@@ -16,7 +16,7 @@ add https://github.com/akio-tomiya/Gaugefields.jl
 
 # How to use
 
-## File loading 
+## File loading
 ## ILDG format
 [ILDG](https://www-zeuthen.desy.de/~pleiter/ildg/ildg-file-format-1.1.pdf) format is one of standard formats for LatticeQCD configurations.
 
@@ -55,6 +55,11 @@ We can write a configuration as the ILDG format like
 filename = "hoge.ildg"
 save_binarydata(U,filename)
 ```
+
+## Text format for Bridge++
+Gaugefield.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
+
+
 
 
 
