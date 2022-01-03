@@ -23,6 +23,11 @@ add https://github.com/akio-tomiya/Gaugefields.jl
 We can read ILDG format like: 
 
 ```julia
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
 Dim = 4
 u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
 U = Array{typeof(u1),1}(undef,Dim)
@@ -59,8 +64,19 @@ save_binarydata(U,filename)
 ## Text format for Bridge++
 Gaugefield.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
 
+### File loading
 
+```julia
+filename = "testconf.txt"
+load_BridgeText!(filename,U,L,NC)
+```
 
+### File saving
+
+```julia
+filename = "testconf.txt"
+save_textdata(U,filename)
+```
 
 
 ## Heatbath updates (even-odd method)
