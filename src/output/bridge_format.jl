@@ -111,7 +111,7 @@ Im of U(0,0,0,0;mu=1)_00
         end
 
         
-        set_wing!(U)
+        set_wing_U!(U)
  
 
         close(fp)
