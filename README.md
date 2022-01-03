@@ -78,6 +78,7 @@ save_textdata(U,filename)
 ```
 
 
+
 ## Heatbath updates (even-odd method)
 
 ```julia
@@ -162,6 +163,42 @@ Nwing = 1
 β = 5.7
 NC = 3
 @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+```
+
+## Gradientflow
+We can use Lüscher's gradient flow.
+
+```julia
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
+NC = 2
+u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+U = Array{typeof(u1),1}(undef,Dim)
+U[1] = u1
+for μ=2:Dim
+    U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
+end
+
+temp1 = similar(U[1])
+temp2 = similar(U[1])
+temp3 = similar(U[1])
+
+comb = 6
+factor = 1/(comb*U[1].NV*U[1].NC)
+
+g = Gradiengflow(U)
+for i=1:100
+    flow!(U,g)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println("$itrj plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
+end
+
+
 ```
 
 # Useful functions
