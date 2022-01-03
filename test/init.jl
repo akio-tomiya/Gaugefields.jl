@@ -18,6 +18,8 @@ function Init_cold_4D(NX,NY,NZ,NT,Nwing,NC)
     #factor = 2/(U[1].NV*4*3*U[1].NC)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
     return plaq_t
     
 
@@ -44,6 +46,8 @@ function Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
     #factor = 2/(U[1].NV*4*3*U[1].NC)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
     return plaq_t
 
 end
@@ -68,6 +72,8 @@ function Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
     comb = 6
     factor = 1/(comb*U[1].NV*U[1].NC)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
     return plaq_t
 
 end

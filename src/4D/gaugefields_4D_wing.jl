@@ -159,6 +159,55 @@ module Gaugefields_4D_wing_module
 
     end
 
+    function m3complv!(a::T) where T <: Gaugefields_4D_wing
+        aa = zeros(Float64,18)
+        NX = a.NX
+        NY = a.NY
+        NZ = a.NZ
+        NT = a.NT
+    
+        @inbounds for it=1:NT
+            for iz=1:NZ
+                for iy=1:NY
+                    @simd for ix=1:NX
+    
+                        aa[ 1] = real( a[1,1,ix,iy,iz,it])
+                        aa[ 2] = imag(a[1,1,ix,iy,iz,it])
+                        aa[ 3] = real( a[1,2,ix,iy,iz,it])
+                        aa[ 4] = imag(a[1,2,ix,iy,iz,it])
+                        aa[ 5] = real( a[1,3,ix,iy,iz,it])
+                        aa[ 6] = imag(a[1,3,ix,iy,iz,it])
+                        aa[ 7] = real( a[2,1,ix,iy,iz,it])
+                        aa[ 8] = imag(a[2,1,ix,iy,iz,it])
+                        aa[ 9] = real( a[2,2,ix,iy,iz,it])
+                        aa[10] = imag(a[2,2,ix,iy,iz,it])
+                        aa[11] = real( a[2,3,ix,iy,iz,it])
+                        aa[12] = imag(a[2,3,ix,iy,iz,it])
+    
+                        aa[13] = aa[ 3]*aa[11] - aa[ 4]*aa[12] -
+                                    aa[ 5]*aa[ 9] + aa[ 6]*aa[10]
+                        aa[14] = aa[ 5]*aa[10] + aa[ 6]*aa[ 9] -
+                                    aa[ 3]*aa[12] - aa[ 4]*aa[11]
+                        aa[15] = aa[ 5]*aa[ 7] - aa[ 6]*aa[ 8] -
+                                    aa[ 1]*aa[11] + aa[ 2]*aa[12]
+                        aa[16] = aa[ 1]*aa[12] + aa[ 2]*aa[11] -
+                                    aa[ 5]*aa[ 8] - aa[ 6]*aa[ 7]
+                        aa[17] = aa[ 1]*aa[ 9] - aa[ 2]*aa[10] -
+                                    aa[ 3]*aa[ 7] + aa[ 4]*aa[ 8]
+                        aa[18] = aa[ 3]*aa[ 8] + aa[ 4]*aa[ 7] -
+                                    aa[ 1]*aa[10] - aa[ 2]*aa[ 9]
+    
+                        a[3,1,ix,iy,iz,it] = aa[13]+im*aa[14]
+                        a[3,2,ix,iy,iz,it] = aa[15]+im*aa[16]
+                        a[3,3,ix,iy,iz,it] = aa[17]+im*aa[18]
+
+                        #println(a[:,:,ix,iy,iz,it]'*a[:,:,ix,iy,iz,it] )
+                    end
+                end
+            end
+        end
+    end
+
     function randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
         U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT)
     

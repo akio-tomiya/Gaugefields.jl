@@ -1198,4 +1198,148 @@ module AbstractGaugefields_module
 
 
 
+    function normalize!(u::Array{ComplexF64,2})
+        NC,_ = size(u)
+        if NC == 2
+            normalize2!(u)
+        elseif NC == 3
+            normalize3!(u)
+        else
+            normalizeN!(u)
+        end
+        return 
+    end
+
+    function normalize2!(u)
+        α = u[1,1]
+        β = u[2,1]
+        detU = abs(α)^2 + abs(β)^2
+        u[1,1] = α/detU
+        u[2,1] = β/detU
+        u[1,2] = -conj(β)/detU
+        u[2,2] = conj(α)/detU
+    end
+
+    function normalizeN!(u)
+        gramschmidt!(u)
+    end
+
+    function normalize3!(u)
+        w1 = 0
+        w2 = 0
+        for ic=1:3
+            w1 += u[2,ic]*conj(u[1,ic])
+            w2 += u[1,ic]*conj(u[1,ic])
+        end
+        zerock2 = w2
+        if zerock2 == 0 
+            println("w2 is zero  !!  (in normlz)")
+            println("u[1,1),u[1,2),u[1,3) : ",u[1,1], "\t",u[1,2],"\t", u[1,3])
+        end
+
+        w1 = -w1/w2
+
+        x4 = (u[2,1]) + w1*u[1,1]
+        x5 = (u[2,2]) + w1*u[1,2]
+        x6 = (u[2,3]) + w1*u[1,3]
+
+        w3 = x4*conj(x4) + x5*conj(x5) + x6*conj(x6)
+
+        zerock3 = w3
+        if zerock3 == 0
+            println("w3 is zero  !!  (in normlz)")
+            println("x4, x5, x6 : $x4, $x5, $x6")
+            exit()
+        end
+
+        u[2,1] = x4
+        u[2,2] = x5
+        u[2,3] = x6
+
+        w3 = 1/sqrt(w3)
+        w2 = 1/sqrt(w2)
+
+        u[1,1] = u[1,1]*w2
+        u[1,2] = u[1,2]*w2
+        u[1,3] = u[1,3]*w2
+        u[2,1] = u[2,1]*w3
+        u[2,2] = u[2,2]*w3
+        u[2,3] = u[2,3]*w3
+
+        if zerock2*zerock3 == 0 
+            println("!! devided by zero !! (in normalize)")
+            println("w2 or w3 in normlz is zero !!")
+            println("w2, w3 : $w2, $w3   ")
+            exit()
+        end
+
+        m3complv3!(u)
+    end
+
+
+    function m3complv3!(a)
+        aa = zeros(Float64,18)
+        aa[ 1] = real( a[1,1])
+        aa[ 2] = imag(a[1,1])
+        aa[ 3] = real( a[1,2])
+        aa[ 4] = imag(a[1,2])
+        aa[ 5] = real( a[1,3])
+        aa[ 6] = imag(a[1,3])
+        aa[ 7] = real( a[2,1])
+        aa[ 8] = imag(a[2,1])
+        aa[ 9] = real( a[2,2])
+        aa[10] = imag(a[2,2])
+        aa[11] = real( a[2,3])
+        aa[12] = imag(a[2,3])
+
+        aa[13] = aa[ 3]*aa[11] - aa[ 4]*aa[12] -
+                    aa[ 5]*aa[ 9] + aa[ 6]*aa[10]
+        aa[14] = aa[ 5]*aa[10] + aa[ 6]*aa[ 9] -
+                    aa[ 3]*aa[12] - aa[ 4]*aa[11]
+        aa[15] = aa[ 5]*aa[ 7] - aa[ 6]*aa[ 8] -
+                    aa[ 1]*aa[11] + aa[ 2]*aa[12]
+        aa[16] = aa[ 1]*aa[12] + aa[ 2]*aa[11] -
+                    aa[ 5]*aa[ 8] - aa[ 6]*aa[ 7]
+        aa[17] = aa[ 1]*aa[ 9] - aa[ 2]*aa[10] -
+                    aa[ 3]*aa[ 7] + aa[ 4]*aa[ 8]
+        aa[18] = aa[ 3]*aa[ 8] + aa[ 4]*aa[ 7] -
+                    aa[ 1]*aa[10] - aa[ 2]*aa[ 9]
+
+        a[3,1] = aa[13]+im*aa[14]
+        a[3,2] = aa[15]+im*aa[16]
+        a[3,3] = aa[17]+im*aa[18]
+        return
+    end
+    
+    function gramschmidt!(v)
+        n = size(v)[1]
+        for i=1:n
+            for j=1:i-1
+                v[:,i] = v[:,i] - v[:,j]'*v[:,i]*v[:,j]
+            end
+            v[:,i] = v[:,i]/norm(v[:,i])
+        end
+    end
+    
+    
+    function gramschmidt_special!(v)
+        n = size(v)[1]
+        #vdet = det(v)
+    
+    
+        vnorm1 = norm(v[:,1])
+        for i=1:n
+            #vnorm[i] = norm(v[:,i])
+            for j=1:i-1
+                v[:,i] = v[:,i] - v[:,j]'*v[:,i]*v[:,j]
+            end
+            v[:,i] = v[:,i]/norm(v[:,i])
+        end
+        for i=1:n
+            #v[:,i] = v[:,i]*vnorm[i]
+            v[:,i] = v[:,i]*vnorm1
+        end
+    end
+    
+
 end

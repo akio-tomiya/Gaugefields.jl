@@ -9,6 +9,7 @@ include("./output/io.jl")
 include("./output/ildg_format.jl")
 include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
+include("./heatbath/heatbathmodule.jl")
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
@@ -19,10 +20,15 @@ function __init__()
 end
 
 # Write your package code here.
-import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette
+import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
+                                    calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
 import .ILDG_format:ILDG,load_gaugefield!
+import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
 
-export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette
+export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!
+export SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
+export map_U!
+export evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
 
 end
