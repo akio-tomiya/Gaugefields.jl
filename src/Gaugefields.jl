@@ -24,11 +24,14 @@ import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGaug
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
 import .ILDG_format:ILDG,load_gaugefield!
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
+import Wilsonloop:loops_staple
 
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!
 export SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
 export map_U!
 export evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
+export loops_staple
+
 
 end
