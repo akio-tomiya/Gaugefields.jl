@@ -174,7 +174,7 @@ NY = 4
 NZ = 4
 NT = 4
 Nwing = 1
-NC = 2
+NC = 3
 u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
 U = Array{typeof(u1),1}(undef,Dim)
 U[1] = u1
@@ -189,15 +189,14 @@ temp3 = similar(U[1])
 comb = 6
 factor = 1/(comb*U[1].NV*U[1].NC)
 
-g = Gradiengflow(U)
-for i=1:100
+g = Gradientflow(U)
+for itrj=1:100
     flow!(U,g)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("$itrj plaq_t = $plaq_t")
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
 end
-
 
 ```
 
