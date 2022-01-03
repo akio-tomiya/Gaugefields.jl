@@ -110,7 +110,7 @@ module AbstractGaugefields_module
         error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
     end
 
-    function substitute_U!(a::T1,b::T2) where {T1 <: AbstractGaugefields,T2 <: AbstractGaugefields}
+    function substitute_U!(a::T1,b::T2) where {T1 <: Abstractfields,T2 <: Abstractfields}
         error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
         return 
     end
@@ -119,8 +119,8 @@ module AbstractGaugefields_module
         error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
     end
 
-    function substitute_U!(a::T1,b::T2,iseven::Bool) where {T1 <: AbstractGaugefields,T2 <: Abstractfields}
-        error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+    function substitute_U!(a::T1,b::T2,iseven::Bool) where {T1 <: Abstractfields,T2 <: Abstractfields}
+        error("substitute_U!(a,b,iseven) is not implemented in type $(typeof(a)) and $(typeof(b))")
         return 
     end
 
@@ -1310,7 +1310,7 @@ module AbstractGaugefields_module
         a[3,3] = aa[17]+im*aa[18]
         return
     end
-    
+
     function gramschmidt!(v)
         n = size(v)[1]
         for i=1:n

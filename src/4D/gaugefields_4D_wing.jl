@@ -2053,6 +2053,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         return η#*boundary_factor_x*boundary_factor_y*boundary_factor_z*boundary_factor_t
     end
 
+    #=
     function gramschmidt!(v)
         n = size(v)[1]
         for i=1:n
@@ -2062,6 +2063,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
             v[:,i] = v[:,i]/norm(v[:,i])
         end
     end
+    =#
 
     function normalize_U!(u::Gaugefields_4D_wing{NC}) where NC
         NX = u.NX
