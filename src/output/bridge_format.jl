@@ -1,5 +1,5 @@
 module Bridge_format
-    import ..Gaugefields:GaugeFields,SU3GaugeFields,SU2GaugeFields,set_wing!
+    import ..AbstractGaugefields_module:set_wing_U!
 #=
 Bridge++ Text file format
 U(x,y,z,t;mu)_{ab} is like 
