@@ -15,6 +15,49 @@ add https://github.com/akio-tomiya/Gaugefields.jl
 ```
 
 # How to use
+
+## File loading 
+## ILDG format
+[ILDG](https://www-zeuthen.desy.de/~pleiter/ildg/ildg-file-format-1.1.pdf) format is one of standard formats for LatticeQCD configurations.
+
+We can read ILDG format like: 
+
+```julia
+Dim = 4
+u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+U = Array{typeof(u1),1}(undef,Dim)
+ildg = ILDG(filename)
+i = 1
+for μ=1:Dim
+    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    #U[μ] = IdentityGauges(NC,NX,NY,NZ,NT,Nwing)
+end
+L = [NX,NY,NZ,NT]
+load_gaugefield!(U,i,ildg,L,NC)
+```
+Then, we can calculate the plaquette: 
+
+```julia
+temp1 = similar(U[1])
+temp2 = similar(U[1])
+
+comb = 6
+factor = 1/(comb*U[1].NV*U[1].NC)
+@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+println("plaq_t = $plaq_t")
+poly = calculate_Polyakov_loop(U,temp1,temp2) 
+println("polyakov loop = $(real(poly)) $(imag(poly))")
+```
+
+We can write a configuration as the ILDG format like 
+
+```julia
+filename = "hoge.ildg"
+save_binarydata(U,filename)
+```
+
+
+
 ## Heatbath updates (even-odd method)
 
 ```julia

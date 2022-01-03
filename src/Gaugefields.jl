@@ -22,12 +22,12 @@ end
 # Write your package code here.
 import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
-import .ILDG_format:ILDG,load_gaugefield!
+import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
 import Wilsonloop:loops_staple
 
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
-export ILDG,load_gaugefield!
+export ILDG,load_gaugefield!,save_binarydata
 export SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
 export map_U!
 export evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
