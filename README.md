@@ -191,10 +191,25 @@ u'
 ```
 This is a lazy evaluation. So there is no memory copy. 
 
-## Sfhift operator
+## Shift operator
 If you want to shift the gaugefields, you can do like 
 
 ```julia
 ushift = shift_U(u,shift)
 ```
 This is also a lazy evaluation. 
+
+## matrix-matrix operation
+If you want to calculate the matrix-matrix multiplicaetion on each lattice site, you can do like
+
+```julia
+mul!(A,B,C)
+```
+which means ```A = B*C``` on each lattice site. 
+## Trace operation 
+If you want to calculate the trace of the gauge field, you can do like 
+
+```julia
+tr(A)
+```
+It is useful to evaluation actions. 
