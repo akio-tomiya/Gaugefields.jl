@@ -6,12 +6,12 @@
 
 # This is the package for Lattice QCD codes. 
 
-This is used in LatticeQCD.jl
+This is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
 
 # Install
 
 ```
-add 
+add https://github.com/akio-tomiya/Gaugefields.jl
 ```
 
 # How to use
