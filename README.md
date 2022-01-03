@@ -35,7 +35,6 @@ ildg = ILDG(filename)
 i = 1
 for μ=1:Dim
     U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    #U[μ] = IdentityGauges(NC,NX,NY,NZ,NT,Nwing)
 end
 L = [NX,NY,NZ,NT]
 load_gaugefield!(U,i,ildg,L,NC)
@@ -164,3 +163,38 @@ Nwing = 1
 NC = 3
 @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 ```
+
+# Data structure
+We can access the gauge field defined on the bond between two neigbohr points. 
+In 4D system, the gauge field is like ```u[ic,jc,ix,iy,iz,it]```. 
+There are four directions in 4D system. Gaugefields.jl uses the array like: 
+
+```julia
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
+Dim = 4
+u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT) #Unit matrix everywhere. 
+U = Array{typeof(u1),1}(undef,Dim)
+for μ=1:Dim
+    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+end
+```
+
+## Adjoint operator
+If you want to get the hermitian conjugate of the gaugefields, you can do like 
+
+```julia
+u'
+```
+This is a lazy evaluation. So there is no memory copy. 
+
+## Sfhift operator
+If you want to shift the gaugefields, you can do like 
+
+```julia
+ushift = shift_U(u,shift)
+```
+This is also a lazy evaluation. 

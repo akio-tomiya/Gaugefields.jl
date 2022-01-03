@@ -22,7 +22,8 @@ end
 
 # Write your package code here.
 import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
-                                    calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
+                                    calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!,
+                                    shift_U
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
 import .Bridge_format:save_textdata,load_BridgeText!
@@ -35,6 +36,7 @@ export map_U!
 export evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
 export loops_staple
 export save_textdata,load_BridgeText!
+export shift_U
 
 
 end
