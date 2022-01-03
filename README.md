@@ -164,7 +164,9 @@ NC = 3
 @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 ```
 
-# Data structure
+# Useful functions
+
+## Data structure
 We can access the gauge field defined on the bond between two neigbohr points. 
 In 4D system, the gauge field is like ```u[ic,jc,ix,iy,iz,it]```. 
 There are four directions in 4D system. Gaugefields.jl uses the array like: 
@@ -213,3 +215,56 @@ If you want to calculate the trace of the gauge field, you can do like
 tr(A)
 ```
 It is useful to evaluation actions. 
+
+# Wilsonloops
+We develop [Wilsonloop.jl](https://github.com/akio-tomiya/Wilsonloop.jl.git), which is useful to calculate Wilson loops. 
+If you want to use this, please install like
+
+```
+add https://github.com/akio-tomiya/Wilsonloop.jl
+```
+
+For example, if you want to calculate the following quantity: 
+
+```math
+U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n)
+```
+
+You can use Wilsonloop.jl as follows
+
+```julia
+using Wilsonloop
+loop = [(1,1),(2,1),(1,-1),(2,-1)]
+w = Wilsonline(loop)
+```
+The output is ```L"$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$"```. 
+Then, you can evaluate this loop with the use of the Gaugefields.jl like: 
+
+```julia
+using LinearAlgebra
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+Nwing = 1
+Dim = 4
+u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT) #Unit matrix everywhere. 
+U = Array{typeof(u1),1}(undef,Dim)
+for μ=1:Dim
+    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+end
+
+temp1 = similar(U[1])
+V = similar(U[1])
+
+evaluate_gaugelinks!(V,w,U,[temp1])
+println(tr(V))
+```
+
+
+
+
+
+
+
