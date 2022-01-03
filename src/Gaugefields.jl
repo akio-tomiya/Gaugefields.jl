@@ -37,7 +37,7 @@ export map_U!
 export evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!
 export loops_staple
 export save_textdata,load_BridgeText!
-export shift_U,evaluate_gaugelinks
+export shift_U,evaluate_gaugelinks,Gradientflow,flow!
 
 
 end
