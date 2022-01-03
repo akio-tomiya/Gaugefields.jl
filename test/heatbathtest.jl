@@ -5,7 +5,12 @@ function heatbath_SU2!(U,NC,temps,β)
     V = temps[3]
     ITERATION_MAX = 10^5
 
-    mapfunc!(A,B) = SU2update_KP!(A,B,β,NC,ITERATION_MAX)
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+    end
+
+    mapfunc!(A,B) = SU2update_KP!(A,B,β,NC,temps2,ITERATION_MAX)
 
     for μ=1:Dim
 
@@ -29,7 +34,14 @@ function heatbath_SU3!(U,NC,temps,β)
     V = temps[3]
     ITERATION_MAX = 10^5
 
-    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,ITERATION_MAX)
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+        temps3[i] = zeros(ComplexF64,3,3)
+    end
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
 
     for μ=1:Dim
 
@@ -54,7 +66,14 @@ function heatbath_SUN!(U,NC,temps,β)
     V = temps[3]
     ITERATION_MAX = 10^5
 
-    mapfunc!(A,B) = SUNupdate_matrix!(A,B,β,NC,ITERATION_MAX)
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+        temps3[i] = zeros(ComplexF64,NC,NC)
+    end
+
+    mapfunc!(A,B) = SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
 
     for μ=1:Dim
 

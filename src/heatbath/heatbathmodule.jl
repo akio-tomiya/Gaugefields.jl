@@ -1,8 +1,12 @@
 module heatbath_module
+using LinearAlgebra
 
 import ..AbstractGaugefields_module:normalize3!,normalizeN!
 
-function SU2update_KP!(Unew,V,beta,NC,ITERATION_MAX = 10^5)
+function SU2update_KP!(Unew,V,beta,NC,temps,ITERATION_MAX = 10^5)
+    V0 = temps[1]
+    temp = temps[2]
+
     eps = 0.000000000001
 
     ρ0 = real(V[1,1]+V[2,2])/2
@@ -13,7 +17,13 @@ function SU2update_KP!(Unew,V,beta,NC,ITERATION_MAX = 10^5)
     ρ = sqrt(ρ0^2+ρ1^2+ρ2^2+ρ3^2)
     #println("R = ",R," ρ ",ρ)
     #println("detV = , ", det(V)," ",ρ0^2+ρ1^2+ρ2^2+ρ3^2)
-    V0 = inv(V/ρ)
+    detV = V[1,1]*V[2,2] - V[1,2]*V[2,1]
+    V0[1,1] = ρ*V[2,2]/detV
+    V0[1,2] = -ρ*V[1,2]/detV
+    V0[2,1] = -ρ*V[2,1]/detV
+    V0[2,2] = ρ*V[1,1]/detV
+    #println(V0)
+    #V0 = inv(V/ρ)
 
     #
     #Nc = 2 # Since Ishikawa's book uses 1/g^2 notation.
@@ -58,11 +68,12 @@ function SU2update_KP!(Unew,V,beta,NC,ITERATION_MAX = 10^5)
     a[2]=rr*cos(ϕ)*sinθ
     a[3]=rr*sin(ϕ)*sinθ
     a[4]=rr*cosθ
-    Unew[1,1] = a[1]+im*a[4]
-    Unew[1,2] = a[3]+im*a[2]
-    Unew[2,1] = -a[3]+im*a[2] 
-    Unew[2,2] = a[1]-im*a[4]
-    Unew[:,:] = Unew*V0
+    temp[1,1] = a[1]+im*a[4]
+    temp[1,2] = a[3]+im*a[2]
+    temp[2,1] = -a[3]+im*a[2] 
+    temp[2,2] = a[1]-im*a[4]
+    mul!(Unew,temp,V0)
+    #Unew[:,:] = Unew*V0
 
     
 
@@ -77,19 +88,27 @@ function SU2update_KP!(Unew,V,beta,NC,ITERATION_MAX = 10^5)
     
 end
 
-function SU2update_KP(V,beta,NC,ITERATION_MAX = 10^5)
+function SU2update_KP(V,beta,NC,temps,ITERATION_MAX = 10^5)
     #println("V = ",V)
     Unew = zero(V)
-    SU2update_KP!(Unew,V,beta,NC,ITERATION_MAX)
+    SU2update_KP!(Unew,V,beta,NC,temps,ITERATION_MAX)
     return Unew
 end
 
-function SUNupdate_matrix!(u,V,beta,NC,ITERATION_MAX)
+function SUNupdate_matrix!(u,V,beta,NC,temps2,temps3,ITERATION_MAX)
+    UV = temps3[1]
+    A = temps3[2]
+    AU = temps3[3]
+    temp1 = temps2[1]
+    temp2 = temps2[2]
+    S = temps2[3]
+    K = temps2[4]
+
     for l=1:NC
         #for l=1:2NC
         
-
-        UV = u[:,:]*V
+        mul!(UV,u,V)
+        #UV = u[:,:]*V
 
         n = rand(1:NC-1)#l
         m = rand(n:NC)
@@ -111,33 +130,44 @@ function SUNupdate_matrix!(u,V,beta,NC,ITERATION_MAX)
         =#
 
 
+        make_submatrix!(S,UV,n,m)
+        #S = make_submatrix(UV,n,m)
 
-        S = make_submatrix(UV,n,m)
         #gramschmidt_special!(S)
         project_onto_SU2!(S)
 
-        K = SU2update_KP(S,beta,NC,ITERATION_MAX)
+        SU2update_KP!(K,S,beta,NC,[temp1,temp2],ITERATION_MAX)
 
 
-        A = make_largematrix(K,n,m,NC)
+        make_largematrix!(A,K,n,m,NC)
 
-        AU = A*u[:,:]
+        mul!(AU,A,u)
 
-        u[:,:] = AU
+        #AU = A*u[:,:]
+
+        u[:,:] .= AU
         #println("det U ",det(AU))
 
     end
 
-    AU = u[:,:]
+    AU[:,:] .= u #u[:,:]
     normalizeN!(AU)
-    u[:,:] = AU
+    u[:,:] .= AU
 end
 
-function SU3update_matrix!(u,V,beta,NC,ITERATION_MAX)
+function SU3update_matrix!(u,V,beta,NC,temps2,temps3,ITERATION_MAX)
+    UV = temps3[1]
+    A = temps3[2]
+    AU = temps3[3]
+    temp1 = temps2[1]
+    temp2 = temps2[2]
+    S = temps2[3]
+    K = temps2[4]
+
     #println("#Heatbath for one SU(3) link started")
     for l=1:3
-
-        UV = u*V
+        mul!(UV,u,V)
+        #UV = u*V
         #println("UV $UV $V $u")
 
         if l==1
@@ -149,23 +179,27 @@ function SU3update_matrix!(u,V,beta,NC,ITERATION_MAX)
 
         end
 
-        S = make_submatrix(UV,n,m)
+        #S = make_submatrix(UV,n,m)
+        make_submatrix!(S,UV,n,m)
         #gramschmidt_special!(S)
         project_onto_SU2!(S)
 
-        K = SU2update_KP(S,beta,NC,ITERATION_MAX)
+        #K = SU2update_KP(S,beta,NC,ITERATION_MAX)
+        SU2update_KP!(K,S,beta,NC,[temp1,temp2],ITERATION_MAX)
 
 
-        A = make_largematrix(K,n,m,NC)
+        #A = make_largematrix(K,n,m,NC)
+        make_largematrix!(A,K,n,m,NC)
 
-        AU = A*u
+        mul!(AU,A,u)
+        #AU = A*u
 
-        u[:,:] = AU[:,:]
+        u[:,:] .= AU
     end
 
-    AU = u[:,:] #u[mu][:,:,ix,iy,iz,it]
+    AU[:,:] .= u #u[mu][:,:,ix,iy,iz,it]
     normalize3!(AU)
-    u[:,:] = AU[:,:]
+    u[:,:] .= AU
     #u[mu][:,:,ix,iy,iz,it] = AU
 end
 
@@ -190,9 +224,31 @@ function make_submatrix(UV,i,j)
     return S
 end
 
+function make_submatrix!(S,UV,i,j)
+    S[1,1] = UV[i,i]
+    S[1,2] = UV[i,j]
+    S[2,1] = UV[j,i]
+    S[2,2] = UV[j,j]
+    return 
+end
+
 
 function make_largematrix(K,i,j,NC)
     A = zeros(ComplexF64,NC,NC)
+    for n=1:NC
+        A[n,n] = 1
+    end
+    #K = project_onto_su2(K)
+    A[i,i] = K[1,1]
+    A[i,j] = K[1,2] 
+    A[j,i] = K[2,1]
+    A[j,j] = K[2,2]  
+    return A
+end
+
+function make_largematrix!(A,K,i,j,NC)
+    #A = zeros(ComplexF64,NC,NC)
+    A .= 0
     for n=1:NC
         A[n,n] = 1
     end

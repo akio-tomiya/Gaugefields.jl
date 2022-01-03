@@ -92,7 +92,15 @@ function heatbath_SU3!(U,NC,temps,β)
     V = temps[3]
     ITERATION_MAX = 10^5
 
-    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,ITERATION_MAX)
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+        temps3[i] = zeros(ComplexF64,NC,NC)
+    end
+
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
 
     for μ=1:Dim
 
@@ -133,13 +141,7 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     numhb = 40
     for itrj = 1:numhb
-        if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
-        elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
-        else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
-        end
+        heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
 
         if itrj % 10 == 0
             @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
