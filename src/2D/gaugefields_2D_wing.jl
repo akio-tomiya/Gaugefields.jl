@@ -328,7 +328,7 @@ module Gaugefields_2D_wing_module
         end
     end
 
-    function check_outside(NDW,shift::NTuple{T,2}) where T <: Integer
+    function check_outside(NDW,shift::Tuple{<:Any,<:Any}) 
         outside = false
         for μ=1:2
             if outside == false
