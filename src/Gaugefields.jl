@@ -11,6 +11,7 @@ include("./output/bridge_format.jl")
 include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
 include("./heatbath/heatbathmodule.jl")
+include("./scalarnn/ScalarNNs.jl")
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
