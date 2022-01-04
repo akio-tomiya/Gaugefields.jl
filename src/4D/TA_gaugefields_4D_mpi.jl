@@ -1,4 +1,4 @@
-struct TA_Gaugefields_4D_serial{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
+struct TA_Gaugefields_4D_mpi{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     a::Array{Float64,5}
     NX::Int64
     NY::Int64
@@ -8,7 +8,14 @@ struct TA_Gaugefields_4D_serial{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     NumofBasis::Int64
     generators::Union{Nothing,Generator}
 
-    function TA_Gaugefields_4D_serial(NC,NX,NY,NZ,NT)
+    PEs::NTuple{4,Int64}
+    PN::NTuple{4,Int64}
+    mpiinit::Bool
+    myrank::Int64
+    nprocs::Int64
+    myrank_xyzt::NTuple{4,Int64}
+
+    function TA_Gaugefields_4D_mpi(u::Gaugefields_4D_wing_mpi{NC}) where NC
         NumofBasis = ifelse(NC == 1,1,NC^2-1)
         if NC <= 3
             generators = nothing
@@ -16,103 +23,30 @@ struct TA_Gaugefields_4D_serial{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
             generators = Generator(NC)
         end
         
-        return new{NC,NumofBasis}(zeros(Float64,NumofBasis,NX,NY,NZ,NT),NX,NY,NZ,NT,NC,NumofBasis,generators)
+        return new{NC,NumofBasis}(zeros(Float64,NumofBasis,u.PN[1],u.PN[2],u.PN[3],u.PN[4]),u.NX,u.NY,u.NZ,u.NT,u.NC,NumofBasis,generators,
+            u.PEs,u.PN,true,u.myrank,u.nprocs,u.myrank_xyzt    
+        )
     end
 end
 
-function Base.setindex!(x::T,v,i...)  where T<: TA_Gaugefields_4D_serial
+function Base.setindex!(x::T,v,i...)  where T<: TA_Gaugefields_4D_mpi
     @inbounds x.a[i...] = v 
 end
 
-function Base.getindex(x::T,i...) where T<: TA_Gaugefields_4D_serial
+function Base.getindex(x::T,i...) where T<: TA_Gaugefields_4D_mpi
     @inbounds return x.a[i...]
 end
 
-
-function Base.similar(u::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC,NumofBasis}
-    return TA_Gaugefields_4D_serial(NC,u.NX,u.NY,u.NZ,u.NT)
-    #error("similar! is not implemented in type $(typeof(U)) ")
-end
-
-function substitute_U!(Uμ::TA_Gaugefields_4D_serial{NC,NumofBasis},pwork) where {NC,NumofBasis}
-    NT = Uμ.NT
-    NZ = Uμ.NZ
-    NY = Uμ.NY
-    NX = Uμ.NX
-    #NumofBasis = Uμ.NumofBasis
-    icount = 0
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
-                    for k=1:NumofBasis 
-                        icount += 1
-                        Uμ[k,ix,iy,iz,it] = pwork[icount]
-                    end
-                end
-            end
-        end
-    end
-
-
-    #n1,n2,n3,n4,n5 = size(x.a)
-    #println(size(pwork))
-    #x.a[:,:,:,:,:] = reshape(pwork,(n1,n2,n3,n4,n5))
-end
-
-
-    
-function Base.:*(x::TA_Gaugefields_4D_serial{NC,NumofBasis},y::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC,NumofBasis}
-    NT = x.NT
-    NZ = x.NZ
-    NY = x.NY
-    NX = x.NX
-    #NumofBasis = Uμ.NumofBasis
-    s = 0.0
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
-                    for k=1:NumofBasis 
-                        s += x[k,ix,iy,iz,it]*y[k,ix,iy,iz,it]
-                    end
-                end
-            end
-        end
-    end
-
-    return s
-end
-
-function clear_U!(Uμ::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC,NumofBasis}
-    NT = Uμ.NT
-    NZ = Uμ.NZ
-    NY = Uμ.NY
-    NX = Uμ.NX
-    #NumofBasis = Uμ.NumofBasis
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
-                    for k=1:NumofBasis 
-                        Uμ[k,ix,iy,iz,it] = 0
-                    end
-                end
-            end
-        end
-    end
-end
-
-function add_U!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},α::N,a::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC, N<:Number,NumofBasis}
+function add_U!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},α::N,a::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC, N<:Number,NumofBasis}
     NT = c.NT
     NZ = c.NZ
     NY = c.NY
     NX = c.NX
     #NumofBasis = c.NumofBasis
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
+    for it=1:c.PN[4]
+        for iz=1:c.PN[3]
+            for iy=1:c.PN[2]
+                for ix=1:c.PN[1]
                     for k=1:NumofBasis 
                         c[k,ix,iy,iz,it] = c[k,ix,iy,iz,it] + α*a[k,ix,iy,iz,it]
                     end
@@ -123,13 +57,22 @@ function add_U!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},α::N,a::TA_Gaugefiel
     #error("add_U! is not implemented in type $(typeof(c)) ")
 end
 
+function clear_U!(U::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC,NumofBasis}
+    #NumofBasis = Uμ.NumofBasis
+    for it=1:U.PN[4]
+        for iz=1:U.PN[3]
+            for iy=1:U.PN[2]
+                for ix=1:U.PN[1]
+                    for k=1:NumofBasis 
+                        @inbounds U[k,ix,iy,iz,it] = 0
+                    end
+                end
+            end
+        end
+    end
+end
 
-
-const sr3 = sqrt(3)
-const sr3i = 1/sr3
-const sr3i2 = 2*sr3i
-
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{3,NumofBasis},factor,vin::Gaugefields_4D_wing{3}) where NumofBasis
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{3}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1/3
     NX = vin.NX
@@ -137,13 +80,13 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{3,NumofBasis},
     NZ = vin.NZ
     NT = vin.NT
 
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
-                    v11 = vin[1,1,ix,iy,iz,it]
-                    v22 = vin[2,2,ix,iy,iz,it] 
-                    v33 = vin[3,3,ix,iy,iz,it]
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
+                    v11 = getvalue(vin,1,1,ix,iy,iz,it)
+                    v22 = getvalue(vin,2,2,ix,iy,iz,it)
+                    v33 = getvalue(vin,3,3,ix,iy,iz,it)
 
                     tri = fac13*(imag(v11)+imag(v22)+imag(v33))
 
@@ -156,12 +99,12 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{3,NumofBasis},
                     y22 = (imag(v22)-tri)*im
                     y33 = (imag(v33)-tri)*im
 
-                    v12 = vin[1,2,ix,iy,iz,it]
-                    v13 = vin[1,3,ix,iy,iz,it]
-                    v21 = vin[2,1,ix,iy,iz,it]
-                    v23 = vin[2,3,ix,iy,iz,it]
-                    v31 = vin[3,1,ix,iy,iz,it]
-                    v32 = vin[3,2,ix,iy,iz,it]
+                    v12 = getvalue(vin,1,2,ix,iy,iz,it)
+                    v13 = getvalue(vin,1,3,ix,iy,iz,it)
+                    v21 = getvalue(vin,2,1,ix,iy,iz,it)
+                    v23 = getvalue(vin,2,3,ix,iy,iz,it)
+                    v31 = getvalue(vin,3,1,ix,iy,iz,it)
+                    v32 = getvalue(vin,3,2,ix,iy,iz,it)
 
                     x12 = v12 - conj(v21)
                     x13 = v13 - conj(v31)
@@ -172,12 +115,12 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{3,NumofBasis},
                     x32 = - conj(x23)
 
                     #=
-                    vout[1,2,ix,iy,iz,it] = 0.5  * x12
-                    vout[1,3,ix,iy,iz,it] = 0.5  * x13
-                    vout[2,1,ix,iy,iz,it] = 0.5  * x21
-                    vout[2,3,ix,iy,iz,it] = 0.5  * x23
-                    vout[3,1,ix,iy,iz,it] = 0.5  * x31
-                    vout[3,2,ix,iy,iz,it] = 0.5  * x32
+                    vout[1,2,ix,iy,iz,it) = 0.5  * x12
+                    vout[1,3,ix,iy,iz,it) = 0.5  * x13
+                    vout[2,1,ix,iy,iz,it) = 0.5  * x21
+                    vout[2,3,ix,iy,iz,it) = 0.5  * x23
+                    vout[3,1,ix,iy,iz,it) = 0.5  * x31
+                    vout[3,2,ix,iy,iz,it) = 0.5  * x32
                     =#
                     y12 = 0.5  * x12
                     y13 = 0.5  * x13
@@ -208,7 +151,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{3,NumofBasis},
 
 end
 
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{2,NumofBasis},factor,vin::Gaugefields_4D_wing{2}) where NumofBasis
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{2,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{2}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac12 = 1/2
     NX = vin.NX
@@ -216,20 +159,20 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{2,NumofBasis},
     NZ = vin.NZ
     NT = vin.NT
 
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
-                    v11 = vin[1,1,ix,iy,iz,it]
-                    v22 = vin[2,2,ix,iy,iz,it]
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
+                    v11 = getvalue(vin,1,1,ix,iy,iz,it)
+                    v22 = getvalue(vin,2,2,ix,iy,iz,it)
 
                     tri = fac12*(imag(v11)+imag(v22))
 
                     
 
-                    v12 = vin[1,2,ix,iy,iz,it]
-                    #v13 = vin[1,3,ix,iy,iz,it]
-                    v21 = vin[2,1,ix,iy,iz,it]
+                    v12 = getvalue(vin,1,2,ix,iy,iz,it)
+                    #v13 = getvalue(vin,1,3,ix,iy,iz,it)
+                    v21 = getvalue(vin,2,1,ix,iy,iz,it)
 
                     x12 = v12 - conj(v21)
 
@@ -261,7 +204,7 @@ end
      wher   x = vin - Conjg(vin)      
 -----------------------------------------------------c
     """
-function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{3,NumofBasis},vin::Gaugefields_4D_wing{3}) where NumofBasis
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},vin::Gaugefields_4D_wing_mpi{3}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1/3
     NX = vin.NX
@@ -269,31 +212,31 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{3,NumofBasis},vin:
     NZ = vin.NZ
     NT = vin.NT
 
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
-                    v11 = vin[1,1,ix,iy,iz,it]
-                    v22 = vin[2,2,ix,iy,iz,it]
-                    v33 = vin[3,3,ix,iy,iz,it]
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
+                    v11 = getvalue(vin,1,1,ix,iy,iz,it)
+                    v22 = getvalue(vin,2,2,ix,iy,iz,it)
+                    v33 = getvalue(vin,3,3,ix,iy,iz,it)
 
                     tri = fac13*(imag(v11)+imag(v22)+imag(v33))
 
                     #=
-                    vout[1,1,ix,iy,iz,it] = (imag(v11)-tri)*im
-                    vout[2,2,ix,iy,iz,it] = (imag(v22)-tri)*im
-                    vout[3,3,ix,iy,iz,it] = (imag(v33)-tri)*im
+                    vout[1,1,ix,iy,iz,it) = (imag(v11)-tri)*im
+                    vout[2,2,ix,iy,iz,it) = (imag(v22)-tri)*im
+                    vout[3,3,ix,iy,iz,it) = (imag(v33)-tri)*im
                     =#
                     y11 = (imag(v11)-tri)*im
                     y22 = (imag(v22)-tri)*im
                     y33 = (imag(v33)-tri)*im
 
-                    v12 = vin[1,2,ix,iy,iz,it]
-                    v13 = vin[1,3,ix,iy,iz,it]
-                    v21 = vin[2,1,ix,iy,iz,it]
-                    v23 = vin[2,3,ix,iy,iz,it]
-                    v31 = vin[3,1,ix,iy,iz,it]
-                    v32 = vin[3,2,ix,iy,iz,it]
+                    v12 = getvalue(vin,1,2,ix,iy,iz,it)
+                    v13 = getvalue(vin,1,3,ix,iy,iz,it)
+                    v21 = getvalue(vin,2,1,ix,iy,iz,it)
+                    v23 = getvalue(vin,2,3,ix,iy,iz,it)
+                    v31 = getvalue(vin,3,1,ix,iy,iz,it)
+                    v32 = getvalue(vin,3,2,ix,iy,iz,it)
 
                     x12 = v12 - conj(v21)
                     x13 = v13 - conj(v31)
@@ -338,7 +281,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{3,NumofBasis},vin:
 
 end
 
-function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},vin::Gaugefields_4D_wing{NC}) where {NC,NumofBasis}
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},vin::Gaugefields_4D_wing_mpi{NC}) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 
     #NC = vout.NC
     fac1N = 1/NC
@@ -352,22 +295,22 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},vin
     matrix = zeros(ComplexF64,NC,NC)
     a = zeros(ComplexF64,length(g))
 
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
                     tri = 0.0
                     @simd for k=1:NC
-                        tri += imag(vin[k,k,ix,iy,iz,it])
+                        tri += imag(getvalue(vin,k,k,ix,iy,iz,it))
                     end
                     tri *= fac1N
                     @simd for k=1:NC
-                        #vout[k,k,ix,iy,iz,it] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
-                        matrix[k,k] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
+                        #vout[k,k,ix,iy,iz,it] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
+                        matrix[k,k] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
                     end
 
                     @simd for k2=k1+1:NC
-                        vv = 0.5*(vin[k1,k2,ix,iy,iz,it] - conj(vin[k2,k1,ix,iy,iz,it]))
+                        vv = 0.5*(getvalue(vin,k1,k2,ix,iy,iz,it) - conj(getvalue(vin,k2,k1,ix,iy,iz,it)))
                         #vout[k1,k2,ix,iy,iz,it] = vv
                         #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
                         matrix[k1,k2] = vv
@@ -388,7 +331,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},vin
     
 end
 
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},factor,vin::Gaugefields_4D_wing{NC}) where {NC,NumofBasis}
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{NC}) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 "NC should be NC >4! in this function"
     #NC = vout.NC
     fac1N = 1/NC
@@ -402,23 +345,23 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{NC,NumofBasis}
     matrix = zeros(ComplexF64,NC,NC)
     a = zeros(ComplexF64,length(g))
 
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
                     tri = 0.0
                     @simd for k=1:NC
-                        tri += imag(vin[k,k,ix,iy,iz,it])
+                        tri += imag(getvalue(vin,k,k,ix,iy,iz,it))
                     end
                     tri *= fac1N
                     @simd for k=1:NC
-                        #vout[k,k,ix,iy,iz,it] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
-                        matrix[k,k] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
+                        #vout[k,k,ix,iy,iz,it] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
+                        matrix[k,k] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
                     end
 
                     for k1=1:NC
                         @simd for k2=k1+1:NC
-                            vv = 0.5*(vin[k1,k2,ix,iy,iz,it] - conj(vin[k2,k1,ix,iy,iz,it]))
+                            vv = 0.5*(getvalue(vin,k1,k2,ix,iy,iz,it) - conj(getvalue(vin,k2,k1,ix,iy,iz,it)))
                             #vout[k1,k2,ix,iy,iz,it] = vv
                             #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
                             matrix[k1,k2] = vv
@@ -440,29 +383,35 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_serial{NC,NumofBasis}
     
 end
 
-
-
-
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{NC,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing, NC,NumofBasis} #uout = exp(t*u)
-    @assert NC != 3 && NC != 2 "This function is for NC != 2,3"
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{NC,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi, NC,NumofBasis} #uout = exp(t*u)
+    @assert NC != 3 && NC != 2 "This function is for NC != 2,3, now, NC = $NC, and NumofBasis = $NumofBasis"
     g = u.generators
     NT = u.NT
     NZ = u.NZ
     NY = u.NY
     NX = u.NX
+    V = zeros(ComplexF64,NC,NC)
 
     u0 = zeros(ComplexF64,NC,NC)
     a = zeros(Float64,length(g))
-    @inbounds for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
+    for it=1:vin.PN[4]
+        for iz=1:vin.PN[3]
+            for iy=1:vin.PN[2]
+                @simd for ix=1:vin.PN[1]
                     for k=1:length(a)
                         a[k] = u[k,ix,iy,iz,it]
                     end
 
                     lie2matrix!(u0,g,a)
-                    uout[:,:,ix,iy,iz,it] = exp(t*(im/2)*u0)
+                    V[:,:] = exp(t*(im/2)*u0)
+                    for k2=1:NC
+                        for k1=1:NC
+                            v = V[k1,k2]
+                            setvalue!(uout,v,k1,k2,ix,iy,iz,it)
+                        end
+                    end
+
+                    #uout[:,:,ix,iy,iz,it] = exp(t*(im/2)*u0)
 
                 end
             end
@@ -471,7 +420,7 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{NC,NumofBasis},temps::A
     #error("exptU! is not implemented in type $(typeof(u)) ")
 end
 
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{3,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing,NumofBasis} #uout = exp(t*u)     
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{3,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi,NumofBasis} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
     NT = u.NT
@@ -481,10 +430,10 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{3,NumofBasis},temps::Ar
     
 
 
-    @inbounds for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
+    for it=1:u.PN[4]
+        for iz=1:u.PN[3]
+            for iy=1:u.PN[2]
+                for ix=1:u.PN[1]
                     c1 = t*u[1,ix,iy,iz,it] * 0.5 
                     c2 = t*u[2,ix,iy,iz,it] * 0.5
                     c3 = t*u[3,ix,iy,iz,it] * 0.5
@@ -495,25 +444,35 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{3,NumofBasis},temps::Ar
                     c8 = t*u[8,ix,iy,iz,it] * 0.5
                     csum = c1+c2+c3+c4+c5+c6+c7+c8
                     if csum == 0
-                        w[1,1,ix,iy,iz,it]=   1 
-                        w[1,2,ix,iy,iz,it]=   0
-                        w[1,3,ix,iy,iz,it]=   0 
-                        w[2,1,ix,iy,iz,it]=  0
-                        w[2,2,ix,iy,iz,it]=   1 
-                        w[2,3,ix,iy,iz,it]=   0
-                        w[3,1,ix,iy,iz,it]=   0 
-                        w[3,2,ix,iy,iz,it]=   0  
-                        w[3,3,ix,iy,iz,it]=   1  
+                        v = 1
+                        setvalue!(w,v,1,1,ix,iy,iz,it)# =   1 
+                        v = 0
+                        setvalue!(w,v,1,2,ix,iy,iz,it)
+                        setvalue!(w,v,1,3,ix,iy,iz,it)# =    0 
+                        setvalue!(w,v,2,1,ix,iy,iz,it)# =  0
+                        v = 1
+                        setvalue!(w,v,2,2,ix,iy,iz,it)# =   1 
+                        v = 0
+                        setvalue!(w,v,2,3,ix,iy,iz,it)# =   0
+                        setvalue!(w,v,3,1,ix,iy,iz,it)# =   0 
+                        setvalue!(w,v,3,2,ix,iy,iz,it)# =   0  
+                        v = 1
+                        setvalue!(w,v,3,3,ix,iy,iz,it)# =   1  
                 
-                        ww[1,1,ix,iy,iz,it]=   1
-                        ww[1,2,ix,iy,iz,it]=   0
-                        ww[1,3,ix,iy,iz,it]=   0
-                        ww[2,1,ix,iy,iz,it]=   0
-                        ww[2,2,ix,iy,iz,it]=   1 
-                        ww[2,3,ix,iy,iz,it]=   0 
-                        ww[3,1,ix,iy,iz,it]=   0
-                        ww[3,2,ix,iy,iz,it]=   0  
-                        ww[3,3,ix,iy,iz,it]=   1
+                        v = 1
+                        setvalue!(ww,v,1,1,ix,iy,iz,it)# =   1
+                        v = 0
+                        setvalue!(ww,v,1,2,ix,iy,iz,it)# =   0
+                        setvalue!(ww,v,1,3,ix,iy,iz,it)# =   0
+                        setvalue!(ww,v,2,1,ix,iy,iz,it)# =   0
+                        v = 1
+                        setvalue!(ww,v,2,2,ix,iy,iz,it)# =   1 
+                        v = 0
+                        setvalue!(ww,v,2,3,ix,iy,iz,it)# =   0 
+                        setvalue!(ww,v,3,1,ix,iy,iz,it)# =   0
+                        setvalue!(ww,v,3,2,ix,iy,iz,it)# =   0  
+                        v = 1
+                        setvalue!(ww,v,3,3,ix,iy,iz,it)# =   1
                         continue
                     end
 
@@ -657,25 +616,45 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{3,NumofBasis},temps::Ar
                     ww17 = w17 * c3 - w18 * s3
                     ww18 = w18 * c3 + w17 * s3
 
-                    w[1,1,ix,iy,iz,it]=   w1+im*w2 
-                    w[1,2,ix,iy,iz,it]=   w3+im*w4 
-                    w[1,3,ix,iy,iz,it]=   w5+im*w6 
-                    w[2,1,ix,iy,iz,it]=   w7+im*w8 
-                    w[2,2,ix,iy,iz,it]=   w9+im*w10  
-                    w[2,3,ix,iy,iz,it]=   w11+im*w12  
-                    w[3,1,ix,iy,iz,it]=   w13+im*w14  
-                    w[3,2,ix,iy,iz,it]=   w15+im*w16  
-                    w[3,3,ix,iy,iz,it]=   w17+im*w18  
+                    v = w1+im*w2 
+                    setvalue!(w,v,1,1,ix,iy,iz,it)# =   1 
+                    v = w3+im*w4 
+                    setvalue!(w,v,1,2,ix,iy,iz,it)
+                    v = w5+im*w6 
+                    setvalue!(w,v,1,3,ix,iy,iz,it)# =    0 
+                    v = w7+im*w8 
+                    setvalue!(w,v,2,1,ix,iy,iz,it)# =  0
+                    v = w9+im*w10  
+
+                    setvalue!(w,v,2,2,ix,iy,iz,it)# =   1 
+                    v = w11+im*w12  
+                    setvalue!(w,v,2,3,ix,iy,iz,it)# =   0
+                    v = w13+im*w14  
+                    setvalue!(w,v,3,1,ix,iy,iz,it)# =   0 
+                    v = w15+im*w16  
+                    setvalue!(w,v,3,2,ix,iy,iz,it)# =   0  
+                    v = 1\w17+im*w18 
+                    setvalue!(w,v,3,3,ix,iy,iz,it)# =   1  
             
-                    ww[1,1,ix,iy,iz,it]=   ww1+im*ww2 
-                    ww[1,2,ix,iy,iz,it]=   ww3+im*ww4 
-                    ww[1,3,ix,iy,iz,it]=   ww5+im*ww6 
-                    ww[2,1,ix,iy,iz,it]=   ww7+im*ww8 
-                    ww[2,2,ix,iy,iz,it]=   ww9+im*ww10  
-                    ww[2,3,ix,iy,iz,it]=   ww11+im*ww12  
-                    ww[3,1,ix,iy,iz,it]=   ww13+im*ww14  
-                    ww[3,2,ix,iy,iz,it]=   ww15+im*ww16  
-                    ww[3,3,ix,iy,iz,it]=   ww17+im*ww18  
+                    v = ww1+im*ww2 
+                    setvalue!(ww,v,1,1,ix,iy,iz,it)# =   1
+                    v = ww3+im*ww4 
+                    setvalue!(ww,v,1,2,ix,iy,iz,it)# =   0
+                    v = ww5+im*ww6 
+                    setvalue!(ww,v,1,3,ix,iy,iz,it)# =   0
+                    v = ww7+im*ww8 
+                    setvalue!(ww,v,2,1,ix,iy,iz,it)# =   0
+                    v = ww9+im*ww10  
+                    setvalue!(ww,v,2,2,ix,iy,iz,it)# =   1 
+                    v =  ww11+im*ww12  
+                    setvalue!(ww,v,2,3,ix,iy,iz,it)# =   0 
+                    v = ww13+im*ww14  
+                    setvalue!(ww,v,3,1,ix,iy,iz,it)# =   0
+                    v = ww15+im*ww16 
+                    setvalue!(ww,v,3,2,ix,iy,iz,it)# =   0  
+                    v =  ww17+im*ww18 
+                    setvalue!(ww,v,3,3,ix,iy,iz,it)# =   1
+                    
 
                 end
             end
@@ -689,17 +668,17 @@ end
 const tinyvalue =1e-100
 
 
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{2,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing,NumofBasis} #uout = exp(t*u)     
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{2,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi,NumofBasis} #uout = exp(t*u)     
     NT = u.NT
     NZ = u.NZ
     NY = u.NY
     NX = u.NX
 
 
-    @inbounds for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                for ix=1:NX
+    for it=1:u.PN[4]
+        for iz=1:u.PN[3]
+            for iy=1:u.PN[2]
+                @simd for ix=1:u.PN[1]
                     #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
                     u1 = t*u[1,ix,iy,iz,it]/2
                     u2 = t*u[2,ix,iy,iz,it]/2
@@ -712,10 +691,16 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_serial{2,NumofBasis},temps::Ar
                     a2 = u2*sR
                     a3 = u3*sR
 
-                    uout[1,1,ix,iy,iz,it] = cos(R) + im*a3
-                    uout[1,2,ix,iy,iz,it] = im*a1 + a2
-                    uout[2,1,ix,iy,iz,it] = im*a1 - a2
-                    uout[2,2,ix,iy,iz,it]= cos(R) - im*a3
+                    v = cos(R) + im*a3
+                    setvalue!(uout,v,1,1,ix,iy,iz,it) 
+                    v = im*a1 + a2
+                    setvalue!(uout,v,1,2,ix,iy,iz,it) 
+                    #uout[2,1,ix,iy,iz,it) = 
+                    v = im*a1 - a2
+                    setvalue!(uout,v,2,1,ix,iy,iz,it) 
+                    #uout[2,2,ix,iy,iz,it)=
+                    v = cos(R) - im*a3
+                    setvalue!(uout,v,2,2,ix,iy,iz,it) 
 
                 end
             end

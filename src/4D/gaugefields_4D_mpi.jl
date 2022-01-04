@@ -277,7 +277,7 @@ module Gaugefields_4D_mpi_module
                                     av = getvalue(a,k1,k2,ix,iy,iz,it)
                                     cv = getvalue(c,k1,k2,ix,iy,iz,it)
                                     v = cv + av
-                                    getvalue!(c,v,k1,k2,ix,iy,iz,it)
+                                    setvalue!(c,v,k1,k2,ix,iy,iz,it)
                                     #c[k1,k2,ix,iy,iz,it] += a[k1,k2,ix,iy,iz,it]
                                 end
                             end

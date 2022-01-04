@@ -26,12 +26,23 @@ end
 
 
 function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim}
-    if Dim==4
-        return TA_Gaugefields(NC,u.NX,u.NY,u.NZ,u.NT)
-    elseif Dim==2
-        return TA_Gaugefields(NC,u.NX,u.NT)
+    if typeof(u) <: Gaugefields_4D_wing_mpi
+        if Dim==4
+            return TA_Gaugefields_4D_mpi(u)
+        elseif Dim==2
+            error("Dim = $Dim is not supoorted")
+        else
+            error("Dim = $Dim is not supoorted")
+        end
+        
     else
-        error("Dim = $Dim is not supoorted")
+        if Dim==4
+            return TA_Gaugefields(NC,u.NX,u.NY,u.NZ,u.NT)
+        elseif Dim==2
+            return TA_Gaugefields(NC,u.NX,u.NT)
+        else
+            error("Dim = $Dim is not supoorted")
+        end
     end
 end
 
