@@ -34,6 +34,16 @@ import .SUN_generator:Generator
 import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
     print_verbose1,print_verbose2,print_verbose3
 
+import Wilsonloops:Wilson_loop_set,make_staples,Wilson_loop_set,
+            make_cloverloops,Tensor_derivative_set, make_loops,
+            make_plaq_staple,make_links,make_plaq,
+            make_loopforactions,make_plaqloops,make_rectloops,make_polyakovloops,
+            make_plaq_staple_prime,
+            calc_coordinate,make_plaq_staple_prime,calc_shift,
+            Tensor_wilson_lines_set,Tensor_wilson_lines,Tensor_derivative_set,
+            get_leftstartposition,get_rightstartposition,Wilson_loop,calc_loopset_μν_name,
+            make_originalactions_fromloops
+
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!,save_binarydata
 export SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
