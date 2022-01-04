@@ -139,11 +139,11 @@ function heatbathtest_2D(NX,NT,β,NC)
     Dim = 2
     Nwing = 1
 
-    u1 = IdentityGauges(NC,Nwing,NX,NT)
+    u1 = RandomGauges(NC,Nwing,NX,NT)
     U = Array{typeof(u1),1}(undef,Dim)
     U[1] = u1
     for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NT)
+        U[μ] = RandomGauges(NC,Nwing,NX,NT)
     end
 
     temp1 = similar(U[1])
@@ -167,8 +167,10 @@ function heatbathtest_2D(NX,NT,β,NC)
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
-    numhb = 40
+    numhb = 200
     for itrj = 1:numhb
+        heatbath!(U,[temp1,temp2,temp3],β)
+        #=
         if NC == 2
             heatbath_SU2!(U,NC,[temp1,temp2,temp3],β,Dim)
         elseif NC == 3
@@ -176,8 +178,9 @@ function heatbathtest_2D(NX,NT,β,NC)
         else
             heatbath_SUN!(U,NC,[temp1,temp2,temp3],β,Dim)
         end
+        =#
 
-        if itrj % 10 == 0
+        if itrj % 40 == 0
             @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
             println("$itrj plaq_t = $plaq_t")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 
@@ -226,6 +229,7 @@ println("4D system")
         @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         @test abs(plaq_t-val)/abs(val) < eps
     end
+
 
 
 end

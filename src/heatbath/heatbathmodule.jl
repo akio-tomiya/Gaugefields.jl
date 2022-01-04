@@ -1,7 +1,120 @@
 module heatbath_module
 using LinearAlgebra
 
-import ..AbstractGaugefields_module:normalize3!,normalizeN!
+import ..AbstractGaugefields_module:normalize3!,normalizeN!,AbstractGaugefields,evaluate_gaugelinks_evenodd!, map_U!
+import Wilsonloop:loops_staple
+
+function heatbath!(U::Array{<: AbstractGaugefields{2,Dim},1},temps,β;ITERATION_MAX=10^5) where {Dim}
+    NC = 2
+    temp1 = temps[1]
+    temp2 = temps[2]
+    V = temps[3]
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+    end
+
+    if NC != 2
+        temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+        for i=1:5
+            temps3[i] = zeros(ComplexF64,NC,NC)
+        end
+    end
+
+
+
+    mapfunc!(A,B) = SU2update_KP!(A,B,β,NC,temps2,ITERATION_MAX)
+
+    for μ=1:Dim
+
+        loops = loops_staple[(Dim,μ)]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+    
+end
+
+function heatbath!(U::Array{<: AbstractGaugefields{3,Dim},1},temps,β;ITERATION_MAX=10^5) where {Dim}
+    NC = 3
+    temp1 = temps[1]
+    temp2 = temps[2]
+    V = temps[3]
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+    end
+
+    if NC != 2
+        temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+        for i=1:5
+            temps3[i] = zeros(ComplexF64,NC,NC)
+        end
+    end
+
+
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+
+
+    for μ=1:Dim
+
+        loops = loops_staple[(Dim,μ)]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+    
+end
+
+function heatbath!(U::Array{<: AbstractGaugefields{NC,Dim},1},temps,β;ITERATION_MAX=10^5) where {Dim,NC}
+
+    temp1 = temps[1]
+    temp2 = temps[2]
+    V = temps[3]
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+    end
+
+    if NC != 2
+        temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+        for i=1:5
+            temps3[i] = zeros(ComplexF64,NC,NC)
+        end
+    end
+
+
+    mapfunc!(A,B) = SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+
+
+    for μ=1:Dim
+
+        loops = loops_staple[(Dim,μ)]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+    
+end
 
 function SU2update_KP!(Unew,V,beta,NC,temps,ITERATION_MAX = 10^5)
     V0 = temps[1]
@@ -201,6 +314,63 @@ function SU3update_matrix!(u,V,beta,NC,temps2,temps3,ITERATION_MAX)
     normalize3!(AU)
     u[:,:] .= AU
     #u[mu][:,:,ix,iy,iz,it] = AU
+end
+
+function SUN_overrelaxation!(u,V,beta,NC,temps2,temps3,ITERATION_MAX)
+    UV = temps3[1]
+    A = temps3[2]
+    AU = temps3[3]
+    temp1 = temps2[1]
+    temp2 = temps2[2]
+    w = temps2[3]
+    h = temps2[4]
+    #K = temps2[5]
+
+    for l=1:NC
+        #for l=1:2NC
+        
+        mul!(UV,u,V)
+        #UV = u[:,:]*V
+
+        n = rand(1:NC-1)#l
+        m = rand(n:NC)
+        while(n==m)
+            m = rand(n:NC)
+        end
+        
+        # we emplay DeGrand's textbook notation
+        make_submatrix!(w,UV,n,m)
+        #S = make_submatrix(UV,n,m)
+
+        #gramschmidt_special!(S)
+        project_onto_SU2!(w)
+
+        # following two lines are only difference to HB
+        #SU2update_KP!(K,S,beta,NC,[temp1,temp2],ITERATION_MAX)
+        for j=1:2
+            for i=1:2
+                h[i,j] = 0
+                for k=1:2
+                    h[i,j] += w'[i,k]*w'[k,j]
+                end
+            end
+        end
+        normalizeN!(h)
+
+        make_largematrix!(A,h,n,m,NC)
+
+        mul!(AU,A,u)
+
+        #AU = A*u[:,:]
+
+        u[:,:] .= AU
+        #println("det U ",det(AU))
+
+    end
+
+    AU[:,:] .= u #u[:,:]
+    normalizeN!(AU)
+    u[:,:] .= AU
 end
 
 
