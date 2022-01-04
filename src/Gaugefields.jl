@@ -25,7 +25,7 @@ end
 import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!,
                                     shift_U,evaluate_gaugelinks!,
-                                    TA_Gaugefields,Abstractfield,Staggered_Gaugefields,staggered_U,
+                                    TA_Gaugefields,Abstractfields,Staggered_Gaugefields,staggered_U,
                                     clear_U!,set_wing_U!
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,
