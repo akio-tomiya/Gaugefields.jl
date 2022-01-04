@@ -79,7 +79,10 @@ module AbstractGaugefields_module
 
 
     include("./4D/gaugefields_4D.jl")
+    include("./2D/gaugefields_2D.jl")
     include("TA_Gaugefields.jl")
+
+    
 
     function LinearAlgebra.mul!(C,A::T,B) where T <: Unit_Gaugefield
         substitute_U!(C,B)
@@ -141,6 +144,8 @@ module AbstractGaugefields_module
         else
             if dim == 4
                 U = randomGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+            elseif dim == 2
+                U = randomGaugefields_2D_wing(NC,NN[1],NN[2],NDW)
             else
                 error("not implemented yet!")
             end
@@ -157,15 +162,17 @@ module AbstractGaugefields_module
                 if dim==4
                     U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit)
                 else
-                    error("not implemented yet!")
+                    error("$dim dimension system is not implemented yet!")
                 end
                 
             end
         else
             if dim == 4
                 U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+            elseif dim == 2
+                U = identityGaugefields_2D_wing(NC,NN[1],NN[2],NDW)
             else
-                error("not implemented yet!")
+                error("$dim dimension system is not implemented yet!")
             end
         end
         set_wing_U!(U)
@@ -188,6 +195,8 @@ module AbstractGaugefields_module
         else
             if dim == 4
                 U = Oneinstanton_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+            elseif dim == 2
+                U = Oneinstanton_2D_wing(NC,NN[1],NN[2],NDW)
             else
                 error("not implemented yet!")
             end
@@ -211,6 +220,8 @@ module AbstractGaugefields_module
         else
             if dim == 4
                 U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+            elseif dim == 2
+                U = identityGaugefields_4D_wing(NC,NN[1],NN[4],NDW)
             else
                 error("not implemented yet!")
             end
@@ -282,6 +293,7 @@ module AbstractGaugefields_module
         Unew = temps[1]
         #Utemp2 = temps[2]
         #clear_U!(uout)
+        origin = Tuple(zeros(Int64,Dim))
 
         glinks = w
         numlinks = length(glinks)
@@ -310,6 +322,7 @@ module AbstractGaugefields_module
         end
 
         substitute_U!(Unew,U[direction])
+        #println(position)
         Ushift1 = shift_U(Unew,position)
 
         for j=2:numlinks
@@ -324,7 +337,7 @@ module AbstractGaugefields_module
 
             substitute_U!(Unew,uout)
 
-            Ushift1 = shift_U(Unew,(0,0,0,0))
+            Ushift1 = shift_U(Unew,origin)
         end
 
 
@@ -336,6 +349,7 @@ module AbstractGaugefields_module
         Unew = temps[1]
         #Utemp2 = temps[2]
         #clear_U!(uout)
+        origin = Tuple(zeros(Int64,Dim))
 
         glinks = w
         numlinks = length(glinks)
@@ -401,7 +415,7 @@ module AbstractGaugefields_module
             
             #println("Unew ", Unew[:,:,ix,iy,iz,it])
 
-            Ushift1 = shift_U(Unew,(0,0,0,0))
+            Ushift1 = shift_U(Unew,origin)
             #println("uout ", uout[:,:,ix,iy,iz,it])
         end
 

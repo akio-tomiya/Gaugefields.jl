@@ -78,8 +78,80 @@ function Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
 
 end
 
+function Init_cold_2D(NX,NT,Nwing,NC)
+    Dim = 2
+
+    u1 = IdentityGauges(NC,Nwing,NX,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = IdentityGauges(NC,Nwing,NX,NT)
+    end
+    
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    if Dim == 4
+        comb = 6 #4*3/2
+    elseif Dim == 3
+        comb = 3
+    elseif Dim == 2
+        comb = 1
+    else
+        error("dimension $Dim is not supported")
+    end
+    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    #factor = 2/(U[1].NV*4*3*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println("plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
+    return plaq_t
+    
+
+end
+
+function Init_hot_2D(NX,NT,Nwing,NC)
+    Random.seed!(123)
+    Dim = 2
+
+    u1 = RandomGauges(NC,Nwing,NX,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = RandomGauges(NC,Nwing,NX,NT)
+    end
+    
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    if Dim == 4
+        comb = 6 #4*3/2
+    elseif Dim == 3
+        comb = 3
+    elseif Dim == 2
+        comb = 1
+    else
+        error("dimension $Dim is not supported")
+    end
+    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    #factor = 2/(U[1].NV*4*3*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println("plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
+    return plaq_t
+
+end
+
+
 @testset "cold start" begin
     println("cold start")
+    println("4D system")
     @testset "4D" begin
         NX = 4
         NY = 4
@@ -116,42 +188,130 @@ end
             @test plaq_t == one(plaq_t)
         end
     end
+
+    println("2D system")
+    @testset "2D" begin
+        NX = 4
+        #NY = 4
+        #NZ = 4
+        NT = 4
+        Nwing = 1
+        
+        @testset "NC=2" begin
+            NC = 2
+            println("NC = $NC")
+            plaq_t = Init_cold_2D(NX,NT,Nwing,NC)
+
+            @test plaq_t == one(plaq_t)
+        end
+
+        @testset "NC=3" begin
+            NC = 3
+            println("NC = $NC")
+            plaq_t = Init_cold_2D(NX,NT,Nwing,NC)
+            @test plaq_t == one(plaq_t)
+        end
+
+        @testset "NC=4" begin
+            NC = 4
+            println("NC = $NC")
+            plaq_t = Init_cold_2D(NX,NT,Nwing,NC)
+            @test plaq_t == one(plaq_t)
+        end
+
+        @testset "NC=5" begin
+            NC = 5
+            println("NC = $NC")
+            plaq_t = Init_cold_2D(NX,NT,Nwing,NC)
+            @test plaq_t == one(plaq_t)
+        end
+    end
 end
+
+eps = 1e-8
 
 @testset "hot start" begin
     println("hot start")
-    NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
-    Nwing = 1
+    println("4D system")
+    @testset "4D" begin
+        NX = 4
+        NY = 4
+        NZ = 4
+        NT = 4
+        Nwing = 1
 
-    @testset "NC=2" begin
-        NC = 2
-        println("NC = $NC")
-        plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-        @test plaq_t == -0.05371251492617195
+        @testset "NC=2" begin
+            NC = 2
+            println("NC = $NC")
+            plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
+            val = -0.05371251492617195
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
+
+        @testset "NC=3" begin
+            NC = 3
+            println("NC = $NC")
+            plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
+            val = 0.0015014233929744197
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
+
+        @testset "NC=4" begin
+            NC = 4
+            println("NC = $NC")
+            plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
+            val = -0.004597227507817238
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
+
+        @testset "NC=5" begin
+            NC = 5
+            println("NC = $NC")
+            plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
+            val = 0.0037580826460029506
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
     end
 
-    @testset "NC=3" begin
-        NC = 3
-        println("NC = $NC")
-        plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-        @test plaq_t == 0.0015014233929744197
-    end
+    println("2D system")
+    @testset "2D" begin
+        NX = 4
+        #NY = 4
+        #NZ = 4
+        NT = 4
+        Nwing = 1
 
-    @testset "NC=4" begin
-        NC = 4
-        println("NC = $NC")
-        plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-        @test plaq_t == -0.004597227507817238
-    end
+        @testset "NC=2" begin
+            NC = 2
+            println("NC = $NC")
+            plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
+            val = -0.05371251492617195
+            #@test abs(plaq_t-val)/abs(val) < eps
+        end
 
-    @testset "NC=5" begin
-        NC = 5
-        println("NC = $NC")
-        plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-        @test plaq_t == 0.0037580826460029506
+        @testset "NC=3" begin
+            NC = 3
+            println("NC = $NC")
+            plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
+            val = -0.04647124293538649
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
+
+        @testset "NC=4" begin
+            NC = 4
+            println("NC = $NC")
+            plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
+            val = 0.07457370324173362
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
+
+        @testset "NC=5" begin
+            NC = 5
+            println("NC = $NC")
+            plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
+            val = -0.013511504030861661
+            @test abs(plaq_t-val)/abs(val) < eps
+        end
     end
 
 end
@@ -174,7 +334,38 @@ end
 
         @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
         println("plaq_t = $plaq_t")
-        @test plaq_t == 0.2791463211708036
+        val =  0.9796864531099871
+        @test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "2D" begin
+        Dim = 2
+        NX = 4
+        #NY = 4
+        #NZ = 4
+        NT = 4
+        NC = 2
+        Nwing = 1
+        U = Oneinstanton(NC,NX,NT,Nwing)
+
+        if Dim == 4
+            comb = 6 #4*3/2
+        elseif Dim == 3
+            comb = 3
+        elseif Dim == 2
+            comb = 1
+        else
+            error("dimension $Dim is not supported")
+        end
+        factor = 1/(comb*U[1].NV*U[1].NC)
+
+        temp1 = similar(U[1])
+        temp2 = similar(U[1])
+
+        @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println("plaq_t = $plaq_t")
+        val = 0.9300052284270868
+        @test abs(plaq_t-val)/abs(val) < eps
     end
 end
 
@@ -191,6 +382,7 @@ end
         plaq_t = Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
         
         println("plaq_t = $plaq_t")
-        @test plaq_t == 0.6684748868359871
+        val = 0.6684748868359871
+        @test abs(plaq_t-val)/abs(val) < eps
     end
 end

@@ -4,6 +4,7 @@ abstract type TA_Gaugefields{NC,Dim}  <: AbstractGaugefields{NC,Dim} #Traceless 
 end
 
 include("./4D/TA_gaugefields_4D.jl")
+include("./2D/TA_gaugefields_2D.jl")
 
 function Base.:*(x::Array{<: TA_Gaugefields{NC,Dim},1},y::Array{<: TA_Gaugefields{NC,Dim},1})  where {NC,Dim}
     s = 0

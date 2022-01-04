@@ -51,7 +51,7 @@ module Gaugefields_4D_wing_module
         ii = div(ii-(iy-1),NY)
         #ii = (it -1)*NZ+iz-1)
         iz = ii % NZ + 1
-        it = div(ii -(iz-1),NZ)
+        it = div(ii -(iz-1),NZ) + 1
         return ix,iy,iz,it        
     end
 
@@ -308,6 +308,8 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+
+        set_wing_U!(U)
 
 
         return U
