@@ -28,7 +28,7 @@ import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGaug
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
-import Wilsonloop:loops_staple,Wilson_loop_set
+import Wilsonloop:loops_staple
 import .Abstractsmearing_module:Gradientflow,flow!,STOUT_Layer,CovNeuralnet,calc_smearedU, construct_smearing
 import .SUN_generator:Generator
 import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
