@@ -26,7 +26,9 @@ import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGaug
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!,
                                     shift_U,evaluate_gaugelinks!,
                                     TA_Gaugefields,Abstractfields,Staggered_Gaugefields,staggered_U,
-                                    clear_U!,set_wing_U!
+                                    clear_U!,set_wing_U!,Traceless_antihermitian!,initialize_TA_Gaugefields,
+                                    substitute_U!,Traceless_antihermitian!,Traceless_antihermitian
+
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,
                                     shift_U,construct_staple!,set_wing_U!,
