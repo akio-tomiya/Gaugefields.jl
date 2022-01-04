@@ -75,6 +75,20 @@ import Wilsonloop:Wilson_loop_set,make_staples,Wilson_loop_set,
             get_leftstartposition,get_rightstartposition,Wilson_loop,calc_loopset_μν_name,
             make_originalactions_fromloops,make_cloverloops
 
+import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,
+            shift_U,construct_staple!,set_wing_U!,
+            calculate_Plaquette,substitute_U!,calculate_Polyakov_loop,construct_gauges,
+            Gaugefields_4D_wing,
+            identityGaugefields_4D_wing,
+            add_force!,exp_aF_U!,clear_U!,add_U!,exptU!,
+            Traceless_antihermitian!,Traceless_antihermitian,Generator,
+            Staggered_Gaugefields,staggered_U,
+            Traceless_antihermitian_add!,
+            IdentityGauges,RandomGauges,Oneinstanton,
+            construct_Λmatrix_forSTOUT!,
+            evaluate_gaugelinks_evenodd!,
+            map_U!            
+
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!,save_binarydata
 export SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!
@@ -85,6 +99,8 @@ export save_textdata,load_BridgeText!
 export shift_U,evaluate_gaugelinks!,Gradientflow,flow!
 export heatbath!,Heatbath
 export STOUT_Layer,CovNeuralnet,calc_smearedU
+
+
 
 
 end
