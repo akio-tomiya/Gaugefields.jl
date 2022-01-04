@@ -28,6 +28,31 @@ struct STOUT_Layer{Dim} <: CovLayer{Dim}
     dataset::Vector{STOUT_dataset{Dim}}
 end
 
+function get_name(s::STOUT_Layer)
+    return "STOUT"
+end
+
+function Base.show(s::STOUT_Layer{Dim}) where Dim
+    println("num. of terms: ", length(s.ρs))
+    for i=1:length(s.ρs)
+        if i==1
+            string = "st"
+        elseif i==2
+            string = "nd"
+        elseif i==3
+            string = "rd"
+        else
+            string = "th"
+        end
+        println("-------------------------------")
+        println("      $i-$string term: ")
+        println("          coefficient: ",s.ρs[i])
+        println("      -------------------------")
+        show(s.dataset[i].closedloop)
+        println("      -------------------------")
+    end
+end
+
 function Base.length(layer::STOUT_Layer)
     return length(layer.ρs)
 end

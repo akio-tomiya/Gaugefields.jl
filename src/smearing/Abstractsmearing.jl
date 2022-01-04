@@ -16,9 +16,52 @@ module Abstractsmearing_module
     abstract type CovLayer{Dim} end
 
     struct CovNeuralnet{Dim} <: Abstractsmearing
-        numlayers::Int64
+        #numlayers::Int64
         layers::Array{CovLayer{Dim},1}
     end
+
+    function get_numlayers(c::CovNeuralnet)
+        return length(c.layers)
+    end
+
+
+
+    function CovNeuralnet(;Dim=4)
+        layers = CovLayer{Dim}[]
+        return CovNeuralnet{Dim}(layers)
+    end
+
+    function Base.push!(c::CovNeuralnet,layer::CovLayer)
+        #c.numlayers += 1
+        push!(c.layers,layer)
+    end
+
+    function Base.getindex(c::CovNeuralnet,i)
+        return c.layers[i]
+    end
+
+    function Base.show(c::CovNeuralnet)
+        numlayers = get_numlayers(c)
+        println("num. of layers: ",numlayers)
+        for i=1:numlayers
+            if i==1
+                string = "st"
+            elseif i==2
+                string = "nd"
+            elseif i==3
+                string = "rd"
+            else
+                string = "th"
+            end
+            println("- $i-$string layer: $(get_name(c[i]))")
+            show(c[i])
+        end
+    end
+
+    function get_name(s::CovLayer)
+        error("layer $s has no name")
+    end
+    
 
 
 
@@ -99,7 +142,7 @@ module Abstractsmearing_module
         temp3  = similar(Uin[1])
         temp4  = similar(Uin[1])
         F0 = initialize_TA_Gaugefields(Uin[1])
-        numlayers = smearing.numlayers
+        numlayers = get_numlayers(smearing)
         Uout_multi = Array{typeof(Uin),1}(undef,numlayers)
         for i=1:numlayers
             Uout_multi[i] = similar(Uin)
@@ -115,7 +158,7 @@ module Abstractsmearing_module
         temps_F1 = initialize_TA_Gaugefields(temps[1])
         tempf = [temps_F1]
 
-        layer = net.layers[net.numlayers]
+        layer = net.layers[get_numlayers(net)]
         δ_prev = similar(δL)
         δ_current = deepcopy(δL)
         set_wing_U!(δ_current)
@@ -136,7 +179,7 @@ module Abstractsmearing_module
     function apply_neuralnet!(Uout_multi,net::CovNeuralnet{Dim},Uin,temps,temps_F) where {Dim}
         layer = net.layers[1]
         apply_layer!(Uout_multi[1],layer,Uin,temps,temps_F)
-        for i=2:net.numlayers
+        for i=2:get_numlayers(net)
             layer = net.layers[i]
             apply_layer!(Uout_multi[i],layer,Uout_multi[i-1],temps,temps_F)
         end

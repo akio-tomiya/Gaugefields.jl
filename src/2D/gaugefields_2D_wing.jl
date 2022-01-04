@@ -65,9 +65,7 @@ module Gaugefields_2D_wing_module
         error("type $(typeof(U)) has no setindex method. This type is read only.")
     end
 
-    @inline function Base.getindex(U::Adjoint_Gaugefields{T},i1,i2,ii) where T <: Abstractfields #U'
-        @inbounds return conj(U.parent[i2,i1,ii])
-    end
+
 
     function substitute_U!(a::Array{T1,1},b::Array{T2,1}) where {T1 <: Gaugefields_2D_wing,T2 <: Gaugefields_2D_wing}
         for μ=1:2
@@ -330,7 +328,7 @@ module Gaugefields_2D_wing_module
         end
     end
 
-    function check_outside(NDW,shift)
+    function check_outside(NDW,shift::NTuple{T,2}) where T <: Integer
         outside = false
         for μ=1:2
             if outside == false

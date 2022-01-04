@@ -28,7 +28,7 @@ import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
 import Wilsonloop:loops_staple
-import .Abstractsmearing_module:Gradientflow,flow!
+import .Abstractsmearing_module:Gradientflow,flow!,STOUT_Layer,CovNeuralnet,calc_smearedU
 
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!,save_binarydata
@@ -39,6 +39,7 @@ export loops_staple
 export save_textdata,load_BridgeText!
 export shift_U,evaluate_gaugelinks!,Gradientflow,flow!
 export heatbath!,Heatbath
+export STOUT_Layer,CovNeuralnet,calc_smearedU
 
 
 end
