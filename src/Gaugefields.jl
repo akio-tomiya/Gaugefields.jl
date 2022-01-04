@@ -25,6 +25,19 @@ end
 import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!,
                                     shift_U,evaluate_gaugelinks!
+import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,
+                                    shift_U,construct_staple!,set_wing_U!,
+                                    calculate_Plaquette,substitute_U!,calculate_Polyakov_loop,construct_gauges,
+                                    Gaugefields_4D_wing,
+                                    identityGaugefields_4D_wing,
+                                    add_force!,exp_aF_U!,clear_U!,add_U!,exptU!,
+                                    Traceless_antihermitian!,Traceless_antihermitian,Generator,
+                                    Staggered_Gaugefields,staggered_U,
+                                    Traceless_antihermitian_add!,
+                                    IdentityGauges,RandomGauges,Oneinstanton,
+                                    construct_Λmatrix_forSTOUT!,
+                                    evaluate_gaugelinks_evenodd!,
+                                    map_U!                                    
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
