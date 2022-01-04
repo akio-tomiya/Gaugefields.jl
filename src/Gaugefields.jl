@@ -53,7 +53,9 @@ import .Wilsonloops_module:Wilson_loop_set,make_staples,Wilson_loop_set,
                                     calc_coordinate,make_plaq_staple_prime,calc_shift,
                                     Tensor_wilson_lines_set,Tensor_wilson_lines,Tensor_derivative_set,
                                     get_leftstartposition,get_rightstartposition,Wilson_loop,calc_loopset_μν_name,
-                                    make_originalactions_fromloops                      
+                                    make_originalactions_fromloops     
+import .Abstractsmearing_module:Abstractsmearing,Nosmearing,Stoutsmearing,calc_smearedU,
+                                construct_smearing,Gradientflow,get_tempG,flow!,get_eps,back_prop,CovNeuralnet#gradientflow!                 
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
