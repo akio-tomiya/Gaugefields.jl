@@ -44,6 +44,7 @@ import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGaug
                                     evaluate_gaugelinks_evenodd!,
                                     map_U!   
                                     =#     
+import .Loops_module:Loops,evaluate_loops,calc_large_wilson_loop!,evaluate_loops!                                       
 import .Wilsonloops_module:Wilson_loop_set,make_staples,Wilson_loop_set,
                                     make_cloverloops,Tensor_derivative_set, make_loops,
                                     make_plaq_staple,make_links,make_plaq,
