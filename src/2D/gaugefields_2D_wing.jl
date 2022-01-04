@@ -217,6 +217,7 @@ module Gaugefields_2D_wing_module
         end
         normalize_U!(U)
         set_wing_U!(U)
+
         return U
     end
 
@@ -1911,15 +1912,17 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         for it=1:NT
             #for iz=1:NZ
                 #for iy=1:NY
-                    @simd for ix=1:NX
+                    for ix=1:NX
 
                         α = u[1,1,ix,it]
                         β = u[2,1,ix,it]
-                        detU = abs(α)^2 + abs(β)^2
+                        detU = sqrt(abs(α)^2 + abs(β)^2)
+
                         u[1,1,ix,it] = α/detU
                         u[2,1,ix,it] = β/detU
                         u[1,2,ix,it] = -conj(β)/detU
                         u[2,2,ix,it] = conj(α)/detU
+
 
                     end
                 #end

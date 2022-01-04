@@ -101,6 +101,8 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
     end
 
+    h = Heatbath(U,β)
+    
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     temp3 = similar(U[1])
@@ -112,8 +114,10 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
-    numhb = 40
+    numhb = 200
     for itrj = 1:numhb
+        heatbath!(U,h)
+        #=
         if NC == 2
             heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
         elseif NC == 3
@@ -121,8 +125,9 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         else
             heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
         end
+        =#
 
-        if itrj % 10 == 0
+        if itrj % 40 == 0
             @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
             println("$itrj plaq_t = $plaq_t")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 

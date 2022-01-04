@@ -2055,6 +2055,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         return η#*boundary_factor_x*boundary_factor_y*boundary_factor_z*boundary_factor_t
     end
 
+    
     #=
     function gramschmidt!(v)
         n = size(v)[1]
@@ -2066,6 +2067,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         end
     end
     =#
+    
 
     function normalize_U!(u::Gaugefields_4D_wing{NC}) where NC
         NX = u.NX
@@ -2100,11 +2102,13 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
 
                         α = u[1,1,ix,iy,iz,it]
                         β = u[2,1,ix,iy,iz,it]
-                        detU = abs(α)^2 + abs(β)^2
+                        detU = sqrt(abs(α)^2 + abs(β)^2)
                         u[1,1,ix,iy,iz,it] = α/detU
                         u[2,1,ix,iy,iz,it] = β/detU
                         u[1,2,ix,iy,iz,it] = -conj(β)/detU
                         u[2,2,ix,iy,iz,it] = conj(α)/detU
+
+                        
 
                     end
                 end

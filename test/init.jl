@@ -244,7 +244,7 @@ eps = 1e-8
             NC = 2
             println("NC = $NC")
             plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-            val = -0.05371251492617195
+            val = -0.007853743153861802
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -285,8 +285,8 @@ eps = 1e-8
             NC = 2
             println("NC = $NC")
             plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
-            val = -0.05371251492617195
-            #@test abs(plaq_t-val)/abs(val) < eps
+            val = 0.022601163616639157
+            @test abs(plaq_t-val)/abs(val) < eps
         end
 
         @testset "NC=3" begin

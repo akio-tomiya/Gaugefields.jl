@@ -4,6 +4,28 @@ using LinearAlgebra
 import ..AbstractGaugefields_module:normalize3!,normalizeN!,AbstractGaugefields,evaluate_gaugelinks_evenodd!, map_U!
 import Wilsonloop:loops_staple
 
+
+struct Heatbath{T}
+    _tempotal_gauges::Vector{T}
+    β::Float64
+    ITERATION_MAX::Int64
+
+    
+    function Heatbath(U::Array{T,1},β;ITERATION_MAX=10^5)  where T <: AbstractGaugefields
+        _tempotal_gauges = Array{T,1}(undef,3)
+        for i=1:3
+            _tempotal_gauges[i] = similar(U[1])
+        end
+        return new{T}(_tempotal_gauges,β,ITERATION_MAX)
+    end
+    
+end
+
+function heatbath!(U::Array{<: AbstractGaugefields{NC,Dim},1},h::Heatbath) where {Dim,NC}
+    heatbath!(U,h._tempotal_gauges,h.β;ITERATION_MAX=h.ITERATION_MAX)
+end
+
+
 function heatbath!(U::Array{<: AbstractGaugefields{2,Dim},1},temps,β;ITERATION_MAX=10^5) where {Dim}
     NC = 2
     temp1 = temps[1]
