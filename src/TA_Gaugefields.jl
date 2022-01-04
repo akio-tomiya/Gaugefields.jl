@@ -28,6 +28,8 @@ end
 function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim}
     if Dim==4
         return TA_Gaugefields(NC,u.NX,u.NY,u.NZ,u.NT)
+    elseif Dim==2
+        return TA_Gaugefields(NC,u.NX,u.NT)
     else
         error("Dim = $Dim is not supoorted")
     end

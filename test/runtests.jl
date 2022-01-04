@@ -15,6 +15,11 @@ end
     include("heatbathtest.jl")
 end
 
+@testset "gradientflow" begin
+    println("gradientflow")
+    include("gradientflow_test.jl")
+end
+
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end

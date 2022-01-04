@@ -1,5 +1,5 @@
 struct TA_Gaugefields_2D_serial{NC,NumofBasis} <: TA_Gaugefields_2D{NC}
-    a::Array{Float64,5}
+    a::Array{Float64,3}
     NX::Int64
     #NY::Int64
     #NZ::Int64
@@ -86,8 +86,8 @@ end
 
 function clear_U!(Uμ::TA_Gaugefields_2D_serial{NC,NumofBasis}) where {NC,NumofBasis}
     NT = Uμ.NT
-    NZ = Uμ.NZ
-    NY = Uμ.NY
+    #NZ = Uμ.NZ
+    #NY = Uμ.NY
     NX = Uμ.NX
     #NumofBasis = Uμ.NumofBasis
     for it=1:NT
