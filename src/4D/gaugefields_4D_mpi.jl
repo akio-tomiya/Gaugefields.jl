@@ -1335,7 +1335,7 @@ module Gaugefields_4D_mpi_module
                             for k2=1:NC
                                 count += 1
                                 v = recv_mesg2[count]
-                                setvalue!(u,v,k1,k2,ix,NY+id,iz,it)
+                                setvalue!(u,v,k1,k2,ix,PN[2]+id,iz,it)
                                 #send_mesg2[count] = getvalue(u,k1,k2,ix,id,iz,it)
                                 #u[k1,k2,ix,NY+id,iz,it] = u[k1,k2,ix,id,iz,it]
                             end
