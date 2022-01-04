@@ -43,7 +43,16 @@ import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGaug
                                     construct_Λmatrix_forSTOUT!,
                                     evaluate_gaugelinks_evenodd!,
                                     map_U!   
-                                    =#                                 
+                                    =#     
+import .Wilsonloops_module:Wilson_loop_set,make_staples,Wilson_loop_set,
+                                    make_cloverloops,Tensor_derivative_set, make_loops,
+                                    make_plaq_staple,make_links,make_plaq,
+                                    make_loopforactions,make_plaqloops,make_rectloops,make_polyakovloops,
+                                    make_plaq_staple_prime,
+                                    calc_coordinate,make_plaq_staple_prime,calc_shift,
+                                    Tensor_wilson_lines_set,Tensor_wilson_lines,Tensor_derivative_set,
+                                    get_leftstartposition,get_rightstartposition,Wilson_loop,calc_loopset_μν_name,
+                                    make_originalactions_fromloops                      
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
