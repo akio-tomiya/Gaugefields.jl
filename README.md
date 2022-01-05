@@ -78,7 +78,6 @@ save_textdata(U,filename)
 ```
 
 
-
 ## Heatbath updates (even-odd method)
 
 ```julia
@@ -298,6 +297,85 @@ V = similar(U[1])
 
 evaluate_gaugelinks!(V,w,U,[temp1])
 println(tr(V))
+```
+
+# How to calculate actions
+We can calculate actions from this packages with fixed gaugefields U. 
+We introduce the concenpt "Scalar neural networks", which is S(U) -> V, where U and V are gaugefields. 
+
+
+```julia
+using Gaugefields
+using LinearAlgebra
+function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    end
+
+    snet = ScalarNN(U) #empty network
+    plaqloop = make_loops_fromname("plaquette") #This is a plaquette loops. 
+    append!(plaqloop,plaqloop') #We need hermitian conjugate loops for making the action real. 
+    β = 1 #This is a coefficient.
+    push!(snet,β,plaqloop)
+    
+    show(snet)
+
+    Uout = apply_snet(snet,U)
+    println(tr(Uout))
+end
+
+test1()
+```
+
+The output is 
+
+```
+----------------------------------------------
+Structure of scalar neural networks
+num. of terms: 1
+-------------------------------
+      1-st term: 
+          coefficient: 1.0
+      -------------------------
+1-st loop
+L"$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$"	
+2-nd loop
+L"$U_{1}(n)U_{3}(n+e_{1})U^{\dagger}_{1}(n+e_{3})U^{\dagger}_{3}(n)$"	
+3-rd loop
+L"$U_{1}(n)U_{4}(n+e_{1})U^{\dagger}_{1}(n+e_{4})U^{\dagger}_{4}(n)$"	
+4-th loop
+L"$U_{2}(n)U_{3}(n+e_{2})U^{\dagger}_{2}(n+e_{3})U^{\dagger}_{3}(n)$"	
+5-th loop
+L"$U_{2}(n)U_{4}(n+e_{2})U^{\dagger}_{2}(n+e_{4})U^{\dagger}_{4}(n)$"	
+6-th loop
+L"$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$"	
+7-th loop
+L"$U_{2}(n)U_{1}(n+e_{2})U^{\dagger}_{2}(n+e_{1})U^{\dagger}_{1}(n)$"	
+8-th loop
+L"$U_{3}(n)U_{1}(n+e_{3})U^{\dagger}_{3}(n+e_{1})U^{\dagger}_{1}(n)$"	
+9-th loop
+L"$U_{4}(n)U_{1}(n+e_{4})U^{\dagger}_{4}(n+e_{1})U^{\dagger}_{1}(n)$"	
+10-th loop
+L"$U_{3}(n)U_{2}(n+e_{3})U^{\dagger}_{3}(n+e_{2})U^{\dagger}_{2}(n)$"	
+11-th loop
+L"$U_{4}(n)U_{2}(n+e_{4})U^{\dagger}_{4}(n+e_{2})U^{\dagger}_{2}(n)$"	
+12-th loop
+L"$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$"	
+      -------------------------
+----------------------------------------------
+9216.0 + 0.0im
+
 ```
 
 
