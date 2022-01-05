@@ -1,4 +1,4 @@
-using Gaugefield
+using Gaugefields
 using LinearAlgebra
 function test1()
     NX = 4
