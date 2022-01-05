@@ -11,7 +11,7 @@ module ScalarNN_module
         βs::Vector{Float64}
         hascovnet::Bool
         covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
-        dataset::Union{Nothing,Vector{ScalarNN_dataset{Dim}}}
+        dataset::Vector{ScalarNN_dataset{Dim}}
     end
 
 
