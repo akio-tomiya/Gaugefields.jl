@@ -397,7 +397,7 @@ or
 calc_dSdUμ!(dSdUμ,snet,μ,U)
 ```
 # Hybrid Monte Carlo method
-With the use of the matrix derivative, we can do th eHybrid Monte Carlo method. 
+With the use of the matrix derivative, we can do the Hybrid Monte Carlo method. 
 The simple code is as follows. 
 
 ```julia
