@@ -299,6 +299,23 @@ evaluate_gaugelinks!(V,w,U,[temp1])
 println(tr(V))
 ```
 
+For example, if you want to calculate the clover operators, you can define like: 
+
+```julia
+function make_cloverloop(μ,ν,Dim)
+    loops = Wilsonline{Dim}[]
+    loop_righttop = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim) # Pmunu
+    push!(loops,loop_righttop)
+    loop_rightbottom = Wilsonline([(ν,-1),(μ,1),(ν,1),(μ,-1)],Dim = Dim) # Qmunu
+    push!(loops,loop_rightbottom)
+    loop_leftbottom= Wilsonline([(μ,-1),(ν,-1),(μ,1),(ν,1)],Dim = Dim) # Rmunu
+    push!(loops,loop_leftbottom)
+    loop_lefttop = Wilsonline([(ν,1),(μ,-1),(ν,-1),(μ,1)],Dim = Dim) # Smunu
+    push!(loops,loop_lefttop)
+    return loops
+end
+```
+
 # How to calculate actions
 We can calculate actions from this packages with fixed gaugefields U. 
 We introduce the concenpt "Scalar neural networks", which is S(U) -> V, where U and V are gaugefields. 
