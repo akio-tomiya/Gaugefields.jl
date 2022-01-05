@@ -1,6 +1,6 @@
 module ScalarNN_module
     import ..Abstractsmearing_module:CovNeuralnet
-    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!,
+    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!
     
     import Wilsonloop:Wilsonline,make_staple
 
@@ -39,7 +39,7 @@ module ScalarNN_module
         return dSdUμ
     end
 
-    function calc_dSdUμ!(dSdUμ,snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}})
+    function calc_dSdUμ!(dSdUμ,snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
         temp1 = snet._temp_U[1]
         temp2 = snet._temp_U[2]
         temp3 = snet._temp_U[3]
