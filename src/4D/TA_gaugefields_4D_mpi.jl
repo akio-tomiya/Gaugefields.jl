@@ -37,6 +37,11 @@ function Base.getindex(x::T,i...) where T<: TA_Gaugefields_4D_mpi
     @inbounds return x.a[i...]
 end
 
+
+function barrier(x::TA_Gaugefields_4D_mpi)
+    MPI.Barrier(comm)
+end
+
 function add_U!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},α::N,a::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC, N<:Number,NumofBasis}
     NT = c.NT
     NZ = c.NZ
@@ -54,6 +59,8 @@ function add_U!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},α::N,a::TA_Gaugefields_
             end
         end
     end
+
+    barrier(c)
     #error("add_U! is not implemented in type $(typeof(c)) ")
 end
 
@@ -70,6 +77,47 @@ function clear_U!(U::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC,NumofBasis}
             end
         end
     end
+    barrier(U)
+end
+
+function gauss_distribution!(p::TA_Gaugefields_4D_mpi{NC,NumofBasis};σ=1.0) where {NC,NumofBasis}
+    d = Normal(0.0, σ)
+    #NumofBasis = Uμ.NumofBasis
+    pwork = rand(d,prod(p.PN)*NumofBasis)
+    icount = 0
+    @inbounds for it=1:p.PN[4]
+        for iz=1:p.PN[3]
+            for iy=1:p.PN[2]
+                @simd for ix=1:p.PN[1]
+                    for k=1:NumofBasis 
+                        icount += 1
+                        p[k,ix,iy,iz,it] = pwork[icount]
+                    end
+                end
+            end
+        end
+    end
+    barrier(p)
+end
+
+function Base.:*(x::TA_Gaugefields_4D_mpi{NC,NumofBasis},y::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC,NumofBasis}
+    #NumofBasis = Uμ.NumofBasis
+    s = 0.0
+    @inbounds for it=1:x.PN[4]
+        for iz=1:x.PN[3]
+            for iy=1:x.PN[2]
+                @simd for ix=1:x.PN[1]
+                    for k=1:NumofBasis 
+                        s += x[k,ix,iy,iz,it]*y[k,ix,iy,iz,it]
+                    end
+                end
+            end
+        end
+    end
+    s = MPI.Allreduce(s,MPI.SUM,comm)
+    barrier(x)
+
+    return s
 end
 
 function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{3}) where NumofBasis
@@ -147,6 +195,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},fac
             end
         end
     end
+    barrier(c)
 
 
 end
@@ -191,6 +240,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{2,NumofBasis},fac
             end
         end
     end
+    barrier(c)
 
 
 end
@@ -277,6 +327,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},vin::Ga
             end
         end
     end
+    barrier(c)
 
 
 end
@@ -326,6 +377,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},vin::G
             end
         end
     end
+    barrier(c)
 
         
     
@@ -378,6 +430,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},fa
             end
         end
     end
+    barrier(c)
 
         
     
@@ -417,6 +470,7 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{NC,NumofBasis},temps::Arra
             end
         end
     end
+    barrier(uout)
     #error("exptU! is not implemented in type $(typeof(u)) ")
 end
 
@@ -660,8 +714,10 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{3,NumofBasis},temps::Array
             end
         end
     end
+    barrier(uout)
 
     mul!(uout,w',ww)
+    barrier(uout)
 
 
 end
@@ -706,6 +762,8 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{2,NumofBasis},temps::Array
             end
         end
     end
+
+    barrier(uout)
 
 
 

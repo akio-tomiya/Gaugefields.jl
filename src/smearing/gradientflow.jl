@@ -5,12 +5,12 @@ mutable struct Gradientflow{TA,T} <: Abstractsmearing
     _temporal_G_field::Array{T,1}
     _temporal_U_field::Array{Array{T,1},1}
 
-    function Gradientflow(U::Array{T,1};Nflow = 1,eps = 0.01) where T <: AbstractGaugefields 
-        F0 = initialize_TA_Gaugefields(U)
+    function Gradientflow(U::Array{T,1};Nflow = 1,eps = 0.01,mpi = false) where T <: AbstractGaugefields 
+        F0 = initialize_TA_Gaugefields(U,mpi=mpi)
         Ftemps = Array{typeof(F0),1}(undef,4)
         Ftemps[1] = F0
         for i=2:4
-            Ftemps[i] = initialize_TA_Gaugefields(U)
+            Ftemps[i] = initialize_TA_Gaugefields(U,mpi = mpi)
         end
 
         Utemps = Array{Array{T,1},1}(undef,2)

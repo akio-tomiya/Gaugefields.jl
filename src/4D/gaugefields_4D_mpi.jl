@@ -285,6 +285,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function add_U!(c::Gaugefields_4D_wing_mpi{NC},a::T1,iseven::Bool) where {NC,T1 <: Abstractfields}
@@ -308,6 +309,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function add_U!(c::Gaugefields_4D_wing_mpi{NC},α::N,a::T1) where {NC,T1 <: Abstractfields, N<:Number}
@@ -335,6 +337,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function substitute_U!(a::Array{T1,1},b::Array{T2,1}) where {T1 <: Gaugefields_4D_wing_mpi,T2 <: Gaugefields_4D_wing_mpi}
@@ -522,6 +525,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(U)
 
     end
 
@@ -672,6 +676,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2,iseven::Bool) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -706,6 +711,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function mul_skiplastindex!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -741,7 +747,9 @@ module Gaugefields_4D_mpi_module
                 end
             end
         #end
+        set_wing_U!(c)
     end
+    
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{3},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
         #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
@@ -796,6 +804,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{3},a::T1,b::T2,iseven::Bool) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -855,6 +864,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{2},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -898,6 +908,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{2},a::T1,b::T2,iseven::Bool) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -946,6 +957,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2,α::Ta,β::Tb) where {NC,T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}
@@ -975,6 +987,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{2},a::T1,b::T2,α::Ta,β::Tb) where {NC,T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}
@@ -1021,6 +1034,7 @@ module Gaugefields_4D_mpi_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{3},a::T1,b::T2,α::Ta,β::Tb) where {NC,T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}

@@ -731,7 +731,7 @@ module AbstractGaugefields_module
     
 
     function exptU!(uout::T,t::N,f::T1,temps::Array{T,1}) where {N <: Number, T <: AbstractGaugefields,T1 <: AbstractGaugefields} #uout = exp(t*u)
-        error("expUt! is not implemented in type $(typeof(f)) ")
+        error("expUt! is not implemented in type $(typeof(f)) uout: $(typeof(uout))")
     end
 
     function exptU!(uout::T,f::T1,temps::Array{T,1}) where {T <: AbstractGaugefields,T1 <: AbstractGaugefields}
