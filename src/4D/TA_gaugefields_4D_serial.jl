@@ -34,6 +34,29 @@ function Base.similar(u::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC,Numo
     #error("similar! is not implemented in type $(typeof(U)) ")
 end
 
+function gauss_distribution!(p::TA_Gaugefields_4D_serial{NC,NumofBasis};σ=1.0) where {NC,NumofBasis}
+    d = Normal(0.0, σ)
+    NT = p.NT
+    NZ = p.NZ
+    NY = p.NY
+    NX = p.NX
+    #NumofBasis = Uμ.NumofBasis
+    pwork = rand(d,NX*NY*NZ*NT*NumofBasis)
+    icount = 0
+    @inbounds for it=1:NT
+        for iz=1:NZ
+            for iy=1:NY
+                for ix=1:NX
+                    for k=1:NumofBasis 
+                        icount += 1
+                        p[k,ix,iy,iz,it] = pwork[icount]
+                    end
+                end
+            end
+        end
+    end
+end
+
 function substitute_U!(Uμ::TA_Gaugefields_4D_serial{NC,NumofBasis},pwork) where {NC,NumofBasis}
     NT = Uμ.NT
     NZ = Uμ.NZ

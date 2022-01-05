@@ -3,6 +3,7 @@ module ScalarNN_module
     import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!
     
     import Wilsonloop:Wilsonline,make_staple
+    using LinearAlgebra
 
     struct ScalarNN_dataset{Dim}
         β::Float64
@@ -33,8 +34,12 @@ module ScalarNN_module
         return ScalarNN_dataset{Dim}(β,closedloops,allstaples)
     end
 
-    function calc_dSdUμ(dSdUμ,snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
-        dSdUμ = snet._temp_U[4]
+    function get_temporal_gauges(snet::ScalarNN)
+        return snet._temp_U
+    end
+
+    function calc_dSdUμ(snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+        dSdUμ = similar(U[1])
         calc_dSdUμ!(dSdUμ,snet,μ,U)
         return dSdUμ
     end
@@ -48,15 +53,23 @@ module ScalarNN_module
         clear_U!(dSdUμ)
         for i=1:numterm
             dataset = snet.dataset[i]
+            β =  dataset.β
             staples_μ =  dataset.staples[μ]
-            evaluate_gaugelinks!(temp3,w,U,[temp1,temp2])
+            evaluate_gaugelinks!(temp3,staples_μ,U,[temp1,temp2])
             add_U!(dSdUμ,β,temp3)
         end
         set_wing_U!(dSdUμ)
     end
 
+    function calc_scalar(snet::ScalarNN,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+        temp1 = snet._temp_U[4]
+        apply_snet!(temp1,snet,U)
+        value = tr(temp1)
+        return value
+    end
+
     function apply_snet(snet::ScalarNN,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
-        uout = snet._temp_U[4]
+        uout = similar(U[1])
         clear_U!(uout)
 
         apply_snet!(uout,snet,U)

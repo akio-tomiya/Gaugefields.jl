@@ -81,9 +81,9 @@ import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfi
             IdentityGauges,RandomGauges,Oneinstanton,
             construct_Λmatrix_forSTOUT!,
             evaluate_gaugelinks_evenodd!,
-            map_U!      
+            map_U!,initialize_TA_Gaugefields,gauss_distribution!      
 import Wilsonloop:make_loops_fromname
-import .ScalarNN_module:ScalarNN,apply_snet!,apply_snet,calc_dSdUμ,calc_dSdUμ!   
+import .ScalarNN_module:ScalarNN,apply_snet!,apply_snet,calc_dSdUμ,calc_dSdUμ!,get_temporal_gauges,calc_scalar
 
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!,save_binarydata
@@ -96,6 +96,8 @@ export shift_U,evaluate_gaugelinks!,Gradientflow,flow!
 export heatbath!,Heatbath
 export STOUT_Layer,CovNeuralnet,calc_smearedU,make_loops_fromname
 export ScalarNN,apply_snet!,apply_snet,calc_dSdUμ,calc_dSdUμ!
+export initialize_TA_Gaugefields,gauss_distribution!
+export exptU!,get_temporal_gauges,Traceless_antihermitian_add!,calc_scalar,substitute_U!,set_wing_U!
 
 
 

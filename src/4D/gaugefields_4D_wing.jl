@@ -1624,6 +1624,7 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
 
@@ -1635,7 +1636,7 @@ module Gaugefields_4D_wing_module
         NZ = c.NZ
         NY = c.NY
         NX = c.NX
-        for it=1:NT
+        @inbounds for it=1:NT
             for iz=1:NZ
                 for iy=1:NY
                     for ix=1:NX
@@ -1652,6 +1653,7 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2,iseven::Bool) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
@@ -1679,6 +1681,7 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2) where {NC,T1 <: Number,T2 <: Abstractfields}
@@ -1706,6 +1709,7 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2,α::Ta,β::Tb) where {NC,T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}
@@ -1730,6 +1734,7 @@ module Gaugefields_4D_wing_module
                 end
             end
         end
+        set_wing_U!(c)
     end
 
 
@@ -1770,6 +1775,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 end
             end
         end
+        set_wing_U!(c)
     end
 
 
@@ -1803,6 +1809,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 end
             end
         end
+        set_wing_U!(c)
     end
     
 
@@ -1846,6 +1853,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     
@@ -1891,6 +1899,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 end
             end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing{3},a::T1,b::T2,iseven::Bool) where {T1 <: Abstractfields,T2 <: Abstractfields}
@@ -1939,6 +1948,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 end
             end
         end
+        set_wing_U!(c)
     end
     
 
@@ -1992,6 +2002,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                     end
                 end
             end
+            set_wing_U!(c)
         end
     end
 

@@ -378,6 +378,157 @@ L"$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$"
 
 ```
 
+# How to calculate derivatives
+We can easily calculate the matrix derivative of the scalar neural networks. The matrix derivative is defined as 
+
+```math
+[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}
+```
+
+We can calculate this like 
+
+```julia
+dSdUμ = calc_dSdUμ(snet,μ,U)
+```
+
+or
+
+```julia
+calc_dSdUμ!(dSdUμ,snet,μ,U)
+```
+# Hybrid Monte Carlo method
+With the use of the matrix derivative, we can do th eHybrid Monte Carlo method. 
+The simple code is as follows. 
+
+```julia
+using Gaugefields
+using LinearAlgebra
+
+function MDtest!(snet,U,Dim)
+    p = initialize_TA_Gaugefields(U)
+    Uold = similar(U)
+    substitute_U!(Uold,U)
+    MDsteps = 100
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+
+    numtrj = 100
+    for itrj = 1:numtrj
+        accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
+        numaccepted += ifelse(accepted,1,0)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println("$itrj plaq_t = $plaq_t")
+        println("acceptance ratio ",numaccepted/itrj)
+    end
+end
+```
+
+We define the functions as 
+
+```julia
+
+function calc_action(snet,U,p)
+    NC = U[1].NC
+    Sg = -calc_scalar(snet,U)/NC #calc_scalar(snet,U) = tr(apply_snet(snet,U))
+    Sp = p*p/2
+    S = Sp + Sg
+    return real(S)
+end
+
+function MDstep!(snet,U,p,MDsteps,Dim,Uold)
+    Δτ = 1/MDsteps
+    gauss_distribution!(p)
+    Sold = calc_action(snet,U,p)
+    substitute_U!(Uold,U)
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,snet)
+
+        P_update!(U,p,1.0,Δτ,Dim,snet)
+
+        U_update!(U,p,0.5,Δτ,Dim,snet)
+    end
+    Snew = calc_action(snet,U,p)
+    println("Sold = $Sold, Snew = $Snew")
+    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(Snew-Sold))
+    if rand() > ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+end
+
+function U_update!(U,p,ϵ,Δτ,Dim,snet)
+    temps = get_temporal_gauges(snet)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    expU = temps[3]
+    W = temps[4]
+
+    for μ=1:Dim
+        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        mul!(W,expU,U[μ])
+        substitute_U!(U[μ],W)
+        
+    end
+end
+
+function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
+    NC = U[1].NC
+    temps = get_temporal_gauges(snet)
+    dSdUμ = temps[end]
+    factor =  -ϵ*Δτ/(NC)
+
+    for μ=1:Dim
+        calc_dSdUμ!(dSdUμ,snet,μ,U)
+        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+    end
+end
+```
+
+Then, we can do the HMC: 
+
+```julia
+function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    end
+
+
+    snet = ScalarNN(U)
+    plaqloop = make_loops_fromname("plaquette")
+    append!(plaqloop,plaqloop')
+    β = 5.7/2
+    push!(snet,β,plaqloop)
+    
+    show(snet)
+
+    MDtest!(snet,U,Dim)
+
+end
+
+
+test1()
+```
+
 
 
 
