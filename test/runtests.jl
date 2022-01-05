@@ -3,12 +3,17 @@ using Test
 using Random
 import Wilsonloop:loops_staple
 
-
+@testset "ScalarNN" begin
+    println("Scalar neural networks")
+    include("scalarnn.jl")
+end
 
 @testset "Initialization" begin
     println("Initialization")
     include("init.jl")
 end
+
+
 
 @testset "heatbath" begin
     println("heatbath")

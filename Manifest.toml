@@ -217,7 +217,7 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[Wilsonloop]]
 deps = ["LaTeXStrings", "LinearAlgebra"]
-git-tree-sha1 = "d25537820df96b6d5365858e22bf26c447a944ed"
+git-tree-sha1 = "216be752176b3b3f243028749c2e659a1a746d18"
 repo-rev = "master"
 repo-url = "https://github.com/akio-tomiya/Wilsonloop.jl"
 uuid = "f3c8d4fe-2f22-401d-8228-e6a01d7a1d02"
