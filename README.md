@@ -405,7 +405,7 @@ using Gaugefields
 using LinearAlgebra
 
 function MDtest!(snet,U,Dim)
-    p = initialize_TA_Gaugefields(U)
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
     MDsteps = 100
