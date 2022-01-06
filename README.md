@@ -390,7 +390,7 @@ test(NX,NY,NZ,NT,β,NC)
 
 # How to calculate actions
 We can calculate actions from this packages with fixed gaugefields U. 
-We introduce the concenpt "Scalar neural networks", which is S(U) -> V, where U and V are gaugefields. 
+We introduce the concenpt "Scalar-valued neural network", which is S(U) -> V, where U and V are gauge fields. 
 
 
 ```julia
@@ -427,7 +427,7 @@ The output is
 
 ```
 ----------------------------------------------
-Structure of scalar neural networks
+Structure of the actions for Gaugefields
 num. of terms: 1
 -------------------------------
       1-st term: 
@@ -464,7 +464,7 @@ L"$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$"
 ```
 
 # How to calculate derivatives
-We can easily calculate the matrix derivative of the scalar neural networks. The matrix derivative is defined as 
+We can easily calculate the matrix derivative of the actions. The matrix derivative is defined as 
 
 <img src="https://latex.codecogs.com/svg.image?[\frac{\partial&space;S}{\partial&space;U_{\mu}(n)}]_{ij}&space;=&space;\frac{\partial&space;S}{\partial&space;U_{\mu,ji}(n)}" title="[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}" />
 
