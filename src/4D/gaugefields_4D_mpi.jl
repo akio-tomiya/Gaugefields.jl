@@ -27,6 +27,7 @@ module Gaugefields_4D_mpi_module
         myrank::Int64
         nprocs::Int64
         myrank_xyzt::NTuple{4,Int64}
+        mpi::Bool
 
         function Gaugefields_4D_wing_mpi(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true) where T<: Integer
             NV = NX*NY*NZ*NT
@@ -61,7 +62,8 @@ module Gaugefields_4D_mpi_module
             #for μ=1:4
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt)
+            mpi = true
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi)
         end
     end
 

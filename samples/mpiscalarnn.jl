@@ -3,7 +3,7 @@ using MPI
 using LinearAlgebra
 
 function MDtest!(snet,U,Dim,mpi=false)
-    p = initialize_TA_Gaugefields(U,mpi=mpi)
+    p = initialize_TA_Gaugefields(U)
     Uold = similar(U)
     substitute_U!(Uold,U)
     MDsteps = 100
@@ -26,7 +26,8 @@ end
 
 function calc_action(snet,U,p)
     NC = U[1].NC
-    Sg = -calc_scalar(snet,U)/NC
+    Sg = -evaluate_GaugeAction(snet,U)/NC 
+    #calc_scalar(snet,U)/NC
     Sp = p*p/2
     S = Sp + Sg
     return real(S)
@@ -59,7 +60,7 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
 end
 
 function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporal_gauges(snet)
+    temps = get_temporary_gaugefields(snet)
     temp1 = temps[1]
     temp2 = temps[2]
     expU = temps[3]
@@ -75,7 +76,7 @@ end
 
 function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporal_gauges(snet)
+    temps = get_temporary_gaugefields(snet)
     dSdUμ = temps[end]
     factor =  -ϵ*Δτ/(NC)
 
@@ -100,25 +101,15 @@ function test1()
     mpi = true
     if mpi
         PEs = (1,1,1,2)
-
-        u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-        U = Array{typeof(u1),1}(undef,Dim)
-        U[1] = u1
-        for μ=2:Dim
-            U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-        end
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold",mpi=true,PEs = PEs,mpiinit = false)
     else
 
-        u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-        U = Array{typeof(u1),1}(undef,Dim)
-        U[1] = u1
-        for μ=2:Dim
-            U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-        end
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+
     end
 
 
-    snet = ScalarNN(U)
+    snet = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
     append!(plaqloop,plaqloop')
     β = 5.7/2

@@ -18,15 +18,17 @@ module Gaugefields_4D_wing_module
         NDW::Int64
         NV::Int64
         NC::Int64
+        mpi::Bool
 
         function Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T) where T<: Integer
             NV = NX*NY*NZ*NT
             U = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
+            mpi = false
             #U = Array{Array{ComplexF64,6}}(undef,4)
             #for μ=1:4
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC)
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,mpi)
         end
     end
 

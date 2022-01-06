@@ -16,16 +16,17 @@ function Base.:*(x::Array{<: TA_Gaugefields{NC,Dim},1},y::Array{<: TA_Gaugefield
 end
 
 
-function initialize_TA_Gaugefields(U::Array{<:AbstractGaugefields{NC,Dim},1};mpi= false) where {NC,Dim}
+function initialize_TA_Gaugefields(U::Array{<:AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
     F = Array{TA_Gaugefields{NC,Dim},1}(undef,Dim)
     for μ=1:Dim
-        F[μ] = initialize_TA_Gaugefields(U[μ],mpi=mpi)
+        F[μ] = initialize_TA_Gaugefields(U[μ])
     end
     return F
 end
 
 
-function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim};mpi = false) where {NC,Dim}
+function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim}
+    mpi = u.mpi
     if mpi
         if Dim==4
             return TA_Gaugefields_4D_mpi(u)
