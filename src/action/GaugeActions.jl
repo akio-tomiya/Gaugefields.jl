@@ -119,7 +119,7 @@ module GaugeAction_module
 
     function Base.show(s::GaugeAction{Dim,T}) where {Dim,T}
         println("----------------------------------------------")
-        println("Structure of scalar neural networks")
+        println("Structure of the actions for Gaugefields")
         println("num. of terms: ", length(s.dataset))
         for i=1:length(s.dataset)
             if i==1
