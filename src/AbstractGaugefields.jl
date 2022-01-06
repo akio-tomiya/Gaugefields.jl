@@ -143,9 +143,9 @@ module AbstractGaugefields_module
 
         for μ=2:Dim
             if condition == "cold"
-                U[μ] = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+                U[μ] = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false)
             elseif condition == "hot"
-                U[μ] = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+                U[μ] = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false)
             else
                 error("not supported")
             end
