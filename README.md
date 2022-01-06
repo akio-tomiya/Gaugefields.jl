@@ -316,6 +316,100 @@ function make_cloverloop(μ,ν,Dim)
 end
 ```
 
+The energy density defined in the paper (Ramos and Sint, [Eur. Phys. J. C (2016) 76:15](https://link.springer.com/article/10.1140%2Fepjc%2Fs10052-015-3831-9)) can be calculated as follows.  Note: the coefficient in the equation (3.40) in the preprint version is wrong. 
+
+```julia
+function make_clover(G,U,temps,Dim)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    temp3 = temps[3]
+    
+    for μ=1:Dim
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            loops = make_cloverloop(μ,ν,Dim)
+            evaluate_gaugelinks!(temp3,loops,U,[temp1,temp2])
+
+            Traceless_antihermitian!(G[μ,ν],temp3)
+        end
+    end
+end
+
+function calc_energydensity(G,U,temps,Dim)
+    temp1 = temps[1]
+    s = 0
+    for μ=1:Dim
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            mul!(temp1,G[μ,ν],G[μ,ν])
+            s += -real(tr(temp1))/2
+        end
+    end
+    return  s/(4^2*U[1].NV)
+end
+```
+
+Then, we can calculate the energy density: 
+
+```julia
+function test(NX,NY,NZ,NT,β,NC)
+    Dim = 4
+    Nwing = 1
+
+    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
+    end
+
+    filename = "./conf_00000010.txt" 
+    L = [NX,NY,NZ,NT]
+    load_BridgeText!(filename,U,L,NC) # We load a configuration from a file. 
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    println("Make clover operator")
+    G = Array{typeof(u1),2}(undef,Dim,Dim)
+    for μ=1:Dim
+        for ν=1:Dim
+            G[μ,ν] = similar(U[1])
+        end
+    end
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println("plaq_t = $plaq_t")
+
+    g = Gradientflow(U,eps = 0.01)
+    for itrj=1:100
+        flow!(U,g)
+
+        make_clover(G,U,[temp1,temp2,temp3],Dim)
+        E = calc_energydensity(G,U,[temp1,temp2,temp3],Dim)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println("$itrj $(itrj*0.01) plaq_t = $plaq_t , E = $E")
+    end
+
+end
+NX = 8
+NY = 8
+NZ = 8
+NT = 8
+β = 5.7
+NC = 3
+test(NX,NY,NZ,NT,β,NC)
+```
+
+
 # How to calculate actions
 We can calculate actions from this packages with fixed gaugefields U. 
 We introduce the concenpt "Scalar neural networks", which is S(U) -> V, where U and V are gaugefields. 
