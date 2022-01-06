@@ -8,9 +8,22 @@
 
 This is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
 
+# What this package can do:
+
+- SU(NC) (NC > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
+- Heatbath method
+- Gradient flow
+- Hybrid Monte Carlo method
+- ILDG and Bridge++ formats are supported
+- STOUT smearing and its backpropagation 
+- MPI parallel computation (experimental. not shown)
+
+This package will be used in LatticeQCD.jl. 
+
 # Install
 
 ```
+add https://github.com/akio-tomiya/Wilsonloop.jl
 add https://github.com/akio-tomiya/Gaugefields.jl
 ```
 

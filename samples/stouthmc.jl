@@ -127,6 +127,7 @@ function test1()
     layername = ["plaquette"]
     st = STOUT_Layer(layername,ρ,L)
     push!(nn,st)
+    push!(nn,st)
 
     
 
