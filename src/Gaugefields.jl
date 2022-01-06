@@ -98,7 +98,7 @@ export STOUT_Layer,CovNeuralnet,calc_smearedU,make_loops_fromname
 export GaugeAction,evaluate_GaugeAction_untraced!,evaluate_GaugeAction_untraced,calc_dSdUμ,calc_dSdUμ!
 export initialize_TA_Gaugefields,gauss_distribution!
 export exptU!,get_temporary_gaugefields,Traceless_antihermitian_add!,evaluate_GaugeAction,substitute_U!,set_wing_U!,Traceless_antihermitian!
-export Initialize_Gaugefields
+export Initialize_Gaugefields,back_prop
 
 
 

@@ -163,7 +163,7 @@ module Abstractsmearing_module
         δ_current = deepcopy(δL)
         set_wing_U!(δ_current)
         
-        for i=net.numlayers:-1:2
+        for i=get_numlayers(net):-1:2
             layer_pullback!(δ_prev,δ_current,layer,Uout_multi[i-1],temps,tempf)
             δ_current,δ_prev = δ_prev,δ_current
             #set_wing_U!(δ_current)
