@@ -405,12 +405,8 @@ function test1()
     Dim = 4
     NC = 3
 
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+
 
     gauge_action = GaugeAction(U) #empty network
     plaqloop = make_loops_fromname("plaquette") #This is a plaquette loops. 
