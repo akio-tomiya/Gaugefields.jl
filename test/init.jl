@@ -42,13 +42,15 @@ function Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
 end
 
 function Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
+    Random.seed!(123)
     Dim = 4
 
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
+    save_binarydata(U,filename)
 
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
     ildg = ILDG(filename)
     i = 1
-
     L = [NX,NY,NZ,NT]
     load_gaugefield!(U,i,ildg,L,NC)
 
@@ -354,11 +356,13 @@ end
         NT = 4
         NC = 2
         Nwing = 1
-        filename = "./data/conf_00000100_4444nc2.ildg"
+        #U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
+
+        filename = "./data/conf_00000100_4444_test.ildg"
         plaq_t = Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
         
         println("plaq_t = $plaq_t")
-        val = 0.6684748868359871
+        val = -0.007853743153861798
         @test abs(plaq_t-val)/abs(val) < eps
     end
 end
