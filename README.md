@@ -844,7 +844,7 @@ function test1()
     Dim = 4
     NC = 3
 
-    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 
 
     gauge_action = GaugeAction(U)

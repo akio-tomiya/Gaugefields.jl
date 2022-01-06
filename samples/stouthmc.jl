@@ -7,7 +7,7 @@ function MDtest!(gauge_action,U,Dim,nn)
     dSdU = similar(U)
     
     substitute_U!(Uold,U)
-    MDsteps = 100
+    MDsteps = 10
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -110,7 +110,7 @@ function test1()
     Dim = 4
     NC = 3
 
-    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 
 
     gauge_action = GaugeAction(U)
@@ -127,7 +127,7 @@ function test1()
     layername = ["plaquette"]
     st = STOUT_Layer(layername,ρ,L)
     push!(nn,st)
-    push!(nn,st)
+    #push!(nn,st)
 
     
 
