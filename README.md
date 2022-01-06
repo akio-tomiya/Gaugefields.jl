@@ -434,15 +434,15 @@ function test1()
         U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
     end
 
-    snet = ScalarNN(U) #empty network
+    gauge_action = GaugeAction(U) #empty network
     plaqloop = make_loops_fromname("plaquette") #This is a plaquette loops. 
     append!(plaqloop,plaqloop') #We need hermitian conjugate loops for making the action real. 
     β = 1 #This is a coefficient.
-    push!(snet,β,plaqloop)
+    push!(gauge_action,β,plaqloop)
     
-    show(snet)
+    show(gauge_action)
 
-    Uout = apply_snet(snet,U)
+    Uout = evaluate_Gaugeaction_untraced(gauge_action,U)
     println(tr(Uout))
 end
 
@@ -499,13 +499,13 @@ We can easily calculate the matrix derivative of the scalar neural networks. The
 We can calculate this like 
 
 ```julia
-dSdUμ = calc_dSdUμ(snet,μ,U)
+dSdUμ = calc_dSdUμ(gauge_action,μ,U)
 ```
 
 or
 
 ```julia
-calc_dSdUμ!(dSdUμ,snet,μ,U)
+calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
 ```
 # Hybrid Monte Carlo method
 With the use of the matrix derivative, we can do the Hybrid Monte Carlo method. 
@@ -515,7 +515,7 @@ The simple code is as follows.
 using Gaugefields
 using LinearAlgebra
 
-function MDtest!(snet,U,Dim)
+function MDtest!(gauge_action,U,Dim)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
@@ -528,7 +528,7 @@ function MDtest!(snet,U,Dim)
 
     numtrj = 100
     for itrj = 1:numtrj
-        accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
         numaccepted += ifelse(accepted,1,0)
 
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -542,28 +542,28 @@ We define the functions as
 
 ```julia
 
-function calc_action(snet,U,p)
+function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -calc_scalar(snet,U)/NC #calc_scalar(snet,U) = tr(apply_snet(snet,U))
+    Sg = -evaluate_Gauge_action(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)
 end
 
-function MDstep!(snet,U,p,MDsteps,Dim,Uold)
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     Δτ = 1/MDsteps
     gauss_distribution!(p)
-    Sold = calc_action(snet,U,p)
+    Sold = calc_action(gauge_action,U,p)
     substitute_U!(Uold,U)
 
     for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,snet)
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
 
-        P_update!(U,p,1.0,Δτ,Dim,snet)
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action)
 
-        U_update!(U,p,0.5,Δτ,Dim,snet)
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
     end
-    Snew = calc_action(snet,U,p)
+    Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
     ratio = min(1,exp(Snew-Sold))
@@ -575,8 +575,8 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
     end
 end
 
-function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporary_gaugefields(snet)
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
+    temps = get_temporary_gaugefields(gauge_action)
     temp1 = temps[1]
     temp2 = temps[2]
     expU = temps[3]
@@ -590,14 +590,14 @@ function U_update!(U,p,ϵ,Δτ,Dim,snet)
     end
 end
 
-function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
+    temps = get_temporary_gaugefields(gauge_action)
     dSdUμ = temps[end]
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,snet,μ,U)
+        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
         mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
         Traceless_antihermitian_add!(p[μ],factor,temps[1])
     end
@@ -624,15 +624,15 @@ function test1()
     end
 
 
-    snet = ScalarNN(U)
+    gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
     append!(plaqloop,plaqloop')
     β = 5.7/2
-    push!(snet,β,plaqloop)
+    push!(gauge_action,β,plaqloop)
     
-    show(snet)
+    show(gauge_action)
 
-    MDtest!(snet,U,Dim)
+    MDtest!(gauge_action,U,Dim)
 
 end
 

@@ -11,7 +11,7 @@ include("./output/bridge_format.jl")
 include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
 include("./heatbath/heatbathmodule.jl")
-include("./scalarnn/ScalarNNs.jl")
+include("./action/GaugeActions.jl")
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
@@ -83,7 +83,7 @@ import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfi
             evaluate_gaugelinks_evenodd!,
             map_U!,initialize_TA_Gaugefields,gauss_distribution!      
 import Wilsonloop:make_loops_fromname
-import .ScalarNN_module:ScalarNN,apply_snet!,apply_snet,calc_dSdUμ,calc_dSdUμ!,get_temporary_gaugefields,calc_scalar
+import .GaugeAction_module:GaugeAction,evaluate_GaugeAction_untraced!,evaluate_GaugeAction_untraced,calc_dSdUμ,calc_dSdUμ!,get_temporary_gaugefields,evaluate_GaugeAction
 
 export IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,calculate_Polyakov_loop
 export ILDG,load_gaugefield!,save_binarydata
@@ -95,9 +95,9 @@ export save_textdata,load_BridgeText!
 export shift_U,evaluate_gaugelinks!,Gradientflow,flow!
 export heatbath!,Heatbath
 export STOUT_Layer,CovNeuralnet,calc_smearedU,make_loops_fromname
-export ScalarNN,apply_snet!,apply_snet,calc_dSdUμ,calc_dSdUμ!
+export GaugeAction,evaluate_GaugeAction_untraced!,evaluate_GaugeAction_untraced,calc_dSdUμ,calc_dSdUμ!
 export initialize_TA_Gaugefields,gauss_distribution!
-export exptU!,get_temporary_gaugefields,Traceless_antihermitian_add!,calc_scalar,substitute_U!,set_wing_U!,Traceless_antihermitian!
+export exptU!,get_temporary_gaugefields,Traceless_antihermitian_add!,evaluate_GaugeAction,substitute_U!,set_wing_U!,Traceless_antihermitian!
 
 
 

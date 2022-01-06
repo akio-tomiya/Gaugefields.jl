@@ -1,24 +1,24 @@
-module ScalarNN_module
+module GaugeAction_module
     import ..Abstractsmearing_module:CovNeuralnet
     import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!
     
     import Wilsonloop:Wilsonline,make_staple
     using LinearAlgebra
 
-    struct ScalarNN_dataset{Dim}
+    struct GaugeAction_dataset{Dim}
         β::Float64
         closedloops::Vector{Wilsonline{Dim}}
         staples::Vector{Vector{Wilsonline{Dim}}}
     end
 
-    struct ScalarNN{Dim,T}
+    struct GaugeAction{Dim,T}
         hascovnet::Bool
         covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
-        dataset::Vector{ScalarNN_dataset{Dim}}
+        dataset::Vector{GaugeAction_dataset{Dim}}
         _temp_U::Vector{T}
     end
 
-    function ScalarNN_dataset(β,closedloops::Vector{Wilsonline{Dim}}) where Dim
+    function GaugeAction_dataset(β,closedloops::Vector{Wilsonline{Dim}}) where Dim
         allstaples = Array{Vector{Wilsonline{Dim}},1}(undef,Dim)
         numloops = length(closedloops)
         for μ=1:Dim
@@ -31,28 +31,28 @@ module ScalarNN_module
             end
             allstaples[μ] = staples
         end
-        return ScalarNN_dataset{Dim}(β,closedloops,allstaples)
+        return GaugeAction_dataset{Dim}(β,closedloops,allstaples)
     end
 
-    function get_temporary_gaugefields(snet::ScalarNN)
-        return snet._temp_U
+    function get_temporary_gaugefields(S::GaugeAction)
+        return S._temp_U
     end
 
-    function calc_dSdUμ(snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+    function calc_dSdUμ(S,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
         dSdUμ = similar(U[1])
-        calc_dSdUμ!(dSdUμ,snet,μ,U)
+        calc_dSdUμ!(dSdUμ,S,μ,U)
         return dSdUμ
     end
 
-    function calc_dSdUμ!(dSdUμ,snet,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
-        temp1 = snet._temp_U[1]
-        temp2 = snet._temp_U[2]
-        temp3 = snet._temp_U[3]
-        numterm = length(snet.dataset)
+    function calc_dSdUμ!(dSdUμ,S,μ,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+        temp1 = S._temp_U[1]
+        temp2 = S._temp_U[2]
+        temp3 = S._temp_U[3]
+        numterm = length(S.dataset)
 
         clear_U!(dSdUμ)
         for i=1:numterm
-            dataset = snet.dataset[i]
+            dataset = S.dataset[i]
             β =  dataset.β
             staples_μ =  dataset.staples[μ]
             evaluate_gaugelinks!(temp3,staples_μ,U,[temp1,temp2])
@@ -61,31 +61,31 @@ module ScalarNN_module
         set_wing_U!(dSdUμ)
     end
 
-    function calc_scalar(snet::ScalarNN,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
-        temp1 = snet._temp_U[4]
-        apply_snet!(temp1,snet,U)
+    function evaluate_GaugeAction(S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+        temp1 = S._temp_U[4]
+        evaluate_GaugeAction_untraced!(temp1,S,U)
         value = tr(temp1)
         return value
     end
 
-    function apply_snet(snet::ScalarNN,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
+    function evaluate_GaugeAction_untraced(S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
         uout = similar(U[1])
         clear_U!(uout)
 
-        apply_snet!(uout,snet,U)
+        evaluate_GaugeAction_untraced(uout,S,U)
         
         return uout
     end
 
-    function apply_snet!(uout,snet::ScalarNN,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC,T}
-        numterm = length(snet.dataset)
-        temp1 = snet._temp_U[1]
-        temp2 = snet._temp_U[2]
-        temp3 = snet._temp_U[3]
+    function evaluate_GaugeAction_untraced!(uout,S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC,T}
+        numterm = length(S.dataset)
+        temp1 = S._temp_U[1]
+        temp2 = S._temp_U[2]
+        temp3 = S._temp_U[3]
         clear_U!(uout)
 
         for i=1:numterm
-            dataset = snet.dataset[i]
+            dataset = S.dataset[i]
             β = dataset.β
             w = dataset.closedloops
             evaluate_gaugelinks!(temp3,w,U,[temp1,temp2])
@@ -96,28 +96,28 @@ module ScalarNN_module
         return
     end
 
-    function ScalarNN(U::Vector{<: AbstractGaugefields{NC,Dim}};hascovnet = false) where {NC,Dim}
+    function GaugeAction(U::Vector{<: AbstractGaugefields{NC,Dim}};hascovnet = false) where {NC,Dim}
         if hascovnet
             covneuralnet = CovNeuralnet(Dim=Dim)
         else
             covneuralnet = nothing
         end
-        dataset = ScalarNN_dataset{Dim}[]
+        dataset = GaugeAction_dataset{Dim}[]
         num = 4
         _temp_U = Array{eltype(U)}(undef,num)
         for i=1:num
             _temp_U[i] = similar(U[1])
         end
 
-        return ScalarNN{Dim,eltype(U)}(hascovnet,covneuralnet,dataset,_temp_U)
+        return GaugeAction{Dim,eltype(U)}(hascovnet,covneuralnet,dataset,_temp_U)
     end
 
-    function Base.push!(snet::ScalarNN{Dim,T1},β::T,closedloops::Vector{Wilsonline{Dim}}) where {Dim,T <: Real,T1}
-        dataset = ScalarNN_dataset(β,closedloops)
-        push!(snet.dataset,dataset)
+    function Base.push!(S::GaugeAction{Dim,T1},β::T,closedloops::Vector{Wilsonline{Dim}}) where {Dim,T <: Real,T1}
+        dataset = GaugeAction_dataset(β,closedloops)
+        push!(S.dataset,dataset)
     end
 
-    function Base.show(s::ScalarNN{Dim,T}) where {Dim,T}
+    function Base.show(s::GaugeAction{Dim,T}) where {Dim,T}
         println("----------------------------------------------")
         println("Structure of scalar neural networks")
         println("num. of terms: ", length(s.dataset))
