@@ -29,13 +29,11 @@ NZ = 4
 NT = 4
 Nwing = 1
 Dim = 4
-u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-U = Array{typeof(u1),1}(undef,Dim)
+
+ U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+
 ildg = ILDG(filename)
 i = 1
-for μ=1:Dim
-    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-end
 L = [NX,NY,NZ,NT]
 load_gaugefield!(U,i,ildg,L,NC)
 ```
@@ -120,12 +118,7 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     Dim = 4
     Nwing = 1
 
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
@@ -176,12 +169,8 @@ NZ = 4
 NT = 4
 Nwing = 1
 NC = 3
-u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-U = Array{typeof(u1),1}(undef,Dim)
-U[1] = u1
-for μ=2:Dim
-    U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
-end
+
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 
 temp1 = similar(U[1])
 temp2 = similar(U[1])
@@ -215,11 +204,9 @@ NZ = 4
 NT = 4
 Nwing = 1
 Dim = 4
-u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT) #Unit matrix everywhere. 
-U = Array{typeof(u1),1}(undef,Dim)
-for μ=1:Dim
-    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-end
+
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+
 ```
 
 ## Adjoint operator
@@ -286,11 +273,7 @@ NT = 4
 NC = 3
 Nwing = 1
 Dim = 4
-u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT) #Unit matrix everywhere. 
-U = Array{typeof(u1),1}(undef,Dim)
-for μ=1:Dim
-    U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-end
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 temp1 = similar(U[1])
 V = similar(U[1])
@@ -360,12 +343,7 @@ function test(NX,NY,NZ,NT,β,NC)
     Dim = 4
     Nwing = 1
 
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     filename = "./conf_00000010.txt" 
     L = [NX,NY,NZ,NT]
@@ -616,12 +594,7 @@ function test1()
     Dim = 4
     NC = 3
 
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 
     gauge_action = GaugeAction(U)

@@ -1,13 +1,7 @@
 function Init_cold_4D(NX,NY,NZ,NT,Nwing,NC)
     Dim = 4
 
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
-    
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
@@ -29,12 +23,7 @@ function Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
     Random.seed!(123)
     Dim = 4
 
-    u1 = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
-    end
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
     
 
     temp1 = similar(U[1])
@@ -54,15 +43,12 @@ end
 
 function Init_ildg_4D(NX,NY,NZ,NT,Nwing,NC,filename)
     Dim = 4
-    u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     ildg = ILDG(filename)
     i = 1
-    for μ=1:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
-        #U[μ] = IdentityGauges(NC,NX,NY,NZ,NT,Nwing)
-    end
+
     L = [NX,NY,NZ,NT]
     load_gaugefield!(U,i,ildg,L,NC)
 
@@ -81,12 +67,8 @@ end
 function Init_cold_2D(NX,NT,Nwing,NC)
     Dim = 2
 
-    u1 = IdentityGauges(NC,Nwing,NX,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = IdentityGauges(NC,Nwing,NX,NT)
-    end
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "cold")
+    
     
 
     temp1 = similar(U[1])
@@ -117,13 +99,7 @@ function Init_hot_2D(NX,NT,Nwing,NC)
     Random.seed!(123)
     Dim = 2
 
-    u1 = RandomGauges(NC,Nwing,NX,NT)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = RandomGauges(NC,Nwing,NX,NT)
-    end
-    
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot")    
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])

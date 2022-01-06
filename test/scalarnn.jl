@@ -16,15 +16,15 @@ function test1()
     end
 
 
-    snet = ScalarNN(U)
+    gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
     append!(plaqloop,plaqloop')
     β = 1
-    push!(snet,β,plaqloop)
+    push!(gauge_action,β,plaqloop)
     
-    show(snet)
+    show(gauge_action)
 
-    Uout = apply_snet(snet,U)
+    Uout = evaluate_GaugeAction_untraced(gauge_action,U)
     println(tr(Uout))
 
 end

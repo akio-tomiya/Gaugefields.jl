@@ -129,12 +129,26 @@ module AbstractGaugefields_module
     end
 
     function Initialize_Gaugefields(NC,NDW,NN...;condition = "cold",mpi = false,PEs=nothing,mpiinit = nothing)
+        Dim = length(NN)
         if condition == "cold"
-            U = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            u1 = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
         elseif condition == "hot"
-            U = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            u1 = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
         else
             error("not supported")
+        end
+
+        U = Array{typeof(u1),1}(undef,Dim)
+        U[1] = u1
+
+        for μ=2:Dim
+            if condition == "cold"
+                U[μ] = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            elseif condition == "hot"
+                U[μ] = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            else
+                error("not supported")
+            end
         end
         return U
     end

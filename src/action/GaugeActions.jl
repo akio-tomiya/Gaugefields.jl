@@ -72,7 +72,7 @@ module GaugeAction_module
         uout = similar(U[1])
         clear_U!(uout)
 
-        evaluate_GaugeAction_untraced(uout,S,U)
+        evaluate_GaugeAction_untraced!(uout,S,U)
         
         return uout
     end
