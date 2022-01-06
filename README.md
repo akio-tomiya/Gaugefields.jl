@@ -576,7 +576,7 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
 end
 
 function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporal_gauges(snet)
+    temps = get_temporary_gaugefields(snet)
     temp1 = temps[1]
     temp2 = temps[2]
     expU = temps[3]
@@ -592,7 +592,7 @@ end
 
 function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporal_gauges(snet)
+    temps = get_temporary_gaugefields(snet)
     dSdUμ = temps[end]
     factor =  -ϵ*Δτ/(NC)
 

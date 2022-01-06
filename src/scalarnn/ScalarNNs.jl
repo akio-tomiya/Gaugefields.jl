@@ -34,7 +34,7 @@ module ScalarNN_module
         return ScalarNN_dataset{Dim}(β,closedloops,allstaples)
     end
 
-    function get_temporal_gauges(snet::ScalarNN)
+    function get_temporary_gaugefields(snet::ScalarNN)
         return snet._temp_U
     end
 
