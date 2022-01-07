@@ -40,6 +40,7 @@ function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim
         
     else
         if Dim==4
+            println("4d")
             return TA_Gaugefields_4D_serial(NC,u.NX,u.NY,u.NZ,u.NT)
         elseif Dim==2
             return TA_Gaugefields_2D_serial(NC,u.NX,u.NT)
