@@ -17,7 +17,8 @@ end
 
 
 function initialize_TA_Gaugefields(U::Array{<:AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
-    F1 = initialize_TA_Gaugefields(U[μ])
+    F1 = initialize_TA_Gaugefields(U[1])
+    println(typeof(F1))
     F = Array{typeof(F1),1}(undef,Dim)
     F[1] = F1
     for μ=2:Dim
