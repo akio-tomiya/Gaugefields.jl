@@ -323,7 +323,7 @@ module Gaugefields_4D_wing_module
 
 
 
-    struct Shifted_Gaugefields_4D{NC,outside} <: Shifted_Gaugefields{NC,4} 
+    struct Shifted_Gaugefields_4D{NC} <: Shifted_Gaugefields{NC,4} 
         parent::Gaugefields_4D_wing{NC}
         #parent::T
         shift::NTuple{4,Int8}
@@ -332,11 +332,12 @@ module Gaugefields_4D_wing_module
         NZ::Int64
         NT::Int64
         NDW::Int64
+        outside::Bool
 
         #function Shifted_Gaugefields(U::T,shift,Dim) where {T <: AbstractGaugefields}
         function Shifted_Gaugefields_4D(U::Gaugefields_4D_wing{NC},shift) where NC
             outside = check_outside(U.NDW,shift)
-            return new{NC,outside}(U,shift,U.NX,U.NY,U.NZ,U.NT,U.NDW)
+            return new{NC}(U,shift,U.NX,U.NY,U.NZ,U.NT,U.NDW,outside)
         end
     end
 
@@ -394,11 +395,29 @@ module Gaugefields_4D_wing_module
     end
     =#
 
-    @inline function Base.getindex(U::Shifted_Gaugefields_4D{NC,false},i1,i2,i3,i4,i5,i6) where NC
+    @inline function Base.getindex(U::Shifted_Gaugefields_4D{NC},i1,i2,i3,i4,i5,i6) where NC
+        if U.outside != false   
+            @inbounds return U.parent[i1,i2,i3 .+ U.shift[1],i4 .+ U.shift[2],i5 .+ U.shift[3],i6 .+ U.shift[4]]
+        else
+            i3_new = i3 + U.shift[1]
+            i3_new += ifelse(i3_new > U.NX + U.NDW,-U.NX,0)
+            i3_new += ifelse(i3_new < 1 - U.NDW,U.NX,0)
+            i4_new = i4 + U.shift[2]
+            i4_new += ifelse(i4_new > U.NY + U.NDW,-U.NY,0)
+            i4_new += ifelse(i4_new < 1 - U.NDW,U.NY,0)
+            i5_new = i5 + U.shift[3]
+            i5_new += ifelse(i5_new > U.NZ + U.NDW,-U.NZ,0)
+            i5_new += ifelse(i5_new < 1 - U.NDW,U.NZ,0)
+            i6_new = i6 + U.shift[4]
+            i6_new += ifelse(i6_new > U.NT + U.NDW,-U.NT,0)
+            i6_new += ifelse(i6_new < 1 - U.NDW,U.NT,0)
+            #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
+            @inbounds return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
+        end
         #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
-        @inbounds return U.parent[i1,i2,i3 .+ U.shift[1],i4 .+ U.shift[2],i5 .+ U.shift[3],i6 .+ U.shift[4]]
     end
 
+    #=
     @inline function Base.getindex(U::Shifted_Gaugefields_4D{NC,true},i1,i2,i3,i4,i5,i6) where NC
         i3_new = i3 + U.shift[1]
         i3_new += ifelse(i3_new > U.NX + U.NDW,-U.NX,0)
@@ -416,6 +435,7 @@ module Gaugefields_4D_wing_module
         @inbounds return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
     end
     
+    =#
     #=
 
     function Base.getindex(U::Adjoint_Gaugefields{Shifted_Gaugefields_4D{NC,false}},i1,i2,i3,i4,i5,i6) where NC
