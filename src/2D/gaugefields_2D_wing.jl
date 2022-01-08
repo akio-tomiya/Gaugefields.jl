@@ -16,15 +16,17 @@ module Gaugefields_2D_wing_module
         NDW::Int64
         NV::Int64
         NC::Int64
+        mpi::Bool
 
         function Gaugefields_2D_wing(NC::T,NDW::T,NX::T,NT::T) where T<: Integer
             NV = NX*NT
             U = zeros(ComplexF64,NC,NC,NX+2NDW,NT+2NDW)
+            mpi = false
             #U = Array{Array{ComplexF64,4}}(undef,2)
             #for μ=1:2
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
-            return new{NC}(U,NX,NT,NDW,NV,NC)
+            return new{NC}(U,NX,NT,NDW,NV,NC,mpi)
         end
     end
 

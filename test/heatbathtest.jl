@@ -252,7 +252,8 @@ println("2D system")
         β = 2.3
         NC = 2
         println("NC = $NC")
-        val =0.6414596466929057
+        val = 0.5767979418826605
+        #val =0.6414596466929057
         @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         #@test abs(plaq_t-val)/abs(val) < eps
     end

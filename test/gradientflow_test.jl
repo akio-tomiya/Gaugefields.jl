@@ -1,7 +1,10 @@
 
+using Random
 function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     Dim = 4
     Nwing = 1
+
+    Random.seed!(123)
 
     u1 = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
     U = Array{typeof(u1),1}(undef,Dim)
