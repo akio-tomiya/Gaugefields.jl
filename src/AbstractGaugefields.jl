@@ -136,6 +136,8 @@ module AbstractGaugefields_module
         else
             error("not supported")
         end
+        @assert length(NN) == 4 "Dimension should be 4. "
+        Dim = 4
 
         U = Array{typeof(u1),1}(undef,Dim)
         U[1] = u1
