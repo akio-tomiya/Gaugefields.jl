@@ -78,7 +78,7 @@ import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfi
             Traceless_antihermitian!,Traceless_antihermitian,Generator,
             Staggered_Gaugefields,staggered_U,
             Traceless_antihermitian_add!,
-            IdentityGauges,RandomGauges,Oneinstanton,
+            IdentityGauges,RandomGauges,Oneinstanton,Initialize_4DGaugefields,
             construct_Λmatrix_forSTOUT!,
             evaluate_gaugelinks_evenodd!,
             map_U!,initialize_TA_Gaugefields,gauss_distribution!,Initialize_Gaugefields      
