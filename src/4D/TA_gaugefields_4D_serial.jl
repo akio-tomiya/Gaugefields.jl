@@ -34,6 +34,9 @@ function Base.similar(u::TA_Gaugefields_4D_serial{NC,NumofBasis}) where {NC,Numo
     #error("similar! is not implemented in type $(typeof(U)) ")
 end
 
+
+
+
 function gauss_distribution!(p::TA_Gaugefields_4D_serial{NC,NumofBasis};σ=1.0) where {NC,NumofBasis}
     d = Normal(0.0, σ)
     NT = p.NT

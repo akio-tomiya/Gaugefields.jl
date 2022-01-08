@@ -793,13 +793,16 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,nn,dSdU)
 
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(Snew-Sold))
-    if rand() > ratio
+
+    accept = exp(Sold - Snew) >= rand()
+
+    if accept != true #rand() > ratio
         substitute_U!(U,Uold)
         return false
     else
         return true
     end
+
 end
 
 function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)

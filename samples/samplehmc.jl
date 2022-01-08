@@ -12,6 +12,8 @@ function MDtest!(gauge_action,U,Dim)
     factor = 1/(comb*U[1].NV*U[1].NC)
     numaccepted = 0
 
+    Random.seed!(123)
+
     numtrj = 100
     for itrj = 1:numtrj
         accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
@@ -34,7 +36,14 @@ end
 
 function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     Δτ = 1/MDsteps
-    gauss_distribution!(p)
+    NC,_,NN... = size(U[1])
+    for μ=1:Dim
+        pwork = gauss_distribution(prod(NN)*(NC^2-1))
+        substitute_U!(p[μ],pwork)
+    end
+    println(p[1][1,1,1,1,1,1])
+
+    #gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,p)
     substitute_U!(Uold,U)
 
@@ -109,5 +118,24 @@ function test1()
 
 end
 
+function gauss_distribution(nv) 
+    variance = 1
+    nvh = div(nv,2)
+    granf = zeros(Float64,nv)
+    for i=1:nvh
+        rho = sqrt(-2*log(rand())*variance)
+        theta = 2pi*univ.ranf()
+        granf[i] = rho*cos(theta)
+        granf[i+nvh] = rho*sin(theta)
+    end
+    if 2*nvh == nv
+        return granf
+    end
+
+    granf[nv] = sqrt(-2*log(rand())*variance) * cos(2pi*urand())
+    return granf
+end
+
 
 test1()
+
