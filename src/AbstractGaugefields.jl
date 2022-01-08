@@ -128,6 +128,30 @@ module AbstractGaugefields_module
         return 
     end
 
+    function Initialize_4DGaugefields(NC,NDW,NN...;condition = "cold")
+        if condition == "cold"
+            u1 = IdentityGauges_4D(NC,NDW,NN...)
+        elseif condition == "hot"
+            u1 = RandomGauges_4D(NC,NDW,NN...)
+        else
+            error("not supported")
+        end
+
+        U = Array{typeof(u1),1}(undef,Dim)
+        U[1] = u1
+
+        for μ=2:Dim
+            if condition == "cold"
+                U[μ] = IdentityGauges_4D(NC,NDW,NN...)
+            elseif condition == "hot"
+                U[μ] = RandomGauges_4D(NC,NDW,NN...)
+            else
+                error("not supported")
+            end
+        end
+        return U
+    end
+
     function Initialize_Gaugefields(NC,NDW,NN...;condition = "cold",mpi = false,PEs=nothing,mpiinit = nothing)
         Dim = length(NN)
         if condition == "cold"

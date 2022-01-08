@@ -231,6 +231,13 @@ module Gaugefields_4D_wing_module
         return U
     end
 
+    function RandomGauges_4D(NC,NDW,NX,NY,NZ,NT)
+        return randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
+    end
+
+    function IdentityGauges_4D(NC,NDW,NX,NY,NZ,NT)
+        return identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
+    end
 
     function identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
         U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT)
