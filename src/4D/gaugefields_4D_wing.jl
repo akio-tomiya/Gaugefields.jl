@@ -381,6 +381,7 @@ module Gaugefields_4D_wing_module
         return outside        
     end
 
+    #=
     
     function shift_U(U::Gaugefields_4D_wing{NC},ν::T) where {T <: Integer,NC}
         return shift_U(U,Val(ν))
@@ -425,10 +426,12 @@ module Gaugefields_4D_wing_module
         shift = (0,0,0,-1)
         return Shifted_Gaugefields_4D(U,shift)
     end
+
+    =#
     
 
         #lattice shift
-    #=
+    
     function shift_U(U::Gaugefields_4D_wing{NC},ν::T) where {T <: Integer,NC}
             if ν == 1
                 shift = (1,0,0,0)
@@ -450,7 +453,7 @@ module Gaugefields_4D_wing_module
     
             return Shifted_Gaugefields_4D(U,shift)
     end
-    =#
+    
     
     
     function shift_U(U::TU,shift::NTuple{Dim,T}) where {Dim,T <: Integer,TU <: Gaugefields_4D}
