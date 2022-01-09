@@ -40,7 +40,7 @@ module Gaugefields_4D_wing_module
     end
 
     @inline function Base.getindex(x::Gaugefields_4D_wing,i1,i2,i3,i4,i5,i6) 
-        return @inbounds x.U[i1,i2,i3 .+ x.NDW,i4 .+ x.NDW,i5 .+ x.NDW,i6 .+ x.NDW]
+        @inbounds  return x.U[i1,i2,i3 .+ x.NDW,i4 .+ x.NDW,i5 .+ x.NDW,i6 .+ x.NDW]
     end
 
     @inline function get_latticeindex(i,NX,NY,NZ,NT)
