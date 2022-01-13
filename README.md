@@ -6,7 +6,7 @@
 
 # Abstract
 
-This is a package for Lattice QCD codes.
+This is a package for lattice QCD codes.
 Treating gauge fields (links), gauge actions with MPI and autograd.
 
 <img src="LQCDjl_block.png" width=300> 
@@ -25,7 +25,7 @@ This package has following functionarities
 - MPI parallel computation (experimental. not shown)
 
 Moreover, this supports followings
-- <font color="red">Autograd for functions with SU(Nc) variables</font>
+- Autograd for functions with SU(Nc) variables
 - Stout smearing (exp projecting smearing)
 - Stout force via [backpropagation](https://arxiv.org/abs/2103.11965)
 
