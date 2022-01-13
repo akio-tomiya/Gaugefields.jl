@@ -6,7 +6,7 @@
 
 # This is a package for Lattice QCD codes. 
 
-This is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
+This will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl) as a utility.
 
 # What this package can do:
 This package has following functionarities
@@ -14,23 +14,23 @@ This package has following functionarities
 - SU(Nc) (Nc > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
 - Configuration generation
     - Heatbath
-    - Hybrid Monte Carlo
+    - Hybrid Monte Carlo (quenched)
 - Gradient flow via RK3
-- I/O: ILDG and Bridge++ formats are supported
+- I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
 - MPI parallel computation (experimental. not shown)
 
 Moreover, this supports followings
 - Autograd for functions with SU(Nc) variables
-- Stout smearing (exp projecting smearing) with its backpropagation
+- Stout smearing (exp projecting smearing) and its backpropagation
 
 Autograd can be worked for general Wilson lines except for ones have overlaps.
-
-This package will be used in LatticeQCD.jl. 
+    
+This package will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
+Full QCD will be supported with [LatticeDiracOperators.jl](https://github.com/akio-tomiya/LatticeDiracOperators.jl).
 
 # Install
 
 ```
-add https://github.com/akio-tomiya/Wilsonloop.jl
 add https://github.com/akio-tomiya/Gaugefields.jl
 ```
 
@@ -79,7 +79,7 @@ save_binarydata(U,filename)
 ```
 
 ## Text format for Bridge++
-Gaugefield.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
+Gaugefields.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
 
 ### File loading
 
@@ -179,7 +179,7 @@ NC = 3
 @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 ```
 
-## Gradientflow
+## Gradient flow
 We can use Lüscher's gradient flow.
 
 ```julia
@@ -229,13 +229,17 @@ U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 ```
 
+In the later exaples, we use, ``mu=1`` and ``u=U[mu]`` as an example.
+
 ## Hermitian conjugate (Adjoint operator)
 If you want to get the hermitian conjugate of the gauge fields, you can do like 
 
 ```julia
 u'
 ```
+
 This is a lazy evaluation. So there is no memory copy. 
+This returs U_\mu^dagger for all sites.
 
 ## Shift operator
 If you want to shift the gaugefields, you can do like 
@@ -244,14 +248,26 @@ If you want to shift the gaugefields, you can do like
 ushift = shift_U(u,shift)
 ```
 This is also a lazy evaluation. 
+Here ``shift`` is ``shift=(1,0,0,0)``.
 
-## matrix-matrix operation
+## matrix-field matrix-field product
 If you want to calculate the matrix-matrix multiplicaetion on each lattice site, you can do like
 
-```julia
-mul!(A,B,C)
+As a mathematical expression, for matrix-valued fields ``A(n), B(n)``,
+we define "matrix-field matrix-field product" as,
 ```
-which means ```A = B*C``` on each lattice site. 
+[A(n)*B(n)]_{ij} = sum_k [A(n)]_{ik} [B(n)]_{kj}.
+```
+for all site index n.
+
+In our package, this is expressed as,
+
+```julia
+mul!(C,A,B)
+```
+which means ```C = A*B``` on each lattice site. 
+Here ``A, B, C`` are same type of ``u``.
+
 ## Trace operation 
 If you want to calculate the trace of the gauge field, you can do like 
 
@@ -259,13 +275,21 @@ If you want to calculate the trace of the gauge field, you can do like
 tr(A)
 ```
 It is useful to evaluation actions. 
+This trace operation summing up all indecis, spacetime and color.
 
-# Wilson loops
+# Applications
+
+This package and Wilsonloop.jl enable you to perform several calcurations.
+Here we demonstrate them.
+
+Some of them will be simplified in LatticeQCD.jl.
+
+## Wilson loops
 We develop [Wilsonloop.jl](https://github.com/akio-tomiya/Wilsonloop.jl.git), which is useful to calculate Wilson loops. 
 If you want to use this, please install like
 
 ```
-add https://github.com/akio-tomiya/Wilsonloop.jl
+add Wilsonloop.jl
 ```
 
 For example, if you want to calculate the following quantity: 
@@ -408,7 +432,7 @@ test(NX,NY,NZ,NT,β,NC)
 ```
 
 
-# How to calculate actions
+## Calculating actions
 We can calculate actions from this packages with fixed gauge fields U. 
 We introduce the concenpt "Scalar-valued neural network", which is S(U) -> V, where U and V are gauge fields. 
 
@@ -501,7 +525,7 @@ or
 ```julia
 calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
 ```
-# Hybrid Monte Carlo method
+## Hybrid Monte Carlo
 With the use of the matrix derivative, we can do the Hybrid Monte Carlo method. 
 The simple code is as follows. 
 
@@ -629,7 +653,7 @@ end
 test1()
 ```
 
-# Stout smearing
+## Stout smearing
 We can use stout smearing. 
 
 <img src="https://latex.codecogs.com/svg.image?U_{\rm&space;fat}&space;=&space;{\cal&space;F}(U)" title="U_{\rm fat} = {\cal F}(U)" />
