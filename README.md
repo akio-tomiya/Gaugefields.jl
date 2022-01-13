@@ -247,10 +247,10 @@ So there is no memory copy.
 This returms $U_\mu^dagger$ for all sites.
 
 ## Shift operator
-If you want to shift the gaugefields, you can do like 
+If you want to shift the gauge fields, you can do like 
 
 ```julia
-ushift = shift_U(u,shift)
+shifted_u = shift_U(u, shift)
 ```
 This is also evaluated with the lazy evaluation. 
 Here ``shift`` is ``shift=(1,0,0,0)`` for example.
