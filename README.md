@@ -242,8 +242,9 @@ If you want to get the hermitian conjugate of the gauge fields, you can do like
 u'
 ```
 
-This is a lazy evaluation. So there is no memory copy. 
-This returs U_\mu^dagger for all sites.
+This is evaluated with the lazy evaluation. 
+So there is no memory copy. 
+This returms $U_\mu^dagger$ for all sites.
 
 ## Shift operator
 If you want to shift the gaugefields, you can do like 
@@ -251,8 +252,8 @@ If you want to shift the gaugefields, you can do like
 ```julia
 ushift = shift_U(u,shift)
 ```
-This is also a lazy evaluation. 
-Here ``shift`` is ``shift=(1,0,0,0)``.
+This is also evaluated with the lazy evaluation. 
+Here ``shift`` is ``shift=(1,0,0,0)`` for example.
 
 ## matrix-field matrix-field product
 If you want to calculate the matrix-matrix multiplicaetion on each lattice site, you can do like
