@@ -762,8 +762,8 @@ NC = 3
 stoutsmearing(NX,NY,NZ,NT,NC)
 ```
 
-# HMC with STOUT smearing
-With the use of the derivatives, we can do the HMC with the STOUT smearing. 
+# HMC with stout smearing
+With the use of the derivatives, we can do the HMC with the stout smearing. 
 The code is shown as follows
 
 ```julia
