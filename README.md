@@ -4,19 +4,26 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://cometscome.github.io/Gaugefields.jl/dev)
 [![Build Status](https://github.com/cometscome/Gaugefields.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/cometscome/Gaugefields.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-# This is the package for Lattice QCD codes. 
+# This is a package for Lattice QCD codes. 
 
 This is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
 
 # What this package can do:
+This package has following functionarities
 
-- SU(NC) (NC > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
-- Heatbath method
-- Gradient flow
-- Hybrid Monte Carlo method
-- ILDG and Bridge++ formats are supported
-- STOUT smearing and its backpropagation 
+- SU(Nc) (Nc > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
+- Configuration generation
+    - Heatbath
+    - Hybrid Monte Carlo
+- Gradient flow via RK3
+- I/O: ILDG and Bridge++ formats are supported
 - MPI parallel computation (experimental. not shown)
+
+Moreover, this supports followings
+- Autograd for functions with SU(Nc) variables
+- Stout smearing (exp projecting smearing) with its backpropagation
+
+Autograd can be worked for general Wilson lines except for ones have overlaps.
 
 This package will be used in LatticeQCD.jl. 
 
@@ -43,7 +50,7 @@ NT = 4
 Nwing = 1
 Dim = 4
 
- U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 ildg = ILDG(filename)
 i = 1
@@ -203,7 +210,7 @@ end
 
 ```
 
-# Useful functions
+# Utilities
 
 ## Data structure
 We can access the gauge field defined on the bond between two neigbohr points. 
@@ -222,8 +229,8 @@ U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 ```
 
-## Adjoint operator
-If you want to get the hermitian conjugate of the gaugefields, you can do like 
+## Hermitian conjugate (Adjoint operator)
+If you want to get the hermitian conjugate of the gauge fields, you can do like 
 
 ```julia
 u'
@@ -253,7 +260,7 @@ tr(A)
 ```
 It is useful to evaluation actions. 
 
-# Wilsonloops
+# Wilson loops
 We develop [Wilsonloop.jl](https://github.com/akio-tomiya/Wilsonloop.jl.git), which is useful to calculate Wilson loops. 
 If you want to use this, please install like
 
@@ -402,7 +409,7 @@ test(NX,NY,NZ,NT,β,NC)
 
 
 # How to calculate actions
-We can calculate actions from this packages with fixed gaugefields U. 
+We can calculate actions from this packages with fixed gauge fields U. 
 We introduce the concenpt "Scalar-valued neural network", which is S(U) -> V, where U and V are gauge fields. 
 
 
@@ -622,8 +629,8 @@ end
 test1()
 ```
 
-# STOUT smearing
-We can use STOUT smearing. 
+# Stout smearing
+We can use stout smearing. 
 
 <img src="https://latex.codecogs.com/svg.image?U_{\rm&space;fat}&space;=&space;{\cal&space;F}(U)" title="U_{\rm fat} = {\cal F}(U)" />
 
