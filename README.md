@@ -24,13 +24,14 @@ This package has following functionarities
 - I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
 - MPI parallel computation (experimental. not shown)
 
-Moreover, this supports followings
-- Autograd for functions with SU(Nc) variables
+Dynamical fermions will be supported with [LatticeDiracOperators.jl](https://github.com/akio-tomiya/LatticeDiracOperators.jl).
+
+In addition, this supports followings
+- **Autograd for functions with SU(Nc) variables**
 - Stout smearing (exp projecting smearing)
 - Stout force via [backpropagation](https://arxiv.org/abs/2103.11965)
 
 Autograd can be worked for general Wilson lines except for ones have overlaps.
-Dynamical fermions will be supported with [LatticeDiracOperators.jl](https://github.com/akio-tomiya/LatticeDiracOperators.jl).
 
 # Install
 
