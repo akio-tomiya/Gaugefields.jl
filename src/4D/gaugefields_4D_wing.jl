@@ -19,18 +19,22 @@ module Gaugefields_4D_wing_module
         NV::Int64
         NC::Int64
         mpi::Bool
+        verbose_print::Verbose_print
 
-        function Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T) where T<: Integer
+        function Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T;verbose_level = 2) where T<: Integer
             NV = NX*NY*NZ*NT
             U = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             mpi = false
+            verbose_print = Verbose_print(verbose_level )
             #U = Array{Array{ComplexF64,6}}(undef,4)
             #for μ=1:4
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,mpi)
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,mpi,verbose_print)
         end
     end
+
+
 
 
 
@@ -93,7 +97,7 @@ module Gaugefields_4D_wing_module
     end
 
     function Base.similar(U::T) where T <: Gaugefields_4D_wing
-        Uout = Gaugefields_4D_wing(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT)
+        Uout = Gaugefields_4D_wing(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,verbose_level = U.verbose_print.level)
         #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
         return Uout
     end
@@ -210,8 +214,8 @@ module Gaugefields_4D_wing_module
         end
     end
 
-    function randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
-        U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT)
+    function randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW;verbose_level = 2)
+        U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT,verbose_level=verbose_level)
     
         for it=1:NT
             for iz=1:NZ
@@ -231,16 +235,16 @@ module Gaugefields_4D_wing_module
         return U
     end
 
-    function RandomGauges_4D(NC,NDW,NX,NY,NZ,NT)
-        return randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
+    function RandomGauges_4D(NC,NDW,NX,NY,NZ,NT;verbose_level=2)
+        return randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW,verbose_level = verbose_level)
     end
 
-    function IdentityGauges_4D(NC,NDW,NX,NY,NZ,NT)
-        return identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
+    function IdentityGauges_4D(NC,NDW,NX,NY,NZ,NT;verbose_level = 2)
+        return identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW,verbose_level=verbose_level)
     end
 
-    function identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW)
-        U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT)
+    function identityGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW;verbose_level = 2)
+        U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT,verbose_level = verbose_level)
     
         for it=1:NT
             for iz=1:NZ
@@ -257,9 +261,9 @@ module Gaugefields_4D_wing_module
         return U
     end
 
-    function Oneinstanton_4D_wing(NC,NX,NY,NZ,NT,NDW)
+    function Oneinstanton_4D_wing(NC,NX,NY,NZ,NT,NDW;verbose_level = 2)
         @assert NC == 2 "NC should be 2"
-        u = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT)
+        u = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT,verbose_level= verbose_level)
         U = Array{typeof(u),1}(undef,4)
         U[1] = u
         for μ = 2:4

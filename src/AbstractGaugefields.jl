@@ -6,6 +6,7 @@ module AbstractGaugefields_module
     import Wilsonloop:loops_staple_prime,Wilsonline,get_position,get_direction,Adjoint_GLink,GLink
     using Requires
     using Distributions
+    import ..Verboseprint_mpi:Verbose_print,println_verbose_level1,println_verbose_level2,println_verbose_level3
 
     #using MPI
     using InteractiveUtils
@@ -100,6 +101,18 @@ module AbstractGaugefields_module
         else
             error("Dim = $Dim is not supported")
         end
+    end
+
+    function println_verbose_level1(u::T,val...)  where T <: AbstractGaugefields
+        println_verbose_level1(u.verbose_print,val...)
+    end
+
+    function println_verbose_level2(u::T,val...)  where T <: AbstractGaugefields
+        println_verbose_level2(u.verbose_print,val...)
+    end
+
+    function println_verbose_level3(u::T,val...)  where T <: AbstractGaugefields
+        println_verbose_level3(u.verbose_print,val...)
     end
     
     

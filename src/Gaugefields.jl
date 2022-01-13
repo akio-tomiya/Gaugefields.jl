@@ -1,7 +1,8 @@
 module Gaugefields
 
 using Requires
-include("./output/verboseprint.jl")
+include("./output/verboseprint_mpi.jl")
+#include("./output/verboseprint.jl")
 include("./SUN_generator.jl")
 include("./autostaples/wilsonloops.jl")
 include("./AbstractGaugefields.jl") 
@@ -22,6 +23,7 @@ function __init__()
 end
 
 # Write your package code here.
+import .Verboseprint_mpi:Verbose_print,println_verbose_level1,println_verbose_level2,println_verbose_level3
 import .AbstractGaugefields_module:AbstractGaugefields,IdentityGauges,RandomGauges,Oneinstanton,calculate_Plaquette,
                                     calculate_Polyakov_loop,map_U!,evaluate_gaugelinks_evenodd!,normalize!,normalize3!,normalizeN!,
                                     shift_U,evaluate_gaugelinks!,

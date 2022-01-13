@@ -28,8 +28,10 @@ module Gaugefields_4D_mpi_module
         nprocs::Int64
         myrank_xyzt::NTuple{4,Int64}
         mpi::Bool
+        verbose_print::Verbose_print
 
-        function Gaugefields_4D_wing_mpi(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true) where T<: Integer
+        function Gaugefields_4D_wing_mpi(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true,
+                                                            verbose_level = 2) where T<: Integer
             NV = NX*NY*NZ*NT
             @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
             @assert NY % PEs[2] == 0 "NY % PEs[2] should be 0. Now NY = $NY and PEs = $PEs"
@@ -53,6 +55,8 @@ module Gaugefields_4D_mpi_module
             @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
             myrank = MPI.Comm_rank(comm)
 
+            verbose_print = Verbose_print(verbose_level,myid = myrank)
+
             myrank_xyzt = get_myrank_xyzt(myrank,PEs)
 
             #println("Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
@@ -63,7 +67,7 @@ module Gaugefields_4D_mpi_module
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
             mpi = true
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi)
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print)
         end
     end
 
@@ -182,8 +186,8 @@ module Gaugefields_4D_mpi_module
     =#
 
 
-    function identityGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true)
-        U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit)
+    function identityGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level = 2)
+        U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
         v = 1
 
         for it=1:U.PN[4]
@@ -203,8 +207,8 @@ module Gaugefields_4D_mpi_module
         return U
     end
 
-    function randomGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true)
-        U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit)
+    function randomGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level= 2)
+        U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
         v = 1
 
         for it=1:U.PN[4]
@@ -533,7 +537,7 @@ module Gaugefields_4D_mpi_module
 
 
     function Base.similar(U::T) where T <: Gaugefields_4D_wing_mpi 
-        Uout = Gaugefields_4D_wing_mpi(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,U.PEs,mpiinit=U.mpiinit)
+        Uout = Gaugefields_4D_wing_mpi(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,U.PEs,mpiinit=U.mpiinit,verbose_level = U.verbose_print.level)
         #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
         return Uout
     end
