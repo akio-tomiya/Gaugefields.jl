@@ -17,16 +17,18 @@ module Gaugefields_2D_wing_module
         NV::Int64
         NC::Int64
         mpi::Bool
+        verbose_print::Verbose_print
 
-        function Gaugefields_2D_wing(NC::T,NDW::T,NX::T,NT::T) where T<: Integer
+        function Gaugefields_2D_wing(NC::T,NDW::T,NX::T,NT::T;verbose_level = 2) where T<: Integer
             NV = NX*NT
             U = zeros(ComplexF64,NC,NC,NX+2NDW,NT+2NDW)
             mpi = false
+            verbose_print = Verbose_print(verbose_level )
             #U = Array{Array{ComplexF64,4}}(undef,2)
             #for μ=1:2
             #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
             #end
-            return new{NC}(U,NX,NT,NDW,NV,NC,mpi)
+            return new{NC}(U,NX,NT,NDW,NV,NC,mpi,verbose_print)
         end
     end
 
@@ -82,7 +84,7 @@ module Gaugefields_2D_wing_module
     end
 
     function Base.similar(U::T) where T <: Gaugefields_2D_wing
-        Uout = Gaugefields_2D_wing(U.NC,U.NDW,U.NX,U.NT)
+        Uout = Gaugefields_2D_wing(U.NC,U.NDW,U.NX,U.NT;verbose_level = U.verbose_print.level)
         #identityGaugefields_2D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
         return Uout
     end
@@ -199,8 +201,8 @@ module Gaugefields_2D_wing_module
         end
     end
 
-    function randomGaugefields_2D_wing(NC,NX,NT,NDW)
-        U = Gaugefields_2D_wing(NC,NDW,NX,NT)
+    function randomGaugefields_2D_wing(NC,NX,NT,NDW;verbose_level = 2)
+        U = Gaugefields_2D_wing(NC,NDW,NX,NT,verbose_level = verbose_level)
     
         for it=1:NT
             #for iz=1:NZ
@@ -222,8 +224,8 @@ module Gaugefields_2D_wing_module
     end
 
 
-    function identityGaugefields_2D_wing(NC,NX,NT,NDW)
-        U = Gaugefields_2D_wing(NC,NDW,NX,NT)
+    function identityGaugefields_2D_wing(NC,NX,NT,NDW;verbose_level = 2)
+        U = Gaugefields_2D_wing(NC,NDW,NX,NT,verbose_level = verbose_level)
     
         for it=1:NT
             #for iz=1:NZ
@@ -240,9 +242,9 @@ module Gaugefields_2D_wing_module
         return U
     end
 
-    function Oneinstanton_2D_wing(NC,NX,NT,NDW)
+    function Oneinstanton_2D_wing(NC,NX,NT,NDW;verbose_level = 2)
         @assert NC == 2 "NC should be 2"
-        u = Gaugefields_2D_wing(NC,NDW,NX,NT)
+        u = Gaugefields_2D_wing(NC,NDW,NX,NT,verbose_level = verbose_level)
         U = Array{typeof(u),1}(undef,2)
         U[1] = u
         for μ = 2:2
