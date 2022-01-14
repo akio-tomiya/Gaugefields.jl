@@ -186,7 +186,7 @@ module Gaugefields_4D_mpi_module
     =#
 
 
-    function identityGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level = 2)
+    function identityGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level = 2,randomnumber="Random")
         U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
         v = 1
 
@@ -207,7 +207,7 @@ module Gaugefields_4D_mpi_module
         return U
     end
 
-    function randomGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level= 2)
+    function randomGaugefields_4D_wing_mpi(NC,NX,NY,NZ,NT,NDW,PEs;mpiinit = true,verbose_level= 2,randomnumber="Random")
         U = Gaugefields_4D_wing_mpi(NC,NDW,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
         v = 1
 

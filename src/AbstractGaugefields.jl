@@ -6,6 +6,7 @@ module AbstractGaugefields_module
     import Wilsonloop:loops_staple_prime,Wilsonline,get_position,get_direction,Adjoint_GLink,GLink
     using Requires
     using Distributions
+    using StableRNGs
     import ..Verboseprint_mpi:Verbose_print,println_verbose_level1,println_verbose_level2,println_verbose_level3
 
     #using MPI
@@ -141,11 +142,11 @@ module AbstractGaugefields_module
         return 
     end
 
-    function Initialize_4DGaugefields(NC,NDW,NN...;condition = "cold")
+    function Initialize_4DGaugefields(NC,NDW,NN...;condition = "cold",verbose_level =2,randomnumber="Random")
         if condition == "cold"
-            u1 = IdentityGauges_4D(NC,NDW,NN...)
+            u1 = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
         elseif condition == "hot"
-            u1 = RandomGauges_4D(NC,NDW,NN...)
+            u1 = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
         else
             error("not supported")
         end
@@ -157,9 +158,9 @@ module AbstractGaugefields_module
 
         for μ=2:Dim
             if condition == "cold"
-                U[μ] = IdentityGauges_4D(NC,NDW,NN...)
+                U[μ] = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
             elseif condition == "hot"
-                U[μ] = RandomGauges_4D(NC,NDW,NN...)
+                U[μ] = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
             else
                 error("not supported")
             end
@@ -167,12 +168,12 @@ module AbstractGaugefields_module
         return U
     end
 
-    function Initialize_Gaugefields(NC,NDW,NN...;condition = "cold",mpi = false,PEs=nothing,mpiinit = nothing)
+    function Initialize_Gaugefields(NC,NDW,NN...;condition = "cold",mpi = false,PEs=nothing,mpiinit = nothing,verbose_level = 2,randomnumber="Random")
         Dim = length(NN)
         if condition == "cold"
-            u1 = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            u1 = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit,verbose_level =verbose_level)
         elseif condition == "hot"
-            u1 = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit)
+            u1 = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = mpiinit,verbose_level =verbose_level,randomnumber=randomnumber)
         else
             error("not supported")
         end
@@ -182,9 +183,9 @@ module AbstractGaugefields_module
 
         for μ=2:Dim
             if condition == "cold"
-                U[μ] = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false)
+                U[μ] = IdentityGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false,verbose_level =verbose_level)
             elseif condition == "hot"
-                U[μ] = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false)
+                U[μ] = RandomGauges(NC,NDW,NN...,mpi =mpi, PEs=PEs, mpiinit = false,verbose_level =verbose_level,randomnumber=randomnumber)
             else
                 error("not supported")
             end
@@ -193,14 +194,14 @@ module AbstractGaugefields_module
     end
 
 
-    function RandomGauges(NC,NDW,NN...;mpi = false,PEs=nothing,mpiinit = nothing)
+    function RandomGauges(NC,NDW,NN...;mpi = false,PEs=nothing,mpiinit = nothing,verbose_level =2,randomnumber="Random")
         dim = length(NN)
         if mpi
             if PEs == nothing || mpiinit == nothing
                 error("not implemented yet!")
             else
                 if dim==4
-                    U = randomGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit)
+                    U = randomGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber=randomnumber)
                 else
                     error("not implemented yet!")
                 end
@@ -208,9 +209,9 @@ module AbstractGaugefields_module
             end
         else
             if dim == 4
-                U = randomGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                U = randomGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level= verbose_level,randomnumber=randomnumber)
             elseif dim == 2
-                U = randomGaugefields_2D_wing(NC,NN[1],NN[2],NDW)
+                U = randomGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level  = verbose_level,randomnumber=randomnumber)
             else
                 error("not implemented yet!")
             end
@@ -218,14 +219,14 @@ module AbstractGaugefields_module
         return U
     end
 
-    function IdentityGauges(NC,NDW,NN...;mpi = false,PEs=nothing,mpiinit = nothing)
+    function IdentityGauges(NC,NDW,NN...;mpi = false,PEs=nothing,mpiinit = nothing,verbose_level =2)
         dim = length(NN)
         if mpi
             if PEs == nothing || mpiinit == nothing
                 error("not implemented yet!")
             else
                 if dim==4
-                    U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit)
+                    U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level=verbose_level)
                 else
                     error("$dim dimension system is not implemented yet!")
                 end
@@ -233,9 +234,9 @@ module AbstractGaugefields_module
             end
         else
             if dim == 4
-                U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level =verbose_level)
             elseif dim == 2
-                U = identityGaugefields_2D_wing(NC,NN[1],NN[2],NDW)
+                U = identityGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level = verbose_level)
             else
                 error("$dim dimension system is not implemented yet!")
             end
@@ -286,7 +287,7 @@ module AbstractGaugefields_module
             if dim == 4
                 U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
             elseif dim == 2
-                U = identityGaugefields_4D_wing(NC,NN[1],NN[4],NDW)
+                U = identityGaugefields_2D_wing(NC,NN[1],NN[4],NDW)
             else
                 error("not implemented yet!")
             end
@@ -409,7 +410,7 @@ module AbstractGaugefields_module
     end
 
     function evaluate_gaugelinks!(uout::T,w::Wilsonline{Dim},U::Array{T,1},temps::Array{T,1}) where {T<: AbstractGaugefields,Dim}
-
+        #println_verbose_level3(uout,"evaluating Wilson loops")
         #Uold = temps[1]
         Unew = temps[1]
         #Utemp2 = temps[2]

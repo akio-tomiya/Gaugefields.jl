@@ -8,6 +8,7 @@ module Gaugefields_4D_wing_module
     import Base
     import ..Gaugefields_4D_module:Gaugefields_4D
 =#
+using Random
 
     struct Gaugefields_4D_wing{NC} <: Gaugefields_4D{NC}
         U::Array{ComplexF64,6}
@@ -214,8 +215,17 @@ module Gaugefields_4D_wing_module
         end
     end
 
-    function randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW;verbose_level = 2)
+    function randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW;verbose_level = 2,randomnumber="Random")
         U = Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT,verbose_level=verbose_level)
+        if randomnumber== "Random"
+            rng = MersenneTwister()
+            #randomfunc() = rand()
+        elseif randomnumber== "Reproducible"
+            rng = StableRNG(123)
+            #randomfunc() = rand(rng,Float64)
+        else
+            error("randomnumber should be \"Random\" or \"Reproducible\". Now randomnumber = $randomnumber")
+        end
     
         for it=1:NT
             for iz=1:NZ
@@ -223,7 +233,7 @@ module Gaugefields_4D_wing_module
                     for ix=1:NX
                         for j=1:NC
                             @simd for i=1:NC
-                                U[i,j,ix,iy,iz,it] = rand()-0.5 + im*(rand()-0.5)
+                                U[i,j,ix,iy,iz,it] = rand(rng)-0.5 + im*(rand(rng)-0.5)
                             end
                         end
                     end
@@ -235,8 +245,8 @@ module Gaugefields_4D_wing_module
         return U
     end
 
-    function RandomGauges_4D(NC,NDW,NX,NY,NZ,NT;verbose_level=2)
-        return randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW,verbose_level = verbose_level)
+    function RandomGauges_4D(NC,NDW,NX,NY,NZ,NT;verbose_level=2,randomnumber="Random")
+        return randomGaugefields_4D_wing(NC,NX,NY,NZ,NT,NDW,verbose_level = verbose_level,randomnumber=randomnumber)
     end
 
     function IdentityGauges_4D(NC,NDW,NX,NY,NZ,NT;verbose_level = 2)

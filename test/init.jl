@@ -23,7 +23,8 @@ function Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
     Random.seed!(123)
     Dim = 4
 
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot") #for debug
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
     
 
     temp1 = similar(U[1])
@@ -101,7 +102,8 @@ function Init_hot_2D(NX,NT,Nwing,NC)
     Random.seed!(123)
     Dim = 2
 
-    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot")    
+    #U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot")    
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
@@ -222,7 +224,8 @@ eps = 1e-8
             NC = 2
             println("NC = $NC")
             plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-            val = -0.007853743153861802
+            #val = -0.007853743153861802
+            val = 0.0002565633289190507
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -230,7 +233,8 @@ eps = 1e-8
             NC = 3
             println("NC = $NC")
             plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-            val = 0.0015014233929744197
+            #val = 0.0015014233929744197
+            val = 0.008449494077606137
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -238,7 +242,8 @@ eps = 1e-8
             NC = 4
             println("NC = $NC")
             plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-            val = -0.004597227507817238
+            #val = -0.004597227507817238
+            val =  0.0029731967994215515
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -246,7 +251,8 @@ eps = 1e-8
             NC = 5
             println("NC = $NC")
             plaq_t = Init_hot_4D(NX,NY,NZ,NT,Nwing,NC)
-            val = 0.0037580826460029506
+            #val = 0.0037580826460029506
+            val = -0.0005506443879866896
             @test abs(plaq_t-val)/abs(val) < eps
         end
     end
@@ -263,7 +269,8 @@ eps = 1e-8
             NC = 2
             println("NC = $NC")
             plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
-            val = 0.022601163616639157
+            #val = 0.022601163616639157
+            val  =-0.09978762099361757
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -271,7 +278,8 @@ eps = 1e-8
             NC = 3
             println("NC = $NC")
             plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
-            val = -0.04647124293538649
+            #val = -0.04647124293538649
+            val = 0.046263787757668186
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -279,7 +287,8 @@ eps = 1e-8
             NC = 4
             println("NC = $NC")
             plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
-            val = 0.07457370324173362
+            #val = 0.07457370324173362
+            val = 0.03150732915218983
             @test abs(plaq_t-val)/abs(val) < eps
         end
 
@@ -287,7 +296,8 @@ eps = 1e-8
             NC = 5
             println("NC = $NC")
             plaq_t = Init_hot_2D(NX,NT,Nwing,NC)
-            val = -0.013511504030861661
+            #val = -0.013511504030861661
+            val = -0.03564420387393341
             @test abs(plaq_t-val)/abs(val) < eps
         end
     end

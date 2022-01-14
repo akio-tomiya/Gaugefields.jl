@@ -94,12 +94,16 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     Dim = 4
     Nwing = 1
 
+    #=
     u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
     U = Array{typeof(u1),1}(undef,Dim)
     U[1] = u1
     for μ=2:Dim
         U[μ] = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
     end
+    =#
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     h = Heatbath(U,β)
     
@@ -144,12 +148,16 @@ function heatbathtest_2D(NX,NT,β,NC)
     Dim = 2
     Nwing = 1
 
+    #=
     u1 = RandomGauges(NC,Nwing,NX,NT)
     U = Array{typeof(u1),1}(undef,Dim)
     U[1] = u1
     for μ=2:Dim
         U[μ] = RandomGauges(NC,Nwing,NX,NT)
     end
+    =#
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
