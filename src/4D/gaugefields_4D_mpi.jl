@@ -272,6 +272,28 @@ module Gaugefields_4D_mpi_module
         set_wing_U!(U)
     end
 
+    function clear_U!(U::Gaugefields_4D_wing_mpi{NC},filternumber::N,filterindex::N) where {NC,N <: Integer}
+        for it=1:U.PN[4]
+            for iz=1:U.PN[3]
+                for iy=1:U.PN[2]
+                    for ix=1:U.PN[1]
+                        filter = ((ix+iy+iz+it)) % filternumber
+                        #evenodd = ifelse( (ix+iy+iz+it) % filternumber ==0, true,false)
+                        if filter == filterindex 
+                            for k2=1:NC                            
+                                for k1=1:NC
+                                    v = 0
+                                    @inbounds setvalue!(U,v,k1,k2,ix,iy,iz,it)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        set_wing_U!(U)
+    end
+
     function add_U!(c::Gaugefields_4D_wing_mpi{NC},a::T1) where {NC,T1 <: Abstractfields}
         for it=1:c.PN[4]
             for iz=1:c.PN[3]

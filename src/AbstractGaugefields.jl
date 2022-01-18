@@ -601,6 +601,147 @@ module AbstractGaugefields_module
     end
 
 
+    function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Wilsonline{Dim},U::Array{<:AbstractGaugefields{NC,Dim},1},
+                            temps::Array{T1,1},indices...) where {Dim,T1 <: Matrix{ComplexF64,1},NC}
+        Unew = temps[1]
+        Ushift1 = temps[2]
+        Ushift2 = temps[3] 
+
+        origin = Tuple(zeros(Int64,Dim))
+
+        glinks = w
+        numlinks = length(glinks)
+        if numlinks == 0
+            for i=1:NC
+                for j=1:NC
+                    uout_mat[j,i] = ifelse(i==j,1,0)
+                end
+            end
+            return
+        end
+
+        j = 1    
+        U1link = glinks[1]
+        direction = get_direction(U1link)
+        position = get_position(U1link)
+        isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+
+        #show(glinks)   
+        #println("in evaluate_gaugelinks!")
+        #show(w)
+        #println("numlinks = $numlinks")
+        if numlinks == 1
+            for i=1:NC
+                for j=1:NC
+                    Unew[j,i] = U[direction][j,i,indices...]
+                end
+            end
+
+            #substitute_U!(Unew,U[direction])
+
+            shiftedposition = Tuple(collect(indices...) .+ collect(position))
+            for i=1:NC
+                for j=1:NC
+                    Ushift1[j,i] = Unew[j,i,shiftedposition...]
+                end
+            end
+
+            #Ushift1 = shift_U(Unew,position)
+            if isU1dag 
+                #println("Ushift1 ",Ushift1'[1,1,1,1,1,1])
+                for i=1:NC
+                    for j=1:NC
+                        Unew[j,i] = Ushift1'[j,i,indices]
+                    end
+                end
+                #substitute_U!(uout,Ushift1')
+            else
+                for i=1:NC
+                    for j=1:NC
+                        Unew[j,i] = Ushift1[j,i,indices]
+                    end
+                end
+                #substitute_U!(uout,Ushift1)
+            end
+            return
+        end
+
+        #j = 1    
+        #U1link = glinks[1]
+        #direction = get_direction(U1link)
+        #position = get_position(U1link)
+        #println("i = $i j = $j position = $position")
+        #substitute_U!(Unew,U[direction])
+        for b=1:NC
+            for a=1:NC
+                Unew[a,b] = U[direction][a,b,indices...]
+            end
+        end
+
+
+        #shiftedposition = Tuple(collect(indices...) .+ collect(position))
+        for i=1:NC
+            for j=1:NC
+                Ushift1[j,i] = Unew[j,i,shiftedposition...]
+            end
+        end
+
+        #Ushift1 = shift_U(Unew,position)
+
+        #ix,iy,iz,it=(2,2,2,2)
+        #println("posotion = $position")
+        #pos = Tuple([ix,iy,iz,it] .+ collect(position))
+        #U1 = Unew[:,:,pos...]
+        #println("U1, ",Unew[:,:,pos...])
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+
+        
+
+
+        for j=2:numlinks
+            Ujlink = glinks[j]
+            isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
+            position = get_position(Ujlink)
+            direction = get_direction(Ujlink)
+            #println("j = $j position = $position")
+            #println("a,b, $isUkdag , $isU1dag")
+            shiftedposition2 = Tuple(collect(indices...) .+ collect(position))
+            for b=1:NC
+                for a=1:NC
+                    Ushift2[a,b] = U[direction][a,b,shiftedposition2...]
+                end
+            end
+
+            #Ushift2 = shift_U(U[direction],position)
+            multiply_12!(uout_mat,Ushift1,Ushift2,j,isUkdag,isU1dag)
+
+            #pos = Tuple([ix,iy,iz,it] .+ collect(position))
+            #U2 = U[direction][:,:,pos...]
+            #println("U1U2dag ", U1*U2')
+            #substitute_U!(Unew,uout)
+            for b=1:NC
+                for a=1:NC
+                    Unew[a,b] =uout_mat[a,b,indices...]
+                end
+            end
+            
+            #println("Unew ", Unew[:,:,ix,iy,iz,it])
+            for b=1:NC
+                for a=1:NC
+                    Ushift1[a,b] = Unew[a,b,indices...]
+                end
+            end
+
+            #Ushift1 = shift_U(Unew,origin)
+            #println("uout ", uout[:,:,ix,iy,iz,it])
+        end
+
+
+        #println("uout2 ", uout[:,:,ix,iy,iz,it])
+        
+        
+    end
+
 
 
     function evaluate_wilson_loops!(xout::T,w::Wilson_loop_set,U::Array{T,1},temps::Array{T,1}) where T<: AbstractGaugefields
