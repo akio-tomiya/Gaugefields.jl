@@ -602,7 +602,7 @@ module AbstractGaugefields_module
 
 
     function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Wilsonline{Dim},U::Array{<:AbstractGaugefields{NC,Dim},1},
-                            temps::Array{T1,1},indices...) where {Dim,T1 <: Matrix{ComplexF64,1},NC}
+                            temps::Array{T1,1},indices...) where {Dim,T1 <: Matrix{ComplexF64,1}}
         Unew = temps[1]
         Ushift1 = temps[2]
         Ushift2 = temps[3] 
