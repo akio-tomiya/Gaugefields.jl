@@ -164,6 +164,7 @@ module Abstractsmearing_module
         set_wing_U!(δ_current)
         
         for i=get_numlayers(net):-1:2
+            layer = net.layers[i]
             layer_pullback!(δ_prev,δ_current,layer,Uout_multi[i-1],temps,tempf)
             δ_current,δ_prev = δ_prev,δ_current
             #set_wing_U!(δ_current)
@@ -173,6 +174,46 @@ module Abstractsmearing_module
         δ_current,δ_prev = δ_prev,δ_current
     
         return δ_current
+    end
+
+    function get_parameter_derivatives(δL,net::CovNeuralnet{Dim},Uout_multi,Uin) where Dim
+        temps = similar(Uout_multi[1])
+        δs = get_δ_from_back_prop(δL,net,Uout_multi,Uin)
+        numlayer = get_numlayers(net)
+        dSdp = Array{Vector{Float64},1}(undef,numlayer)
+
+        for i=1:numlayer
+            layer = net.layers[i]
+            U_current = Uout_multi[i]
+            dSdp[i] = parameter_derivatives(δs[i],layer,U_current,temps)
+        end
+        return dSdp
+    end
+
+    function get_δ_from_back_prop(δL,net::CovNeuralnet{Dim},Uout_multi,Uin) where Dim
+        temps = similar(Uout_multi[1])
+        temps_F1 = initialize_TA_Gaugefields(temps[1])
+        tempf = [temps_F1]
+
+        layer = net.layers[get_numlayers(net)]
+        δ_prev = similar(δL)
+        δ_current = deepcopy(δL)
+        set_wing_U!(δ_current)
+
+        δs = Array{typeof(δL),1}(undef,get_numlayers(net))
+        
+        for i=get_numlayers(net):-1:2
+            layer_pullback!(δ_prev,δ_current,layer,Uout_multi[i-1],temps,tempf)
+            δs[i] = deepcopy(δ_prev)
+            δ_current,δ_prev = δ_prev,δ_current
+            #set_wing_U!(δ_current)
+        end
+        layer = net.layers[1]
+        layer_pullback!(δ_prev,δ_current,layer,Uin,temps,tempf)
+        δs[1] = deepcopy(δ_prev)
+        δ_current,δ_prev = δ_prev,δ_current
+    
+        return δs
     end
 
 
@@ -185,6 +226,7 @@ module Abstractsmearing_module
         end
     end
 
+
     function apply_layer!(Uout,layer::T,Uin,temps,temps_F) where T <: CovLayer
         error("apply_layer!(Uout,layer,Uin,temps,temps_F) is not implemented with type $(typeof(layer)) of layer.")
     end
@@ -196,6 +238,10 @@ module Abstractsmearing_module
     """
     function layer_pullback!(δ_prev,δ_next,layer::T,Uprev,temps,tempf) where T <: CovLayer
         error("layer_pullback!(δ_prev,δ_next,layer::T,Uprev,temps,tempf) is not implemented with type $(typeof(layer)) of layer.")
+    end
+
+    function parameter_derivatives(δ_current,layer::T,U_current,temps) where T <: CovLayer
+        error("parameter_derivatives(δ_current,layer::T,U_current,temps) is not implemented with type $(typeof(layer)) of layer.")
     end
     
 

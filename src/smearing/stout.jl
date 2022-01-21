@@ -339,6 +339,58 @@ function layer_pullback!(δ_prev::Array{<: AbstractGaugefields{NC,Dim},1},δ_cur
 
 end
 
+function parameter_derivatives(δ_current,layer::STOUT_Layer{Dim},U_current,temps) where {Dim}
+    #δ_prev[ν](n) = δ_current[ν](n)*exp(Qν[Uprev](n)) + F(δ_current,Uprev)
+    #F(δ_current,Uprev) = sum_μ sum_m Fm[μ](δ_current,Uprev)
+    #δ_prev[ν](n) = dS/dU[ν](n)
+
+    Cμs = similar(δ_current)
+    construct_Cμ!(Cμs,layer,U_current,temps)
+
+    Qμs = similar(U_current)
+
+    #F0 = tempf[1]
+    #construct_Qμs!(F0,Cμs,Uprev,temps)
+    #substitute_U!(Qμs,F0)
+
+    
+    construct_Qμs!(Qμs,Cμs,U_current,temps)
+    Λs = similar(U_current)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    temp3 = temps[3]
+    temp4 = temps[4]
+
+    for μ=1:Dim
+        construct_Λmatrix_forSTOUT!(Λs[μ],δ_current[μ],Qμs[μ],Uprev[μ])
+    end
+
+
+    #error("lambda!")
+
+    numterms = length(layer)
+    dSdρ=zeros(Float64,numterms)
+
+    for i=1:numterms
+        C = get_Cμ(layer,i)
+        s =0.0
+        for μ=1:Dim
+            Λμ = Λs[μ]
+            Uμ = U_current[μ]
+            Cμ = C[μ]
+
+            dCμdρ = temp3
+            evaluate_gaugelinks!(dCμdρ,Cμ,Uμ,[temp1,temp2])
+            #Udag Λ dCμdρ
+            mul!(temp1,Λμ,dCμdρ)
+            mul!(temp2,Uμ',temp1)
+            s += 2*real(tr(temp2))
+        end
+        dSdρ[i] = s
+    end
+
+end
+
 """
 M = U δ star dexp(Q)/dQ
 """
