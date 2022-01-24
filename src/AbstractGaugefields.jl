@@ -520,6 +520,7 @@ module AbstractGaugefields_module
         temp2 = temps[2]
 
         #ix,iy,iz,it=(2,2,2,2)
+        ix,iy,iz,it=(1,1,1,1)
         
         clear_U!(xout)
         for i=1:num
