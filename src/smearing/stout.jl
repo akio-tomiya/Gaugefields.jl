@@ -384,7 +384,7 @@ function parameter_derivatives(δ_current,layer::STOUT_Layer{Dim},U_current,temp
             Cμ = C[μ]
 
             dCμdρ = temp3
-            evaluate_gaugelinks!(dCμdρ,Cμ,Uμ,[temp1,temp2])
+            evaluate_gaugelinks!(dCμdρ,Cμ,U_current,[temp1,temp2])
             #Udag Λ dCμdρ
             mul!(temp1,Λμ,dCμdρ)
             mul!(temp2,Uμ',temp1)
