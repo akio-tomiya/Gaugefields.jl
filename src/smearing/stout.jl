@@ -443,7 +443,7 @@ function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGauge
         println("C[1,1] = ",Cμs[μ][1,1,1,1,1,1])
 
     end
-    error("dd")
+    #error("dd")
 
 end
 
