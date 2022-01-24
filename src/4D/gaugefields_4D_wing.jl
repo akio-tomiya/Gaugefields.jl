@@ -875,10 +875,10 @@ using Random
     end
 
     function exptU!(uout::T,t::N,v::Gaugefields_4D_wing{2},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing} #uout = exp(t*u)
-        NT = u.NT
-        NZ = u.NZ
-        NY = u.NY
-        NX = u.NX
+        NT = v.NT
+        NZ = v.NZ
+        NY = v.NY
+        NX = v.NX
     
     
         @inbounds for it=1:NT
