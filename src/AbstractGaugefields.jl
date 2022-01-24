@@ -525,7 +525,7 @@ module AbstractGaugefields_module
         for i=1:num
             glinks = w[i]
             evaluate_gaugelinks!(temp2,glinks,U,[temp1])
-            #println("uout2 ", temp2[:,:,ix,iy,iz,it])
+            println("uout2 ", temp2[:,:,ix,iy,iz,it])
             add_U!(xout,temp2)
             #println("xout ", xout[:,:,ix,iy,iz,it])
         end
