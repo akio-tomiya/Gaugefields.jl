@@ -1174,6 +1174,7 @@ module AbstractGaugefields_module
         Unδn = tempmatrices[1]
         B = tempmatrices[2]
         tmp_matrix1 = tempmatrices[3]
+        NC = 2
 
         trQ2 = 0.0
         for i=1:2
