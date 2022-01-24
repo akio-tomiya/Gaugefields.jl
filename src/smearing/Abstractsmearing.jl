@@ -226,6 +226,7 @@ module Abstractsmearing_module
         for i=2:get_numlayers(net)
             layer = net.layers[i]
             apply_layer!(Uout_multi[i],layer,Uout_multi[i-1],temps,temps_F)
+            set_wing_U!(Uout_multi[i])
         end
     end
 

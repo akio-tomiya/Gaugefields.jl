@@ -437,8 +437,8 @@ function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGauge
             evaluate_gaugelinks!(temp3,loops,Uin,[temp1,temp2])
             add_U!(Cμs[μ],ρs[i],temp3)
         end
-        #println("U ", Uin[1][1,1,1,1,1,1])
-        #println("C[1,1] = ",Cμs[μ][1,1,1,1,1,1])
+        println("U ", Uin[1][1,1,1,1,1,1])
+        println("C[1,1] = ",Cμs[μ][1,1,1,1,1,1])
 
     end
 
