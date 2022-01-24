@@ -432,8 +432,10 @@ using Random
             i6_new = i6 + U.shift[4]
             i6_new += ifelse(i6_new > U.NT + U.NDW,-U.NT,0)
             i6_new += ifelse(i6_new < 1 - U.NDW,U.NT,0)
+            println(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
+            println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
             #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
-             return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
+            @inbounds return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
         end
         #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
     end
