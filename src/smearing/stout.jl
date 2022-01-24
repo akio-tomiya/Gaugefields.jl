@@ -268,7 +268,7 @@ function layer_pullback!(δ_prev::Array{<: AbstractGaugefields{NC,Dim},1},δ_cur
         dCμdUν = get_dCμdUν(layer,i)
         dCμdagdUν = get_dCμdagdUν(layer,i)
         ρi = get_ρ(layer,i)
-        println("ρi  = ",ρi )
+        #println("ρi  = ",ρi )
         
 
 
