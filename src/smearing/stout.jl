@@ -268,6 +268,7 @@ function layer_pullback!(δ_prev::Array{<: AbstractGaugefields{NC,Dim},1},δ_cur
         dCμdUν = get_dCμdUν(layer,i)
         dCμdagdUν = get_dCμdagdUν(layer,i)
         ρi = get_ρ(layer,i)
+        println("ρi  = ",ρi )
         
 
 
@@ -431,7 +432,7 @@ function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGauge
     for μ=1:Dim
         clear_U!(Cμs[μ])
         for i=1:num
-            println("ρi  = ",ρs[i] )
+            #println("ρi  = ",ρs[i] )
             loops = layer.dataset[i].Cμ[μ]
             evaluate_gaugelinks!(temp3,loops,Uin,[temp1,temp2])
             add_U!(Cμs[μ],ρs[i],temp3)
