@@ -366,7 +366,7 @@ function parameter_derivatives(δ_current,layer::STOUT_Layer{Dim},U_current,temp
     temp4 = temps[4]
 
     for μ=1:Dim
-        construct_Λmatrix_forSTOUT!(Λs[μ],δ_current[μ],Qμs[μ],Uprev[μ])
+        construct_Λmatrix_forSTOUT!(Λs[μ],δ_current[μ],Qμs[μ],U_current[μ])
     end
 
 
