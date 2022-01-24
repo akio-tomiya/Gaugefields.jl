@@ -874,6 +874,68 @@ using Random
         #error("exptU! is not implemented in type $(typeof(u)) ")
     end
 
+    function exptU!(uout::T,t::N,v::Gaugefields_4D_wing{2},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing} #uout = exp(t*u)
+        NT = u.NT
+        NZ = u.NZ
+        NY = u.NY
+        NX = u.NX
+    
+    
+        @inbounds for it=1:NT
+            for iz=1:NZ
+                for iy=1:NY
+                    for ix=1:NX
+                        v11 = vin[1,1,ix,iy,iz,it]
+                        v22 = vin[2,2,ix,iy,iz,it]
+
+                        tri = fac12*(imag(v11)+imag(v22))
+
+                        
+
+                        v12 = vin[1,2,ix,iy,iz,it]
+                        #v13 = vin[1,3,ix,iy,iz,it]
+                        v21 = vin[2,1,ix,iy,iz,it]
+
+                        x12 = v12 - conj(v21)
+
+                        x21 = - conj(x12)
+
+                        y11 = (imag(v11)-tri)*im
+                        y12 = 0.5  * x12
+                        y21 = 0.5  * x21
+                        y22 = (imag(v22)-tri)*im
+
+                        c1_0[1,ix,iy,iz,it] = (imag(y12)+imag(y21))
+                        c2_0[2,ix,iy,iz,it] = (real(y12)-real(y21))  
+                        c3_0[3,ix,iy,iz,it] = (imag(y11)-imag(y22))  
+                        
+                        #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
+                        u1 = t*c1_0/2
+                        u2 = t*c2_0/2
+                        u3 = t*c3_0/2
+                        R = sqrt(u1^2+u2^2+u3^2) +  tinyvalue
+                        sR = sin(R)/R
+                        #sR = ifelse(R == 0,1,sR)
+                        a0 = cos(R)
+                        a1 = u1*sR
+                        a2 = u2*sR
+                        a3 = u3*sR
+    
+                        uout[1,1,ix,iy,iz,it] = cos(R) + im*a3
+                        uout[1,2,ix,iy,iz,it] = im*a1 + a2
+                        uout[2,1,ix,iy,iz,it] = im*a1 - a2
+                        uout[2,2,ix,iy,iz,it]= cos(R) - im*a3
+    
+                    end
+                end
+            end
+        end
+    
+    
+    
+    
+    end
+
     const tinyvalue =1e-100
     const pi23 = 2pi/3
     const fac13 = 1/3
