@@ -434,6 +434,7 @@ function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGauge
         for i=1:num
             #println("ρi  = ",ρs[i] )
             loops = layer.dataset[i].Cμ[μ]
+            println(Uin)
             evaluate_gaugelinks!(temp3,loops,Uin,[temp1,temp2])
             #println("i = $i")
             #println(temp3[1,1,1,1,1,1])
@@ -461,6 +462,7 @@ function apply_layer!(Uout::Array{<: AbstractGaugefields{NC,Dim},1},layer::STOUT
         # mul!(temp1,Cμs[μ],Uin[μ]') #Cμ*U^+
         #clear_U!(F0)
         #Traceless_antihermitian_add!(F0,1,temp1)
+        
         exptU!(temp3,1,Qμ,[temp1,temp2])
         mul!(Uout[μ],temp3,Uin[μ])        
     end
