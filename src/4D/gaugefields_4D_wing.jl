@@ -436,9 +436,10 @@ using Random
             #println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
             #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
             if isnan(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
-                tes = U.parent.U[i1,i2,i3_new .+ x.NDW,i4_new .+ x.NDW,i5_new .+ x.NDW,i6_new .+ x.NDW]
+                NDW = U.parent.NDW
+                tes = U.parent.U[i1,i2,i3_new .+ NDW,i4_new .+ NDW,i5_new .+ NDW,i6_new .+ NDW]
                 println(tes)
-                println("d ",(i1,i2,i3_new .+ x.NDW,i4_new .+ x.NDW,i5_new .+ x.NDW,i6_new .+ x.NDW))
+                println("d ",(i1,i2,i3_new .+ NDW,i4_new .+ NDW,i5_new .+ NDW,i6_new .+ NDW))
                 println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
                 error("is nan!")
             end
