@@ -520,13 +520,13 @@ module AbstractGaugefields_module
         temp2 = temps[2]
 
         #ix,iy,iz,it=(2,2,2,2)
-        ix,iy,iz,it=(1,1,1,1)
+        #ix,iy,iz,it=(1,1,1,1)
         
         clear_U!(xout)
         for i=1:num
             glinks = w[i]
             evaluate_gaugelinks!(temp2,glinks,U,[temp1])
-            println("uout2 ", temp2[:,:,ix,iy,iz,it])
+            #println("uout2 ", temp2[:,:,ix,iy,iz,it])
             add_U!(xout,temp2)
             #println("xout ", xout[:,:,ix,iy,iz,it])
         end
