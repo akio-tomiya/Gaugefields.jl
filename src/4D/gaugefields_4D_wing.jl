@@ -907,9 +907,9 @@ using Random
                         y21 = 0.5  * x21
                         y22 = (imag(v22)-tri)*im
 
-                        c1_0[1,ix,iy,iz,it] = (imag(y12)+imag(y21))
-                        c2_0[2,ix,iy,iz,it] = (real(y12)-real(y21))  
-                        c3_0[3,ix,iy,iz,it] = (imag(y11)-imag(y22))  
+                        c1_0 = (imag(y12)+imag(y21))
+                        c2_0 = (real(y12)-real(y21))  
+                        c3_0 = (imag(y11)-imag(y22))  
                         
                         #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
                         u1 = t*c1_0/2
