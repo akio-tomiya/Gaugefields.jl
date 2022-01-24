@@ -68,7 +68,7 @@ module Abstractsmearing_module
     include("./stout.jl")
     include("./gradientflow.jl")
 
-    function set_parameters(s::CovLayer,i,v)
+    function set_parameters(s::CovNeuralnet,i,v)
         set_parameters(s[i],v)
     end
 
