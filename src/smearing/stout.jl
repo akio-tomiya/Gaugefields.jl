@@ -392,6 +392,7 @@ function parameter_derivatives(δ_current,layer::STOUT_Layer{Dim},U_current,temp
         end
         dSdρ[i] = s
     end
+    return dSdρ
 
 end
 
