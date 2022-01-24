@@ -434,7 +434,6 @@ function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGauge
         for i=1:num
             #println("ρi  = ",ρs[i] )
             loops = layer.dataset[i].Cμ[μ]
-            println(Uin)
             evaluate_gaugelinks!(temp3,loops,Uin,[temp1,temp2])
             #println("i = $i")
             #println(temp3[1,1,1,1,1,1])
