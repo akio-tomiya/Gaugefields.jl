@@ -885,16 +885,16 @@ using Random
             for iz=1:NZ
                 for iy=1:NY
                     for ix=1:NX
-                        v11 = vin[1,1,ix,iy,iz,it]
-                        v22 = vin[2,2,ix,iy,iz,it]
+                        v11 = v[1,1,ix,iy,iz,it]
+                        v22 = v[2,2,ix,iy,iz,it]
 
                         tri = fac12*(imag(v11)+imag(v22))
 
                         
 
-                        v12 = vin[1,2,ix,iy,iz,it]
+                        v12 = v[1,2,ix,iy,iz,it]
                         #v13 = vin[1,3,ix,iy,iz,it]
-                        v21 = vin[2,1,ix,iy,iz,it]
+                        v21 = v[2,1,ix,iy,iz,it]
 
                         x12 = v12 - conj(v21)
 
