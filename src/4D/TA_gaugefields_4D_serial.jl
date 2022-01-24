@@ -364,6 +364,51 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{3,NumofBasis},vin:
 
 end
 
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{2,NumofBasis},factor,vin::Gaugefields_4D_wing{2}) where NumofBasis
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+    fac12 = 1/2
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+    for it=1:NT
+        for iz=1:NZ
+            for iy=1:NY
+                @simd for ix=1:NX
+                    v11 = vin[1,1,ix,iy,iz,it]
+                    v22 = vin[2,2,ix,iy,iz,it]
+
+                    tri = fac12*(imag(v11)+imag(v22))
+
+                    
+
+                    v12 = vin[1,2,ix,iy,iz,it]
+                    #v13 = vin[1,3,ix,iy,iz,it]
+                    v21 = vin[2,1,ix,iy,iz,it]
+
+                    x12 = v12 - conj(v21)
+
+                    x21 = - conj(x12)
+
+                    y11 = (imag(v11)-tri)*im
+                    y12 = 0.5  * x12
+                    y21 = 0.5  * x21
+                    y22 = (imag(v22)-tri)*im
+
+                    c[1,ix,iy,iz,it] = (imag(y12)+imag(y21))*factor  
+                    c[2,ix,iy,iz,it] = (real(y12)-real(y21))*factor  
+                    c[3,ix,iy,iz,it] = (imag(y11)-imag(y22))*factor  
+                end
+            end
+        end
+    end
+
+
+end
+
+
+
 function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{NC,NumofBasis},vin::Gaugefields_4D_wing{NC}) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 
     #NC = vout.NC

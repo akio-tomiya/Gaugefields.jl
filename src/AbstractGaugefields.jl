@@ -84,6 +84,7 @@ module AbstractGaugefields_module
     include("./4D/gaugefields_4D.jl")
     include("./2D/gaugefields_2D.jl")
     include("TA_Gaugefields.jl")
+    include("Adjoint_rep_Gaugefields.jl")
 
     
 
