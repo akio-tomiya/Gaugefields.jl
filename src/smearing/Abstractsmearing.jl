@@ -61,13 +61,16 @@ module Abstractsmearing_module
     function get_name(s::CovLayer)
         error("layer $s has no name")
     end
-    
+
 
 
 
     include("./stout.jl")
     include("./gradientflow.jl")
 
+    function set_parameters(s::CovLayer,i,v)
+        set_parameters(s[i],v)
+    end
 
 
     function construct_smearing(smearingparameters,loops_list,L,coefficients,numlayers)

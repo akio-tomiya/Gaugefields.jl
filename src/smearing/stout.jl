@@ -53,6 +53,10 @@ function Base.show(s::STOUT_Layer{Dim}) where Dim
     end
 end
 
+function set_parameters(s::STOUT_Layer,ρs)
+    s.ρs[:] .= ρs
+end
+
 function Base.length(layer::STOUT_Layer)
     return length(layer.ρs)
 end
