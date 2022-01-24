@@ -62,7 +62,7 @@ import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
 import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath
 import .Bridge_format:save_textdata,load_BridgeText!
 import Wilsonloop:loops_staple
-import .Abstractsmearing_module:Gradientflow,flow!,STOUT_Layer,CovNeuralnet,calc_smearedU, construct_smearing
+import .Abstractsmearing_module:Gradientflow,flow!,STOUT_Layer,CovNeuralnet,calc_smearedU, construct_smearing,set_parameters
 import .SUN_generator:Generator
 #import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
 #    print_verbose1,print_verbose2,print_verbose3
@@ -102,6 +102,7 @@ export initialize_TA_Gaugefields,gauss_distribution!
 export exptU!,get_temporary_gaugefields,Traceless_antihermitian_add!,evaluate_GaugeAction,substitute_U!,set_wing_U!,Traceless_antihermitian!
 export Initialize_Gaugefields,back_prop
 export Initialize_4DGaugefields
+export set_parameters
 
 
 
