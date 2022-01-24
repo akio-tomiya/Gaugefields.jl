@@ -364,7 +364,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{3,NumofBasis},vin:
 
 end
 
-function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{2,NumofBasis},factor,vin::Gaugefields_4D_wing{2}) where NumofBasis
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{2,NumofBasis},vin::Gaugefields_4D_wing{2}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac12 = 1/2
     NX = vin.NX
@@ -396,9 +396,9 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_serial{2,NumofBasis},fact
                     y21 = 0.5  * x21
                     y22 = (imag(v22)-tri)*im
 
-                    c[1,ix,iy,iz,it] = (imag(y12)+imag(y21))*factor  
-                    c[2,ix,iy,iz,it] = (real(y12)-real(y21))*factor  
-                    c[3,ix,iy,iz,it] = (imag(y11)-imag(y22))*factor  
+                    c[1,ix,iy,iz,it] = (imag(y12)+imag(y21))
+                    c[2,ix,iy,iz,it] = (real(y12)-real(y21))  
+                    c[3,ix,iy,iz,it] = (imag(y11)-imag(y22))  
                 end
             end
         end
