@@ -874,6 +874,8 @@ using Random
         #error("exptU! is not implemented in type $(typeof(u)) ")
     end
 
+    const fac12 = 1/2
+
     function exptU!(uout::T,t::N,v::Gaugefields_4D_wing{2},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing} #uout = exp(t*u)
         NT = v.NT
         NZ = v.NZ
