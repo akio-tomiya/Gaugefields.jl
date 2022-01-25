@@ -439,6 +439,7 @@ using Random
             if isnan(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
                 NDW = U.parent.NDW
                 println("shift: ",U.shift)
+                println("i: ",(i1,i2,i3,i4,i5,i6))
                 #set_wing_U!(U.parent)
                 tes = U.parent.U[i1,i2,i3_new .+ NDW,i4_new .+ NDW,i5_new .+ NDW,i6_new .+ NDW]
                 println(tes)
