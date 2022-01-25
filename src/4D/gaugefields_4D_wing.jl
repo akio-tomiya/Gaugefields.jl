@@ -435,17 +435,17 @@ using Random
             #println(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
             #println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
             #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
-            #=
+            
             if isnan(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
                 NDW = U.parent.NDW
-                set_wing_U!(U.parent)
+                #set_wing_U!(U.parent)
                 tes = U.parent.U[i1,i2,i3_new .+ NDW,i4_new .+ NDW,i5_new .+ NDW,i6_new .+ NDW]
                 println(tes)
                 println("d ",(i1,i2,i3_new .+ NDW,i4_new .+ NDW,i5_new .+ NDW,i6_new .+ NDW))
                 println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
                 error("is nan!")
             end
-            =#
+            
             @inbounds return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
         end
         #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
