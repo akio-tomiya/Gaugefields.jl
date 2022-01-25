@@ -33,8 +33,9 @@ Autograd can be worked for general Wilson lines except for ones have overlaps.
 
 # Install
 
+In Julia REPL in the package mode,
 ```
-add https://github.com/akio-tomiya/Gaugefields.jl
+add Gaugefields.jl
 ```
 
 # How to use
