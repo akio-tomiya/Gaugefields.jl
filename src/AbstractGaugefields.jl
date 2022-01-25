@@ -411,9 +411,9 @@ module AbstractGaugefields_module
     end
 
     function evaluate_gaugelinks!(uout::T,w::Wilsonline{Dim},U::Array{T,1},temps::Array{T,1}) where {T<: AbstractGaugefields,Dim}
-        #println_verbose_level3(uout,"evaluating Wilson loops")
+        println_verbose_level3(uout,"evaluating Wilson loops")
         #Uold = temps[1]
-        set_wing_U!(U)
+        #set_wing_U!(U)
         Unew = temps[1]
         #Utemp2 = temps[2]
         #clear_U!(uout)
