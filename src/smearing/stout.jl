@@ -424,7 +424,6 @@ end
 
 function construct_Cμ!(Cμs,layer::STOUT_Layer{Dim},Uin::Array{<: AbstractGaugefields{NC,Dim},1},temps) where {NC,Dim}
     println_verbose_level3(Uin[1],"construct_Cμ!")
-    set_wing_U!(Uin)
     ρs = layer.ρs
     temp1  = temps[1]
     temp2  = temps[2]
