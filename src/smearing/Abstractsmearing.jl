@@ -225,9 +225,6 @@ module Abstractsmearing_module
     function apply_neuralnet!(Uout_multi,net::CovNeuralnet{Dim},Uin,temps,temps_F) where {Dim}
         layer = net.layers[1]
         println_verbose_level3(Uin[1],"apply_neuralnet! on 1st layer")
-        for μ=1:Dim
-            println(Uin[μ][1, 1, 1, 1, 1, 2])
-        end
         apply_layer!(Uout_multi[1],layer,Uin,temps,temps_F)
         #set_wing_U!(Uout_multi[1])
         for i=2:get_numlayers(net)
