@@ -1983,10 +1983,12 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         NY = c.NY
         NX = c.NX
         #println("threads = ", Threads.nthreads())
-        @inbounds  for it=1:NT#,iz=1:NZ,iy=1:NY
+        #@inbounds  for it=1:NT#,iz=1:NZ,iy=1:NY
+        for it=1:NT#,iz=1:NZ,iy=1:NY
             for iz=1:NZ
                 for iy=1:NY
-                    @simd for ix=1:NX
+                    #@simd for ix=1:NX
+                    for ix=1:NX
                         a11 = a[1,1,ix,iy,iz,it]
                         a21 = a[2,1,ix,iy,iz,it]
                         a31 = a[3,1,ix,iy,iz,it]
