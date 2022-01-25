@@ -1989,6 +1989,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 for iy=1:NY
                     #@simd for ix=1:NX
                     for ix=1:NX
+                        println((ix,iy,iz,it))
                         a11 = a[1,1,ix,iy,iz,it]
                         a21 = a[2,1,ix,iy,iz,it]
                         a31 = a[3,1,ix,iy,iz,it]
