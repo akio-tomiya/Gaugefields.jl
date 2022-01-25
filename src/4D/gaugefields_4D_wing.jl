@@ -363,11 +363,15 @@ using Random
     end
 
     function check_outside(NDW,shift)
-        outside = false
+        outside = false        
         for μ=1:4
-            if outside == false
-                outside = ifelse(abs(shift[μ]) > NDW,true,false)
+            outside = ifelse(abs(shift[μ]) > NDW,true,false)
+            if outside
+                break
             end
+            #if outside == false
+            #    outside = ifelse(abs(shift[μ]) > NDW,true,false)
+            #end
         end
         if outside
             println(outside,"\t",shift)
