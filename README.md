@@ -565,7 +565,7 @@ We define the functions as
 
 function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -evaluate_Gauge_action(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)

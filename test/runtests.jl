@@ -3,6 +3,9 @@ using Test
 using Random
 import Wilsonloop:loops_staple
 
+
+
+
 @testset "ScalarNN" begin
     println("Scalar neural networks")
     include("scalarnn.jl")
@@ -24,6 +27,12 @@ end
     println("gradientflow")
     include("gradientflow_test.jl")
 end
+
+@testset "HMC" begin
+    println("HMC")
+    include("HMC_test.jl")
+end
+
 
 @testset "Gaugefields.jl" begin
     # Write your tests here.
