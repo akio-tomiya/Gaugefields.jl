@@ -420,6 +420,8 @@ using Random
         if U.outside != false   
             @inbounds return U.parent[i1,i2,i3 .+ U.shift[1],i4 .+ U.shift[2],i5 .+ U.shift[3],i6 .+ U.shift[4]]
         else
+            println("shift: ",U.shift,"\t",U.outside)
+            
             i3_new = i3 + U.shift[1]
             i3_new += ifelse(i3_new > U.NX + U.NDW,-U.NX,0)
             i3_new += ifelse(i3_new < 1 - U.NDW,U.NX,0)
