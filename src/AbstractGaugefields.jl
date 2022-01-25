@@ -471,7 +471,7 @@ module AbstractGaugefields_module
             isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
             position = get_position(Ujlink)
             direction = get_direction(Ujlink)
-            println("j = $j position = $position")
+            #println("j = $j position = $position")
             #println("a,b, $isUkdag , $isU1dag")
             Ushift2 = shift_U(U[direction],position)
             multiply_12!(uout,Ushift1,Ushift2,j,isUkdag,isU1dag)
