@@ -369,9 +369,9 @@ using Random
                 outside = ifelse(abs(shift[μ]) > NDW,true,false)
             end
         end
-        #if outside
-        #    println(outside,"\t",shift)
-        #end
+        if outside
+            println(outside,"\t",shift)
+        end
         return outside        
     end
 
