@@ -421,11 +421,11 @@ using Random
     =#
 
     @inline function Base.getindex(U::Shifted_Gaugefields_4D{NC},i1,i2,i3,i4,i5,i6) where NC
-        if U.outside != false   
-            println("inside shift: ",U.shift,"\t",U.outside)
+        if U.outside != true   
+            #println("inside shift: ",U.shift,"\t",U.outside)
             @inbounds return U.parent[i1,i2,i3 .+ U.shift[1],i4 .+ U.shift[2],i5 .+ U.shift[3],i6 .+ U.shift[4]]
         else
-            println("shift: ",U.shift,"\t",U.outside)
+            #println("shift: ",U.shift,"\t",U.outside)
 
             i3_new = i3 + U.shift[1]
             i3_new += ifelse(i3_new > U.NX + U.NDW,-U.NX,0)
@@ -443,6 +443,7 @@ using Random
             #println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
             #function Base.getindex(U::Shifted_Gaugefields{T,4},i1,i2,i3,i4,i5,i6) where T <: Gaugefields_4D_wing
             
+            #=
             if isnan(U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ])
                 NDW = U.parent.NDW
                 println("shift: ",U.shift,"\t",U.outside)
@@ -454,6 +455,7 @@ using Random
                 println((i1,i2,i3_new ,i4_new ,i5_new ,i6_new ))
                 error("is nan!")
             end
+            =#
             
             @inbounds return U.parent[i1,i2,i3_new ,i4_new ,i5_new ,i6_new ]
         end
