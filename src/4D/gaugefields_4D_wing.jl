@@ -41,11 +41,11 @@ using Random
 
 
     function Base.setindex!(x::Gaugefields_4D_wing,v,i1,i2,i3,i4,i5,i6) 
-        @inbounds x.U[i1,i2,i3 + x.NDW,i4 + x.NDW,i5 + x.NDW,i6 + x.NDW] = v
+        x.U[i1,i2,i3 + x.NDW,i4 + x.NDW,i5 + x.NDW,i6 + x.NDW] = v
     end
 
     @inline function Base.getindex(x::Gaugefields_4D_wing,i1,i2,i3,i4,i5,i6) 
-        @inbounds return x.U[i1,i2,i3 .+ x.NDW,i4 .+ x.NDW,i5 .+ x.NDW,i6 .+ x.NDW]
+        return x.U[i1,i2,i3 .+ x.NDW,i4 .+ x.NDW,i5 .+ x.NDW,i6 .+ x.NDW]
     end
 
     @inline function get_latticeindex(i,NX,NY,NZ,NT)
@@ -74,7 +74,7 @@ using Random
 
 
     @inline function Base.getindex(U::Adjoint_Gaugefields{T},i1,i2,i3,i4,i5,i6) where T <: Abstractfields #U'
-        @inbounds return conj(U.parent[i2,i1,i3,i4,i5,i6])
+        return conj(U.parent[i2,i1,i3,i4,i5,i6])
     end
 
     function Base.setindex!(U::Adjoint_Gaugefields{T},v,i1,i2,i3,i4,i5,i6,μ)  where T <: Abstractfields
@@ -82,7 +82,7 @@ using Random
     end
 
     @inline function Base.getindex(U::Adjoint_Gaugefields{T},i1,i2,ii) where T <: Abstractfields #U'
-        @inbounds return conj(U.parent[i2,i1,ii])
+        return conj(U.parent[i2,i1,ii])
     end
 
     function substitute_U!(a::Array{T1,1},b::Array{T2,1}) where {T1 <: Gaugefields_4D_wing,T2 <: Gaugefields_4D_wing}
@@ -421,7 +421,7 @@ using Random
             @inbounds return U.parent[i1,i2,i3 .+ U.shift[1],i4 .+ U.shift[2],i5 .+ U.shift[3],i6 .+ U.shift[4]]
         else
             println("shift: ",U.shift,"\t",U.outside)
-            
+
             i3_new = i3 + U.shift[1]
             i3_new += ifelse(i3_new > U.NX + U.NDW,-U.NX,0)
             i3_new += ifelse(i3_new < 1 - U.NDW,U.NX,0)
