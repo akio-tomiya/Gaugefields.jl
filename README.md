@@ -1,7 +1,7 @@
 # Gaugefields
 
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://github.com/akio-tomiya/Gaugefields.jl/dev)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://akio-tomiya.github.io//Gaugefields.jl/dev)
 
 # Abstract
 
