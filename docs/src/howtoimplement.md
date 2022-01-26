@@ -19,6 +19,8 @@ The concrete types for gauge fields should have following functions.
 * `add_U!(c::T,α::N,a::T1) where {T<: AbstractGaugefields,T1 <: Abstractfields, N<:Number}`
 * `LinearAlgebra.tr(a::T) where T<: Abstractfields`
 * `LinearAlgebra.tr(a::T,b::T) where T<: Abstractfields`
+* `Base.setindex!(x::Gaugefields_4D_wing,v,i1,i2,i3,i4,i5,i6)`
+* `Base.getindex(x::Gaugefields_4D_wing,i1,i2,i3,i4,i5,i6)`
 
 ## matrix-field matrix-field product
 
@@ -43,7 +45,7 @@ mul!(C,A,B)
 which means ```C = A*B``` on each lattice site. 
 Here ``A, B, C`` are same type of ``u``.
 
-### example
+## examples
 
 We have two kinds of gauge fields. 
 
@@ -135,4 +137,72 @@ MPI version:
             return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print)
         end
     end
+```
+
+The matrix-field matrix-field product is defined as 
+
+Serial version:
+
+```julia
+    function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
+        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        NT = c.NT
+        NZ = c.NZ
+        NY = c.NY
+        NX = c.NX
+        @inbounds for it=1:NT
+            for iz=1:NZ
+                for iy=1:NY
+                    for ix=1:NX
+                        for k2=1:NC                            
+                            for k1=1:NC
+                                c[k1,k2,ix,iy,iz,it] = 0
+
+                                @simd for k3=1:NC
+                                    c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        set_wing_U!(c)
+    end
+```
+
+MPI version: 
+
+```julia
+    function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
+        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        NT = c.NT
+        NZ = c.NZ
+        NY = c.NY
+        NX = c.NX
+        PN = c.PN
+        for it=1:PN[4]
+            for iz=1:PN[3]
+                for iy=1:PN[2]
+                    for ix=1:PN[1]
+                        for k2=1:NC                            
+                            for k1=1:NC
+                                v = 0
+                                setvalue!(c,v,k1,k2,ix,iy,iz,it)
+                                #c[k1,k2,ix,iy,iz,it] = 0
+
+                                @simd for k3=1:NC
+                                    vc = getvalue(c,k1,k2,ix,iy,iz,it) + getvalue(a,k1,k3,ix,iy,iz,it)*getvalue(b,k3,k2,ix,iy,iz,it)
+                                    setvalue!(c,vc,k1,k2,ix,iy,iz,it)
+                                    #c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        #set_wing_U!(c)
+    end
+
 ```
