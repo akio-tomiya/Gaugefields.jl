@@ -10,6 +10,11 @@ module Gaugefields_4D_wing_module
 =#
 using Random
 
+    """
+    `Gaugefields_4D_wing{NC} <: Gaugefields_4D{NC}``
+
+    SU(N) Gauge fields in four dimensional lattice. 
+    """
     struct Gaugefields_4D_wing{NC} <: Gaugefields_4D{NC}
         U::Array{ComplexF64,6}
         NX::Int64

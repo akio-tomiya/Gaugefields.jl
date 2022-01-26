@@ -132,9 +132,6 @@ So, we implement kind-dependent `mul!` like
 If we want to use MPI parallel computations, we use diffrent type of gauge fields. 
 The definition is 
 
-```@docs
-Gaugefields_4D_wing_mpi
-```
 
 ```julia
     struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}

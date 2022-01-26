@@ -12,6 +12,11 @@ module Gaugefields_4D_mpi_module
 
     const comm = MPI.COMM_WORLD
 
+    """
+    `Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}`
+
+    MPI version of SU(N) Gauge fields in four dimensional lattice. 
+    """
     struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         U::Array{ComplexF64,6}
         NX::Int64
