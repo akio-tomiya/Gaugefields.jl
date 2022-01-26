@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Applications · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/applications/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li class="is-active"><a class="tocitem" href>Applications</a><ul class="internal"><li><a class="tocitem" href="#Gradient-flow"><span>Gradient flow</span></a></li><li><a class="tocitem" href="#Heatbath-updates-(even-odd-method)"><span>Heatbath updates (even-odd method)</span></a></li><li><a class="tocitem" href="#Wilson-loops"><span>Wilson loops</span></a></li><li><a class="tocitem" href="#Calculating-actions"><span>Calculating actions</span></a></li><li class="toplevel"><a class="tocitem" href="#How-to-calculate-derivatives"><span>How to calculate derivatives</span></a></li><li><a class="tocitem" href="#Hybrid-Monte-Carlo"><span>Hybrid Monte Carlo</span></a></li><li class="toplevel"><a class="tocitem" href="#Smearing"><span>Smearing</span></a></li><li><a class="tocitem" href="#Stout-smearing"><span>Stout smearing</span></a></li><li><a class="tocitem" href="#HMC-with-stout-smearing"><span>HMC with stout smearing</span></a></li></ul></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li><a class="tocitem" href="../howtoimplement/">How to implement new gauge fields</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Applications</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Applications</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/applications.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Applications"><a class="docs-heading-anchor" href="#Applications">Applications</a><a id="Applications-1"></a><a class="docs-heading-anchor-permalink" href="#Applications" title="Permalink"></a></h1><h2 id="Gradient-flow"><a class="docs-heading-anchor" href="#Gradient-flow">Gradient flow</a><a id="Gradient-flow-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow" title="Permalink"></a></h2><p>We can use Lüscher&#39;s gradient flow.</p><pre><code class="language-julia hljs">NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
+NC = 3
+
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+
+temp1 = similar(U[1])
+temp2 = similar(U[1])
+temp3 = similar(U[1])
+
+comb = 6
+factor = 1/(comb*U[1].NV*U[1].NC)
+
+g = Gradientflow(U)
+for itrj=1:100
+    flow!(U,g)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot;$itrj plaq_t = $plaq_t&quot;)
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println(&quot;$itrj polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+end
+</code></pre><h2 id="Heatbath-updates-(even-odd-method)"><a class="docs-heading-anchor" href="#Heatbath-updates-(even-odd-method)">Heatbath updates (even-odd method)</a><a id="Heatbath-updates-(even-odd-method)-1"></a><a class="docs-heading-anchor-permalink" href="#Heatbath-updates-(even-odd-method)" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Gaugefields
+
+
+function heatbath_SU3!(U,NC,temps,β)
+    Dim = 4
+    temp1 = temps[1]
+    temp2 = temps[2]
+    V = temps[3]
+    ITERATION_MAX = 10^5
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+        temps3[i] = zeros(ComplexF64,NC,NC)
+    end
+
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+
+    for μ=1:Dim
+
+        loops = loops_staple[(Dim,μ)]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+    
+end
+
+function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+    Dim = 4
+    Nwing = 1
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot;plaq_t = $plaq_t&quot;)
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println(&quot;polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+
+    numhb = 40
+    for itrj = 1:numhb
+        heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
+
+        if itrj % 10 == 0
+            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            println(&quot;$itrj plaq_t = $plaq_t&quot;)
+            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            println(&quot;$itrj polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+        end
+    end
+    
+
+    return plaq_t
+
+end
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
+
+β = 5.7
+NC = 3
+@time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)</code></pre><h2 id="Wilson-loops"><a class="docs-heading-anchor" href="#Wilson-loops">Wilson loops</a><a id="Wilson-loops-1"></a><a class="docs-heading-anchor-permalink" href="#Wilson-loops" title="Permalink"></a></h2><p>This package and Wilsonloop.jl enable you to perform several calcurations. Here we demonstrate them.</p><p>Some of them will be simplified in LatticeQCD.jl.</p><p>We develop <a href="https://github.com/akio-tomiya/Wilsonloop.jl.git">Wilsonloop.jl</a>, which is useful to calculate Wilson loops.  If you want to use this, please install like</p><pre><code class="nohighlight hljs">add Wilsonloop</code></pre><p>For example, if you want to calculate the following quantity: </p><p class="math-container">\[U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n)\]</p><p>You can use Wilsonloop.jl as follows</p><pre><code class="language-julia hljs">using Wilsonloop
+loop = [(1,1),(2,1),(1,-1),(2,-1)]
+w = Wilsonline(loop)</code></pre><p>The output is <code>L&quot;$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$&quot;</code>.  Then, you can evaluate this loop with the use of the Gaugefields.jl like: </p><pre><code class="language-julia hljs">using LinearAlgebra
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+Nwing = 1
+Dim = 4
+U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+temp1 = similar(U[1])
+V = similar(U[1])
+
+evaluate_gaugelinks!(V,w,U,[temp1])
+println(tr(V))</code></pre><p>For example, if you want to calculate the clover operators, you can define like: </p><pre><code class="language-julia hljs">function make_cloverloop(μ,ν,Dim)
+    loops = Wilsonline{Dim}[]
+    loop_righttop = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim) # Pmunu
+    push!(loops,loop_righttop)
+    loop_rightbottom = Wilsonline([(ν,-1),(μ,1),(ν,1),(μ,-1)],Dim = Dim) # Qmunu
+    push!(loops,loop_rightbottom)
+    loop_leftbottom= Wilsonline([(μ,-1),(ν,-1),(μ,1),(ν,1)],Dim = Dim) # Rmunu
+    push!(loops,loop_leftbottom)
+    loop_lefttop = Wilsonline([(ν,1),(μ,-1),(ν,-1),(μ,1)],Dim = Dim) # Smunu
+    push!(loops,loop_lefttop)
+    return loops
+end</code></pre><p>The energy density defined in the paper (Ramos and Sint, <a href="https://link.springer.com/article/10.1140%2Fepjc%2Fs10052-015-3831-9">Eur. Phys. J. C (2016) 76:15</a>) can be calculated as follows.  Note: the coefficient in the equation (3.40) in the preprint version is wrong. </p><pre><code class="language-julia hljs">function make_clover(G,U,temps,Dim)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    temp3 = temps[3]
+    
+    for μ=1:Dim
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            loops = make_cloverloop(μ,ν,Dim)
+            evaluate_gaugelinks!(temp3,loops,U,[temp1,temp2])
+
+            Traceless_antihermitian!(G[μ,ν],temp3)
+        end
+    end
+end
+
+function calc_energydensity(G,U,temps,Dim)
+    temp1 = temps[1]
+    s = 0
+    for μ=1:Dim
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            mul!(temp1,G[μ,ν],G[μ,ν])
+            s += -real(tr(temp1))/2
+        end
+    end
+    return  s/(4^2*U[1].NV)
+end</code></pre><p>Then, we can calculate the energy density: </p><pre><code class="language-julia hljs">function test(NX,NY,NZ,NT,β,NC)
+    Dim = 4
+    Nwing = 1
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+    filename = &quot;./conf_00000010.txt&quot; 
+    L = [NX,NY,NZ,NT]
+    load_BridgeText!(filename,U,L,NC) # We load a configuration from a file. 
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    println(&quot;Make clover operator&quot;)
+    G = Array{typeof(u1),2}(undef,Dim,Dim)
+    for μ=1:Dim
+        for ν=1:Dim
+            G[μ,ν] = similar(U[1])
+        end
+    end
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot;plaq_t = $plaq_t&quot;)
+
+    g = Gradientflow(U,eps = 0.01)
+    for itrj=1:100
+        flow!(U,g)
+
+        make_clover(G,U,[temp1,temp2,temp3],Dim)
+        E = calc_energydensity(G,U,[temp1,temp2,temp3],Dim)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println(&quot;$itrj $(itrj*0.01) plaq_t = $plaq_t , E = $E&quot;)
+    end
+
+end
+NX = 8
+NY = 8
+NZ = 8
+NT = 8
+β = 5.7
+NC = 3
+test(NX,NY,NZ,NT,β,NC)</code></pre><h2 id="Calculating-actions"><a class="docs-heading-anchor" href="#Calculating-actions">Calculating actions</a><a id="Calculating-actions-1"></a><a class="docs-heading-anchor-permalink" href="#Calculating-actions" title="Permalink"></a></h2><p>We can calculate actions from this packages with fixed gauge fields U.  We introduce the concenpt &quot;Scalar-valued neural network&quot;, which is S(U) -&gt; V, where U and V are gauge fields. </p><pre><code class="language-julia hljs">using Gaugefields
+using LinearAlgebra
+function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+
+    gauge_action = GaugeAction(U) #empty network
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;) #This is a plaquette loops. 
+    append!(plaqloop,plaqloop&#39;) #We need hermitian conjugate loops for making the action real. 
+    β = 1 #This is a coefficient.
+    push!(gauge_action,β,plaqloop)
+    
+    show(gauge_action)
+
+    Uout = evaluate_Gaugeaction_untraced(gauge_action,U)
+    println(tr(Uout))
+end
+
+test1()</code></pre><p>The output is </p><pre><code class="nohighlight hljs">----------------------------------------------
+Structure of the actions for Gaugefields
+num. of terms: 1
+-------------------------------
+      1-st term: 
+          coefficient: 1.0
+      -------------------------
+1-st loop
+L&quot;$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$&quot;	
+2-nd loop
+L&quot;$U_{1}(n)U_{3}(n+e_{1})U^{\dagger}_{1}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+3-rd loop
+L&quot;$U_{1}(n)U_{4}(n+e_{1})U^{\dagger}_{1}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+4-th loop
+L&quot;$U_{2}(n)U_{3}(n+e_{2})U^{\dagger}_{2}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+5-th loop
+L&quot;$U_{2}(n)U_{4}(n+e_{2})U^{\dagger}_{2}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+6-th loop
+L&quot;$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+7-th loop
+L&quot;$U_{2}(n)U_{1}(n+e_{2})U^{\dagger}_{2}(n+e_{1})U^{\dagger}_{1}(n)$&quot;	
+8-th loop
+L&quot;$U_{3}(n)U_{1}(n+e_{3})U^{\dagger}_{3}(n+e_{1})U^{\dagger}_{1}(n)$&quot;	
+9-th loop
+L&quot;$U_{4}(n)U_{1}(n+e_{4})U^{\dagger}_{4}(n+e_{1})U^{\dagger}_{1}(n)$&quot;	
+10-th loop
+L&quot;$U_{3}(n)U_{2}(n+e_{3})U^{\dagger}_{3}(n+e_{2})U^{\dagger}_{2}(n)$&quot;	
+11-th loop
+L&quot;$U_{4}(n)U_{2}(n+e_{4})U^{\dagger}_{4}(n+e_{2})U^{\dagger}_{2}(n)$&quot;	
+12-th loop
+L&quot;$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+      -------------------------
+----------------------------------------------
+9216.0 + 0.0im
+</code></pre><h1 id="How-to-calculate-derivatives"><a class="docs-heading-anchor" href="#How-to-calculate-derivatives">How to calculate derivatives</a><a id="How-to-calculate-derivatives-1"></a><a class="docs-heading-anchor-permalink" href="#How-to-calculate-derivatives" title="Permalink"></a></h1><p>We can easily calculate the matrix derivative of the actions. The matrix derivative is defined as </p><p class="math-container">\[\left[ \frac{\partial S}{\partial U_{\mu}(n)} \right]_{ij} = \frac{\partial S}{\partial [U_{\mu}(n)]_{ji}}\]</p><p>We can calculate this like </p><pre><code class="language-julia hljs">dSdUμ = calc_dSdUμ(gauge_action,μ,U)</code></pre><p>or</p><pre><code class="language-julia hljs">calc_dSdUμ!(dSdUμ,gauge_action,μ,U)</code></pre><h2 id="Hybrid-Monte-Carlo"><a class="docs-heading-anchor" href="#Hybrid-Monte-Carlo">Hybrid Monte Carlo</a><a id="Hybrid-Monte-Carlo-1"></a><a class="docs-heading-anchor-permalink" href="#Hybrid-Monte-Carlo" title="Permalink"></a></h2><p>With the use of the matrix derivative, we can do the Hybrid Monte Carlo method.  The simple code is as follows. </p><pre><code class="language-julia hljs">using Gaugefields
+using LinearAlgebra
+
+function MDtest!(gauge_action,U,Dim)
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    Uold = similar(U)
+    substitute_U!(Uold,U)
+    MDsteps = 100
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+
+    numtrj = 100
+    for itrj = 1:numtrj
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        numaccepted += ifelse(accepted,1,0)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println(&quot;$itrj plaq_t = $plaq_t&quot;)
+        println(&quot;acceptance ratio &quot;,numaccepted/itrj)
+    end
+end</code></pre><p>We define the functions as </p><pre><code class="language-julia hljs">
+function calc_action(gauge_action,U,p)
+    NC = U[1].NC
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
+    Sp = p*p/2
+    S = Sp + Sg
+    return real(S)
+end
+
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+    Δτ = 1/MDsteps
+    gauss_distribution!(p)
+    Sold = calc_action(gauge_action,U,p)
+    substitute_U!(Uold,U)
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+    end
+    Snew = calc_action(gauge_action,U,p)
+    println(&quot;Sold = $Sold, Snew = $Snew&quot;)
+    println(&quot;Snew - Sold = $(Snew-Sold)&quot;)
+    ratio = min(1,exp(Snew-Sold))
+    if rand() &gt; ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+end
+
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
+    temps = get_temporary_gaugefields(gauge_action)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    expU = temps[3]
+    W = temps[4]
+
+    for μ=1:Dim
+        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        mul!(W,expU,U[μ])
+        substitute_U!(U[μ],W)
+        
+    end
+end
+
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -&gt; p +factor*U*dSdUμ
+    NC = U[1].NC
+    temps = get_temporary_gaugefields(gauge_action)
+    dSdUμ = temps[end]
+    factor =  -ϵ*Δτ/(NC)
+
+    for μ=1:Dim
+        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
+        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+    end
+end</code></pre><p>Then, we can do the HMC: </p><pre><code class="language-julia hljs">function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(gauge_action,β,plaqloop)
+    
+    show(gauge_action)
+
+    MDtest!(gauge_action,U,Dim)
+
+end
+
+
+test1()</code></pre><h1 id="Smearing"><a class="docs-heading-anchor" href="#Smearing">Smearing</a><a id="Smearing-1"></a><a class="docs-heading-anchor-permalink" href="#Smearing" title="Permalink"></a></h1><p>Smearing techniques make gaugefileds more smooth. </p><p class="math-container">\[U_{\rm fat} = {\cal F}(U)\]</p><h2 id="Stout-smearing"><a class="docs-heading-anchor" href="#Stout-smearing">Stout smearing</a><a id="Stout-smearing-1"></a><a class="docs-heading-anchor-permalink" href="#Stout-smearing" title="Permalink"></a></h2><p>We can use stout smearing. </p><p>The smearing is regarded as gauge covariant neural networks <a href="https://arxiv.org/abs/2103.11965">Tomiya and Nagai, arXiv:2103.11965</a>.  The network is constructed as follows. </p><pre><code class="language-julia hljs">    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    show(nn)</code></pre><p>The output is </p><pre><code class="nohighlight hljs">num. of layers: 1
+- 1-st layer: STOUT
+num. of terms: 1
+-------------------------------
+      1-st term: 
+          coefficient: 0.1
+      -------------------------
+1-st loop
+L&quot;$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$&quot;	
+2-nd loop
+L&quot;$U_{1}(n)U_{3}(n+e_{1})U^{\dagger}_{1}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+3-rd loop
+L&quot;$U_{1}(n)U_{4}(n+e_{1})U^{\dagger}_{1}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+4-th loop
+L&quot;$U_{2}(n)U_{3}(n+e_{2})U^{\dagger}_{2}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+5-th loop
+L&quot;$U_{2}(n)U_{4}(n+e_{2})U^{\dagger}_{2}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+6-th loop
+L&quot;$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+      -------------------------</code></pre><p>Since we ragard the smearing as the neural networks, we can calculate the derivative with the use of the back propergation techques. </p><p>&lt;img src=&quot;https://latex.codecogs.com/svg.image?\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU<em>{\rm fat}},U \right)&quot; title=&quot;\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU</em>{\rm fat}},U \right)&quot; /&gt;</p><p>For example, </p><pre><code class="language-julia hljs">using Gaugefields
+using Wilsonloop
+
+function stoutsmearing(NX,NY,NZ,NT,NC)
+    Nwing = 1
+    Dim = 4
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+    L = [NX,NY,NZ,NT]
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot; plaq_t = $plaq_t&quot;)
+
+
+    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    show(nn)
+
+    
+    @time Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    plaq_t = calculate_Plaquette(Uout,temp1,temp2)*factor
+    println(&quot;plaq_t = $plaq_t&quot;)
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(gauge_action,β,plaqloop)
+
+    μ = 1
+    dSdUμ = similar(U)
+    for μ=1:Dim
+        dSdUμ[μ] = calc_dSdUμ(gauge_action,μ,U)
+    end
+
+    @time dSdUbareμ = back_prop(dSdUμ,nn,Uout_multi,U) 
+
+end
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+stoutsmearing(NX,NY,NZ,NT,NC)</code></pre><h2 id="HMC-with-stout-smearing"><a class="docs-heading-anchor" href="#HMC-with-stout-smearing">HMC with stout smearing</a><a id="HMC-with-stout-smearing-1"></a><a class="docs-heading-anchor-permalink" href="#HMC-with-stout-smearing" title="Permalink"></a></h2><p>With the use of the derivatives, we can do the HMC with the stout smearing.  The code is shown as follows</p><pre><code class="language-julia hljs">using Gaugefields
+using LinearAlgebra
+
+function MDtest!(gauge_action,U,Dim,nn)
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    Uold = similar(U)
+    dSdU = similar(U)
+    
+    substitute_U!(Uold,U)
+    MDsteps = 100
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+    
+
+    numtrj = 100
+    for itrj = 1:numtrj
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,nn,dSdU)
+        numaccepted += ifelse(accepted,1,0)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println(&quot;$itrj plaq_t = $plaq_t&quot;)
+        println(&quot;acceptance ratio &quot;,numaccepted/itrj)
+    end
+end
+
+function calc_action(gauge_action,U,p)
+    NC = U[1].NC
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_GaugeAction_untraced(gauge_action,U))
+    Sp = p*p/2
+    S = Sp + Sg
+    return real(S)
+end
+
+
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,nn,dSdU)
+    
+
+    Δτ = 1/MDsteps
+    gauss_distribution!(p)
+
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    Sold = calc_action(gauge_action,Uout,p)
+
+    substitute_U!(Uold,U)
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action,dSdU,nn)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+    end
+
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    Snew = calc_action(gauge_action,Uout,p)
+
+    println(&quot;Sold = $Sold, Snew = $Snew&quot;)
+    println(&quot;Snew - Sold = $(Snew-Sold)&quot;)
+
+    accept = exp(Sold - Snew) &gt;= rand()
+
+    if accept != true #rand() &gt; ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+
+end
+
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
+    temps = get_temporary_gaugefields(gauge_action)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    expU = temps[3]
+    W = temps[4]
+
+    for μ=1:Dim
+        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        mul!(W,expU,U[μ])
+        substitute_U!(U[μ],W)
+        
+    end
+end
+
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,dSdU,nn) # p -&gt; p +factor*U*dSdUμ
+    NC = U[1].NC
+    factor =  -ϵ*Δτ/(NC)
+    temps = get_temporary_gaugefields(gauge_action)
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+
+    for μ=1:Dim
+        calc_dSdUμ!(dSdU[μ],gauge_action,μ,Uout)
+    end
+
+    dSdUbare = back_prop(dSdU,nn,Uout_multi,U) 
+    
+    for μ=1:Dim
+        mul!(temps[1],U[μ],dSdUbare[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+    end
+end
+
+function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(gauge_action,β,plaqloop)
+
+    show(gauge_action)
+
+    L = [NX,NY,NZ,NT]
+    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    
+
+    MDtest!(gauge_action,U,Dim,nn)
+
+end
+
+
+test1()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 26 January 2022 02:17">Wednesday 26 January 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
