@@ -1,5 +1,6 @@
 using Gaugefields
 using Documenter
+using MPI
 
 DocMeta.setdocmeta!(Gaugefields, :DocTestSetup, :(using Gaugefields); recursive=true)
 

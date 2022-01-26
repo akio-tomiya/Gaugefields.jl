@@ -45,11 +45,26 @@ mul!(C,A,B)
 which means ```C = A*B``` on each lattice site. 
 Here ``A, B, C`` are same type of ``u``.
 
+## halo updates
+Now we use wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites. 
+`set_wing_U!` function is used for updating halo sites. 
+If you do not want to use halo type implementations for gauge fields, you can write `set_wing_U!(U::Yourtype) = nothing`. 
+
 ## examples
 
-We have two kinds of gauge fields. 
+```@meta
+CurrentModule = Gaugefields.AbstractGaugefields_module
+```
+
+We have two kinds of $SU(N)$ gauge fields in four dimension. 
 
 Serial version: 
+
+```@docs
+Gaugefields_4D_wing
+```
+
+
 ```julia
     struct Gaugefields_4D_wing{NC} <: Gaugefields_4D{NC}
         U::Array{ComplexF64,6}
@@ -77,7 +92,50 @@ Serial version:
     end
 ```
 
-MPI version: 
+Usually, we do not consider local SU(N) matrix on each lattice bond. The gauge fields are manupulated like 
+
+```julia
+mul!(C,A,B)
+s = tr(C)
+```
+Details of `mul!` and `tr` depends on the gauge field type that we use. In other words, the details which depends on kinds of gauge fields are only in the definitions of `mul!` or `tr`. 
+So, we implement kind-dependent `mul!` like 
+
+```julia
+    function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
+        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        NT = c.NT
+        NZ = c.NZ
+        NY = c.NY
+        NX = c.NX
+        @inbounds for it=1:NT
+            for iz=1:NZ
+                for iy=1:NY
+                    for ix=1:NX
+                        for k2=1:NC                            
+                            for k1=1:NC
+                                c[k1,k2,ix,iy,iz,it] = 0
+
+                                @simd for k3=1:NC
+                                    c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        set_wing_U!(c)
+    end
+```
+
+If we want to use MPI parallel computations, we use diffrent type of gauge fields. 
+The definition is 
+
+```@docs
+Gaugefields_4D_wing_mpi
+```
+
 ```julia
     struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         U::Array{ComplexF64,6}
@@ -139,39 +197,7 @@ MPI version:
     end
 ```
 
-The matrix-field matrix-field product is defined as 
-
-Serial version:
-
-```julia
-    function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
-        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
-        NT = c.NT
-        NZ = c.NZ
-        NY = c.NY
-        NX = c.NX
-        @inbounds for it=1:NT
-            for iz=1:NZ
-                for iy=1:NY
-                    for ix=1:NX
-                        for k2=1:NC                            
-                            for k1=1:NC
-                                c[k1,k2,ix,iy,iz,it] = 0
-
-                                @simd for k3=1:NC
-                                    c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        set_wing_U!(c)
-    end
-```
-
-MPI version: 
+Its `mul!` is implemented as 
 
 ```julia
     function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
