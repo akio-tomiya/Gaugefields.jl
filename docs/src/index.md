@@ -1,5 +1,9 @@
 # Gaugefields
 
+```@meta
+CurrentModule = Gaugefields
+```
+
 Documentation for [Gaugefields](https://github.com/cometscome/Gaugefields.jl).
 
 ```@index
