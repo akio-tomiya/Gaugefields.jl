@@ -43,3 +43,96 @@ mul!(C,A,B)
 which means ```C = A*B``` on each lattice site. 
 Here ``A, B, C`` are same type of ``u``.
 
+### example
+
+We have two kinds of gauge fields. 
+
+Serial version: 
+```julia
+    struct Gaugefields_4D_wing{NC} <: Gaugefields_4D{NC}
+        U::Array{ComplexF64,6}
+        NX::Int64
+        NY::Int64
+        NZ::Int64
+        NT::Int64
+        NDW::Int64
+        NV::Int64
+        NC::Int64
+        mpi::Bool
+        verbose_print::Verbose_print
+
+        function Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T;verbose_level = 2) where T<: Integer
+            NV = NX*NY*NZ*NT
+            U = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
+            mpi = false
+            verbose_print = Verbose_print(verbose_level )
+            #U = Array{Array{ComplexF64,6}}(undef,4)
+            #for μ=1:4
+            #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
+            #end
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,mpi,verbose_print)
+        end
+    end
+```
+
+MPI version: 
+```julia
+    struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
+        U::Array{ComplexF64,6}
+        NX::Int64
+        NY::Int64
+        NZ::Int64
+        NT::Int64
+        NDW::Int64
+        NV::Int64
+        NC::Int64
+        PEs::NTuple{4,Int64}
+        PN::NTuple{4,Int64}
+        mpiinit::Bool
+        myrank::Int64
+        nprocs::Int64
+        myrank_xyzt::NTuple{4,Int64}
+        mpi::Bool
+        verbose_print::Verbose_print
+
+        function Gaugefields_4D_wing_mpi(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true,
+                                                            verbose_level = 2) where T<: Integer
+            NV = NX*NY*NZ*NT
+            @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
+            @assert NY % PEs[2] == 0 "NY % PEs[2] should be 0. Now NY = $NY and PEs = $PEs"
+            @assert NZ % PEs[3] == 0 "NZ % PEs[3] should be 0. Now NZ = $NZ and PEs = $PEs"
+            @assert NT % PEs[4] == 0 "NT % PEs[4] should be 0. Now NT = $NT and PEs = $PEs"
+
+            PN = (NX ÷ PEs[1],
+                    NY ÷ PEs[2],
+                    NZ ÷ PEs[3],
+                    NT ÷ PEs[4],
+            )
+
+            if mpiinit == false
+                MPI.Init()
+                mpiinit = true
+            end
+
+            comm = MPI.COMM_WORLD
+
+            nprocs = MPI.Comm_size(comm)
+            @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
+            myrank = MPI.Comm_rank(comm)
+
+            verbose_print = Verbose_print(verbose_level,myid = myrank)
+
+            myrank_xyzt = get_myrank_xyzt(myrank,PEs)
+
+            #println("Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
+
+            U = zeros(ComplexF64,NC,NC,PN[1]+2NDW,PN[2]+2NDW,PN[3]+2NDW,PN[4]+2NDW)
+            #U = Array{Array{ComplexF64,6}}(undef,4)
+            #for μ=1:4
+            #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
+            #end
+            mpi = true
+            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print)
+        end
+    end
+```

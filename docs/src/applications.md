@@ -549,7 +549,9 @@ L"$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$"
 
 Since we ragard the smearing as the neural networks, we can calculate the derivative with the use of the back propergation techques. 
 
-<img src="https://latex.codecogs.com/svg.image?\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)" title="\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)" />
+```math
+\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)
+```
 
 For example, 
 
