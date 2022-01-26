@@ -9,6 +9,10 @@ module SUN_generator
         end
     end
 
+    function Base.getindex(g::Generator,i)
+        return g.generator[i]
+    end
+
     function Base.length(a::Generator)
         return length(a.generator)
     end
