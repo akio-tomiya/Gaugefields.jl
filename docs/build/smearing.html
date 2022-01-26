@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Smearing · Gaugefields.jl</title><script data-outdated-warner src="assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/smearing.html"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">Gaugefields.jl</a></span></div><form class="docs-search" action="search.html"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="index.html">Home</a></li><li><a class="tocitem" href="utilities.html">Utilities</a></li><li><a class="tocitem" href="applications.html">Applications</a></li><li><a class="tocitem" href="usefulfunctions.html">Useful functions</a></li><li><a class="tocitem" href="howtoimplement.html">How to implement new gauge fields</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="smearing.html">Smearing</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="smearing.html">Smearing</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/smearing.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Smearing"><a class="docs-heading-anchor" href="#Smearing">Smearing</a><a id="Smearing-1"></a><a class="docs-heading-anchor-permalink" href="#Smearing" title="Permalink"></a></h1><p>Smearing techniques make gaugefileds more smooth. </p><p class="math-container">\[U_{\rm fat} = {\cal F}(U)\]</p><h2 id="Stout-smearing"><a class="docs-heading-anchor" href="#Stout-smearing">Stout smearing</a><a id="Stout-smearing-1"></a><a class="docs-heading-anchor-permalink" href="#Stout-smearing" title="Permalink"></a></h2><p>We can use stout smearing. </p><p>The smearing is regarded as gauge covariant neural networks <a href="https://arxiv.org/abs/2103.11965">Tomiya and Nagai, arXiv:2103.11965</a>.  The network is constructed as follows. </p><pre><code class="language-julia hljs">    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    show(nn)</code></pre><p>The output is </p><pre><code class="nohighlight hljs">num. of layers: 1
+- 1-st layer: STOUT
+num. of terms: 1
+-------------------------------
+      1-st term: 
+          coefficient: 0.1
+      -------------------------
+1-st loop
+L&quot;$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$&quot;	
+2-nd loop
+L&quot;$U_{1}(n)U_{3}(n+e_{1})U^{\dagger}_{1}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+3-rd loop
+L&quot;$U_{1}(n)U_{4}(n+e_{1})U^{\dagger}_{1}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+4-th loop
+L&quot;$U_{2}(n)U_{3}(n+e_{2})U^{\dagger}_{2}(n+e_{3})U^{\dagger}_{3}(n)$&quot;	
+5-th loop
+L&quot;$U_{2}(n)U_{4}(n+e_{2})U^{\dagger}_{2}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+6-th loop
+L&quot;$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$&quot;	
+      -------------------------</code></pre><p>Since we ragard the smearing as the neural networks, we can calculate the derivative with the use of the back propergation techques. </p><p>&lt;img src=&quot;https://latex.codecogs.com/svg.image?\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU<em>{\rm fat}},U \right)&quot; title=&quot;\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU</em>{\rm fat}},U \right)&quot; /&gt;</p><p>For example, </p><pre><code class="language-julia hljs">using Gaugefields
+using Wilsonloop
+
+function stoutsmearing(NX,NY,NZ,NT,NC)
+    Nwing = 1
+    Dim = 4
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+    L = [NX,NY,NZ,NT]
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot; plaq_t = $plaq_t&quot;)
+
+
+    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    show(nn)
+
+    
+    @time Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    plaq_t = calculate_Plaquette(Uout,temp1,temp2)*factor
+    println(&quot;plaq_t = $plaq_t&quot;)
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(gauge_action,β,plaqloop)
+
+    μ = 1
+    dSdUμ = similar(U)
+    for μ=1:Dim
+        dSdUμ[μ] = calc_dSdUμ(gauge_action,μ,U)
+    end
+
+    @time dSdUbareμ = back_prop(dSdUμ,nn,Uout_multi,U) 
+
+end
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+stoutsmearing(NX,NY,NZ,NT,NC)</code></pre><h2 id="HMC-with-stout-smearing"><a class="docs-heading-anchor" href="#HMC-with-stout-smearing">HMC with stout smearing</a><a id="HMC-with-stout-smearing-1"></a><a class="docs-heading-anchor-permalink" href="#HMC-with-stout-smearing" title="Permalink"></a></h2><p>With the use of the derivatives, we can do the HMC with the stout smearing.  The code is shown as follows</p><pre><code class="language-julia hljs">using Gaugefields
+using LinearAlgebra
+
+function MDtest!(gauge_action,U,Dim,nn)
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    Uold = similar(U)
+    dSdU = similar(U)
+    
+    substitute_U!(Uold,U)
+    MDsteps = 100
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+    
+
+    numtrj = 100
+    for itrj = 1:numtrj
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,nn,dSdU)
+        numaccepted += ifelse(accepted,1,0)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        println(&quot;$itrj plaq_t = $plaq_t&quot;)
+        println(&quot;acceptance ratio &quot;,numaccepted/itrj)
+    end
+end
+
+function calc_action(gauge_action,U,p)
+    NC = U[1].NC
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_GaugeAction_untraced(gauge_action,U))
+    Sp = p*p/2
+    S = Sp + Sg
+    return real(S)
+end
+
+
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,nn,dSdU)
+    
+
+    Δτ = 1/MDsteps
+    gauss_distribution!(p)
+
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    Sold = calc_action(gauge_action,Uout,p)
+
+    substitute_U!(Uold,U)
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action,dSdU,nn)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+    end
+
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+    Snew = calc_action(gauge_action,Uout,p)
+
+    println(&quot;Sold = $Sold, Snew = $Snew&quot;)
+    println(&quot;Snew - Sold = $(Snew-Sold)&quot;)
+
+    accept = exp(Sold - Snew) &gt;= rand()
+
+    if accept != true #rand() &gt; ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+
+end
+
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
+    temps = get_temporary_gaugefields(gauge_action)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    expU = temps[3]
+    W = temps[4]
+
+    for μ=1:Dim
+        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        mul!(W,expU,U[μ])
+        substitute_U!(U[μ],W)
+        
+    end
+end
+
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,dSdU,nn) # p -&gt; p +factor*U*dSdUμ
+    NC = U[1].NC
+    factor =  -ϵ*Δτ/(NC)
+    temps = get_temporary_gaugefields(gauge_action)
+    Uout,Uout_multi,_ = calc_smearedU(U,nn)
+
+    for μ=1:Dim
+        calc_dSdUμ!(dSdU[μ],gauge_action,μ,Uout)
+    end
+
+    dSdUbare = back_prop(dSdU,nn,Uout_multi,U) 
+    
+    for μ=1:Dim
+        mul!(temps[1],U[μ],dSdUbare[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+    end
+end
+
+function test1()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    Dim = 4
+    NC = 3
+
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(gauge_action,β,plaqloop)
+
+    show(gauge_action)
+
+    L = [NX,NY,NZ,NT]
+    nn = CovNeuralnet()
+    ρ = [0.1]
+    layername = [&quot;plaquette&quot;]
+    st = STOUT_Layer(layername,ρ,L)
+    push!(nn,st)
+
+    
+
+    MDtest!(gauge_action,U,Dim,nn)
+
+end
+
+
+test1()</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 26 January 2022 10:47">Wednesday 26 January 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
