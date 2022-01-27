@@ -127,6 +127,7 @@ module AbstractGaugefields_module
     end
 
     function substitute_U!(a::Array{<: AbstractGaugefields{NC,Dim},1},b::Array{<: AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
+        error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
         for i=1:Dim
             substitute_U!(a[i],b[i])
         end
