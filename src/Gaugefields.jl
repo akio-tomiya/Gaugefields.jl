@@ -84,7 +84,8 @@ import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfi
             IdentityGauges,RandomGauges,Oneinstanton,Initialize_4DGaugefields,
             construct_Λmatrix_forSTOUT!,
             evaluate_gaugelinks_evenodd!,
-            map_U!,initialize_TA_Gaugefields,gauss_distribution!,Initialize_Gaugefields      
+            map_U!,initialize_TA_Gaugefields,gauss_distribution!,Initialize_Gaugefields,
+            construct_Adjoint_rep_Gaugefields      
 import Wilsonloop:make_loops_fromname
 import .GaugeAction_module:GaugeAction,evaluate_GaugeAction_untraced!,evaluate_GaugeAction_untraced,calc_dSdUμ,calc_dSdUμ!,get_temporary_gaugefields,evaluate_GaugeAction
 
@@ -104,6 +105,7 @@ export exptU!,get_temporary_gaugefields,Traceless_antihermitian_add!,evaluate_Ga
 export Initialize_Gaugefields,back_prop
 export Initialize_4DGaugefields
 export set_parameters,get_parameter_derivatives,apply_smearing_U
+export construct_Adjoint_rep_Gaugefields
 
 
 

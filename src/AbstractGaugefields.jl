@@ -14,11 +14,7 @@ module AbstractGaugefields_module
     
     abstract type Abstractfields end
 
-    """
-    AbstractGaugefields{NC,Dim} 
 
-All types of gauge fields belong AbstractGaugefields{NC,Dim}. 
-    """
     abstract type AbstractGaugefields{NC,Dim} <: Abstractfields
     end
 
