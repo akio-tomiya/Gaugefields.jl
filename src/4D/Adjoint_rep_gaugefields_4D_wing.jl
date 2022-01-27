@@ -13,8 +13,8 @@ struct Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis} <: Adjoint_rep_Gaugefields
     generators::Union{Nothing,Generator}
 
 
-    function Adjoint_rep_Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T;verbose_level = 2) where T<: Integer
-        NumofBasis = ifelse(NC == 1,1,NC^2-1)
+    function Adjoint_rep_Gaugefields_4D_wing(NumofBasis,NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T;verbose_level = 2) where T<: Integer
+        
         NV = NX*NY*NZ*NT
         U = zeros(ComplexF64,NumofBasis,NumofBasis,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
         mpi = false
@@ -43,8 +43,9 @@ function Adjoint_rep_Gaugefields_4D_wing(Uin::Gaugefields_4D{NC};verbose_level=2
     NY = Uin.NY
     NZ = Uin.NZ
     NT = Uin.NT
+    NumofBasis = ifelse(NC == 1,1,NC^2-1)
     NDW = Uin.NDW
-    Uadj = Adjoint_rep_Gaugefields_4D_wing(NC,NDW,NX,NY,NZ,NT,verbose_level = verbose_level)
+    Uadj = Adjoint_rep_Gaugefields_4D_wing(NumofBasis,NC,NDW,NX,NY,NZ,NT,verbose_level = verbose_level)
 
     make_adjoint_rep!(Uadj,Uin)
 
