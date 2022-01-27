@@ -1,4 +1,4 @@
-struct Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis} <: Adjoint_rep_Gaugefields_4D{NC} 
+struct Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis} <: Adjoint_rep_Gaugefields_4D{NC,NumofBasis} 
     U::Array{ComplexF64,6}
     NX::Int64
     NY::Int64
@@ -578,4 +578,30 @@ function set_wing_U!(u::Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis}) where {N
     #exit()
 
     return
+end
+
+function mul_skiplastindex!(c::Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis},a::T1,b::T2) where {NC,NumofBasis,T1 <: Abstractfields,T2 <: Abstractfields}
+    #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+    NT = c.NT
+    NZ = c.NZ
+    NY = c.NY
+    NX = c.NX
+    #for it=1:NT
+    it = 1
+        for iz=1:NZ
+            for iy=1:NY
+                for ix=1:NX
+                    for k2=1:NumofBasis                            
+                        for k1=1:NumofBasis
+                            c[k1,k2,ix,iy,iz,it] = 0
+
+                            @simd for k3=1:NumofBasis
+                                c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    #end
 end

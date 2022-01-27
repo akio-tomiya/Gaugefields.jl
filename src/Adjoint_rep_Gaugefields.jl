@@ -1,4 +1,4 @@
-abstract type Adjoint_rep_Gaugefields{NC,Dim}  <: AbstractGaugefields{NC,Dim} #Traceless antihermitian matrix
+abstract type Adjoint_rep_Gaugefields{NC,Dim,NumofBasis}  <: AbstractGaugefields{NC,Dim} #Traceless antihermitian matrix
 end
 
 include("./4D/Adjoint_rep_gaugefields_4D.jl")
