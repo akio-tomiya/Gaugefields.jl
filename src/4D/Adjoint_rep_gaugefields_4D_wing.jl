@@ -185,6 +185,11 @@ function make_adjoint_rep!(Uadj::Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis},
 
 end
 
+function substitute_U!(a::Array{<: Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis},1},b::Array{Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis},1}) where {NC,NumofBasis}
+    for i=1:4
+        substitute_U!(a[i],b[i])
+    end
+end
 
 function substitute_U!(a::Adjoint_rep_Gaugefields_4D_wing{NC,NumofBasis},b::T2) where {NC, NumofBasis,T2 <: Abstractfields}
     NT = a.NT
