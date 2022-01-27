@@ -135,7 +135,7 @@ end
 
 
 function Base.similar(U::T) where T <: Adjoint_rep_Gaugefields_4D_wing
-    Uout = Adjoint_rep_Gaugefields_4D_wing(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,verbose_level = U.verbose_print.level)
+    Uout = Adjoint_rep_Gaugefields_4D_wing(U.NumofBasis,U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,verbose_level = U.verbose_print.level)
     #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
 end
