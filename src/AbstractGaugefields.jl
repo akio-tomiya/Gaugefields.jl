@@ -126,8 +126,10 @@ module AbstractGaugefields_module
         error("similar! is not implemented in type $(typeof(U)) ")
     end
 
-    function substitute_U!(a::Array{T1,1},b::Array{T2,1}) where {T1 <: AbstractGaugefields,T2 <: AbstractGaugefields}
-        error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+    function substitute_U!(a::Array{<: AbstractGaugefields{NC,Dim},1},b::Array{<: AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
+        for i=1:Dim
+            substitute_U!(a[i],b[i])
+        end
     end
 
     function substitute_U!(a::T1,b::T2) where {T1 <: Abstractfields,T2 <: Abstractfields}
