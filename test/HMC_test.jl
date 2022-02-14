@@ -184,7 +184,7 @@ function HMC_test_2D(NX,NT,NC)
 
 
     gauge_action = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette")
+    plaqloop = make_loops_fromname("plaquette",Dim=Dim)
     append!(plaqloop,plaqloop')
     β = 5.7*(NC/3)/2
     push!(gauge_action,β,plaqloop)
@@ -220,6 +220,61 @@ function HMC_test_2D(NX,NT,NC)
     return plaq_t
 
 end
+
+
+
+println("2D system")
+@testset "2D" begin
+    NX = 4
+    #NY = 4
+    #NZ = 4
+    NT = 4
+    Nwing = 1
+
+        
+    @testset "NC=1" begin
+        β = 2.3
+        NC = 1
+        println("NC = $NC")
+        #val =0.6414596466929057
+        val =  0.9768786716327604
+        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+    
+    @testset "NC=2" begin
+        β = 2.3
+        NC = 2
+        println("NC = $NC")
+        #val =0.6414596466929057
+        val =  0.9768786716327604
+        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "NC=3" begin
+        β = 5.7
+        NC = 3
+        println("NC = $NC")
+        #val = 0.5779454661484242
+        val = 0.9656356864814539
+        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "NC=4" begin
+        β = 5.7
+        NC = 4
+        println("NC = $NC")
+        #val  =0.19127260002797497
+        val = 0.8138836242603148
+        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+
+end
+
 
 println("4D system")
 @testset "4D" begin
@@ -268,46 +323,3 @@ println("4D system")
 end
 
 
-#=
-println("2D system")
-@testset "2D" begin
-    NX = 4
-    #NY = 4
-    #NZ = 4
-    NT = 4
-    Nwing = 1
-    
-    @testset "NC=2" begin
-        β = 2.3
-        NC = 2
-        println("NC = $NC")
-        #val =0.6414596466929057
-        val =  0.9768786716327604
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
-        #@test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=3" begin
-        β = 5.7
-        NC = 3
-        println("NC = $NC")
-        #val = 0.5779454661484242
-        val = 0.9656356864814539
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
-        #@test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=4" begin
-        β = 5.7
-        NC = 4
-        println("NC = $NC")
-        #val  =0.19127260002797497
-        val = 0.8138836242603148
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
-        #@test abs(plaq_t-val)/abs(val) < eps
-    end
-
-
-end
-
-=#

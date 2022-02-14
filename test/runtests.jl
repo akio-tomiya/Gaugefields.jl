@@ -4,6 +4,10 @@ using Random
 import Wilsonloop:loops_staple
 
 
+@testset "HMC" begin
+    println("HMC")
+    include("HMC_test.jl")
+end
 
 
 @testset "ScalarNN" begin
@@ -28,10 +32,6 @@ end
     include("gradientflow_test.jl")
 end
 
-@testset "HMC" begin
-    println("HMC")
-    include("HMC_test.jl")
-end
 
 
 @testset "Gaugefields.jl" begin
