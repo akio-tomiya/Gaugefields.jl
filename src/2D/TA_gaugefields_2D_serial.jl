@@ -252,6 +252,31 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_2D_serial{2,NumofBasis},
 
 end
 
+function Traceless_antihermitian_add!(c::TA_Gaugefields_2D_serial{1,NumofBasis},factor,vin::Gaugefields_2D_wing{1}) where NumofBasis
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(c)) ")
+    fac12 = 1/2
+    NX = vin.NX
+    ##NY = vin.NY
+    ##NZ = vin.NZ
+    NT = vin.NT
+
+    for it=1:NT
+        #for iz=1:NZ
+            #for iy=1:NY
+                @simd for ix=1:NX
+                    v11 = vin[1,1,ix,it]
+                    c[1,ix,it] = 2*imag(v11)*factor   + c[1,ix,it]
+                    #c[1,ix,it] += ifelse(c[1,ix,it] > 2π,-2π,0)
+                    #c[1,ix,it] += ifelse(c[1,ix,it] < 0,2π,0)
+
+                end
+            #end
+        #end
+    end
+
+
+end
+
 """
 -----------------------------------------------------c
      !!!!!   vin and vout should be different vectors
@@ -339,7 +364,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_2D_serial{3,NumofBasis},vin:
 end
 
 function Traceless_antihermitian!(c::TA_Gaugefields_2D_serial{NC,NumofBasis},vin::Gaugefields_2D_wing{NC}) where {NC,NumofBasis}
-    @assert NC != 3 && NC != 2 
+    @assert NC != 3 && NC != 2 && NC != 1
     #NC = vout.NC
     fac1N = 1/NC
     nv = vin.NV
@@ -389,7 +414,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_2D_serial{NC,NumofBasis},vin
 end
 
 function Traceless_antihermitian_add!(c::TA_Gaugefields_2D_serial{NC,NumofBasis},factor,vin::Gaugefields_2D_wing{NC}) where {NC,NumofBasis}
-    @assert NC != 3 && NC != 2 "NC should be NC >4! in this function"
+    @assert NC != 3 && NC != 2 && NC != 1 "NC should be NC >4! in this function. Now NC = $NC"
     #NC = vout.NC
     fac1N = 1/NC
     nv = vin.NV
@@ -441,10 +466,28 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_2D_serial{NC,NumofBasis}
 end
 
 
+function exptU!(uout::T,t::N,u::TA_Gaugefields_2D_serial{1,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_2D_wing, NumofBasis} #uout = exp(t*u)
+    NT = u.NT
+    #NZ = u.NZ
+    #NY = u.NY
+    NX = u.NX
+
+    @inbounds for it=1:NT
+        #for iz=1:NZ
+            #for iy=1:NY
+                for ix=1:NX
+                    uout[1,1,ix,it] = exp(t*im*u[1,ix,it])
+
+                end
+            #end
+        #end
+    end
+    #error("exptU! is not implemented in type $(typeof(u)) ")
+end
 
 
 function exptU!(uout::T,t::N,u::TA_Gaugefields_2D_serial{NC,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_2D_wing, NC,NumofBasis} #uout = exp(t*u)
-    @assert NC != 3 && NC != 2 "This function is for NC != 2,3"
+    @assert NC != 3 && NC != 2 && NC != 1 "This function is for NC != 1,2,3"
     g = u.generators
     NT = u.NT
     #NZ = u.NZ
@@ -725,4 +768,24 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_2D_serial{2,NumofBasis},temps::Ar
 
 
 
+end
+
+
+function gauss_distribution!(p::TA_Gaugefields_2D_serial{NC,NumofBasis};σ=1.0) where {NC,NumofBasis}
+    d = Normal(0.0, σ)
+    NT = p.NT
+    NX = p.NX
+    #NumofBasis = Uμ.NumofBasis
+    pwork = rand(d,NX*NT*NumofBasis)
+    icount = 0
+    @inbounds for it=1:NT
+
+        for ix=1:NX
+            for k=1:NumofBasis 
+                icount += 1
+                p[k,ix,it] = pwork[icount]
+            end
+        end
+
+    end
 end

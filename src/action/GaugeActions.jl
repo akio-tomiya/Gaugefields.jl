@@ -59,6 +59,7 @@ module GaugeAction_module
             add_U!(dSdUμ,β,temp3)
         end
         set_wing_U!(dSdUμ)
+
     end
 
     function evaluate_GaugeAction(S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC}
@@ -108,6 +109,7 @@ module GaugeAction_module
         for i=1:num
             _temp_U[i] = similar(U[1])
         end
+
 
         return GaugeAction{Dim,eltype(U)}(hascovnet,covneuralnet,dataset,_temp_U)
     end

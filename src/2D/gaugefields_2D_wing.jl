@@ -51,12 +51,12 @@ module Gaugefields_2D_wing_module
     end
 
     function Base.setindex!(x::Gaugefields_2D_wing,v,i1,i2,ii) 
-        ix,it =  get_latticeindex(ii,x.NX,x.NY,x.NZ,x.NT)
+        ix,it =  get_latticeindex(ii,x.NX,x.NT)
         @inbounds x.U[i1,i2,ix + x.NDW,it + x.NDW] = v
     end
 
     @inline function Base.getindex(x::Gaugefields_2D_wing,i1,i2,ii)
-        ix,it =  get_latticeindex(ii,x.NX,x.NY,x.NZ,x.NT)
+        ix,it =  get_latticeindex(ii,x.NX,x.NT)
         @inbounds return x.U[i1,i2,ix + x.NDW,it + x.NDW]
     end
 
@@ -228,6 +228,7 @@ module Gaugefields_2D_wing_module
         end
         normalize_U!(U)
         set_wing_U!(U)
+    
 
         return U
     end
@@ -1175,6 +1176,30 @@ module Gaugefields_2D_wing_module
 
     end
 
+    function Traceless_antihermitian!(vout::Gaugefields_2D_wing{1},vin::Gaugefields_2D_wing{1})
+        #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+        fac13 = 1/3
+        NX = vin.NX
+        #NY = vin.NY
+        #NZ = vin.NZ
+        NT = vin.NT
+
+
+        for it=1:NT
+            #for iz=1:NZ
+                #for iy=1:NY
+                    @simd for ix=1:NX
+                        v11 = vin[1,1,ix,it]
+                        vout[1,1,ix,it] = imag(v11)*im
+
+                    end
+                #end
+            #end
+        end
+
+    end
+
+
 
     function Traceless_antihermitian!(vout::Gaugefields_2D_wing{NC},vin::Gaugefields_2D_wing{NC}) where NC
         #NC = vout.NC
@@ -1239,6 +1264,32 @@ module Gaugefields_2D_wing_module
                                 s += a[k,k2,ix,it]*b[k2,k,ix,it]
                             end
                         end
+                    end
+                #end
+            #end
+        end
+        #println(3*NT*NZ*NY*NX*NC)
+        return s
+    end
+
+    function LinearAlgebra.tr(a::Gaugefields_2D_wing{1},b::Gaugefields_2D_wing{1})
+        NX=a.NX
+        #NY=a.NY
+        #NZ=a.NZ
+        NT=a.NT
+
+        s = 0
+        for it=1:NT
+            #for iz=1:NZ
+                #for iy=1:NY
+                    for ix=1:NX
+                        a11 = a[1,1,ix,it]
+
+                        b11 = b[1,1,ix,it]
+
+
+                        s += a11*b11
+
                     end
                 #end
             #end
@@ -1343,6 +1394,27 @@ module Gaugefields_2D_wing_module
         #println(3*NT*NZ*NY*NX*NC)
         return s
     end
+
+    function LinearAlgebra.tr(a::Gaugefields_2D_wing{1}) 
+        NX=a.NX
+        #NY=a.NY
+        #NZ=a.NZ
+        NT=a.NT
+
+        s = 0
+        for it=1:NT
+            #for iz=1:NZ
+                #for iy=1:NY
+                    for ix=1:NX
+                        s += a[1,1,ix,it]
+                    end
+                #end
+            #end
+        end
+        #println(3*NT*NZ*NY*NX*NC)
+        return s
+    end
+
 
     function partial_tr(a::Gaugefields_2D_wing{NC},μ) where NC
         NX=a.NX
@@ -1491,8 +1563,27 @@ module Gaugefields_2D_wing_module
                 #end
             #end
         end
+        set_wing_U!(c)
     end
 
+    function LinearAlgebra.mul!(c::Gaugefields_2D_wing{1},a::T1,b::T2) where {T1 <: Abstractfields,T2 <: Abstractfields}
+        #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        NT = c.NT
+        #NZ = c.NZ
+        #NY = c.NY
+        NX = c.NX
+        for it=1:NT
+            #for iz=1:NZ
+                #for iy=1:NY
+                    for ix=1:NX
+                        @inbounds c[1,1,ix,it] = a[1,1,ix,it]*b[1,1,ix,it]
+                    end
+                #end
+            #end
+        end
+        set_wing_U!(c)
+
+    end
 
     
     
@@ -1519,10 +1610,11 @@ module Gaugefields_2D_wing_module
                 #end
             #end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_2D_wing{NC},a::T1,b::T2,iseven::Bool) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
-        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        @assert NC != 2 && NC != 3 && NC != 1 "This function is for NC != 1,2,3"
         NT = c.NT
         #NZ = c.NZ
         #NY = c.NY
@@ -1546,6 +1638,7 @@ module Gaugefields_2D_wing_module
                 #end
             #end
         end
+        set_wing_U!(c)
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_2D_wing{NC},a::T1,b::T2) where {NC,T1 <: Number,T2 <: Abstractfields}
@@ -1558,7 +1651,7 @@ module Gaugefields_2D_wing_module
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_2D_wing{NC},a::T1,b::T2,α::Ta,β::Tb) where {NC,T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}
-        @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        @assert NC != 2 && NC != 3 && NC != 1 "This function is for NC != 1,2,3"
         NT = c.NT
         #NZ = c.NZ
         #NY = c.NY
@@ -1579,6 +1672,26 @@ module Gaugefields_2D_wing_module
                 #end
             #end
         end
+        set_wing_U!(c)
+    end
+
+
+    function LinearAlgebra.mul!(c::Gaugefields_2D_wing{1},a::T1,b::T2,α::Ta,β::Tb) where {T1 <: Abstractfields,T2 <: Abstractfields,Ta <: Number, Tb <: Number}
+        #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+        NT = c.NT
+        #NZ = c.NZ
+        #NY = c.NY
+        NX = c.NX
+        for it=1:NT
+            #for iz=1:NZ
+                #for iy=1:NY
+                    for ix=1:NX
+                        @inbounds c[1,1,ix,it] = β*c[1,1,ix,it] + α*a[1,1,ix,it]*b[1,1,ix,it] 
+                    end
+                #end
+            #end
+        end
+        set_wing_U!(c)
     end
 
 
@@ -1619,6 +1732,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 #end
             #end
         end
+        set_wing_U!(c)
     end
 
 
@@ -1652,6 +1766,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 #end
             #end
         end
+        set_wing_U!(c)
     end
     
 
@@ -1695,6 +1810,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 #end
             end
         end
+        set_wing_U!(c)
     end
 
     
@@ -1735,11 +1851,14 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                         c[1,3,ix,it] = a11*b13+a12*b23+a13*b33
                         c[2,3,ix,it] = a21*b13+a22*b23+a23*b33
                         c[3,3,ix,it] = a31*b13+a32*b23+a33*b33
+                        
 
                     end
                 #end
             #end
         end
+        set_wing_U!(c)
+        #error("mul")
     end
 
     function LinearAlgebra.mul!(c::Gaugefields_2D_wing{3},a::T1,b::T2,iseven::Bool) where {T1 <: Abstractfields,T2 <: Abstractfields}
@@ -1788,6 +1907,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 #end
             #end
         end
+        set_wing_U!(c)
     end
     
 
@@ -1842,6 +1962,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                 #end
             end
         end
+        set_wing_U!(c)
     end
 
     function mul_skiplastindex!(c::Gaugefields_2D_wing{NC},a::T1,b::T2) where {NC,T1 <: Abstractfields,T2 <: Abstractfields}
