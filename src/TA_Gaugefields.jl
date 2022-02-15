@@ -51,6 +51,10 @@ function gauss_distribution!(p::T) where T<: TA_Gaugefields
     error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
 end
 
+function gauss_distribution!(p::T;σ=1.0) where T<: TA_Gaugefields
+    error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
+end
+
 
 function gauss_distribution!(p::Array{<:TA_Gaugefields{NC,Dim},1};σ=1.0) where {NC,Dim}
     for μ=1:Dim
