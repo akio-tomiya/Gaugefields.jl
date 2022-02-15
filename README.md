@@ -16,6 +16,7 @@ This package will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/Latt
 This package has following functionarities
 
 - SU(Nc) (Nc > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
+- U(1) gauge fields in 2 dimensions with arbitrary actions. 
 - Configuration generation
     - Heatbath
     - quenched Hybrid Monte Carlo
