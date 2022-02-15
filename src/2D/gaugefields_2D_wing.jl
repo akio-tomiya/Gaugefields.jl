@@ -459,7 +459,7 @@ module Gaugefields_2D_wing_module
         #NY = u.parent.NY
         NX = u.parent.NX
 
-        t = i6-1 + u.parent.shift[4]
+        t = i6-1 + u.parent.shift[2]
         t += ifelse(t<0,NT,0)
         t += ifelse(t ≥ NT,-NT,0)
         #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
