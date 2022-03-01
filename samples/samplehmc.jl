@@ -124,7 +124,7 @@ function gauss_distribution(nv)
     granf = zeros(Float64,nv)
     for i=1:nvh
         rho = sqrt(-2*log(rand())*variance)
-        theta = 2pi*univ.ranf()
+        theta = 2pi*rand()
         granf[i] = rho*cos(theta)
         granf[i+nvh] = rho*sin(theta)
     end
@@ -132,7 +132,7 @@ function gauss_distribution(nv)
         return granf
     end
 
-    granf[nv] = sqrt(-2*log(rand())*variance) * cos(2pi*urand())
+    granf[nv] = sqrt(-2*log(rand())*variance) * cos(2pi*rand())
     return granf
 end
 
