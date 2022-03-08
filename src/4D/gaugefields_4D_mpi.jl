@@ -935,7 +935,7 @@ module Gaugefields_4D_mpi_module
                         setvalue!(c,v,1,2,ix,iy,iz,it) 
                         v = a21*b12+a22*b22
                         setvalue!(c,v,2,2,ix,iy,iz,it) 
-                        v = a31*b12+a32*b22
+                        #v = a31*b12+a32*b22
 
                     end
                 end
