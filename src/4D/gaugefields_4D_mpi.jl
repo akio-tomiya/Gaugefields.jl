@@ -361,7 +361,7 @@ module Gaugefields_4D_mpi_module
                     for ix=1:c.PN[1]
                         for k2=1:NC                            
                             @simd for k1=1:NC
-                                v = α*getvalue(a,k1,k2,ix,iy,iz,it)
+                                v = getvalue(c,k1,k2,ix,iy,iz,it) + α*getvalue(a,k1,k2,ix,iy,iz,it)
                                 setvalue!(c,v,k1,k2,ix,iy,iz,it)
                                 #c[k1,k2,ix,iy,iz,it] += α*a[k1,k2,ix,iy,iz,it]
                             end
