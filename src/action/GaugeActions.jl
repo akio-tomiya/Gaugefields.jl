@@ -1,6 +1,6 @@
 module GaugeAction_module
     import ..Abstractsmearing_module:CovNeuralnet
-    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!
+    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!,getvalue
     
     import Wilsonloop:Wilsonline,make_staple
     using LinearAlgebra
@@ -56,7 +56,9 @@ module GaugeAction_module
             β =  dataset.β
             staples_μ =  dataset.staples[μ]
             evaluate_gaugelinks!(temp3,staples_μ,U,[temp1,temp2])
+            #println("temp3 in dSdUμ! ",getvalue(temp3,1,1,1,1,1,1))
             add_U!(dSdUμ,β,temp3)
+            #println("dSdUμ! ",getvalue(dSdUμ,1,1,1,1,1,1))
         end
         set_wing_U!(dSdUμ)
 

@@ -117,7 +117,31 @@ module AbstractGaugefields_module
     function println_verbose_level3(u::T,val...)  where T <: AbstractGaugefields
         println_verbose_level3(u.verbose_print,val...)
     end
+
+    function get_myrank(U::T) where T <: AbstractGaugefields
+        return 0
+    end
+
+    function get_myrank(U::Array{T,1}) where T <: AbstractGaugefields
+        return 0
+    end
+
+    function get_nprocs(U::T) where T <: AbstractGaugefields
+        return 1
+    end
+
+    function get_nprocs(U::Array{T,1}) where T <: AbstractGaugefields
+        return 1
+    end
+
+    function barrier(x::T) where T <: AbstractGaugefields
+        return 
+    end
     
+    
+    function getvalue(U::T,i1,i2,i3,i4,i5,i6) where T <: Abstractfields
+        return U[i1,i2,i3,i4,i5,i6]
+    end
     
     #include("./gaugefields_4D_wing_mpi.jl")
 
@@ -149,9 +173,18 @@ module AbstractGaugefields_module
 
     function Initialize_4DGaugefields(NC,NDW,NN...;condition = "cold",verbose_level =2,randomnumber="Random")
         if condition == "cold"
-            u1 = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
+            if NDW == 0
+                
+                u1 = IdentityGauges_4D(NC,NN...,verbose_level = verbose_level)
+            else
+                u1 = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
+            end
         elseif condition == "hot"
-            u1 = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+            if NDW == 0
+                u1 = RandomGauges_4D(NC,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+            else
+                u1 = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+            end
         else
             error("not supported")
         end
@@ -163,9 +196,17 @@ module AbstractGaugefields_module
 
         for μ=2:Dim
             if condition == "cold"
-                U[μ] = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
+                if NDW == 0
+                    U[μ] = IdentityGauges_4D(NC,NN...,verbose_level = verbose_level)
+                else
+                    U[μ] = IdentityGauges_4D(NC,NDW,NN...,verbose_level = verbose_level)
+                end
             elseif condition == "hot"
-                U[μ] = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+                if NDW == 0
+                    U[μ] = RandomGauges_4D(NC,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+                else
+                    U[μ] = RandomGauges_4D(NC,NDW,NN...,verbose_level = verbose_level,randomnumber=randomnumber)
+                end
             else
                 error("not supported")
             end
@@ -236,7 +277,11 @@ Gaugefields with using MPI is not well tested.
                 error("not implemented yet!")
             else
                 if dim==4
-                    U = randomGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber=randomnumber)
+                    if NDW == 0
+                        U = randomGaugefields_4D_nowing_mpi(NC,NN[1],NN[2],NN[3],NN[4],PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber=randomnumber)
+                    else
+                        U = randomGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber=randomnumber)
+                    end
                 else
                     error("not implemented yet!")
                 end
@@ -244,9 +289,18 @@ Gaugefields with using MPI is not well tested.
             end
         else
             if dim == 4
-                U = randomGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level= verbose_level,randomnumber=randomnumber)
+                if NDW == 0
+                    U = randomGaugefields_4D_nowing(NC,NN[1],NN[2],NN[3],NN[4],verbose_level= verbose_level,randomnumber=randomnumber)
+
+                else
+                    U = randomGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level= verbose_level,randomnumber=randomnumber)
+                end
             elseif dim == 2
-                U = randomGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level  = verbose_level,randomnumber=randomnumber)
+                if NDW == 0
+                    U = randomGaugefields_2D_nowing(NC,NN[1],NN[2],verbose_level  = verbose_level,randomnumber=randomnumber)
+                else
+                    U = randomGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level  = verbose_level,randomnumber=randomnumber)
+                end
             else
                 error("not implemented yet!")
             end
@@ -256,12 +310,17 @@ Gaugefields with using MPI is not well tested.
 
     function IdentityGauges(NC,NDW,NN...;mpi = false,PEs=nothing,mpiinit = nothing,verbose_level =2)
         dim = length(NN)
+        
         if mpi
             if PEs == nothing || mpiinit == nothing
                 error("not implemented yet!")
             else
                 if dim==4
-                    U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level=verbose_level)
+                    if NDW == 0
+                        U = identityGaugefields_4D_nowing_mpi(NC,NN[1],NN[2],NN[3],NN[4],PEs,mpiinit = mpiinit,verbose_level=verbose_level)
+                    else
+                        U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level=verbose_level)
+                    end
                 else
                     error("$dim dimension system is not implemented yet!")
                 end
@@ -269,9 +328,18 @@ Gaugefields with using MPI is not well tested.
             end
         else
             if dim == 4
-                U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level =verbose_level)
+                if NDW == 0
+                    U = identityGaugefields_4D_nowing(NC,NN[1],NN[2],NN[3],NN[4],verbose_level =verbose_level)
+                else
+                    U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW,verbose_level =verbose_level)
+                end
             elseif dim == 2
-                U = identityGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level = verbose_level)
+                if NDW == 0
+                    
+                    U = identityGaugefields_2D_nowing(NC,NN[1],NN[2],verbose_level = verbose_level)
+                else
+                    U = identityGaugefields_2D_wing(NC,NN[1],NN[2],NDW,verbose_level = verbose_level)
+                end
             else
                 error("$dim dimension system is not implemented yet!")
             end
@@ -287,6 +355,7 @@ Gaugefields with using MPI is not well tested.
                 error("not implemented yet!")
             else
                 if dim==4
+                    
                     U = Oneinstanton_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit)
                 else
                     error("not implemented yet!")
@@ -295,9 +364,18 @@ Gaugefields with using MPI is not well tested.
             end
         else
             if dim == 4
-                U = Oneinstanton_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                if NDW == 0
+                    U = Oneinstanton_4D_nowing(NC,NN[1],NN[2],NN[3],NN[4])
+                else
+                    U = Oneinstanton_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                end
             elseif dim == 2
-                U = Oneinstanton_2D_wing(NC,NN[1],NN[2],NDW)
+                if NDW == 0
+                    U = Oneinstanton_2D_nowing(NC,NN[1],NN[2])
+                else
+                    U = Oneinstanton_2D_wing(NC,NN[1],NN[2],NDW)
+
+                end
             else
                 error("not implemented yet!")
             end
@@ -320,9 +398,17 @@ Gaugefields with using MPI is not well tested.
             end
         else
             if dim == 4
-                U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                if NDW == 0
+                    U = identityGaugefields_4D_nowing(NC,NN[1],NN[2],NN[3],NN[4])
+                else
+                    U = identityGaugefields_4D_wing(NC,NN[1],NN[2],NN[3],NN[4],NDW)
+                end
             elseif dim == 2
-                U = identityGaugefields_2D_wing(NC,NN[1],NN[4],NDW)
+                if NDW == 0
+                    U = identityGaugefields_2D_nowing(NC,NN[1],NN[4])
+                else
+                    U = identityGaugefields_2D_wing(NC,NN[1],NN[4],NDW)
+                end
             else
                 error("not implemented yet!")
             end
@@ -479,6 +565,7 @@ Gaugefields with using MPI is not well tested.
             else
                 substitute_U!(uout,Ushift1)
             end
+            
             return
         end
 
@@ -508,12 +595,19 @@ Gaugefields with using MPI is not well tested.
             #println("j = $j position = $position")
             #println("a,b, $isUkdag , $isU1dag")
             Ushift2 = shift_U(U[direction],position)
+      
+            #zerocheck(U,Ushift1.parent.Ushifted,"Ushift1")
+            #zerocheck(U,Ushift2.parent.Ushifted,"Ushift2 position $position")
+
             multiply_12!(uout,Ushift1,Ushift2,j,isUkdag,isU1dag)
+
+            #zerocheck(U,uout.U,"uout")
 
             #pos = Tuple([ix,iy,iz,it] .+ collect(position))
             #U2 = U[direction][:,:,pos...]
             #println("U1U2dag ", U1*U2')
             substitute_U!(Unew,uout)
+            
             
             #println("Unew ", Unew[:,:,ix,iy,iz,it])
 
@@ -521,12 +615,51 @@ Gaugefields with using MPI is not well tested.
             #println("uout ", uout[:,:,ix,iy,iz,it])
         end
 
+        #zerocheck(U,uout.U,"uoutfinal")
+
 
         #println("uout2 ", uout[:,:,ix,iy,iz,it])
         
         
     end
 
+
+    function zerocheck(U,U2bare,Uname)
+        for myrank=0:(get_nprocs(U)-1)
+            #println(get_nprocs(U))
+            if get_myrank(U) == myrank
+                
+                #println("rank = $myrank Ushift1",Ushift1.parent.Ushifted)
+                #println("rank = $myrank Ushift2",Ushift2.parent.Ushifted)
+                
+                nc,_,nx,ny,nz,nt = size(U2bare)
+                for it=1:nt
+                    for iz=1:nz
+                        for iy=1:ny
+                            for ix = 1:nx
+                                ic = 1
+                                jc = 1
+                                #for ic=1:nc
+                                #    for jc = 1:nc
+                                        v = U2bare[jc,ic,ix,iy,iz,it]
+                                        if abs(v) <= 1e-15
+                                            println("rank = $myrank ",Uname)
+                                            println("$position type: $(typeof(U))\n ",v," at $((jc,ic,ix,iy,iz,it))")
+                                        end
+
+                                #    end
+                                #end
+                            end
+                        end
+                    end
+                end
+                
+                #println("rank $myrank j = $j $position Ushift1 $(typeof(Ushift1)) ",getvalue(Ushift1,1,1,1,1,1,1))
+                #println("rank $myrank j = $j $position Ushift2 $(typeof(Ushift2)) ",getvalue(Ushift2,1,1,1,1,1,1))
+            end
+            barrier(U[1])
+        end
+    end
     function evaluate_gaugelinks_evenodd!(xout::T,w::Array{<:Wilsonline{Dim},1},U::Array{T,1},temps::Array{T,1},iseven) where {T<: AbstractGaugefields,Dim}
         num = length(w)
         temp1 = temps[1]
@@ -973,9 +1106,11 @@ Gaugefields with using MPI is not well tested.
     =#
     
 
+    
     function exptU!(uout::T,t::N,f::T1,temps::Array{T,1}) where {N <: Number, T <: AbstractGaugefields,T1 <: AbstractGaugefields} #uout = exp(t*u)
         error("expUt! is not implemented in type $(typeof(f)) uout: $(typeof(uout))")
     end
+    
 
     function exptU!(uout::T,f::T1,temps::Array{T,1}) where {T <: AbstractGaugefields,T1 <: AbstractGaugefields}
         expU!(uout,1,f,temps)

@@ -15,7 +15,7 @@ struct TA_Gaugefields_4D_mpi{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     nprocs::Int64
     myrank_xyzt::NTuple{4,Int64}
 
-    function TA_Gaugefields_4D_mpi(u::Gaugefields_4D_wing_mpi{NC}) where NC
+    function TA_Gaugefields_4D_mpi(u::Gaugefields_4D{NC}) where NC
         NumofBasis = ifelse(NC == 1,1,NC^2-1)
         if NC <= 3
             generators = nothing
@@ -120,7 +120,7 @@ function Base.:*(x::TA_Gaugefields_4D_mpi{NC,NumofBasis},y::TA_Gaugefields_4D_mp
     return s
 end
 
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{3}) where NumofBasis
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},factor,vin::Union{Gaugefields_4D_wing_mpi{3},Gaugefields_4D_nowing_mpi{3}}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1/3
     NX = vin.NX
@@ -200,7 +200,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},fac
 
 end
 
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{2,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{2}) where NumofBasis
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{2,NumofBasis},factor,vin::Union{Gaugefields_4D_wing_mpi{2},Gaugefields_4D_nowing_mpi{2}}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac12 = 1/2
     NX = vin.NX
@@ -254,7 +254,7 @@ end
      wher   x = vin - Conjg(vin)      
 -----------------------------------------------------c
     """
-function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},vin::Gaugefields_4D_wing_mpi{3}) where NumofBasis
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},vin::Union{Gaugefields_4D_wing_mpi{3},Gaugefields_4D_nowing_mpi{3}}) where NumofBasis
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1/3
     NX = vin.NX
@@ -332,7 +332,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{3,NumofBasis},vin::Ga
 
 end
 
-function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},vin::Gaugefields_4D_wing_mpi{NC}) where {NC,NumofBasis}
+function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},vin::Union{Gaugefields_4D_wing_mpi{NC},Gaugefields_4D_nowing_mpi{NC}}) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 
     #NC = vout.NC
     fac1N = 1/NC
@@ -383,7 +383,7 @@ function Traceless_antihermitian!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},vin::G
     
 end
 
-function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},factor,vin::Gaugefields_4D_wing_mpi{NC}) where {NC,NumofBasis}
+function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},factor,vin::Union{Gaugefields_4D_wing_mpi{NC},Gaugefields_4D_nowing_mpi{NC}}) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 "NC should be NC >4! in this function"
     #NC = vout.NC
     fac1N = 1/NC
@@ -436,7 +436,7 @@ function Traceless_antihermitian_add!(c::TA_Gaugefields_4D_mpi{NC,NumofBasis},fa
     
 end
 
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{NC,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi, NC,NumofBasis} #uout = exp(t*u)
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{NC,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D, NC,NumofBasis} #uout = exp(t*u)
     @assert NC != 3 && NC != 2 "This function is for NC != 2,3, now, NC = $NC, and NumofBasis = $NumofBasis"
     g = u.generators
     NT = u.NT
@@ -474,7 +474,7 @@ function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{NC,NumofBasis},temps::Arra
     #error("exptU! is not implemented in type $(typeof(u)) ")
 end
 
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{3,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi,NumofBasis} #uout = exp(t*u)     
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{3,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D,NumofBasis} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
     NT = u.NT
@@ -724,7 +724,7 @@ end
 const tinyvalue =1e-100
 
 
-function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{2,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D_wing_mpi,NumofBasis} #uout = exp(t*u)     
+function exptU!(uout::T,t::N,u::TA_Gaugefields_4D_mpi{2,NumofBasis},temps::Array{T,1}) where {N <: Number, T <: Gaugefields_4D,NumofBasis} #uout = exp(t*u)     
     NT = u.NT
     NZ = u.NZ
     NY = u.NY

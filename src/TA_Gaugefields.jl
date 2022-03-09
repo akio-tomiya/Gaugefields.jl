@@ -47,9 +47,9 @@ function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim
     end
 end
 
-function gauss_distribution!(p::T) where T<: TA_Gaugefields
-    error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
-end
+#function gauss_distribution!(p::T) where T<: TA_Gaugefields
+#    error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
+#end
 
 function gauss_distribution!(p::T;σ=1.0) where T<: TA_Gaugefields
     error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")

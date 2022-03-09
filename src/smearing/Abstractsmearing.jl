@@ -8,6 +8,7 @@ module Abstractsmearing_module
                         construct_Λmatrix_forSTOUT!,Traceless_antihermitian!,shift_U
     import Wilsonloop:Wilsonline,DwDU,make_loopforactions,make_Cμ,derive_U,derive_Udag,get_leftlinks,get_rightlinks
     import ..Verboseprint_mpi:Verbose_print,println_verbose_level1,println_verbose_level2,println_verbose_level3
+    #import ..GaugeAction_module:GaugeAction
 
 
     abstract type Abstractsmearing end
@@ -68,7 +69,7 @@ module Abstractsmearing_module
 
 
     include("./stout.jl")
-    include("./gradientflow.jl")
+    #include("./gradientflow.jl")
 
     function set_parameters(s::CovNeuralnet,i,v)
         set_parameters(s[i],v)
