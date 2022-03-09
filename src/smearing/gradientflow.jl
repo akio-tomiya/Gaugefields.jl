@@ -5,8 +5,9 @@ module Gradientflow_module
     construct_Λmatrix_forSTOUT!,Traceless_antihermitian!,shift_U
     import ..GaugeAction_module:GaugeAction,get_temporary_gaugefields,calc_dSdUμ!
     import ..Abstractsmearing_module:Abstractsmearing
-    import Wilsonloop:make_loops_fromname
+    import Wilsonloop:make_loops_fromname,Wilsonline
     using LinearAlgebra
+    import Wilsonloop:LinearAlgebra.adjoint
 
 struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
     Nflow::Int64
@@ -17,6 +18,17 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
     _temporal_U_field::Array{Array{T,1},1}
 
     function Gradientflow_general(U::Array{<:AbstractGaugefields{NC,Dim},1},linknames,linkvalues;Nflow = 1,eps = 0.01) where {NC,Dim }
+        @assert length(linknames) == length(linkvalues)
+        numlinks = length(linknames)
+        links = Vector{Vector{Wilsonline{Dim}}}(undef,numlinks)
+        for i=1:numlinks
+            links[i] = make_loops_fromname(linknames[i],Dim=Dim)
+        end
+
+        return Gradientflow_general(U,links,linkvalues,Nflow = Nflow,eps = eps)
+    end
+
+    function Gradientflow_general(U::Array{<:AbstractGaugefields{NC,Dim},1},links::Vector{Vector{Wilsonline{Dim}}},linkvalues;Nflow = 1,eps = 0.01) where {NC,Dim }
         F0 = initialize_TA_Gaugefields(U)
         Ftemps = Array{typeof(F0),1}(undef,4)
         Ftemps[1] = F0
@@ -35,10 +47,10 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
         end
 
         gaugeaction = GaugeAction(U)
-        @assert length(linknames) == length(linkvalues)
-        numlinks = length(linknames)
+        @assert length(links) == length(linkvalues)
+        numlinks = length(links)
         for i=1:numlinks
-            loop = make_loops_fromname(linknames[i],Dim=Dim)
+            loop = links[i]#make_loops_fromname(linknames[i],Dim=Dim)
             append!(loop,loop')
             factor = linkvalues[i]
             push!(gaugeaction,factor,loop)
