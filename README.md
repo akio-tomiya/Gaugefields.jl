@@ -645,8 +645,8 @@ function test1()
 
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
-    append!(plaqloop,plaqloop')
-    β = 5.7/2
+    append!(plaqloop,plaqloop') # add hermitian conjugate
+    β = 5.7/2 # real part; re[p] = (p+p')/2
     push!(gauge_action,β,plaqloop)
     
     show(gauge_action)
@@ -742,8 +742,8 @@ function stoutsmearing(NX,NY,NZ,NT,NC)
 
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
-    append!(plaqloop,plaqloop')
-    β = 5.7/2
+    append!(plaqloop,plaqloop')# add hermitian conjugate
+    β = 5.7/2 # real part; re[p] = (p+p')/2
     push!(gauge_action,β,plaqloop)
 
     μ = 1
