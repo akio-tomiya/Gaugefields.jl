@@ -614,8 +614,9 @@ Gaugefields with using MPI is not well tested.
       
             #zerocheck(U,Ushift1.parent.Ushifted,"Ushift1")
             #zerocheck(U,Ushift2.parent.Ushifted,"Ushift2 position $position")
-
+            
             multiply_12!(uout,Ushift1,Ushift2,j,isUkdag,isU1dag)
+           
 
             #zerocheck(U,uout.U,"uout")
 

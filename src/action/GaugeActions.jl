@@ -5,6 +5,7 @@ module GaugeAction_module
     
     import Wilsonloop:Wilsonline,make_staple
     using LinearAlgebra
+    using InteractiveUtils
 
     struct GaugeAction_dataset{Dim}
         β::Float64
@@ -56,7 +57,8 @@ module GaugeAction_module
             dataset = S.dataset[i]
             β =  dataset.β
             staples_μ =  dataset.staples[μ]
-            evaluate_gaugelinks!(temp3,staples_μ,U,[temp1,temp2])
+            evaluate_gaugelinks!(temp3,staples_μ,U,S._temp_U)
+            
             #println("temp3 in dSdUμ! ",getvalue(temp3,1,1,1,1,1,1))
             add_U!(dSdUμ,β,temp3)
             #println("dSdUμ! ",getvalue(dSdUμ,1,1,1,1,1,1))
