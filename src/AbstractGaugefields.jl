@@ -3,7 +3,7 @@ module AbstractGaugefields_module
     import ..Wilsonloops_module:Wilson_loop_set,calc_coordinate,make_plaq_staple_prime,calc_shift,make_plaq,make_plaq_staple,
                         Tensor_wilson_lines_set,Tensor_wilson_lines,Tensor_derivative_set,
                         get_leftstartposition,get_rightstartposition,Wilson_loop,calc_loopset_μν_name   
-    import Wilsonloop:loops_staple_prime,Wilsonline,get_position,get_direction,Adjoint_GLink,GLink
+    import Wilsonloop:loops_staple_prime,Wilsonline,get_position,get_direction,GLink,isdag
     using Requires
     using Distributions
     using StableRNGs
@@ -458,6 +458,17 @@ Gaugefields with using MPI is not well tested.
         error("map_U! is not implemented in type $(typeof(U)) ")
         return nothing
     end
+
+    function map_U!(U::AbstractGaugefields{NC,Dim},f::Function,V::AbstractGaugefields{NC,Dim}) where {NC,Dim, T<: Abstractfields}
+        error("map_U! is not implemented in type $(typeof(U)) ")
+        return nothing
+    end
+
+
+    function map_U_sequential!(U::AbstractGaugefields{NC,Dim},f::Function,Uin) where {NC,Dim, T<: Abstractfields}
+        error("map_U_sequential! is not implemented in type $(typeof(U)) ")
+        return nothing
+    end
     
 
     function identitymatrix(U::T) where T <: AbstractGaugefields
@@ -493,7 +504,8 @@ Gaugefields with using MPI is not well tested.
         U1link = glinks[1]
         direction = get_direction(U1link)
         position = get_position(U1link)
-        isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+        isU1dag = isdag(U1link)
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
 
 
         if numlinks == 1
@@ -514,7 +526,8 @@ Gaugefields with using MPI is not well tested.
 
         for j=2:numlinks
             Ujlink = glinks[j]
-            isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
+            isUkdag = isdag(Ujlink)
+            #isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
             position = get_position(Ujlink)
             direction = get_direction(Ujlink)
 
@@ -550,7 +563,8 @@ Gaugefields with using MPI is not well tested.
         U1link = glinks[1]
         direction = get_direction(U1link)
         position = get_position(U1link)
-        isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+        isU1dag = isdag(U1link)
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
 
         #show(glinks)   
         #println("in evaluate_gaugelinks!")
@@ -582,6 +596,7 @@ Gaugefields with using MPI is not well tested.
         #pos = Tuple([ix,iy,iz,it] .+ collect(position))
         #U1 = Unew[:,:,pos...]
         #println("U1, ",Unew[:,:,pos...])
+        #isU1dag = U1link.isdag
         #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
 
         
@@ -589,7 +604,8 @@ Gaugefields with using MPI is not well tested.
 
         for j=2:numlinks
             Ujlink = glinks[j]
-            isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
+            isUkdag = isdag(Ujlink)
+            #isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
             position = get_position(Ujlink)
             direction = get_direction(Ujlink)
             #println("j = $j position = $position")
@@ -771,8 +787,37 @@ Gaugefields with using MPI is not well tested.
     end
 
 
+
+    function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Array{<:Wilsonline{Dim},1},U::Array{<:AbstractGaugefields{NC,Dim},1},
+        temps,indices...) where {Dim,T1 <: Matrix{ComplexF64},NC}
+        
+        #xout::T,w::Array{<:Wilsonline{Dim},1},U::Array{T,1},temps::Array{T,1},iseven) where {T<: AbstractGaugefields,Dim}
+        num = length(w)
+        temp = temps[4]
+
+
+        #ix,iy,iz,it=(2,2,2,2)
+        
+        uout_mat .= 0
+        for i=1:num
+            glinks = w[i]
+            evaluate_gaugelinks_eachsite!(temp,glinks,U,view(temps,1:3),indices...)
+            #println("uout2 ", temp2[:,:,ix,iy,iz,it])
+            uout_mat .+= temp
+            #println("xout ", xout[:,:,ix,iy,iz,it])
+        end
+
+        #println("xout2 ", xout[:,:,ix,iy,iz,it])
+        return
+
+
+    end
+
+
+
     function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Wilsonline{Dim},U::Array{<:AbstractGaugefields{NC,Dim},1},
-                            temps::Array{T1,1},indices...) where {Dim,T1 <: Matrix{ComplexF64},NC}
+                            temps,indices...) where {Dim,T1 <: Matrix{ComplexF64},NC}
+        _,_,NN... = size(U[1])
         Unew = temps[1]
         Ushift1 = temps[2]
         Ushift2 = temps[3] 
@@ -794,7 +839,8 @@ Gaugefields with using MPI is not well tested.
         U1link = glinks[1]
         direction = get_direction(U1link)
         position = get_position(U1link)
-        isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+        isU1dag = isdag(U1link)#.isdag
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
 
         #show(glinks)   
         #println("in evaluate_gaugelinks!")
@@ -808,8 +854,13 @@ Gaugefields with using MPI is not well tested.
             end
 
             #substitute_U!(Unew,U[direction])
-
-            shiftedposition = Tuple(collect(indices...) .+ collect(position))
+            shifted = collect(indices) .+ collect(position)
+            for μ=1:Dim
+                shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+                shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
+            end
+            shiftedposition = Tuple(shifted)
+            #shiftedposition = Tuple(collect(indices) .+ collect(position))
             for i=1:NC
                 for j=1:NC
                     Ushift1[j,i] = Unew[j,i,shiftedposition...]
@@ -842,17 +893,21 @@ Gaugefields with using MPI is not well tested.
         #position = get_position(U1link)
         #println("i = $i j = $j position = $position")
         #substitute_U!(Unew,U[direction])
-        for b=1:NC
-            for a=1:NC
-                Unew[a,b] = U[direction][a,b,indices...]
-            end
+        #for b=1:NC
+        #    for a=1:NC
+        #        Unew[a,b] = U[direction][a,b,indices...]
+        #    end
+        #end
+
+        shifted = collect(indices) .+ collect(position)
+        for μ=1:Dim
+            shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+            shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
         end
-
-
-        #shiftedposition = Tuple(collect(indices...) .+ collect(position))
+        shiftedposition = Tuple(shifted)
         for i=1:NC
             for j=1:NC
-                Ushift1[j,i] = Unew[j,i,shiftedposition...]
+                Ushift1[j,i] = U[direction][j,i,shiftedposition...]
             end
         end
 
@@ -870,12 +925,19 @@ Gaugefields with using MPI is not well tested.
 
         for j=2:numlinks
             Ujlink = glinks[j]
-            isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
+            isUkdag = isdag(Ujlink)
+            #isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
             position = get_position(Ujlink)
             direction = get_direction(Ujlink)
             #println("j = $j position = $position")
             #println("a,b, $isUkdag , $isU1dag")
-            shiftedposition2 = Tuple(collect(indices...) .+ collect(position))
+            shifted = collect(indices) .+ collect(position)
+            for μ=1:Dim
+                shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+                shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
+            end
+            shiftedposition2 = Tuple(shifted)
+            #shiftedposition2 = Tuple(collect(indices) .+ collect(position))
             for b=1:NC
                 for a=1:NC
                     Ushift2[a,b] = U[direction][a,b,shiftedposition2...]
@@ -891,14 +953,14 @@ Gaugefields with using MPI is not well tested.
             #substitute_U!(Unew,uout)
             for b=1:NC
                 for a=1:NC
-                    Unew[a,b] =uout_mat[a,b,indices...]
+                    Unew[a,b] =uout_mat[a,b]
                 end
             end
             
             #println("Unew ", Unew[:,:,ix,iy,iz,it])
             for b=1:NC
                 for a=1:NC
-                    Ushift1[a,b] = Unew[a,b,indices...]
+                    Ushift1[a,b] = Unew[a,b]
                 end
             end
 

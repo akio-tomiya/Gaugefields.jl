@@ -436,6 +436,7 @@ module Gaugefields_4D_mpi_module
         tempmatrix = zeros(ComplexF64,NC,NC)
 
         win = MPI.Win_create(U.Ushifted,comm)
+        #Isend Irecv
 
         MPI.Win_fence(0, win)
 

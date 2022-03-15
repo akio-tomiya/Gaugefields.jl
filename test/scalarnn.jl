@@ -1,10 +1,10 @@
 using LinearAlgebra
-function test1()
+function test1(Nwing)
     NX = 4
     NY = 4
     NZ = 4
     NT = 4
-    Nwing = 1
+    #Nwing = 1
     Dim = 4
     NC = 3
 
@@ -30,5 +30,10 @@ function test1()
 end
 
 @testset "initialization" begin
-    test1()
+    println("with Nwing")
+    Nwing = 1
+    test1(Nwing)
+    println("without Nwing")
+    Nwing = 0
+    test1(Nwing)
 end

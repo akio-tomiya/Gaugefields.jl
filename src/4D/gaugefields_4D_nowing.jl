@@ -485,6 +485,37 @@ using Random
         set_wing_U!(U)
     end
 
+    function map_U_sequential!(U::Gaugefields_4D_nowing{NC},f!::Function,Uin) where {NC} 
+        NT = U.NT
+        NZ = U.NZ
+        NY = U.NY
+        NX = U.NX
+        #A = zeros(ComplexF64,NC,NC)
+        B = zeros(ComplexF64,NC,NC)
+        for it=1:NT
+            for iz=1:NZ
+                for iy=1:NY
+                    for ix=1:NX
+
+                        for k2=1:NC                            
+                            for k1=1:NC
+                                B[k1,k2] = U[k1,k2,ix,iy,iz,it]
+                            end
+                        end
+                        f!(B,Uin,ix,iy,iz,it)
+                        for k2=1:NC                            
+                            for k1=1:NC
+                                U[k1,k2,ix,iy,iz,it] = B[k1,k2]
+                            end
+                        end
+
+                    end
+                end
+            end
+        end
+        #set_wing_U!(U)
+    end
+
 
     
     function clear_U!(Uμ::Gaugefields_4D_nowing{NC}) where NC

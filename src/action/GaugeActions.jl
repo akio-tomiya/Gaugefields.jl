@@ -1,6 +1,7 @@
 module GaugeAction_module
     import ..Abstractsmearing_module:CovNeuralnet
-    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!,getvalue
+    import ..AbstractGaugefields_module:AbstractGaugefields,evaluate_gaugelinks!,add_U!,clear_U!,set_wing_U!,getvalue,
+                            evaluate_gaugelinks_eachsite! 
     
     import Wilsonloop:Wilsonline,make_staple
     using LinearAlgebra
@@ -78,6 +79,19 @@ module GaugeAction_module
         evaluate_GaugeAction_untraced!(uout,S,U)
         
         return uout
+    end
+
+    function evaluate_staple_eachindex!(mat_U,μ,S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}},mat_temps,indices...) where {Dim,NC,T}
+        temp3 = mat_temps[5]
+        numterm = length(S.dataset)
+        mat_U .= 0
+        for i=1:numterm
+            dataset = S.dataset[i]
+            β = dataset.β
+            staples_μ =  dataset.staples[μ]
+            evaluate_gaugelinks_eachsite!(temp3,staples_μ,U,view(mat_temps,1:4),indices...)
+            mat_U .+= β*temp3
+        end
     end
 
     function evaluate_GaugeAction_untraced!(uout,S::GaugeAction,U::Vector{<: AbstractGaugefields{NC,Dim}}) where {Dim,NC,T}
