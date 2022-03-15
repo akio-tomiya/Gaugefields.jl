@@ -1,93 +1,3 @@
-function heatbath_SU2!(U,NC,temps,β,Dim=4)
-
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-    end
-
-    mapfunc!(A,B) = SU2update_KP!(A,B,β,NC,temps2,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
-
-function heatbath_SU3!(U,NC,temps,β,Dim=4)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-        temps3[i] = zeros(ComplexF64,3,3)
-    end
-
-    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
-
-
-function heatbath_SUN!(U,NC,temps,β,Dim = 4)
-    #Dim = 4
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-        temps3[i] = zeros(ComplexF64,NC,NC)
-    end
-
-    mapfunc!(A,B) = SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
 
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
@@ -107,13 +17,18 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     h = Heatbath(U,β)
 
-    #=
+    
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette",Dim=Dim)
     append!(plaqloop,plaqloop')
     βinp = β/2
     push!(gauge_action,βinp,plaqloop)
-    =#
+    rectloop = make_loops_fromname("rectangular",Dim=Dim)
+    append!(rectloop,rectloop')
+    βinp = β/2
+    push!(gauge_action,βinp,rectloop)
+    hnew = Heatbath_update(U,gauge_action)
+    
 
     
     temp1 = similar(U[1])
@@ -130,8 +45,8 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     numhb = 200
     for itrj = 1:numhb
-        #heatbath!(U,hnew)
-        heatbath!(U,h)
+        heatbath!(U,hnew)
+        #heatbath!(U,h)
         #=
         if NC == 2
             heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
@@ -191,20 +106,22 @@ function heatbathtest_2D(NX,NT,β,NC)
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
-    #=
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette",Dim=Dim)
     append!(plaqloop,plaqloop')
     βinp = β/2
     push!(gauge_action,βinp,plaqloop)
+    rectloop = make_loops_fromname("rectangular",Dim=Dim)
+    append!(rectloop,rectloop')
+    βinp = β/2
+    push!(gauge_action,βinp,rectloop)
     hnew = Heatbath_update(U,gauge_action)
-
-    =#
+    
 
     numhb = 200
     for itrj = 1:numhb
-        #heatbath!(U,hnew)
-        heatbath!(U,[temp1,temp2,temp3],β)
+        heatbath!(U,hnew)
+        #heatbath!(U,[temp1,temp2,temp3],β)
         #=
         if NC == 2
             heatbath_SU2!(U,NC,[temp1,temp2,temp3],β,Dim)
@@ -242,16 +159,17 @@ println("4D system")
         β = 2.3
         NC = 2
         println("NC = $NC")
-        val =0.6414596466929057
+        val =0.9042749888688881
         @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         @test abs(plaq_t-val)/abs(val) < eps
     end
 
     @testset "NC=3" begin
-        β = 5.7
+        
         NC = 3
+        β = 2.3*NC #5.7
         println("NC = $NC")
-        val = 0.5779454661484242
+        val = 0.9148612416401057
         @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         @test abs(plaq_t-val)/abs(val) < eps
     end
@@ -260,7 +178,7 @@ println("4D system")
         β = 5.7
         NC = 4
         println("NC = $NC")
-        val  =0.19127260002797497
+        val  =0.791346082492281
         @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         @test abs(plaq_t-val)/abs(val) < eps
     end
@@ -282,7 +200,7 @@ println("2D system")
         β = 2.3
         NC = 2
         println("NC = $NC")
-        val = 0.5767979418826605
+        val =  0.8275345965584693
         #val =0.6414596466929057
         @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         #@test abs(plaq_t-val)/abs(val) < eps
@@ -292,7 +210,7 @@ println("2D system")
         β = 5.7
         NC = 3
         println("NC = $NC")
-        val = 0.5779454661484242
+        val =  0.8441480514316867
         @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         #@test abs(plaq_t-val)/abs(val) < eps
     end
@@ -301,7 +219,7 @@ println("2D system")
         β = 5.7
         NC = 4
         println("NC = $NC")
-        val  =0.19127260002797497
+        val  = 0.32324174201862377
         @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         #@test abs(plaq_t-val)/abs(val) < eps
     end

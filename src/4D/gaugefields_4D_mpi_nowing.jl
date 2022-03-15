@@ -409,6 +409,11 @@ module Gaugefields_4D_mpi_module
         set_wing_U!(U)
     end
 
+    function map_U_sequential!(U::Gaugefields_4D_nowing_mpi{NC},f!::Function,Uin) where {NC} 
+        error("The function map_U_sequential! can not be used with MPI")
+    end
+
+
 
     struct Shifted_Gaugefields_4D_mpi_nowing{NC} <: Shifted_Gaugefields{NC,4} 
         parent::Gaugefields_4D_nowing_mpi{NC}

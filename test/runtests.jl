@@ -5,6 +5,7 @@ import Wilsonloop:loops_staple
 
 
 
+
 @testset "HMC nowing" begin
     println("HMC nowing")
     include("HMC_test_nowing.jl")
@@ -40,7 +41,10 @@ end
     include("heatbathtest.jl")
 end
 
-
+@testset "heatbath with plaq and rect actions" begin
+    println("heatbath with plaq and rect actions")
+    include("heatbathtest_general.jl")
+end
 
 
 @testset "gradientflow nowing" begin
