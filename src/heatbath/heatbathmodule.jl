@@ -37,11 +37,13 @@ struct Heatbath_update{Dim,T}
     end
 end
 
+const heatbath_factor = 2
+
 function heatbath_update_eachsite_SU2!(A,μ,U::Vector{<: AbstractGaugefields{NC,Dim}},h::Heatbath_update{Dim,T},mat_temps,indices...) where {NC,Dim,T}
     @assert NC == 2
     V = mat_temps[1]
     evaluate_staple_eachindex!(V,μ,h.gauge_action,U,view(mat_temps,2:6),indices...) 
-    SU2update_KP!(A,V,1,NC,view(mat_temps,7:8),h.ITERATION_MAX)
+    SU2update_KP!(A,V,heatbath_factor ,NC,view(mat_temps,7:8),h.ITERATION_MAX)
 end
 
 function heatbath!(U::Array{<: AbstractGaugefields{2,Dim},1},h::Heatbath_update{Dim,T}) where {Dim,T}
@@ -65,14 +67,14 @@ function heatbath_update_eachsite_SU3!(A,μ,U::Vector{<: AbstractGaugefields{NC,
     @assert NC == 3
     V = mat_temps1[1]
     evaluate_staple_eachindex!(V,μ,h.gauge_action,U,view(mat_temps1,2:6),indices...) 
-    SU3update_matrix!(A,V,1,NC,view(mat_temps1,7:11),mat_temps2,h.ITERATION_MAX)
+    SU3update_matrix!(A,V,heatbath_factor ,NC,view(mat_temps1,7:11),mat_temps2,h.ITERATION_MAX)
     #SU2update_KP!(A,V,1,NC,view(mat_temps,7:8),h.ITERATION_MAX)
 end
 
 function heatbath_update_eachsite_SUN!(A,μ,U::Vector{<: AbstractGaugefields{NC,Dim}},h::Heatbath_update{Dim,T},mat_temps1,mat_temps2,indices...) where {NC,Dim,T}
     V = mat_temps1[1]
     evaluate_staple_eachindex!(V,μ,h.gauge_action,U,view(mat_temps1,2:6),indices...) 
-    SUNupdate_matrix!(A,V,1,NC,view(mat_temps1,7:11),mat_temps2,h.ITERATION_MAX)
+    SUNupdate_matrix!(A,V,heatbath_factor ,NC,view(mat_temps1,7:11),mat_temps2,h.ITERATION_MAX)
     #SU2update_KP!(A,V,1,NC,view(mat_temps,7:8),h.ITERATION_MAX)
 end
 
@@ -201,6 +203,46 @@ function heatbath!(U::Array{<: AbstractGaugefields{3,Dim},1},temps,β;ITERATION_
     end
     
 end
+
+function heatbath!(U::Array{<: AbstractGaugefields{3,Dim},1},temps,β,gauge_action;ITERATION_MAX=10^5) where {Dim} #This function is for debugging
+    NC = 3
+    temp1 = temps[1]
+    temp2 = temps[2]
+    V = temps[3]
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+    end
+
+    if NC != 2
+        temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+        for i=1:5
+            temps3[i] = zeros(ComplexF64,NC,NC)
+        end
+    end
+
+
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+
+
+    for μ=1:Dim
+
+        #loops = loops_staple[(Dim,μ)]
+        loops = gauge_action.dataset[1].staples[μ]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+    
+end
+
 
 function heatbath!(U::Array{<: AbstractGaugefields{NC,Dim},1},temps,β;ITERATION_MAX=10^5) where {Dim,NC}
 
