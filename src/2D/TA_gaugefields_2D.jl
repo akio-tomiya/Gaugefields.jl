@@ -5,7 +5,8 @@ include("./TA_gaugefields_2D_serial.jl")
 
 function TA_Gaugefields(NC,NX,NT;mpi=false)
     if mpi
-        error("mpi = $mpi is not supoorted")
+        return TA_Gaugefields_2D_mpi(NC,NX,NT)
+        #error("mpi = $mpi is not supoorted")
     else
         return TA_Gaugefields_2D_serial(NC,NX,NT)
     end 

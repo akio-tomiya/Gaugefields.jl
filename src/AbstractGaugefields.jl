@@ -80,10 +80,23 @@ module AbstractGaugefields_module
     end
 
 
+    mutable struct Data_sent{NC} #data format for MPI
+        count::Int64
+        data::Array{ComplexF64,3}
+        positions::Vector{Int64}
+    
+        function Data_sent(N,NC)
+            data = zeros(ComplexF64,NC,NC,N)
+            count = 0
+            positions = zeros(Int64,N)
+    
+            return new{NC}(count,data,positions)
+        end
+    end
 
-
-    include("./4D/gaugefields_4D.jl")
     include("./2D/gaugefields_2D.jl")
+    include("./4D/gaugefields_4D.jl")
+    
     include("TA_Gaugefields.jl")
     include("Adjoint_rep_Gaugefields.jl")
 
@@ -141,6 +154,10 @@ module AbstractGaugefields_module
     
     function getvalue(U::T,i1,i2,i3,i4,i5,i6) where T <: Abstractfields
         return U[i1,i2,i3,i4,i5,i6]
+    end
+
+    function getvalue(U::T,i1,i2,i3,i6) where T <: Abstractfields
+        return U[i1,i2,i3,i6]
     end
     
     #include("./gaugefields_4D_wing_mpi.jl")
@@ -321,8 +338,12 @@ Gaugefields with using MPI is not well tested.
                     else
                         U = identityGaugefields_4D_wing_mpi(NC,NN[1],NN[2],NN[3],NN[4],NDW,PEs,mpiinit = mpiinit,verbose_level=verbose_level)
                     end
+                elseif dim == 2
+                    if NDW == 0
+                        U = identityGaugefields_2D_nowing_mpi(NC,NN[1],NN[2],PEs,mpiinit = mpiinit,verbose_level=verbose_level)
+                    end
                 else
-                    error("$dim dimension system is not implemented yet!")
+                    error("$dim dimension with $NDW  is not implemented yet! set NDW = 0")
                 end
                 
             end

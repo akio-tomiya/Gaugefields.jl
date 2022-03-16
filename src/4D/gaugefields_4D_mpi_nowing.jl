@@ -1,16 +1,4 @@
-mutable struct Data_sent{NC}
-    count::Int64
-    data::Array{ComplexF64,3}
-    positions::Vector{Int64}
 
-    function Data_sent(N,NC)
-        data = zeros(ComplexF64,NC,NC,N)
-        count = 0
-        positions = zeros(Int64,N)
-
-        return new{NC}(count,data,positions)
-    end
-end
 
 #=
 module Gaugefields_4D_mpi_module
