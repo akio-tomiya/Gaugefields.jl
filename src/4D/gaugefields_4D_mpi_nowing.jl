@@ -56,6 +56,9 @@ module Gaugefields_4D_mpi_module
         win_i::MPI.Win
         win_1i::MPI.Win
         countvec::Vector{Int64}
+        otherranks::Vector{Int64}
+        win_other::MPI.Win
+        your_ranks::Matrix{Int64}
     
 
         function Gaugefields_4D_nowing_mpi(NC::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true,
@@ -104,9 +107,16 @@ module Gaugefields_4D_mpi_module
             win_i = MPI.Win_create(positions,comm)
             countvec = zeros(Int64,1)
             win_1i = MPI.Win_create(countvec,comm)
+
+            otherranks = zeros(Int64,nprocs)
+            otherranks .= 0
+            win_other = MPI.Win_create(otherranks,comm)
+            your_ranks = zeros(Int64,nprocs,nprocs)
+
+
             return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print,
                     Ushifted,tempmatrix,positions,send_ranks,
-                    win,win_i,win_1i,countvec)
+                    win,win_i,win_1i,countvec,otherranks,win_other,your_ranks)
         end
     end
 
@@ -485,7 +495,40 @@ module Gaugefields_4D_mpi_module
         PEs,myrank_xyzt,xP,yP,zP,tP,U::Gaugefields_4D_nowing_mpi{NC}) where NC
         tempmatrix_mini = view(U.tempmatrix,1:NC,1:NC,1) 
 
+        
         px = myrank_xyzt[1] + xP
+        while px >= PEs[1]
+            px += -PEs[1]
+        end
+        while px < 0
+            px += PEs[1]
+        end
+
+        py = myrank_xyzt[2] + yP
+        while py >= PEs[2]
+            py += -PEs[2]
+        end
+        while py < 0
+            py += PEs[2]
+        end
+
+        pz = myrank_xyzt[3] + zP
+        while pz >= PEs[3]
+            pz += -PEs[3]
+        end
+        while pz < 0
+            pz += PEs[3]
+        end
+
+        pt = myrank_xyzt[4] + tP
+        while pt >= PEs[4]
+            pt += -PEs[4]
+        end
+        while pt < 0
+            pt += PEs[4]
+        end
+
+        #=
         px += ifelse(px >= PEs[1],-PEs[1],0) 
         px += ifelse(px < 0,+PEs[1],0) 
         py = myrank_xyzt[2] + yP
@@ -497,11 +540,30 @@ module Gaugefields_4D_mpi_module
         pt = myrank_xyzt[4] + tP
         pt += ifelse(pt >= PEs[4],-PEs[4],0) 
         pt += ifelse(pt < 0,+PEs[4],0) 
+        =#
 
         myrank_xyzt_send = (px,py,pz,pt)
-        #println(myrank_xyzt_send)
+        
         myrank_send = get_myrank(myrank_xyzt_send,PEs)
-        #println(myrank_send,"\t",myrank)
+        #println("send ",myrank_send)
+
+        #=
+        for rank=0:get_nprocs(U)
+            if rank == get_myrank(U)
+                if myrank_send == rank
+                    println("myrank = $rank, ",myrank_xyzt_send)
+                    println("myrank_xyzt $myrank_xyzt")
+                    println("(xP,yP,zP,tP) ",(xP,yP,zP,tP))
+                println("send ",myrank_send)
+                println("(ix,iy,iz,it) ",(ix,iy,iz,it))
+                println("(ix_shifted,iy_shifted,iz_shifted,it_shifted) ",(ix_shifted,iy_shifted,iz_shifted,it_shifted))
+                end
+                
+
+            end
+            barrier(U)
+        end
+        =#
 
 
         for jc=1:NC
@@ -557,17 +619,19 @@ module Gaugefields_4D_mpi_module
                     iy_shifted = iy
                     for ix=1:U.PN[1]
                         ix_shifted = ix - shift[1]
-                        if myrank_xyzt[1] == 0
-                            while ix_shifted < 1
-                                ix_shifted += U.NX
-                            end
-                            #ix_shifted += ifelse(ix_shifted < 1,U.NX,0)
+                        ix_global = myrank_xyzt[1]*U.PN[1] + ix
+                        ix_shifted_global = ix_global - shift[1]
+                        #if myrank_xyzt[1] == 0
+                        while ix_shifted_global < 1
+                            ix_shifted += U.NX
+                            ix_shifted_global += U.NX
                         end
-                        if myrank_xyzt[1] == PEs[1]-1
-                            while ix_shifted > U.PN[1]
-                                ix_shifted += -U.NX
-                            end
-                            #ix_shifted += ifelse(ix_shifted > U.PN[1],-U.NX,0)
+                            #ix_shifted += ifelse(ix_shifted < 1,U.NX,0)
+                        #end
+                        #if myrank_xyzt[1] == PEs[1]-1
+                        while ix_shifted_global > U.NX
+                            ix_shifted += -U.NX
+                            ix_shifted_global += -U.NX
                         end
 
                         if ix_shifted <=  0
@@ -633,20 +697,21 @@ module Gaugefields_4D_mpi_module
             for iz=1:U.PN[3]
                 iz_shifted = iz
                 for iy=1:U.PN[2]
-                    iy_shifted = iy
                     iy_shifted = iy - shift[2]
-                    if myrank_xyzt[2] == 0
-                        while iy_shifted < 1
-                            iy_shifted += U.NY
-                        end
+                    iy_global = myrank_xyzt[2]*U.PN[2] + iy
+                    iy_shifted_global = iy_global - shift[2]
+                    #if myrank_xyzt[2] == 0
+                    while iy_shifted_global < 1
+                        iy_shifted += U.NY
+                        iy_shifted_global += U.NY
+                    end
 
                         #iy_shifted += ifelse(iy_shifted < 1,U.NY,0)
-                    end
-                    if myrank_xyzt[2] == PEs[2]-1
-                        while iy_shifted > U.PN[2]
-                            iy_shifted += -U.NY
-                        end
-                        #iy_shifted += ifelse(iy_shifted > U.PN[2],-U.NY,0)
+                    #end
+                    #if myrank_xyzt[2] == PEs[2]-1
+                    while iy_shifted_global > U.NY
+                        iy_shifted += -U.NY
+                        iy_shifted_global += -U.NY
                     end
 
                     if iy_shifted <=  0
@@ -714,18 +779,19 @@ module Gaugefields_4D_mpi_module
             it_shifted = it
             for iz=1:U.PN[3]
                 iz_shifted = iz - shift[3]
-                if myrank_xyzt[3] == 0
-                    while iz_shifted < 1
-                        iz_shifted += U.NZ
-                    end
-                    #iz_shifted += ifelse(iz_shifted < 1,U.NZ,0)
+                iz_global = myrank_xyzt[3]*U.PN[3] + iz
+                iz_shifted_global = iz_global - shift[3]
+                #if myrank_xyzt[3] == 0
+                while iz_shifted_global < 1
+                    iz_shifted += U.NZ
+                    iz_shifted_global += U.NZ
                 end
-                if myrank_xyzt[3] == PEs[3]-1
-                    while iz_shifted > U.PN[3]
-                        iz_shifted += -U.NZ
-                    end
-
-                    #iz_shifted += ifelse(iz_shifted > U.PN[3],-U.NZ,0)
+                    #iz_shifted += ifelse(iz_shifted < 1,U.NZ,0)
+                #end
+                #if myrank_xyzt[3] == PEs[3]-1
+                while iz_shifted_global  > U.NZ
+                    iz_shifted += -U.NZ
+                    iz_shifted_global += -U.NZ
                 end
 
                 if iz_shifted <=  0
@@ -794,23 +860,29 @@ module Gaugefields_4D_mpi_module
 
         for it=1:U.PN[4]
             it_shifted = it - shift[4]
-            if myrank_xyzt[4] == 0
-                while it_shifted < 1
-                    it_shifted += U.NT
-                end
+            it_global = myrank_xyzt[4]*U.PN[4] + it
+            it_shifted_global = it_global - shift[4]
+            #if myrank_xyzt[4] == 0
+            while it_shifted_global < 1
+                it_shifted += U.NT
+                it_shifted_global += U.NT
+            end
                 #it_shifted += ifelse(it_shifted < 1,U.NT,0)
+            #end  
+            #if myrank_xyzt[4] == PEs[4]-1
+            while it_shifted_global > U.NT
+                it_shifted += -U.NT
+                it_shifted_global += -U.NT
             end
-            if myrank_xyzt[4] == PEs[4]-1
-                while it_shifted > U.PN[4]
-                    it_shifted += -U.NT
-                end
-                #it_shifted += ifelse(it_shifted > U.PN[4],-U.NT,0)
-            end
+
             if it_shifted <= 0
                 tP = div(it_shifted,U.PN[4]) -1
             else
                 tP = div(it_shifted-1,U.PN[4])
             end
+            #if tP < 0 
+            #    println("it_shifted $it_shifted tP = $tP")
+            #end
 
 
             #it_shifted += ifelse(it_shifted < 1,U.PN[4],0)
@@ -854,9 +926,9 @@ module Gaugefields_4D_mpi_module
         
 
     end
-    
 
-    function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC},send_ranks) where NC
+
+    function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC},send_ranks) where NC
         if length(send_ranks) != 0
             #=
             for rank=0:get_nprocs(U)
@@ -868,7 +940,6 @@ module Gaugefields_4D_mpi_module
                 end
                 barrier(U)
             end
-
             =#
             tempmatrix = U.tempmatrix #zeros(ComplexF64,NC,NC,N)
             #tempmatrix = zeros(ComplexF64,NC,NC,N)
@@ -944,12 +1015,254 @@ module Gaugefields_4D_mpi_module
     end
 
 
+    const printdata =false
+
+    function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC},send_ranks) where NC
+
+
+
+
+        otherranks = U.otherranks
+        win_other = U.win_other
+
+        MPI.Win_fence(0, win_other)
+        myrank = get_myrank(U)
+        nprocs = get_nprocs(U)
+        for (myrank_send,value) in send_ranks
+            count = value.count
+            MPI.Put(Int64[count], myrank_send,myrank,win_other)
+        end
+        MPI.Win_fence(0, win_other)
+
+
+        tempmatrix = U.tempmatrix #zeros(ComplexF64,NC,NC,N)
+        #tempmatrix = zeros(ComplexF64,NC,NC,N)
+        positions = U.positions
+
+        win = U.win
+        #@time win = MPI.Win_create(tempmatrix,comm)
+        #println(typeof(win))
+        #Isend Irecv
+        
+        win_i = U.win_i#MPI.Win_create(positions,comm)
+        
+        win_c = U.win_1i
+        #win_c = MPI.Win_create(countvec,comm)
+        
+
+        countvec = U.countvec#zeros(Int64,1)
+
+        your_ranks = U.your_ranks #zeros(Int64,nprocs,nprocs)
+        your_ranks .= -1
+
+        MPI.Win_fence(0, win_other)
+        icount = 0
+        for (myrank_send,value) in send_ranks
+            icount += 1
+            MPI.Get(view(your_ranks,1:nprocs,icount), myrank_send,win_other)
+        end
+        MPI.Win_fence(0, win_other)
+
+
+        
+
+        MPI.Win_fence(0, win)
+        MPI.Win_fence(0, win_i)
+        MPI.Win_fence(0, win_c)
+
+        icount = 0
+        for (myrank_send,value) in send_ranks
+            count = value.count
+            icount += 1
+            disp = 0
+            for irank=1:myrank
+                if your_ranks[irank,icount] != -1
+                    disp += your_ranks[irank,icount]
+                end
+            end
+            
+
+            MPI.Put(value.positions[1:count], myrank_send,disp,win_i)
+            MPI.Put(value.data[:,:,1:count], myrank_send,disp*NC*NC,win)
+        end
+        
+
+        MPI.Win_fence(0, win)
+        MPI.Win_fence(0, win_i)
+        MPI.Win_fence(0, win_c)
+
+        your_ranks .= -1
+
+        totaldatanum = sum(otherranks)
+
+
+        for i = 1:totaldatanum
+            position = positions[i]
+            for jc = 1:NC
+                for ic= 1:NC
+                    ii = ((position-1)*NC + jc-1)*NC + ic
+                    U.Ushifted[ii] = tempmatrix[ic,jc,i]
+                end
+            end
+            #println(position)
+        end
+
+        otherranks .= 0
+
+    end
+
+    function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC},send_ranks) where NC
+        if length(send_ranks) != 0
+
+            val = MPI.Allreduce(length(send_ranks), +,comm) ÷ get_nprocs(U)
+
+            #=
+            for rank=0:get_nprocs(U)
+                if rank == get_myrank(U)
+                    println("length = ",val,"\t")
+                    println("myrank = ",rank," length = $(length(send_ranks))")
+                end
+                barrier(U)
+            end
+            =#
+
+            mpi_updates_U_moredata!(U,send_ranks)
+            return
+
+            if val == 1
+                mpi_updates_U_1data!(U,send_ranks)
+            else
+                mpi_updates_U_moredata!(U,send_ranks)
+            end
+            return
+
+            if length(send_ranks) == 1
+                mpi_updates_U_1data!(U,send_ranks)
+                barrier(U)
+                return
+            else
+                mpi_updates_U_moredata!(U,send_ranks)
+                barrier(U)
+                return
+            end
+            
+            return
+
+
+            for rank=0:get_nprocs(U)
+                if rank == get_myrank(U)
+                    println("myrank = ",rank," length = $(length(send_ranks))")
+                    for (key,value) in send_ranks
+                        println(key,"\t",value.count)
+                    end
+                    for i=1:get_nprocs(U)
+                        println("other ",otherranks[i])
+                    end
+                    for i=1:get_nprocs(U)
+                        println("my data ",your_ranks[i])
+                    end
+                    #println("I have ",)
+                end
+                barrier(U)
+            end
+            otherranks .= 0
+            
+            for (myrank_send,value) in send_ranks
+                count = value.count
+                #count = value.count
+                MPI.Put(Int64[count], myrank_send,win_c)
+                
+                # count = value.count
+                MPI.Put(value.positions[1:count], myrank_send,win_i)
+                MPI.Put(value.data[:,:,1:count], myrank_send,win)
+
+            end
+
+            MPI.Win_fence(0, win)
+            MPI.Win_fence(0, win_i)
+            MPI.Win_fence(0, win_c)
+
+            count = countvec[1]
+
+            for i = 1:count
+                position = positions[i]
+                for jc = 1:NC
+                    for ic= 1:NC
+                        ii = ((position-1)*NC + jc-1)*NC + ic
+                        U.Ushifted[ii] = tempmatrix[ic,jc,i]
+                    end
+                end
+                #println(position)
+            end
+
+            #MPI.free(win)
+
+            #=
+
+            
+
+            #for (myrank_send,value) in send_ranks
+            #    count = value.count
+            #    MPI.Put(value.positions[1:count], myrank_send,win_i)
+            #end
+
+            
+            #MPI.free(win_i)
+
+            countvec = U.countvec#zeros(Int64,1)
+           
+
+            for (myrank_send,value) in send_ranks
+                count = value.count
+                MPI.Put(Int64[count], myrank_send,win_c)
+            end
+
+            
+            #MPI.free(win_c)
+
+            count = countvec[1]
+
+            
+
+            #=
+            for rank=0:get_nprocs(U)
+                if rank == get_myrank(U)
+                    println("myrank = ",myrank)
+                    for position in positions[1:count]
+                        println(position)
+                    end
+                end
+                barrier(U)
+            end
+            =#
+
+            for i = 1:count
+                position = positions[i]
+                for jc = 1:NC
+                    for ic= 1:NC
+                        ii = ((position-1)*NC + jc-1)*NC + ic
+                        U.Ushifted[ii] = tempmatrix[ic,jc,i]
+                    end
+                end
+                #println(position)
+            end
+
+            =#
+
+            #error("in shiftdU")
+        end
+    end
+
+
     
 
     function shifted_U_improved!(U::Gaugefields_4D_nowing_mpi{NC},shift) where NC
         if shift == (0,0,0,0)
             shifted_U_improved_zeroshift!(U)
             return
+
+        
+        
         
         elseif shift[1] != 0 && shift[2] == 0 && shift[3] == 0 && shift[4] == 0
             shifted_U_improved_xshift!(U,shift)
@@ -964,7 +1277,10 @@ module Gaugefields_4D_mpi_module
             shifted_U_improved_tshift!(U,shift)
             return
             
+            
         end
+        
+        
 
         PEs = U.PEs
         PN = U.PN
@@ -989,23 +1305,30 @@ module Gaugefields_4D_mpi_module
 
         for it=1:U.PN[4]
             it_shifted = it - shift[4]
-            if myrank_xyzt[4] == 0
-                while it_shifted < 1
-                    it_shifted += U.NT
-                end
+            it_global = myrank_xyzt[4]*U.PN[4] + it
+            it_shifted_global = it_global - shift[4]
+            #if myrank_xyzt[4] == 0
+            while it_shifted_global < 1
+                it_shifted += U.NT
+                it_shifted_global += U.NT
+            end
                 #it_shifted += ifelse(it_shifted < 1,U.NT,0)
+            #end  
+            #if myrank_xyzt[4] == PEs[4]-1
+            while it_shifted_global > U.NT
+                it_shifted += -U.NT
+                it_shifted_global += -U.NT
             end
-            if myrank_xyzt[4] == PEs[4]-1
-                while it_shifted > U.PN[4]
-                    it_shifted += -U.NT
-                end
                 #it_shifted += ifelse(it_shifted > U.PN[4],-U.NT,0)
-            end
+            #end
             if it_shifted <= 0
                 tP = div(it_shifted,U.PN[4]) -1
             else
                 tP = div(it_shifted-1,U.PN[4])
             end
+            #if tP < 0 
+            #    println("it_shifted $it_shifted tP = $tP myrank_xyzt $myrank_xyzt it = $it shift = $shift it_shifted_global $it_shifted_global")
+            #end
 
 
             #it_shifted += ifelse(it_shifted < 1,U.PN[4],0)
@@ -1020,19 +1343,23 @@ module Gaugefields_4D_mpi_module
             
             for iz=1:U.PN[3]
                 iz_shifted = iz - shift[3]
-                if myrank_xyzt[3] == 0
-                    while iz_shifted < 1
-                        iz_shifted += U.NZ
-                    end
-                    #iz_shifted += ifelse(iz_shifted < 1,U.NZ,0)
+                iz_global = myrank_xyzt[3]*U.PN[3] + iz
+                iz_shifted_global = iz_global - shift[3]
+                #if myrank_xyzt[3] == 0
+                while iz_shifted_global < 1
+                    iz_shifted += U.NZ
+                    iz_shifted_global += U.NZ
                 end
-                if myrank_xyzt[3] == PEs[3]-1
-                    while iz_shifted > U.PN[3]
-                        iz_shifted += -U.NZ
-                    end
+                    #iz_shifted += ifelse(iz_shifted < 1,U.NZ,0)
+                #end
+                #if myrank_xyzt[3] == PEs[3]-1
+                while iz_shifted_global  > U.NZ
+                    iz_shifted += -U.NZ
+                    iz_shifted_global += -U.NZ
+                end
 
                     #iz_shifted += ifelse(iz_shifted > U.PN[3],-U.NZ,0)
-                end
+                #end
 
                 if iz_shifted <=  0
                     zP = div(iz_shifted,U.PN[3])-1
@@ -1052,20 +1379,25 @@ module Gaugefields_4D_mpi_module
                 #iz_shifted += ifelse(iz_shifted > U.PN[3],-U.PN[3],0)
                 
                 for iy=1:U.PN[2]
+                    
                     iy_shifted = iy - shift[2]
-                    if myrank_xyzt[2] == 0
-                        while iy_shifted < 1
-                            iy_shifted += U.NY
-                        end
+                    iy_global = myrank_xyzt[2]*U.PN[2] + iy
+                    iy_shifted_global = iy_global - shift[2]
+                    #if myrank_xyzt[2] == 0
+                    while iy_shifted_global < 1
+                        iy_shifted += U.NY
+                        iy_shifted_global += U.NY
+                    end
 
                         #iy_shifted += ifelse(iy_shifted < 1,U.NY,0)
+                    #end
+                    #if myrank_xyzt[2] == PEs[2]-1
+                    while iy_shifted_global > U.NY
+                        iy_shifted += -U.NY
+                        iy_shifted_global += -U.NY
                     end
-                    if myrank_xyzt[2] == PEs[2]-1
-                        while iy_shifted > U.PN[2]
-                            iy_shifted += -U.NY
-                        end
                         #iy_shifted += ifelse(iy_shifted > U.PN[2],-U.NY,0)
-                    end
+                    #end
 
                     if iy_shifted <=  0
                         yP = div(iy_shifted,U.PN[2])-1
@@ -1085,18 +1417,22 @@ module Gaugefields_4D_mpi_module
                     
                     for ix=1:U.PN[1]
                         ix_shifted = ix - shift[1]
-                        if myrank_xyzt[1] == 0
-                            while ix_shifted < 1
-                                ix_shifted += U.NX
-                            end
+                        ix_global = myrank_xyzt[1]*U.PN[1] + ix
+                        ix_shifted_global = ix_global - shift[1]
+                        #if myrank_xyzt[1] == 0
+                        while ix_shifted_global < 1
+                            ix_shifted += U.NX
+                            ix_shifted_global += U.NX
+                        end
                             #ix_shifted += ifelse(ix_shifted < 1,U.NX,0)
+                        #end
+                        #if myrank_xyzt[1] == PEs[1]-1
+                        while ix_shifted_global > U.NX
+                            ix_shifted += -U.NX
+                            ix_shifted_global += -U.NX
                         end
-                        if myrank_xyzt[1] == PEs[1]-1
-                            while ix_shifted > U.PN[1]
-                                ix_shifted += -U.NX
-                            end
                             #ix_shifted += ifelse(ix_shifted > U.PN[1],-U.NX,0)
-                        end
+                        #end
 
 
                         if ix_shifted <=  0
@@ -1141,7 +1477,16 @@ module Gaugefields_4D_mpi_module
        
 
         #barrier(U)
-        mpi_updates_U!(U,send_ranks)
+        if length(send_ranks) != 0
+            mpi_updates_U!(U,send_ranks)
+            #=
+            if length(send_ranks) == 1
+                mpi_updates_U_1data!(U,send_ranks)
+            else
+                mpi_updates_U_moredata!(U,send_ranks)
+            end
+            =#
+        end
         #=
         if length(send_ranks) != 0
             #=
@@ -1238,136 +1583,7 @@ module Gaugefields_4D_mpi_module
 
     end
 
-    function shifted_U_improved_misc!(U::Gaugefields_4D_nowing_mpi{NC},shift) where NC
-        PEs = U.PEs
-        PN = U.PN
-        myrank = U.myrank
-        myrank_xyzt = U.myrank_xyzt
-        myrank_xyzt_send = U.myrank_xyzt
-
-        NDW = 0
-        for μ=1:4
-            NDW = ifelse(shift[μ] > NDW,shift[μ],NDW)
-        end
-
-
-
-        #win = MPI.Win_create(U.Ushifted,comm)
-
-
-        for μ=1:4
-            if μ == 1
-                indexset = (2,3,4)
-            elseif μ == 2
-                indexset = (1,3,4)
-            elseif μ == 3
-                indexset = (1,2,4)
-            else
-                indexset = (1,2,3)
-            end
-
-            shift_μ = shift[μ]
-            if shift_μ == 0
-                continue
-            end
-            index_from = zeros(Int64,4)
-            index_to = zeros(Int64,4)
-
-            if -shift_μ > 0
-                rightleft = U.PN[μ]
-            else
-                rightleft = 1
-            end
-            for i = 1:shift_μ
-                send_from = rightleft + i  -1
-                send_to = send_from - shift_μ
-
-                while send_to < 1
-                    sent_to += U.PN[μ]
-                end
-                while send_to > U.PN[μ]
-                    send_to += -U.PN[μ]
-                end
-
-                #send_to = (send_to-1) % U.PN[μ] + 1
-                index_from[μ] = send_from
-                index_to[μ] = send_to
-
-                #MPI.Win_fence(0, win)
-
-                tempmatrix = zeros(ComplexF64,NC,NC,U.PN[indexset[1]],U.PN[indexset[2]],U.PN[indexset[3]])
-
-                N = U.PN[indexset[1]]*U.PN[indexset[2]]*U.PN[indexset[3]]*NC*NC
-                send_mesg1 = Array{ComplexF64}(undef, N)
-                recv_mesg1 = Array{ComplexF64}(undef, N)
-                
-                    
-                for i3 = 1:U.PN[indexset[3]]
-                    PN = U.PN[indexset[3]]
-                    index_from[indexset[3]] = i3
-                    i3_to =   i3 - shift[indexset[3]]
-                    #i3_to = (i3_to -1) % U.PN[indexset[3]] + 1
-
-                    while i3_to  < 1
-                        i3_to  += PN
-                    end
-                    while i3_to  > PN
-                        i3_to += -PN
-                    end
-                    index_to[indexset[3]] = i3_to 
-                    for i2 = 1:U.PN[indexset[2]]
-                        PN = U.PN[indexset[2]]
-                        index_from[indexset[2]] = i2
-                        i2_to =  i2 - shift[indexset[2]]
-                        while i2_to  < 1
-                            i2_to  += PN
-                        end
-                        while i2_to  > PN
-                            i2_to += -PN
-                        end
-                        #i2_to = (i2_to -1) % U.PN[indexset[2]] + 1
-                        index_to[indexset[2]] = i2_to 
-
-                        for i1 = 1:U.PN[indexset[1]]
-                            PN = U.PN[indexset[1]]
-                            index_from[indexset[1]] = i1
-                            i1_to =  i1 - shift[indexset[1]]
-                            while i1_to  < 1
-                                i1_to  += PN
-                            end
-                            while i1_to  > PN
-                                i1_to += -PN
-                            end
-                            #i1_to = (i1_to -1) % U.PN[indexset[1]] + 1
-                            index_to[indexset[1]] =i1_to 
-
-                            position_from = Tuple(index_from)
-                            position_to = Tuple(index_to)
-
-                            for jc=1:NC
-                                for ic=1:NC
-                                    tempmatrix[ic,jc,position_to...] = getvalue(U,ic,jc,position_from...)
-                                end
-                            end
-
-                        end
-                    end
-                end
-
-
-                #MPI.Win_fence(0, win)
-
-
-            end
-
-        end
-
-        #MPI.free(win)
-        
-        error("dd")
-
-    end
-
+ 
 
     function shifted_U!(U::Gaugefields_4D_nowing_mpi{NC},shift) where NC
         PEs = U.PEs
