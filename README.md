@@ -22,7 +22,7 @@ This package has following functionarities
     - quenched Hybrid Monte Carlo
 - Gradient flow via RK3
 - I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
-- MPI parallel computation (experimental. not shown)
+- MPI parallel computation (experimental. See documents.)
 
 Dynamical fermions will be supported with [LatticeDiracOperators.jl](https://github.com/akio-tomiya/LatticeDiracOperators.jl).
 

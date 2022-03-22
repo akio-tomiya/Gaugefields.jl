@@ -1,44 +1,28 @@
 using Gaugefields
 using MPI
 
+const pes = Tuple(parse.(Int64,ARGS[1:4]))
+const mpi = parse(Bool,ARGS[5])
+
 function test()
     NX = 8*2
     NY = 8*2
     NZ = 8*2
     NT = 8*2
-    Nwing = 1
+    Nwing = 0
     NC = 3
     
     Dim = 4
     
-    #=
-    u1 = RandomGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-    U = Array{typeof(u1),1}(undef,Dim)
-    U[1] = u1
-    for μ=2:Dim
-        U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-    end
-    =#
-
-    mpi = true
     if mpi
-        PEs = (1,1,1,2)
-
-        u1 = RandomGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-        U = Array{typeof(u1),1}(undef,Dim)
-        U[1] = u1
-        for μ=2:Dim
-            U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT,mpi=true,PEs = PEs,mpiinit = false)
-        end
+        PEs = pes#(1,1,1,2)
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",mpi=true,PEs = PEs,mpiinit = false)
+        
     else
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 
-        u1 = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
-        U = Array{typeof(u1),1}(undef,Dim)
-        U[1] = u1
-        for μ=2:Dim
-            U[μ] = RandomGauges(NC,Nwing,NX,NY,NZ,NT)
-        end
     end
+
 
 
     temp1 = similar(U[1])

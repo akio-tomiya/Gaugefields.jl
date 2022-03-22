@@ -45,12 +45,27 @@ mul!(C,A,B)
 which means ```C = A*B``` on each lattice site. 
 Here ``A, B, C`` are same type of ``u``.
 
+## Several ways to treat periodic boundary. 
+There are several ways to treat periodic boundary. 
+Now, there are two kinds of methods, halo updates and direct-shift method. 
+
+- halo updates: wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites. If ```NDW > 0``` is set, this update is used. 
+- direct-shift method: In ```shift_U!```  function, the data is copied. If ```NDW = 0``` is set, this update is used. 
+
+
+Therefore, the important functions are 
+
+- ```set_wing_U!``` : This is used in halo updates, but not used in direct-shift method (returns nothing). 
+- ```shift_U!``` : In this function, the data is copied in direct-shift method. This is the lazy evaluation in halo updates. 
+
+
+
 ## halo updates
-Now we use wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites. 
+There is a wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites. 
 `set_wing_U!` function is used for updating halo sites. 
 If you do not want to use halo type implementations for gauge fields, you can write `set_wing_U!(U::Yourtype) = nothing`. 
 
-## examples
+### examples
 
 ```@meta
 CurrentModule = Gaugefields.AbstractGaugefields_module
