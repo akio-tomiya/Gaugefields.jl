@@ -23,7 +23,7 @@ for itrj=1:100
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println(&quot;$itrj polyakov loop = $(real(poly)) $(imag(poly))&quot;)
 end
-</code></pre><h2 id="Gradient-flow-with-general-terms"><a class="docs-heading-anchor" href="#Gradient-flow-with-general-terms">Gradient flow with general terms</a><a id="Gradient-flow-with-general-terms-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow-with-general-terms" title="Permalink"></a></h2><p>We can do the gradient flow with general terms with the use of Wilsonloop.jl, which is shown below.  The code is </p><pre><code class="language-julia hljs">
+</code></pre><h2 id="Gradient-flow-with-general-terms"><a class="docs-heading-anchor" href="#Gradient-flow-with-general-terms">Gradient flow with general terms</a><a id="Gradient-flow-with-general-terms-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow-with-general-terms" title="Permalink"></a></h2><p>We can do the gradient flow with general terms with the use of Wilsonloop.jl, which is shown below. The coefficient of the action can be complex. The complex conjugate of the action defined here is added automatically to make the total action hermitian.    The code is </p><pre><code class="language-julia hljs">
 using Random
 using Test
 using Gaugefields
@@ -66,8 +66,6 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
             end
             loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
             push!(loops_p,loop1)
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-            push!(loops_p,loop1)
         end
     end
 
@@ -87,7 +85,7 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     end
 
     listloops = [loops_p,loops]
-    listvalues = [1,0.1]
+    listvalues = [1+im,0.1]
     g = Gradientflow_general(U,listloops,listvalues,eps = 0.01)
 
     for itrj=1:100
@@ -140,10 +138,8 @@ function gradientflow_test_2D(NX,NT,NC)
             end
 
             loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
+            push!(loops_p,loop1)
 
-            push!(loops_p,loop1)
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-            push!(loops_p,loop1)
         end
     end
 
@@ -163,7 +159,7 @@ function gradientflow_test_2D(NX,NT,NC)
     end
 
     listloops = [loops_p,loops]
-    listvalues = [1,0.1]
+    listvalues = [1+im,0.1]
     g = Gradientflow_general(U,listloops,listvalues,eps = 0.01)
 
     for itrj=1:100
@@ -882,4 +878,4 @@ function test1()
 end
 
 
-test1()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 17 March 2022 03:46">Thursday 17 March 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+test1()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 22 March 2022 00:32">Tuesday 22 March 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
