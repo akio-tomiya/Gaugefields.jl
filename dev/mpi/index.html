@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Parallel computation · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/mpi/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li><a class="tocitem" href="../howtoimplement/">How to implement new gauge fields</a></li><li class="is-active"><a class="tocitem" href>Parallel computation</a><ul class="internal"><li><a class="tocitem" href="#Parallel-computation-with-MPI"><span>Parallel computation with MPI</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Parallel computation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Parallel computation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/mpi.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h2 id="Parallel-computation-with-MPI"><a class="docs-heading-anchor" href="#Parallel-computation-with-MPI">Parallel computation with MPI</a><a id="Parallel-computation-with-MPI-1"></a><a class="docs-heading-anchor-permalink" href="#Parallel-computation-with-MPI" title="Permalink"></a></h2><p>Gaugefields.jl uses MPI.jl to do the parallel computations.  The function <code>println_verbose_level1</code> is println function with MPI. Please see the example codes. </p><p>We show the example codes. </p><h3 id="Gradient-flow"><a class="docs-heading-anchor" href="#Gradient-flow">Gradient flow</a><a id="Gradient-flow-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow" title="Permalink"></a></h3><pre><code class="language-julia hljs">using Gaugefields
+using Wilsonloop
+using MPI
+
+
+const pes = Tuple(parse.(Int64,ARGS[1:4]))
+const mpi = parse(Bool,ARGS[5])
+
+function test()
+    NX = 8*2
+    NY = 8*2
+    NZ = 8*2
+    NT = 8*2
+    Nwing = 0
+    Dim = 4
+    NC = 3
+
+
+    if mpi
+        PEs = pes#(1,1,1,2)
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;,mpi=true,PEs = PEs,mpiinit = false)
+        
+    else
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+    end
+
+    #println(typeof(U))
+    println_verbose_level1(U[1],typeof(U))
+
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println_verbose_level1(U[1],&quot; plaq_t = $plaq_t&quot;)
+    #println(&quot; plaq_t = $plaq_t&quot;)
+
+    loops_p = Wilsonline{Dim}[]
+    for μ=1:Dim
+        for ν=μ:Dim
+            if ν == μ
+                continue
+            end
+
+            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
+
+            push!(loops_p,loop1)
+            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
+            push!(loops_p,loop1)
+        end
+    end
+
+
+    loops = Wilsonline{Dim}[]
+    for μ=1:Dim
+        for ν=μ:Dim
+            if ν == μ
+                continue
+            end
+            loop1 = Wilsonline([(μ,1),(ν,2),(μ,-1),(ν,-2)],Dim = Dim)
+            push!(loops,loop1)
+        end
+    end
+
+
+    listnames = [loops_p,loops]
+    listvalues = [1+im,0.1]
+    g = Gradientflow_general(U,listnames,listvalues,eps = 0.01)
+
+    for itrj=1:100
+        @time flow!(U,g)
+        #if itrj % 10 == 0
+            plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            
+            println_verbose_level1(U[1],&quot;$itrj plaq_t = $plaq_t&quot;)
+            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            println_verbose_level1(U[1],&quot;$itrj polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+        #end
+    end
+
+
+end
+test()</code></pre><p>We can do the parallel computation like</p><pre><code class="nohighlight hljs">mpirun -np 4 julia --project=../ mpigradientflow.jl 1 1 2 2 true</code></pre><h3 id="HMC"><a class="docs-heading-anchor" href="#HMC">HMC</a><a id="HMC-1"></a><a class="docs-heading-anchor-permalink" href="#HMC" title="Permalink"></a></h3><p>This is the sample code:</p><pre><code class="language-julia hljs">using Gaugefields
+using MPI
+using LinearAlgebra
+using Random
+
+const pes = Tuple(parse.(Int64,ARGS[1:4]))
+const mpi = parse(Bool,ARGS[5])
+
+
+function MDtest!(snet,U,Dim,mpi=false)
+    p = initialize_TA_Gaugefields(U)
+    Uold = similar(U)
+    substitute_U!(Uold,U)
+    MDsteps = 200
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+
+    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    if get_myrank(U) == 0
+        println(&quot;0 plaq_t = $plaq_t&quot;)
+        println(&quot;polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+    end
+
+
+    numtrj = 10
+    for itrj = 1:numtrj
+        @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
+        numaccepted += ifelse(accepted,1,0)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        poly = calculate_Polyakov_loop(U,temp1,temp2) 
+        
+        if get_myrank(U) == 0
+            println(&quot;$itrj plaq_t = $plaq_t&quot;)
+            println(&quot;acceptance ratio &quot;,numaccepted/itrj)
+            println(&quot;polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+        end
+    end
+end
+
+function calc_action(snet,U,p)
+    NC = U[1].NC
+    Sg = -evaluate_GaugeAction(snet,U)/NC
+    Sp = p*p/2
+    S = Sp + Sg
+    return real(S)
+end
+
+function MDstep!(snet,U,p,MDsteps,Dim,Uold)
+    Δτ = 1/MDsteps
+    gauss_distribution!(p)
+    Sold = calc_action(snet,U,p)
+    substitute_U!(Uold,U)
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,snet)
+        #println(getvalue(U[1],1,1,1,1,1,1))
+
+        P_update!(U,p,1.0,Δτ,Dim,snet)
+
+
+        U_update!(U,p,0.5,Δτ,Dim,snet)
+        #error(&quot;dd&quot;)
+    end
+    #error(&quot;end&quot;)
+    
+    Snew = calc_action(snet,U,p)
+    if get_myrank(U) == 0
+        println(&quot;Sold = $Sold, Snew = $Snew&quot;)
+        println(&quot;Snew - Sold = $(Snew-Sold)&quot;)
+    end
+    ratio = min(1,exp(Snew-Sold))
+    r = rand()
+    if mpi
+        r = MPI.bcast(r, 0, MPI.COMM_WORLD)
+    end
+    #println(r,&quot;\t&quot;,ratio)
+
+    if r &gt; ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+end
+
+function U_update!(U,p,ϵ,Δτ,Dim,snet)
+    temps = get_temporary_gaugefields(snet)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    expU = temps[3]
+    W = temps[4]
+
+    for μ=1:Dim
+        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        mul!(W,expU,U[μ])
+        substitute_U!(U[μ],W)
+        
+    end
+end
+
+function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -&gt; p +factor*U*dSdUμ
+    NC = U[1].NC
+    temps = get_temporary_gaugefields(snet)
+    dSdUμ = temps[end]
+    factor =  -ϵ*Δτ/(NC)
+
+    for μ=1:Dim
+        calc_dSdUμ!(dSdUμ,snet,μ,U)
+        #println(&quot;dSdU = &quot;,getvalue(dSdUμ,1,1,1,1,1,1))
+        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+    end
+end
+
+
+
+function test1()
+    NX = 8
+    NY = 8
+    NZ = 8
+    NT = 8
+    Nwing = 0
+    Dim = 4
+    NC = 3
+
+
+    if mpi
+        PEs = pes#(1,1,1,2)
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;,mpi=true,PEs = PEs,mpiinit = false)
+        
+    else
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+    end
+
+    Random.seed!(123+get_myrank(U[1]))    
+
+
+
+    snet = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;)
+    append!(plaqloop,plaqloop&#39;)
+    β = 5.7/2
+    push!(snet,β,plaqloop)
+    
+    #show(snet)
+
+
+    MDtest!(snet,U,Dim,mpi)
+
+end
+
+
+test1()
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howtoimplement/">« How to implement new gauge fields</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 22 March 2022 01:12">Tuesday 22 March 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
