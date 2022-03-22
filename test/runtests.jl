@@ -3,6 +3,22 @@ using Test
 using Random
 import Wilsonloop:loops_staple
 
+@testset "gradientflow_general" begin
+    println("gradientflow with general action")
+    include("gradientflow_general.jl")
+end
+
+@testset "gradientflow nowing" begin
+    println("gradientflow nowing")
+    include("gradientflow_test_nowing.jl")
+end
+
+
+@testset "gradientflow" begin
+    println("gradientflow")
+    include("gradientflow_test.jl")
+end
+
 
 
 
@@ -47,16 +63,7 @@ end
 end
 
 
-@testset "gradientflow nowing" begin
-    println("gradientflow nowing")
-    include("gradientflow_test_nowing.jl")
-end
 
-
-@testset "gradientflow" begin
-    println("gradientflow")
-    include("gradientflow_test.jl")
-end
 
 
 

@@ -8,7 +8,8 @@ module GaugeAction_module
     using InteractiveUtils
 
     struct GaugeAction_dataset{Dim}
-        β::Float64
+        #β::Float64
+        β::ComplexF64
         closedloops::Vector{Wilsonline{Dim}}
         staples::Vector{Vector{Wilsonline{Dim}}}
     end
@@ -132,7 +133,7 @@ module GaugeAction_module
         return GaugeAction{Dim,eltype(U)}(hascovnet,covneuralnet,dataset,_temp_U)
     end
 
-    function Base.push!(S::GaugeAction{Dim,T1},β::T,closedloops::Vector{Wilsonline{Dim}}) where {Dim,T <: Real,T1}
+    function Base.push!(S::GaugeAction{Dim,T1},β::T,closedloops::Vector{Wilsonline{Dim}}) where {Dim,T <: Number,T1}
         dataset = GaugeAction_dataset(β,closedloops)
         push!(S.dataset,dataset)
     end

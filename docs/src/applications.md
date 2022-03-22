@@ -33,7 +33,8 @@ end
 ```
 
 ## Gradient flow with general terms
-We can do the gradient flow with general terms with the use of Wilsonloop.jl, which is shown below. 
+We can do the gradient flow with general terms with the use of Wilsonloop.jl, which is shown below.
+The coefficient of the action can be complex. The complex conjugate of the action defined here is added automatically to make the total action hermitian.   
 The code is 
 
 ```julia
@@ -80,8 +81,6 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
             end
             loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
             push!(loops_p,loop1)
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-            push!(loops_p,loop1)
         end
     end
 
@@ -101,7 +100,7 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     end
 
     listloops = [loops_p,loops]
-    listvalues = [1,0.1]
+    listvalues = [1+im,0.1]
     g = Gradientflow_general(U,listloops,listvalues,eps = 0.01)
 
     for itrj=1:100
@@ -154,10 +153,8 @@ function gradientflow_test_2D(NX,NT,NC)
             end
 
             loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
+            push!(loops_p,loop1)
 
-            push!(loops_p,loop1)
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-            push!(loops_p,loop1)
         end
     end
 
@@ -177,7 +174,7 @@ function gradientflow_test_2D(NX,NT,NC)
     end
 
     listloops = [loops_p,loops]
-    listvalues = [1,0.1]
+    listvalues = [1+im,0.1]
     g = Gradientflow_general(U,listloops,listvalues,eps = 0.01)
 
     for itrj=1:100
@@ -273,7 +270,6 @@ println("4D system")
 
 end
 ```
-
 
 ## Heatbath updates (even-odd method)
 
