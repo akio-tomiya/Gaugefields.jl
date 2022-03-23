@@ -1,93 +1,3 @@
-function heatbath_SU2!(U,NC,temps,β,Dim=4)
-
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-    end
-
-    mapfunc!(A,B) = SU2update_KP!(A,B,β,NC,temps2,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
-
-function heatbath_SU3!(U,NC,temps,β,Dim=4)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-        temps3[i] = zeros(ComplexF64,3,3)
-    end
-
-    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
-
-
-function heatbath_SUN!(U,NC,temps,β,Dim = 4)
-    #Dim = 4
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
-    ITERATION_MAX = 10^5
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
-    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
-    for i=1:5
-        temps2[i] = zeros(ComplexF64,2,2)
-        temps3[i] = zeros(ComplexF64,NC,NC)
-    end
-
-    mapfunc!(A,B) = SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
-
-    for μ=1:Dim
-
-        loops = loops_staple[(Dim,μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
-        map_U!(U[μ],mapfunc!,V,iseven) 
-    end
-    
-end
 
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
@@ -119,28 +29,29 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 200
+    numOR = 3
+
+    plaq_ave = 0.0
     for itrj = 1:numhb
         heatbath!(U,h)
-        #=
-        if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
-        elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
-        else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
+        for ior=1:numOR
+            overrelaxation!(U,h)
         end
-        =#
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_ave += plaq_t
 
         if itrj % 40 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-            println("$itrj plaq_t = $plaq_t")
+            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
+            #println("$itrj plaq_t = $plaq_t")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
     
 
-    return plaq_t
+    return plaq_ave/numhb
 
 end
 
@@ -157,6 +68,7 @@ function heatbathtest_2D(NX,NT,β,NC)
     =#
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
+    h = Heatbath(U,β)
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
@@ -179,73 +91,35 @@ function heatbathtest_2D(NX,NT,β,NC)
     poly = calculate_Polyakov_loop(U,temp1,temp2) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
-    numhb = 200
+    numhb = 2000
+    numOR = 10
+    plaq_ave = 0.0
     for itrj = 1:numhb
-        heatbath!(U,[temp1,temp2,temp3],β)
-        #=
-        if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β,Dim)
-        elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β,Dim)
-        else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β,Dim)
+        heatbath!(U,h)
+        #heatbath!(U,[temp1,temp2,temp3],β)
+        for ior=1:numOR
+            overrelaxation!(U,h)
         end
-        =#
 
-        if itrj % 40 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-            println("$itrj plaq_t = $plaq_t")
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_ave += plaq_t
+
+        if itrj % 200 == 0
+            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
+            #println("$itrj plaq_t = $plaq_t")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
     
 
-    return plaq_t
+    return plaq_ave/numhb
 
 end
 
-eps = 1e-1
-
-println("4D system")
-@testset "4D" begin
-    NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
-    Nwing = 0
-    
-    @testset "NC=2" begin
-        β = 2.3
-        NC = 2
-        println("NC = $NC")
-        val =0.6414596466929057
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=3" begin
-        β = 5.7
-        NC = 3
-        println("NC = $NC")
-        val = 0.5779454661484242
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=4" begin
-        β = 5.7
-        NC = 4
-        println("NC = $NC")
-        val  =0.19127260002797497
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-
-
-end
-
+#eps = 1e-1
 
 println("2D system")
 @testset "2D" begin
@@ -259,9 +133,13 @@ println("2D system")
         β = 2.3
         NC = 2
         println("NC = $NC")
-        val = 0.5767979418826605
+        #val = 0.5767979418826605
         #val =0.6414596466929057
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        #val =  0.32876152559048755
+        val = 0.47686969885505276
+        #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -269,8 +147,11 @@ println("2D system")
         β = 5.7
         NC = 3
         println("NC = $NC")
-        val = 0.5779454661484242
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        #val = 0.5779454661484242
+        val = 0.40215145054471996
+        #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -278,10 +159,61 @@ println("2D system")
         β = 5.7
         NC = 4
         println("NC = $NC")
-        val  =0.19127260002797497
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        #val  =0.19127260002797497
+        val = 0.1763164690262148
+        #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
 
 end
+
+println("4D system")
+@testset "4D" begin
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 0
+    
+    @testset "NC=2" begin
+        β = 2.3
+        NC = 2
+        println("NC = $NC")
+        #val =0.6414596466929057
+        #val = 0.6023531251990353
+        val = 0.60876803568248
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "NC=3" begin
+        β = 5.7
+        NC = 3
+        println("NC = $NC")
+        #val = 0.5779454661484242
+        val = 0.5618833345986648
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "NC=4" begin
+        β = 5.7
+        NC = 4
+        println("NC = $NC")
+        #val  =0.19127260002797497
+        val = 0.19494730324923296
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+
+
+end
+
+

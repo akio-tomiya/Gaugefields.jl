@@ -485,6 +485,8 @@ using Random
         set_wing_U!(U)
     end
 
+    
+
     function map_U_sequential!(U::Gaugefields_4D_nowing{NC},f!::Function,Uin) where {NC} 
         NT = U.NT
         NZ = U.NZ
@@ -503,6 +505,7 @@ using Random
                             end
                         end
                         f!(B,Uin,ix,iy,iz,it)
+                        
                         for k2=1:NC                            
                             for k1=1:NC
                                 U[k1,k2,ix,iy,iz,it] = B[k1,k2]

@@ -824,6 +824,7 @@ Gaugefields with using MPI is not well tested.
         for i=1:num
             glinks = w[i]
             evaluate_gaugelinks_eachsite!(temp,glinks,U,view(temps,1:3),indices...)
+            
             #println("uout2 ", temp2[:,:,ix,iy,iz,it])
             uout_mat .+= temp
             #println("xout ", xout[:,:,ix,iy,iz,it])
@@ -836,7 +837,6 @@ Gaugefields with using MPI is not well tested.
     end
 
 
-
     function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Wilsonline{Dim},U::Array{<:AbstractGaugefields{NC,Dim},1},
                             temps,indices...) where {Dim,T1 <: Matrix{ComplexF64},NC}
         _,_,NN... = size(U[1])
@@ -844,7 +844,8 @@ Gaugefields with using MPI is not well tested.
         Ushift1 = temps[2]
         Ushift2 = temps[3] 
 
-        origin = Tuple(zeros(Int64,Dim))
+        #origin = Tuple(zeros(Int64,Dim))
+        shifted = zeros(Int64,Dim)
 
         glinks = w
         numlinks = length(glinks)
@@ -876,16 +877,20 @@ Gaugefields with using MPI is not well tested.
             end
 
             #substitute_U!(Unew,U[direction])
-            shifted = collect(indices) .+ collect(position)
+            for μ=1:Dim
+                shifted[μ] = indices[μ] + position[μ]# collect(position)
+            end
+            #shifted = collect(indices) .+ collect(position)
             for μ=1:Dim
                 shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
                 shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
             end
-            shiftedposition = Tuple(shifted)
+            #shiftedposition = Tuple(shifted)
             #shiftedposition = Tuple(collect(indices) .+ collect(position))
             for i=1:NC
                 for j=1:NC
-                    Ushift1[j,i] = Unew[j,i,shiftedposition...]
+                    #Ushift1[j,i] = Unew[j,i,shiftedposition...]
+                    Ushift1[j,i] = Unew[j,i,shifted...]
                 end
             end
 
@@ -894,14 +899,14 @@ Gaugefields with using MPI is not well tested.
                 #println("Ushift1 ",Ushift1'[1,1,1,1,1,1])
                 for i=1:NC
                     for j=1:NC
-                        Unew[j,i] = Ushift1'[j,i,indices]
+                        Unew[j,i] = Ushift1'[j,i]#,indices]
                     end
                 end
                 #substitute_U!(uout,Ushift1')
             else
                 for i=1:NC
                     for j=1:NC
-                        Unew[j,i] = Ushift1[j,i,indices]
+                        Unew[j,i] = Ushift1[j,i]#,indices]
                     end
                 end
                 #substitute_U!(uout,Ushift1)
@@ -921,15 +926,19 @@ Gaugefields with using MPI is not well tested.
         #    end
         #end
 
-        shifted = collect(indices) .+ collect(position)
+        for μ=1:Dim
+            shifted[μ] = indices[μ] + position[μ]# collect(position)
+        end
+        #shifted = collect(indices) .+ collect(position)
         for μ=1:Dim
             shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
             shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
         end
-        shiftedposition = Tuple(shifted)
+        #shiftedposition = Tuple(shifted)
         for i=1:NC
             for j=1:NC
-                Ushift1[j,i] = U[direction][j,i,shiftedposition...]
+                #Ushift1[j,i] = U[direction][j,i,shiftedposition...]
+                Ushift1[j,i] = U[direction][j,i,shifted...]
             end
         end
 
@@ -953,16 +962,20 @@ Gaugefields with using MPI is not well tested.
             direction = get_direction(Ujlink)
             #println("j = $j position = $position")
             #println("a,b, $isUkdag , $isU1dag")
-            shifted = collect(indices) .+ collect(position)
+            for μ=1:Dim
+                shifted[μ] = indices[μ] + position[μ]# collect(position)
+            end
+            #shifted = collect(indices) .+ collect(position)
             for μ=1:Dim
                 shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
                 shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
             end
-            shiftedposition2 = Tuple(shifted)
-            #shiftedposition2 = Tuple(collect(indices) .+ collect(position))
+            #shiftedposition2 = Tuple(shifted)
+            ##  shiftedposition2 = Tuple(collect(indices) .+ collect(position))
             for b=1:NC
                 for a=1:NC
-                    Ushift2[a,b] = U[direction][a,b,shiftedposition2...]
+                    #Ushift2[a,b] = U[direction][a,b,shiftedposition2...]
+                    Ushift2[a,b] = U[direction][a,b,shifted...]
                 end
             end
 
@@ -995,6 +1008,197 @@ Gaugefields with using MPI is not well tested.
         
         
     end
+
+
+    const shifted_4_temp = zeros(Int64,4)
+    const NN_4_temp = zeros(Int64,4)
+
+    function evaluate_gaugelinks_eachsite!(uout_mat::T1,w::Wilsonline{4},U::Array{<:AbstractGaugefields{NC,4},1},
+                            temps,indices...) where {T1 <: Matrix{ComplexF64},NC}
+        #NN = NN_4_temp
+        #NN[1] = U[1].NX
+        #NN[2] = U[1].NY
+        #NN[3] = U[1].NZ
+        #NN[4] = U[1].NT
+        _,_,NN... = size(U[1])
+
+        
+        Unew = temps[1]
+        Ushift1 = temps[2]
+        Ushift2 = temps[3] 
+
+        #origin = Tuple(zeros(Int64,Dim))
+        shifted = shifted_4_temp #zeros(Int64,Dim)
+
+        glinks = w
+        numlinks = length(glinks)
+        if numlinks == 0
+            for i=1:NC
+                for j=1:NC
+                    uout_mat[j,i] = ifelse(i==j,1,0)
+                end
+            end
+            return
+        end
+
+        j = 1    
+        U1link = glinks[1]
+        direction = get_direction(U1link)
+        position = get_position(U1link)
+        isU1dag = isdag(U1link)#.isdag
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+
+        #show(glinks)   
+        #println("in evaluate_gaugelinks!")
+        #show(w)
+        #println("numlinks = $numlinks")
+        if numlinks == 1
+            for i=1:NC
+                for j=1:NC
+                    Unew[j,i] = U[direction][j,i,indices...]
+                end
+            end
+
+            #substitute_U!(Unew,U[direction])
+            for μ=1:4
+                shifted[μ] = indices[μ] + position[μ]# collect(position)
+            end
+            #shifted = collect(indices) .+ collect(position)
+            for μ=1:4
+                shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+                shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
+            end
+            #shiftedposition = Tuple(shifted)
+            #shiftedposition = Tuple(collect(indices) .+ collect(position))
+            for i=1:NC
+                for j=1:NC
+                    #Ushift1[j,i] = Unew[j,i,shiftedposition...]
+                    #Ushift1[j,i] = Unew[j,i,shifted...]
+                    Ushift1[j,i] = Unew[j,i,shifted[1],shifted[2],shifted[3],shifted[4]]
+                end
+            end
+
+            #Ushift1 = shift_U(Unew,position)
+            if isU1dag 
+                #println("Ushift1 ",Ushift1'[1,1,1,1,1,1])
+                for i=1:NC
+                    for j=1:NC
+                        Unew[j,i] = Ushift1'[j,i]#,indices]
+                    end
+                end
+                #substitute_U!(uout,Ushift1')
+            else
+                for i=1:NC
+                    for j=1:NC
+                        Unew[j,i] = Ushift1[j,i]#,indices]
+                    end
+                end
+                #substitute_U!(uout,Ushift1)
+            end
+            return
+        end
+
+        #j = 1    
+        #U1link = glinks[1]
+        #direction = get_direction(U1link)
+        #position = get_position(U1link)
+        #println("i = $i j = $j position = $position")
+        #substitute_U!(Unew,U[direction])
+        #for b=1:NC
+        #    for a=1:NC
+        #        Unew[a,b] = U[direction][a,b,indices...]
+        #    end
+        #end
+        
+
+        for μ=1:4
+            shifted[μ] = indices[μ] + position[μ]# collect(position)
+        end
+        #shifted = collect(indices) .+ collect(position)
+        for μ=1:4
+            shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+            shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
+        end
+        #shiftedposition = Tuple(shifted)
+        for i=1:NC
+            for j=1:NC
+                #Ushift1[j,i] = U[direction][j,i,shiftedposition...]
+                #Ushift1[j,i] = U[direction][j,i,shifted...]
+                Ushift1[j,i] = U[direction][j,i,shifted[1],shifted[2],shifted[3],shifted[4]]
+                
+            end
+        end
+
+        #Ushift1 = shift_U(Unew,position)
+
+        #ix,iy,iz,it=(2,2,2,2)
+        #println("posotion = $position")
+        #pos = Tuple([ix,iy,iz,it] .+ collect(position))
+        #U1 = Unew[:,:,pos...]
+        #println("U1, ",Unew[:,:,pos...])
+        #isU1dag = ifelse(typeof(U1link) <: Adjoint_GLink,true,false)
+
+        
+
+
+        for j=2:numlinks
+            Ujlink = glinks[j]
+            isUkdag = isdag(Ujlink)
+            #isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
+            position = get_position(Ujlink)
+            direction = get_direction(Ujlink)
+            #println("j = $j position = $position")
+            #println("a,b, $isUkdag , $isU1dag")
+            for μ=1:4
+                shifted[μ] = indices[μ] + position[μ]# collect(position)
+            end
+            #shifted = collect(indices) .+ collect(position)
+            for μ=1:4
+                shifted[μ] += ifelse(shifted[μ] < 1,NN[μ],0)
+                shifted[μ] += ifelse(shifted[μ] > NN[μ],-NN[μ],0)
+            end
+            #shiftedposition2 = Tuple(shifted)
+            ##  shiftedposition2 = Tuple(collect(indices) .+ collect(position))
+            for b=1:NC
+                for a=1:NC
+                    #Ushift2[a,b] = U[direction][a,b,shiftedposition2...]
+                    #Ushift2[a,b] = U[direction][a,b,shifted...]
+                    Ushift2[a,b] = U[direction][a,b,shifted[1],shifted[2],shifted[3],shifted[4]]
+                end
+            end
+
+            #Ushift2 = shift_U(U[direction],position)
+            multiply_12!(uout_mat,Ushift1,Ushift2,j,isUkdag,isU1dag)
+
+            #pos = Tuple([ix,iy,iz,it] .+ collect(position))
+            #U2 = U[direction][:,:,pos...]
+            #println("U1U2dag ", U1*U2')
+            #substitute_U!(Unew,uout)
+            for b=1:NC
+                for a=1:NC
+                    Unew[a,b] =uout_mat[a,b]
+                end
+            end
+            
+            #println("Unew ", Unew[:,:,ix,iy,iz,it])
+            for b=1:NC
+                for a=1:NC
+                    Ushift1[a,b] = Unew[a,b]
+                end
+            end
+
+            #Ushift1 = shift_U(Unew,origin)
+            #println("uout ", uout[:,:,ix,iy,iz,it])
+        end
+
+
+        #println("uout2 ", uout[:,:,ix,iy,iz,it])
+        
+        
+    end
+
+
+    
 
 
 

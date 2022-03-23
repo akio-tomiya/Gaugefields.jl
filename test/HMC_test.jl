@@ -142,7 +142,7 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
     end
 
 
-    return plaq_t
+    return plaq_t,numaccepted/numtrj
 
 end
 
@@ -217,7 +217,7 @@ function HMC_test_2D(NX,NT,NC)
             println("acceptance ratio ",numaccepted/itrj)
         end
     end
-    return plaq_t
+    return plaq_t,numaccepted/numtrj
 
 end
 
@@ -238,7 +238,8 @@ println("2D system")
         println("NC = $NC")
         #val =0.6414596466929057
         val =  0.9768786716327604
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        @time plaq_t,ratio = HMC_test_2D(NX,NT,NC)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
     
@@ -248,7 +249,8 @@ println("2D system")
         println("NC = $NC")
         #val =0.6414596466929057
         val =  0.9768786716327604
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        @time plaq_t,ratio = HMC_test_2D(NX,NT,NC)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -258,7 +260,8 @@ println("2D system")
         println("NC = $NC")
         #val = 0.5779454661484242
         val = 0.9656356864814539
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        @time plaq_t,ratio = HMC_test_2D(NX,NT,NC)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -268,7 +271,8 @@ println("2D system")
         println("NC = $NC")
         #val  =0.19127260002797497
         val = 0.8138836242603148
-        @time plaq_t = HMC_test_2D(NX,NT,NC)
+        @time plaq_t,ratio = HMC_test_2D(NX,NT,NC)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -291,7 +295,8 @@ println("4D system")
         #val =0.6414596466929057
         #val = 0.5920897445000382
         val  =0.9440125563836135
-        @time plaq_t = HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @time plaq_t,ratio = HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -303,7 +308,8 @@ println("4D system")
         #val  =0.9440125563836135
         #val = 0.5385142466966718
         val = 0.8786515255315753
-        @time plaq_t = HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @time plaq_t,ratio = HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -314,7 +320,8 @@ println("4D system")
         #val  =0.19127260002797497
         #val = 0.1904815857904191
         val = 0.7301232810349298
-        @time plaq_t =HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @time plaq_t,ratio  =HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 

@@ -61,7 +61,8 @@ import .Wilsonloops_module:Wilson_loop_set,make_staples,Wilson_loop_set,
 import .Abstractsmearing_module:Abstractsmearing,Nosmearing,Stoutsmearing,calc_smearedU,
                                 construct_smearing,back_prop,CovNeuralnet#gradientflow!                 
 import .ILDG_format:ILDG,load_gaugefield!,save_binarydata
-import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,Heatbath,Heatbath_update
+import .heatbath_module:SU2update_KP!,SUNupdate_matrix!,SU3update_matrix!,heatbath!,
+            Heatbath,Heatbath_update,overrelaxation!
 import .Bridge_format:save_textdata,load_BridgeText!
 import Wilsonloop:loops_staple
 import .Abstractsmearing_module:STOUT_Layer,CovNeuralnet,calc_smearedU, construct_smearing,
@@ -112,6 +113,7 @@ export construct_Adjoint_rep_Gaugefields
 export get_myrank,getvalue,get_nprocs,Gradientflow_general
 export Heatbath_update
 export println_verbose_level1,println_verbose_level2,println_verbose_level3
+export overrelaxation!
 
 
 

@@ -162,7 +162,7 @@ end
 
 
 
-const eps = 0.1
+#const eps = 0.1
 
 
 println("2D system")

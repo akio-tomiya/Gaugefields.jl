@@ -2,7 +2,7 @@
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     Dim = 4
-    Nwing = 1
+    Nwing = 0
 
     #=
     u1 = IdentityGauges(NC,Nwing,NX,NY,NZ,NT)
@@ -44,8 +44,13 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     #hnew = Heatbath_update(U,gauge_action)
 
     numhb = 200
+    numOR = 3
+    plaq_ave = 0.0
     for itrj = 1:numhb
         heatbath!(U,hnew)
+        for ior=1:numOR
+            overrelaxation!(U,hnew)
+        end
         #heatbath!(U,h)
         #=
         if NC == 2
@@ -56,17 +61,20 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
             heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
         end
         =#
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_ave += plaq_t
 
         if itrj % 40 == 0
             @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-            println("$itrj plaq_t = $plaq_t")
+            println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
+            #println("$itrj plaq_t = $plaq_t")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
     
 
-    return plaq_t
+    return  plaq_ave/numhb #plaq_t
 
 end
 
@@ -118,9 +126,14 @@ function heatbathtest_2D(NX,NT,β,NC)
     hnew = Heatbath_update(U,gauge_action)
     
 
-    numhb = 200
+    numhb = 1000
+    numOR = 3
+    plaq_ave = 0.0
     for itrj = 1:numhb
         heatbath!(U,hnew)
+        for ior=1:numOR
+            overrelaxation!(U,hnew)
+        end
         #heatbath!(U,[temp1,temp2,temp3],β)
         #=
         if NC == 2
@@ -131,61 +144,22 @@ function heatbathtest_2D(NX,NT,β,NC)
             heatbath_SUN!(U,NC,[temp1,temp2,temp3],β,Dim)
         end
         =#
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_ave += plaq_t
 
-        if itrj % 40 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-            println("$itrj plaq_t = $plaq_t")
+        if itrj % 200 == 0
+            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
             poly = calculate_Polyakov_loop(U,temp1,temp2) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
     
 
-    return plaq_t
+    return plaq_ave/numhb
 
 end
 
-eps = 1e-1
-
-println("4D system")
-@testset "4D" begin
-    NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
-    Nwing = 1
-    
-    @testset "NC=2" begin
-        β = 2.3
-        NC = 2
-        println("NC = $NC")
-        val =0.9042749888688881
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=3" begin
-        
-        NC = 3
-        β = 2.3*NC #5.7
-        println("NC = $NC")
-        val = 0.9148612416401057
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-    @testset "NC=4" begin
-        β = 5.7
-        NC = 4
-        println("NC = $NC")
-        val  =0.791346082492281
-        @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_t-val)/abs(val) < eps
-    end
-
-
-
-end
 
 
 println("2D system")
@@ -200,18 +174,63 @@ println("2D system")
         β = 2.3
         NC = 2
         println("NC = $NC")
-        val =  0.8275345965584693
+        #val =  0.8275345965584693
         #val =0.6414596466929057
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
-        #@test abs(plaq_t-val)/abs(val) < eps
+        val = 0.8237678929985711
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
     end
 
     @testset "NC=3" begin
         β = 5.7
         NC = 3
         println("NC = $NC")
-        val =  0.8441480514316867
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        val = 0.8070960744356934
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+    end
+
+    @testset "NC=4" begin
+        β = 5.7
+        NC = 4
+        println("NC = $NC")
+        val = 0.38564608114572807
+        @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+    end
+
+
+end
+
+
+println("4D system")
+@testset "4D" begin
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 1
+    
+    @testset "NC=2" begin
+        β = 2.3
+        NC = 2
+        println("NC = $NC")
+        #val =0.9042749888688881
+        val = 0.9040744318206326
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
+    end
+
+    @testset "NC=3" begin
+        
+        NC = 3
+        β = 2.3*NC #5.7
+        println("NC = $NC")
+        #val = 0.9148612416401057
+        val = 0.9148494229319207
+        #@time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
@@ -219,10 +238,15 @@ println("2D system")
         β = 5.7
         NC = 4
         println("NC = $NC")
-        val  = 0.32324174201862377
-        @time plaq_t = heatbathtest_2D(NX,NT,β,NC)
+        #val  =0.791346082492281
+        val = 0.792025880016283
+        #@time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+        @test abs(plaq_ave-val)/abs(val) < eps
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
 
+
 end
+
