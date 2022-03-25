@@ -485,7 +485,7 @@ using Random
         set_wing_U!(U)
     end
 
-    
+
 
     function map_U_sequential!(U::Gaugefields_4D_nowing{NC},f!::Function,Uin) where {NC} 
         NT = U.NT
@@ -1524,7 +1524,7 @@ using Random
                         evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                         if evenodd == iseven
                             for k2=1:NC                            
-                                @simd for k1=1:NC
+                                @inbounds @simd for k1=1:NC
                                     c[k1,k2,ix,iy,iz,it] += a[k1,k2,ix,iy,iz,it]
                                 end
                             end
@@ -1551,7 +1551,7 @@ using Random
                 for iy=1:NY
                     for ix=1:NX
                         for k2=1:NC                            
-                            @simd for k1=1:NC
+                            @inbounds @simd  for k1=1:NC
                                 c[k1,k2,ix,iy,iz,it] += α*a[k1,k2,ix,iy,iz,it]
                             end
                         end
@@ -1579,7 +1579,7 @@ using Random
                             for k1=1:NC
                                 c[k1,k2,ix,iy,iz,it] = 0
 
-                                @simd for k3=1:NC
+                                @inbounds @simd  for k3=1:NC
                                     c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
                                 end
                             end
@@ -1606,7 +1606,7 @@ using Random
                             for k2=1:NC                            
                                 for k1=1:NC
                                     c[k1,k2,ix,iy,iz,it] = 0
-                                    @simd for k3=1:NC
+                                    @inbounds @simd  for k3=1:NC
                                         c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
                                     end
                                 end
@@ -1636,7 +1636,7 @@ using Random
                 for iy=1:NY
                     for ix=1:NX
                         for k2=1:NC                            
-                            @simd for k1=1:NC
+                            @inbounds @simd  for k1=1:NC
                                 c[k1,k2,ix,iy,iz,it] = a*b[k1,k2,ix,iy,iz,it]
                             end
                         end
@@ -1660,7 +1660,7 @@ using Random
                         for k2=1:NC                            
                             for k1=1:NC
                                 c[k1,k2,ix,iy,iz,it] = β*c[k1,k2,ix,iy,iz,it] 
-                                @simd for k3=1:NC
+                                @inbounds @simd  for k3=1:NC
                                     c[k1,k2,ix,iy,iz,it] += α*a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it] 
                                 end
                             end
@@ -1687,7 +1687,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         @inbounds  for it=1:NT#,iz=1:NZ,iy=1:NY
             for iz=1:NZ
                 for iy=1:NY
-                    @simd for ix=1:NX
+                    @inbounds @simd for ix=1:NX
                         evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
                         if evenodd == iseven
                             a11 = a[1,1,ix,iy,iz,it]
@@ -1724,7 +1724,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         @inbounds  for it=1:NT#,iz=1:NZ,iy=1:NY
             for iz=1:NZ
                 for iy=1:NY
-                    @simd for ix=1:NX
+                    @inbounds @simd  for ix=1:NX
                         a11 = a[1,1,ix,iy,iz,it]
                         a21 = a[2,1,ix,iy,iz,it]
                         a12 = a[1,2,ix,iy,iz,it]
@@ -1765,7 +1765,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
             @inbounds for it=1:NT
                 for iz=1:NZ
                     for iy=1:NY
-                        @simd for ix=1:NX
+                        @inbounds @simd  for ix=1:NX
                             a11 = a[1,1,ix,iy,iz,it]
                             a21 = a[2,1,ix,iy,iz,it]
                             a12 = a[1,2,ix,iy,iz,it]
@@ -1803,7 +1803,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
             for iz=1:NZ
                 for iy=1:NY
                     #@simd for ix=1:NX
-                    for ix=1:NX
+                    @inbounds @simd for ix=1:NX
                         a11 = a[1,1,ix,iy,iz,it]
                         a21 = a[2,1,ix,iy,iz,it]
                         a31 = a[3,1,ix,iy,iz,it]
@@ -1906,7 +1906,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
             @inbounds for it=1:NT
                 for iz=1:NZ
                     for iy=1:NY
-                        @simd for ix=1:NX
+                        @inbounds @simd  for ix=1:NX
                             a11 = a[1,1,ix,iy,iz,it]
                             a21 = a[2,1,ix,iy,iz,it]
                             a31 = a[3,1,ix,iy,iz,it]
@@ -2107,7 +2107,7 @@ evenodd = ifelse( (ix+iy+iz+it) % 2 ==0, true,false)
         for it=1:NT
             for iz=1:NZ
                 for iy=1:NY
-                    @simd for ix=1:NX
+                    @inbounds @simd  for ix=1:NX
     
                         aa[ 1] = real( a[1,1,ix,iy,iz,it])
                         aa[ 2] = imag(a[1,1,ix,iy,iz,it])

@@ -51,9 +51,19 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
         numlinks = length(links)
         for i=1:numlinks
             loop = links[i]#make_loops_fromname(linknames[i],Dim=Dim)
-            append!(loop,loop')
             factor = linkvalues[i]
-            push!(gaugeaction,factor,loop)
+            if typeof(factor) <: Real
+                append!(loop,loop')
+                push!(gaugeaction,factor,loop)
+            elseif typeof(factor) <: Number
+                push!(gaugeaction,factor,loop)
+                push!(gaugeaction,factor',loop')
+            else
+                error("type of factor $(typeof(factor)) is not supported")
+            end
+            #append!(loop,loop')
+            #factor = linkvalues[i]
+            #push!(gaugeaction,factor,loop)
         end
         
         return new{Dim,typeof(F0),T}(Nflow,eps,gaugeaction,Ftemps,tempG,Utemps)
