@@ -47,10 +47,11 @@ module Gaugefields_4D_mpi_module
         otherranks::Vector{Int64}
         win_other::MPI.Win
         your_ranks::Matrix{Int64}
+        comm::MPI.Comm
     
 
         function Gaugefields_4D_nowing_mpi(NC::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true,
-                                                            verbose_level = 2) where T<: Integer
+                                                            verbose_level = 2, comm = MPI.COMM_WORLD) where T<: Integer
             NV = NX*NY*NZ*NT
             NDW = 0
             @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
@@ -69,7 +70,7 @@ module Gaugefields_4D_mpi_module
                 mpiinit = true
             end
 
-            comm = MPI.COMM_WORLD
+            #comm = MPI.COMM_WORLD
 
             nprocs = MPI.Comm_size(comm)
             @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
@@ -104,7 +105,7 @@ module Gaugefields_4D_mpi_module
 
             return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print,
                     Ushifted,tempmatrix,positions,send_ranks,
-                    win,win_i,win_1i,countvec,otherranks,win_other,your_ranks)
+                    win,win_i,win_1i,countvec,otherranks,win_other,your_ranks,comm)
         end
     end
 
@@ -127,7 +128,7 @@ module Gaugefields_4D_mpi_module
 
     function barrier(x::T) where T <: Gaugefields_4D_nowing_mpi
         #println("ba")
-        MPI.Barrier(comm)
+        MPI.Barrier(x.comm)
     end
 
     function Base.setindex!(x::Gaugefields_4D_nowing_mpi,v,i1,i2,i3,i4,i5,i6) 
@@ -1102,7 +1103,7 @@ module Gaugefields_4D_mpi_module
     function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC},send_ranks) where NC
         if length(send_ranks) != 0
 
-            val = MPI.Allreduce(length(send_ranks), +,comm) ÷ get_nprocs(U)
+            val = MPI.Allreduce(length(send_ranks), +,U.comm) ÷ get_nprocs(U)
 
             #=
             for rank=0:get_nprocs(U)
@@ -1581,7 +1582,7 @@ module Gaugefields_4D_mpi_module
         myrank_xyzt_send = U.myrank_xyzt
         tempmatrix = zeros(ComplexF64,NC,NC)
 
-        win = MPI.Win_create(U.Ushifted,comm)
+        win = MPI.Win_create(U.Ushifted,U[1].comm)
         #Isend Irecv
 
         MPI.Win_fence(0, win)
@@ -1905,7 +1906,7 @@ module Gaugefields_4D_mpi_module
             end
         end
 
-        s = MPI.Allreduce(s,MPI.SUM,comm)
+        s = MPI.Allreduce(s,MPI.SUM,a.comm)
 
         #println(3*NT*NZ*NY*NX*NC)
         return s
@@ -2012,7 +2013,7 @@ module Gaugefields_4D_mpi_module
             
         end
 
-        s = MPI.Allreduce(s,MPI.SUM,comm)
+        s = MPI.Allreduce(s,MPI.SUM,a.comm)
         
 
 
@@ -2480,417 +2481,10 @@ module Gaugefields_4D_mpi_module
 
     function set_wing_U!(u::Array{Gaugefields_4D_nowing_mpi{NC},1}) where NC
         return 
-        for μ=1:4
-            set_wing_U!(u[μ]) 
-        end
     end
 
     function set_wing_U!(u::Gaugefields_4D_nowing_mpi{NC}) where NC
         return 
-
-
-        NT = u.NT
-        NY = u.NY
-        NZ = u.NZ
-        NX = u.NX
-        NDW = u.NDW
-        PEs = u.PEs
-        PN = u.PN
-        myrank = u.myrank
-        myrank_xyzt = u.myrank_xyzt
-        myrank_xyzt_send = u.myrank_xyzt
-        
-    
-        #X direction 
-        #Now we send data
-        #from NX to 1
-        N = PN[2]*PN[3]*PN[4]*NDW*NC*NC
-        send_mesg1 = Array{ComplexF64}(undef, N)
-        recv_mesg1 = Array{ComplexF64}(undef, N)
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for iy=1:PN[2]
-                    for id=1:NDW
-                        for k2=1:NC
-                            for k1=1:NC
-                                count += 1
-                                send_mesg1[count] = getvalue(u,k1,k2,PN[1]+(id-NDW),iy,iz,it)
-                                #u[k1,k2,-NDW+id,iy,iz,it] = u[k1,k2,NX+(id-NDW),iy,iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        px = myrank_xyzt[1] + 1
-        px += ifelse(px >= PEs[1],-PEs[1],0)        
-        myrank_xyzt_send = (px,myrank_xyzt[2],myrank_xyzt[3],myrank_xyzt[4])
-        myrank_send1 = get_myrank(myrank_xyzt_send,PEs)
-        #=
-        for ip=0:u.nprocs-1
-            if ip == u.myrank
-                println("rank = $myrank, myrank_send1 = $(myrank_send1)")
-            end
-            MPI.Barrier(comm)
-
-        end
-        =#
-        
-        sreq1 = MPI.Isend(send_mesg1, myrank_send1, myrank_send1+32, comm) #from left to right 0 -> 1
-
-        N = PN[2]*PN[3]*PN[4]*NDW*NC*NC
-        send_mesg2 = Array{ComplexF64}(undef, N)
-        recv_mesg2 = Array{ComplexF64}(undef, N)
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for iy=1:PN[2]
-                    for id=1:NDW
-                        for k2=1:NC
-                            for k1=1:NC
-                                count += 1
-                                send_mesg2[count] = getvalue(u,k1,k2,id,iy,iz,it)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        px = myrank_xyzt[1] - 1
-        px += ifelse(px < 0,PEs[1],0)
-        #println("px = $px")        
-        myrank_xyzt_send = (px,myrank_xyzt[2],myrank_xyzt[3],myrank_xyzt[4])
-        myrank_send2 = get_myrank(myrank_xyzt_send,PEs)
-        #=
-        for ip=0:u.nprocs-1
-            if ip == u.myrank
-                println("rank = $myrank, myrank_send2 = $(myrank_send2)")
-            end
-            MPI.Barrier(comm)
-
-        end
-        =#
-
-
-        
-        sreq2 = MPI.Isend(send_mesg2, myrank_send2, myrank_send2+64, comm) #from right to left 0 -> -1
-
-        #=
-        myrank = 1: myrank_send1 = 2, myrank_send2 = 0
-            sreq1: from 1 to 2 2
-            sreq2: from 1 to 0 2
-        myrank = 2: myrank_send1 = 3, myrank_send2 = 1
-            sreq1: from 2 to 3 3
-            sreq2: from 2 to 1 1
-            rreq1: from 1 to 2 2 -> sreq1 at myrank 1
-            rreq2: from 3 to 2 2 
-        myrank = 3: myrank_send1 = 4, myrank_send2 = 2
-            sreq1: from 3 to 4 4
-            sreq2: from 3 to 2 2
-        =#
-
-        rreq1 = MPI.Irecv!(recv_mesg1, myrank_send2, myrank+32, comm) #from -1 to 0
-        rreq2 = MPI.Irecv!(recv_mesg2, myrank_send1, myrank+64, comm) #from 1 to 0
-
-        stats = MPI.Waitall!([rreq1, sreq1,rreq2,sreq2])
-        MPI.Barrier(comm)
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for iy=1:PN[2]
-                    for id=1:NDW
-                        for k2=1:NC
-                            for k1=1:NC
-                                count += 1
-                                v = recv_mesg1[count]
-                                setvalue!(u,v,k1,k2,-NDW+id,iy,iz,it)
-                                #send_mesg1[count] = getvalue(u,k1,k2,PN[1]+(id-NDW),iy,iz,it)
-                                #u[k1,k2,-NDW+id,iy,iz,it] = u[k1,k2,NX+(id-NDW),iy,iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for iy=1:PN[2]
-                    for id=1:NDW
-                        for k2=1:NC
-                            for k1=1:NC
-                                count += 1
-                                v = recv_mesg2[count]
-                                setvalue!(u,v,k1,k2,PN[1]+id,iy,iz,it)
-                                #u[k1,k2,NX+id,iy,iz,it] = u[k1,k2,id,iy,iz,it]
-                                #send_mesg2[count] = getvalue(u,k1,k2,id,iy,iz,it)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-
-        #N = PN[1]*PN[3]*PN[4]*NDW*NC*NC
-        N = PN[4]*PN[3]*length(-NDW+1:PN[1]+NDW)*NDW*NC*NC
-        send_mesg1 = Array{ComplexF64}(undef, N)
-        recv_mesg1 = Array{ComplexF64}(undef, N)
-        send_mesg2 = Array{ComplexF64}(undef, N)
-        recv_mesg2 = Array{ComplexF64}(undef, N)
-
-        #Y direction 
-        #Now we send data
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for ix=-NDW+1:PN[1]+NDW
-                    for id=1:NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                send_mesg1[count] = getvalue(u,k1,k2,ix,PN[2]+(id-NDW),iz,it)
-                                #u[k1,k2,ix,-NDW+id,iz,it] = u[k1,k2,ix,NY+(id-NDW),iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        py = myrank_xyzt[2] + 1
-        py += ifelse(py >= PEs[2],-PEs[2],0)        
-        myrank_xyzt_send = (myrank_xyzt[1],py,myrank_xyzt[3],myrank_xyzt[4])
-        myrank_send1 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send1 = $(myrank_send1)")
-        sreq1 = MPI.Isend(send_mesg1, myrank_send1, myrank_send1+32, comm) #from left to right 0 -> 1
-
-    
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for ix=-NDW+1:PN[1]+NDW
-                    for id=1:NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                send_mesg2[count] = getvalue(u,k1,k2,ix,id,iz,it)
-                                #u[k1,k2,ix,NY+id,iz,it] = u[k1,k2,ix,id,iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        py = myrank_xyzt[2] - 1
-        py += ifelse(py < 0,PEs[2],0)
-        #println("py = $py")        
-        myrank_xyzt_send = (myrank_xyzt[1],py,myrank_xyzt[3],myrank_xyzt[4])
-        myrank_send2 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send2 = $(myrank_send2)")
-        sreq2 = MPI.Isend(send_mesg2, myrank_send2, myrank_send2+64, comm) #from right to left 0 -> -1
-
-        rreq1 = MPI.Irecv!(recv_mesg1, myrank_send2, myrank+32, comm) #from -1 to 0
-        rreq2 = MPI.Irecv!(recv_mesg2, myrank_send1, myrank+64, comm) #from 1 to 0
-
-        stats = MPI.Waitall!([rreq1, sreq1,rreq2,sreq2])
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for ix=-NDW+1:PN[1]+NDW
-                    for id=1:NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                v = recv_mesg1[count] 
-                                setvalue!(u,v,k1,k2,ix,-NDW+id,iz,it)
-                                #send_mesg1[count] = getvalue(u,k1,k2,ix,PN[2]+(id-NDW),iz,it)
-                                #u[k1,k2,ix,-NDW+id,iz,it] = u[k1,k2,ix,NY+(id-NDW),iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        count = 0
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for ix=-NDW+1:PN[1]+NDW
-                    for id=1:NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                v = recv_mesg2[count]
-                                setvalue!(u,v,k1,k2,ix,PN[2]+id,iz,it)
-                                #send_mesg2[count] = getvalue(u,k1,k2,ix,id,iz,it)
-                                #u[k1,k2,ix,NY+id,iz,it] = u[k1,k2,ix,id,iz,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-
-        MPI.Barrier(comm)
-
-        #Z direction 
-        #Now we send data
-
-        N = NDW*PN[4]*length(-NDW+1:PN[2]+NDW)*length(-NDW+1:PN[1]+NDW)*NC*NC
-        send_mesg1 = Array{ComplexF64}(undef, N)
-        recv_mesg1 = Array{ComplexF64}(undef, N)
-        send_mesg2 = Array{ComplexF64}(undef, N)
-        recv_mesg2 = Array{ComplexF64}(undef, N)
-
-        count = 0
-        for id=1:NDW
-            for it=1:PN[4]
-                for iy=-NDW+1:PN[2]+NDW
-                    for ix=-NDW+1:PN[1]+NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                send_mesg1[count] = getvalue(u,k1,k2,ix,iy,PN[3]+(id-NDW),it)
-                                send_mesg2[count] = getvalue(u,k1,k2,ix,iy,id,it)
-                                #u[k1,k2,ix,iy,id-NDW,it] = u[k1,k2,ix,iy,NZ+(id-NDW),it]
-                                #u[k1,k2,ix,iy,NZ+id,it] = u[k1,k2,ix,iy,id,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        pz = myrank_xyzt[3] + 1
-        pz += ifelse(pz >= PEs[3],-PEs[3],0)        
-        myrank_xyzt_send = (myrank_xyzt[1],myrank_xyzt[2],pz,myrank_xyzt[4])
-        myrank_send1 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send1 = $(myrank_send1)")
-        sreq1 = MPI.Isend(send_mesg1, myrank_send1, myrank_send1+32, comm) #from left to right 0 -> 1
-
-        pz = myrank_xyzt[3] - 1
-        pz += ifelse(pz < 0,PEs[3],0)
-        #println("pz = $pz")        
-        myrank_xyzt_send = (myrank_xyzt[1],myrank_xyzt[2],pz,myrank_xyzt[4])
-        myrank_send2 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send2 = $(myrank_send2)")
-        sreq2 = MPI.Isend(send_mesg2, myrank_send2, myrank_send2+64, comm) #from right to left 0 -> -1
-
-        rreq1 = MPI.Irecv!(recv_mesg1, myrank_send2, myrank+32, comm) #from -1 to 0
-        rreq2 = MPI.Irecv!(recv_mesg2, myrank_send1, myrank+64, comm) #from 1 to 0
-
-        stats = MPI.Waitall!([rreq1, sreq1,rreq2,sreq2])
-
-        count = 0
-        for id=1:NDW
-            for it=1:PN[4]
-                for iy=-NDW+1:PN[2]+NDW
-                    for ix=-NDW+1:PN[1]+NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                v = recv_mesg1[count]
-                                setvalue!(u,v,k1,k2,ix,iy,id-NDW,it)
-                                v = recv_mesg2[count]
-                                setvalue!(u,v,k1,k2,ix,iy,PN[3]+id,it)
-                                #u[k1,k2,ix,iy,id-NDW,it] = u[k1,k2,ix,iy,NZ+(id-NDW),it]
-                                #u[k1,k2,ix,iy,NZ+id,it] = u[k1,k2,ix,iy,id,it]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        MPI.Barrier(comm)
-        
-        #T direction 
-        #Now we send data
-
-        N = NDW*length(-NDW+1:PN[3]+NDW)*length(-NDW+1:PN[2]+NDW)*length(-NDW+1:PN[1]+NDW)*NC*NC
-        send_mesg1 = Array{ComplexF64}(undef, N)
-        recv_mesg1 = Array{ComplexF64}(undef, N)
-        send_mesg2 = Array{ComplexF64}(undef, N)
-        recv_mesg2 = Array{ComplexF64}(undef, N)
-    
-        count = 0
-        for id=1:NDW
-            for iz=-NDW+1:PN[3]+NDW
-                for iy=-NDW+1:PN[2]+NDW
-                    for ix=-NDW+1:PN[1]+NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                send_mesg1[count] = getvalue(u,k1,k2,ix,iy,iz,PN[4]+(id-NDW))
-                                send_mesg2[count] = getvalue(u,k1,k2,ix,iy,iz,id)
-                                #u[k1,k2,ix,iy,iz,id-NDW] = u[k1,k2,ix,iy,iz,PN[4]+(id-NDW)]
-                                #u[k1,k2,ix,iy,iz,PN[4]+id] = u[k1,k2,ix,iy,iz,id]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        pt = myrank_xyzt[4] + 1
-        pt += ifelse(pt >= PEs[4],-PEs[4],0)        
-        myrank_xyzt_send = (myrank_xyzt[1],myrank_xyzt[2],myrank_xyzt[3],pt)
-        myrank_send1 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send1 = $(myrank_send1)")
-        sreq1 = MPI.Isend(send_mesg1, myrank_send1, myrank_send1+32, comm) #from left to right 0 -> 1
-
-        pt = myrank_xyzt[4] - 1
-        pt += ifelse(pt < 0,PEs[4],0)
-        #println("pt = $pt")        
-        myrank_xyzt_send = (myrank_xyzt[1],myrank_xyzt[2],myrank_xyzt[3],pt)
-        myrank_send2 = get_myrank(myrank_xyzt_send,PEs)
-        #println("rank = $rank, myrank_send2 = $(myrank_send2)")
-        sreq2 = MPI.Isend(send_mesg2, myrank_send2, myrank_send2+64, comm) #from right to left 0 -> -1
-
-        rreq1 = MPI.Irecv!(recv_mesg1, myrank_send2, myrank+32, comm) #from -1 to 0
-        rreq2 = MPI.Irecv!(recv_mesg2, myrank_send1, myrank+64, comm) #from 1 to 0
-
-        stats = MPI.Waitall!([rreq1, sreq1,rreq2,sreq2])
-
-        count = 0
-        for id=1:NDW
-            for iz=-NDW+1:PN[3]+NDW
-                for iy=-NDW+1:PN[2]+NDW
-                    for ix=-NDW+1:PN[1]+NDW
-                        for k1=1:NC
-                            for k2=1:NC
-                                count += 1
-                                v = recv_mesg1[count]
-                                setvalue!(u,v,k1,k2,ix,iy,iz,id-NDW)
-                                v = recv_mesg2[count]
-                                setvalue!(u,v,k1,k2,ix,iy,iz,PN[4]+id)
-
-                                #send_mesg1[count] = getvalue(u,k1,k2,ix,iy,iz,PN[4]+(id-NDW))
-                                #send_mesg2[count] = getvalue(u,k1,k2,ix,iy,iz,id)
-                                #u[k1,k2,ix,iy,iz,id-NDW] = u[k1,k2,ix,iy,iz,PN[4]+(id-NDW)]
-                                #u[k1,k2,ix,iy,iz,PN[4]+id] = u[k1,k2,ix,iy,iz,id]
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        #error("rr22r")
-
-
-        MPI.Barrier(comm)
-    
-        return
     end
 
 
