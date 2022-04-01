@@ -164,8 +164,8 @@ module Gaugefields_4D_mpi_module
 
 
 
-    function identityGaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs;mpiinit = true,verbose_level = 2,randomnumber="Random")
-        U = Gaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
+    function identityGaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs;mpiinit = true,verbose_level = 2,randomnumber="Random", comm = MPI.COMM_WORLD)
+        U = Gaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level,comm = comm)
         v = 1
 
         for it=1:U.PN[4]
@@ -185,8 +185,8 @@ module Gaugefields_4D_mpi_module
         return U
     end
 
-    function randomGaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs;mpiinit = true,verbose_level= 2,randomnumber="Random")
-        U = Gaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level)
+    function randomGaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs;mpiinit = true,verbose_level= 2,randomnumber="Random", comm = MPI.COMM_WORLD)
+        U = Gaugefields_4D_nowing_mpi(NC,NX,NY,NZ,NT,PEs,mpiinit = mpiinit,verbose_level = verbose_level,comm = comm)
         v = 1
 
         for it=1:U.PN[4]
@@ -1871,7 +1871,7 @@ module Gaugefields_4D_mpi_module
 
 
     function Base.similar(U::T) where T <: Gaugefields_4D_nowing_mpi 
-        Uout = Gaugefields_4D_nowing_mpi(U.NC,U.NX,U.NY,U.NZ,U.NT,U.PEs,mpiinit=U.mpiinit,verbose_level = U.verbose_print.level)
+        Uout = Gaugefields_4D_nowing_mpi(U.NC,U.NX,U.NY,U.NZ,U.NT,U.PEs,mpiinit=U.mpiinit,verbose_level = U.verbose_print.level,comm = U.comm)
         #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
         return Uout
     end
