@@ -22,7 +22,7 @@ makedocs(;
         "Applications" => "applications.md",
         "Useful functions" => "usefulfunctions.md",
         "How to implement new gauge fields" => "howtoimplement.md",
-        "Measurements" => "measurments.md",
+        "Measurements" => "measurements.md",
         "Parallel computation" => "mpi.md",
         #"Derivatives" => "derivatives.md",
         #"Hybrid Monte Carlo" => "hmc.md",
