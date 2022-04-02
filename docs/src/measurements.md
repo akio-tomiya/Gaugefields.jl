@@ -146,7 +146,6 @@ function calculate_energy_density(U::Array{T,1}, Wmat,temps) where T <: Abstract
     NC = U[1].NC
     make_energy_density!(Wmat,U,temps) # make wilon loop operator and evaluate as a field, not traced.
     WL =  make_energy_density_core(Wmat) # tracing over color and average over spacetime and x,y,z.
-    NDir = 4.0*3.0/2 # choice of 2 axis from 4.
     return real(WL)/(NV*4^2)
 end
 
