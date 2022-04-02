@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Measurements · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/measurements/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li><a class="tocitem" href="../howtoimplement/">How to implement new gauge fields</a></li><li class="is-active"><a class="tocitem" href>Measurements</a><ul class="internal"><li><a class="tocitem" href="#Measurements"><span>Measurements</span></a></li></ul></li><li><a class="tocitem" href="../mpi/">Parallel computation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Measurements</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Measurements</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/measurements.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h2 id="Measurements"><a class="docs-heading-anchor" href="#Measurements">Measurements</a><a id="Measurements-1"></a><a class="docs-heading-anchor-permalink" href="#Measurements" title="Permalink"></a></h2><p>We show examples of measurements. </p><h3 id="Plaquette-and-Polyakov-loops"><a class="docs-heading-anchor" href="#Plaquette-and-Polyakov-loops">Plaquette and Polyakov loops</a><a id="Plaquette-and-Polyakov-loops-1"></a><a class="docs-heading-anchor-permalink" href="#Plaquette-and-Polyakov-loops" title="Permalink"></a></h3><p>This is the example to measure Plaquette and Polyakov loop observable. </p><pre><code class="language-julia hljs">using Gaugefields
+
+function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+    Dim = 4
+    Nwing = 1
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+    println(typeof(U))
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname(&quot;plaquette&quot;,Dim=Dim)
+    append!(plaqloop,plaqloop&#39;)
+    βinp = β/2
+    push!(gauge_action,βinp,plaqloop)
+
+    rectloop = make_loops_fromname(&quot;rectangular&quot;,Dim=Dim)
+    append!(rectloop,rectloop&#39;)
+    βinp = β/2
+    push!(gauge_action,βinp,rectloop)
+    hnew = Heatbath_update(U,gauge_action)
+
+    show(gauge_action)
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot;plaq_t = $plaq_t&quot;)
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    println(&quot;polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+
+    numhb = 1000
+    for itrj = 1:numhb
+
+        heatbath!(U,hnew)
+
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        poly = calculate_Polyakov_loop(U,temp1,temp2) 
+
+        if itrj % 40 == 0
+            println(&quot;$itrj plaq_t = $plaq_t&quot;)
+            println(&quot;$itrj polyakov loop = $(real(poly)) $(imag(poly))&quot;)
+        end
+    end
+    
+    close(fp)
+    return plaq_t
+
+end
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+β = 5.7
+heatbathtest_4D(NX,NY,NZ,NT,β,NC)</code></pre><h3 id="Energy-density"><a class="docs-heading-anchor" href="#Energy-density">Energy density</a><a id="Energy-density-1"></a><a class="docs-heading-anchor-permalink" href="#Energy-density" title="Permalink"></a></h3><p>We show the code to measure the energy density.</p><p>This is the code example: </p><pre><code class="language-julia hljs">using Gaugefields
+using Wilsonloop
+using LinearAlgebra
+
+function make_cloverloops(μ,ν;Dim=4)
+    loops = Wilsonline{Dim}[]
+    loop_righttop = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)])
+    loop_lefttop = Wilsonline([(ν,1),(μ,-1),(ν,-1),(μ,1)])
+    loop_rightbottom = Wilsonline([(ν,-1),(μ,1),(ν,1),(μ,-1)])
+    loop_leftbottom= Wilsonline([(μ,-1),(ν,-1),(μ,1),(ν,1)])
+    push!(loops,loop_righttop)
+    push!(loops,loop_lefttop)
+    push!(loops,loop_rightbottom)
+    push!(loops,loop_leftbottom)
+    return loops
+end
+
+function cloverloops(Dim)
+    loops_μν= Matrix{Vector{Wilsonline{Dim}}}(undef,Dim,Dim)
+    for μ=1:Dim
+        for ν=1:Dim
+            loops_μν[μ,ν] = Wilsonline{Dim}[]
+            if ν == μ
+                continue
+            end
+            loops_μν[μ,ν] = make_cloverloops(μ,ν,Dim=Dim)
+        end
+    end
+    return  loops_μν
+end
+
+function make_energy_density!(Wmat,U::Vector{&lt;: AbstractGaugefields{NC,Dim}},temps) where {NC,Dim}
+    W_operator = cloverloops(Dim)
+    calc_wilson_loop!(Wmat,W_operator,U,temps)
+    return 
+end
+
+
+function calc_wilson_loop!(W,W_operator,U::Vector{&lt;: AbstractGaugefields{NC,Dim}},temps) where {NC,Dim}
+    for μ=1:Dim
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            evaluate_gaugelinks!(W[μ,ν],W_operator[μ,ν],U,temps)
+            W[μ,ν] = Traceless_antihermitian(W[μ,ν])
+        end
+    end
+    return 
+end
+
+function  make_energy_density_core(Wmat::Matrix{&lt;: AbstractGaugefields{NC,Dim}}) where {NC,Dim}
+    @assert Dim == 4
+    W = 0.0 + 0.0im
+    for μ=1:Dim # all directions
+        for ν=1:Dim
+            if μ == ν
+                continue
+            end
+            W += -tr(Wmat[μ,ν],Wmat[μ,ν])/2
+        end
+    end
+    return W
+end
+
+
+function calculate_energy_density(U::Array{T,1}, Wmat,temps) where T &lt;: AbstractGaugefields
+    # Making a ( Ls × Lt) Wilson loop operator for potential calculations
+    WL = 0.0+0.0im
+    NV = U[1].NV
+    NC = U[1].NC
+    make_energy_density!(Wmat,U,temps) # make wilon loop operator and evaluate as a field, not traced.
+    WL =  make_energy_density_core(Wmat) # tracing over color and average over spacetime and x,y,z.
+    NDir = 4.0*3.0/2 # choice of 2 axis from 4.
+    return real(WL)/(NV*4^2)
+end
+
+function test()
+    NX = 8
+    NY = 8
+    NZ = 8
+    NT = 8
+    Nwing = 0
+    NC = 3
+    
+    Dim = 4
+    
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;hot&quot;)
+    filename=&quot;./conf_08080808.ildg&quot;
+    
+    ildg = ILDG(filename)
+    i = 1
+    L = [NX,NY,NZ,NT]
+    load_gaugefield!(U,i,ildg,L,NC)
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    temp3 = similar(U[1])
+
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    β = 5.7
+    W_temp = Matrix{typeof(U[1])}(undef,Dim,Dim)
+    for μ=1:Dim
+        for ν=1:Dim
+            W_temp[μ,ν] = similar(U[1])
+        end
+    end
+
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println(&quot; plaq_t = $plaq_t&quot;)
+
+    dt = 0.01
+
+    g = Gradientflow(U,eps = dt)
+
+    for itrj=1:10
+        flow!(U,g)
+        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        e = calculate_energy_density(U, W_temp,[temp1,temp2])
+        println(&quot;$itrj $dt $plaq_t $e # itrj dt plaq energy&quot;)
+    end
+
+
+end
+test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howtoimplement/">« How to implement new gauge fields</a><a class="docs-footer-nextpage" href="../mpi/">Parallel computation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 2 April 2022 02:09">Saturday 2 April 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
