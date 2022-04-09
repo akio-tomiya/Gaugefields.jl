@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Applications · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/applications/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li class="is-active"><a class="tocitem" href>Applications</a><ul class="internal"><li><a class="tocitem" href="#Gradient-flow"><span>Gradient flow</span></a></li><li><a class="tocitem" href="#Gradient-flow-with-general-terms"><span>Gradient flow with general terms</span></a></li><li><a class="tocitem" href="#Heatbath-updates-(even-odd-method)"><span>Heatbath updates (even-odd method)</span></a></li><li><a class="tocitem" href="#Heatbath-updates-with-general-actions"><span>Heatbath updates with general actions</span></a></li><li><a class="tocitem" href="#Wilson-loops"><span>Wilson loops</span></a></li><li><a class="tocitem" href="#Calculating-actions"><span>Calculating actions</span></a></li><li class="toplevel"><a class="tocitem" href="#How-to-calculate-derivatives"><span>How to calculate derivatives</span></a></li><li><a class="tocitem" href="#Hybrid-Monte-Carlo"><span>Hybrid Monte Carlo</span></a></li><li class="toplevel"><a class="tocitem" href="#Smearing"><span>Smearing</span></a></li><li><a class="tocitem" href="#Stout-smearing"><span>Stout smearing</span></a></li><li><a class="tocitem" href="#HMC-with-stout-smearing"><span>HMC with stout smearing</span></a></li></ul></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li><a class="tocitem" href="../howtoimplement/">How to implement new gauge fields</a></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../mpi/">Parallel computation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Applications</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Applications</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/applications.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Applications"><a class="docs-heading-anchor" href="#Applications">Applications</a><a id="Applications-1"></a><a class="docs-heading-anchor-permalink" href="#Applications" title="Permalink"></a></h1><h2 id="Gradient-flow"><a class="docs-heading-anchor" href="#Gradient-flow">Gradient flow</a><a id="Gradient-flow-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow" title="Permalink"></a></h2><p>We can use Lüscher&#39;s gradient flow.</p><pre><code class="language-julia hljs">NX = 4
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Applications · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/applications/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li class="is-active"><a class="tocitem" href>Applications</a><ul class="internal"><li><a class="tocitem" href="#Gradient-flow"><span>Gradient flow</span></a></li><li><a class="tocitem" href="#Gradient-flow-with-general-terms"><span>Gradient flow with general terms</span></a></li><li><a class="tocitem" href="#Heatbath-updates-(even-odd-method)"><span>Heatbath updates (even-odd method)</span></a></li><li><a class="tocitem" href="#Heatbath-updates-with-general-actions"><span>Heatbath updates with general actions</span></a></li><li><a class="tocitem" href="#Wilson-loops"><span>Wilson loops</span></a></li><li><a class="tocitem" href="#Calculating-actions"><span>Calculating actions</span></a></li><li class="toplevel"><a class="tocitem" href="#How-to-calculate-derivatives"><span>How to calculate derivatives</span></a></li><li><a class="tocitem" href="#Hybrid-Monte-Carlo"><span>Hybrid Monte Carlo</span></a></li><li class="toplevel"><a class="tocitem" href="#Smearing"><span>Smearing</span></a></li><li><a class="tocitem" href="#Stout-smearing"><span>Stout smearing</span></a></li><li><a class="tocitem" href="#HMC-with-stout-smearing"><span>HMC with stout smearing</span></a></li><li><a class="tocitem" href="#Mapping-example"><span>Mapping example</span></a></li></ul></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li><a class="tocitem" href="../howtoimplement/">How to implement new gauge fields</a></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../mpi/">Parallel computation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Applications</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Applications</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/applications.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Applications"><a class="docs-heading-anchor" href="#Applications">Applications</a><a id="Applications-1"></a><a class="docs-heading-anchor-permalink" href="#Applications" title="Permalink"></a></h1><h2 id="Gradient-flow"><a class="docs-heading-anchor" href="#Gradient-flow">Gradient flow</a><a id="Gradient-flow-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-flow" title="Permalink"></a></h2><p>We can use Lüscher&#39;s gradient flow.</p><pre><code class="language-julia hljs">NX = 4
 NY = 4
 NZ = 4
 NT = 4
@@ -878,4 +878,136 @@ function test1()
 end
 
 
-test1()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 2 April 2022 10:47">Saturday 2 April 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+test1()</code></pre><h2 id="Mapping-example"><a class="docs-heading-anchor" href="#Mapping-example">Mapping example</a><a id="Mapping-example-1"></a><a class="docs-heading-anchor-permalink" href="#Mapping-example" title="Permalink"></a></h2><p>We have a mapping function <code>map_U_sequential!(U,func!,V)</code>.  This function is used in the heatbath updates.  <code>func!(U,V,ix,iy,iz,it)</code> updates the matrix <code>U[ix,iy,iz,it]</code> on each site.  <code>V</code> is an input array or field.  For example, in the heatbath update, the updated new matrix depends on the Gauge field <code>U</code>, so we set <code>map_U_sequential!(U[mu],func!,U)</code>.  Then <code>U</code> is updated sequentially. </p><p>We show the example to apply &quot;staggered phase&quot; to the Gauge field.  Since this phase does not depend on the Gauge field does depend only on the site index, <code>V</code> is a dummy variable. </p><p>This is 4D case</p><pre><code class="language-julia hljs">using Gaugefields
+function test()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = &quot;cold&quot;)
+
+    μ = 4
+
+    function staggered_phase!(A,V,ix,iy,iz,it ) 
+
+        t = it-1
+        t += ifelse(t&lt;0,NT,0)
+        t += ifelse(t ≥ NT,-NT,0)
+        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
+        z = iz-1
+        z += ifelse(z&lt;0,NZ,0)
+        z += ifelse(z ≥ NZ,-NZ,0)
+        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
+        y = iy-1
+        y += ifelse(y&lt;0,NY,0)
+        y += ifelse(y ≥ NY,-NY,0)
+        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
+        x = ix-1
+        x += ifelse(x&lt;0,NX,0)
+        x += ifelse(x ≥ NX,-NX,0)
+        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
+        if μ ==1
+            η = 1
+        elseif μ ==2
+            #η = (-1.0)^(x)
+            η = ifelse(x%2 == 0,1,-1)
+        elseif μ ==3
+            #η = (-1.0)^(x+y)
+            η = ifelse((x+y)%2 == 0,1,-1)
+        elseif μ ==4
+            #η = (-1.0)^(x+y+z)
+            η = ifelse((x+y+z)%2 == 0,1,-1)
+        else
+            error(&quot;η should be positive but η = $η&quot;)
+        end
+
+        for ic=1:NC
+            for jc=1:NC
+                A[jc,ic] *= η
+            end
+        end
+
+    end
+    V = similar(U)
+
+    println(U[μ][:,:,1,1,1,1])
+    println(U[μ][:,:,2,1,1,1])
+
+    map_U_sequential!(U[μ],staggered_phase!,V)
+
+    println(U[μ][:,:,1,1,1,1])
+    println(U[μ][:,:,2,1,1,1])
+end
+
+test()</code></pre><p>This is 2D case:</p><pre><code class="language-julia hljs">using Gaugefields
+function test()
+    NX = 4
+    #NY = 4
+    #NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = &quot;cold&quot;)
+
+    μ = 2
+
+    function staggered_phase!(A,V,ix,it ) 
+
+        t = it-1
+        t += ifelse(t&lt;0,NT,0)
+        t += ifelse(t ≥ NT,-NT,0)
+        #=
+        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
+        z = iz-1
+        z += ifelse(z&lt;0,NZ,0)
+        z += ifelse(z ≥ NZ,-NZ,0)
+        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
+        y = iy-1
+        y += ifelse(y&lt;0,NY,0)
+        y += ifelse(y ≥ NY,-NY,0)
+        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
+        =#
+        x = ix-1
+        x += ifelse(x&lt;0,NX,0)
+        x += ifelse(x ≥ NX,-NX,0)
+        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
+        if μ ==1
+            η = 1
+        elseif μ ==2
+            #η = (-1.0)^(x)
+            η = ifelse(x%2 == 0,1,-1)
+            #=
+        elseif μ ==3
+            #η = (-1.0)^(x+y)
+            η = ifelse((x+y)%2 == 0,1,-1)
+        elseif μ ==4
+            #η = (-1.0)^(x+y+z)
+            η = ifelse((x+y+z)%2 == 0,1,-1)
+            =#
+        else
+            error(&quot;η should be positive but η = $η&quot;)
+        end
+
+        for ic=1:NC
+            for jc=1:NC
+                A[jc,ic] *= η
+            end
+        end
+
+    end
+    V = similar(U)
+
+    println(U[μ][:,:,1,1])
+    println(U[μ][:,:,2,1])
+
+    map_U_sequential!(U[μ],staggered_phase!,V)
+
+    println(U[μ][:,:,1,1])
+    println(U[μ][:,:,2,1])
+end
+
+test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 9 April 2022 09:33">Saturday 9 April 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
