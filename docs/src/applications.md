@@ -1077,7 +1077,7 @@ For example, in the heatbath update, the updated new matrix depends on the Gauge
 Then ```U``` is updated sequentially. 
 
 We show the example to apply "staggered phase" to the Gauge field. 
-Since this phase does not depend on the Gauge field does depend only on the site index, ```V``` is a dummy variable. 
+Since this phase does not depend on the Gaugefield and does depend only on the site index, ```V``` is a dummy variable. 
 
 This is 4D case
 
