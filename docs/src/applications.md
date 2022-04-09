@@ -1153,6 +1153,33 @@ This is 2D case:
 
 ```julia
 using Gaugefields
+
+function staggered_phase!(A,V,ix,it,NX,NT,NC,μ)
+    t = it-1
+    t += ifelse(t<0,NT,0)
+    t += ifelse(t ≥ NT,-NT,0)
+
+    x = ix-1
+    x += ifelse(x<0,NX,0)
+    x += ifelse(x ≥ NX,-NX,0)
+    if μ ==1
+        η = 1
+    elseif μ ==2
+        #η = (-1.0)^(x)
+        η = ifelse(x%2 == 0,1,-1)
+
+    else
+        error("η should be positive but η = $η")
+    end
+
+    for ic=1:NC
+        for jc=1:NC
+            A[jc,ic] *= η
+        end
+    end
+
+end
+
 function test()
     NX = 4
     #NY = 4
@@ -1165,59 +1192,15 @@ function test()
 
     μ = 2
 
-    function staggered_phase!(A,V,ix,it ) 
-
-        t = it-1
-        t += ifelse(t<0,NT,0)
-        t += ifelse(t ≥ NT,-NT,0)
-        #=
-        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
-        z = iz-1
-        z += ifelse(z<0,NZ,0)
-        z += ifelse(z ≥ NZ,-NZ,0)
-        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
-        y = iy-1
-        y += ifelse(y<0,NY,0)
-        y += ifelse(y ≥ NY,-NY,0)
-        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
-        =#
-        x = ix-1
-        x += ifelse(x<0,NX,0)
-        x += ifelse(x ≥ NX,-NX,0)
-        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
-        if μ ==1
-            η = 1
-        elseif μ ==2
-            #η = (-1.0)^(x)
-            η = ifelse(x%2 == 0,1,-1)
-            #=
-        elseif μ ==3
-            #η = (-1.0)^(x+y)
-            η = ifelse((x+y)%2 == 0,1,-1)
-        elseif μ ==4
-            #η = (-1.0)^(x+y+z)
-            η = ifelse((x+y+z)%2 == 0,1,-1)
-            =#
-        else
-            error("η should be positive but η = $η")
-        end
-
-        for ic=1:NC
-            for jc=1:NC
-                A[jc,ic] *= η
-            end
-        end
-
-    end
     V = similar(U)
-
-    println(U[μ][:,:,1,1])
-    println(U[μ][:,:,2,1])
-
-    map_U_sequential!(U[μ],staggered_phase!,V)
-
-    println(U[μ][:,:,1,1])
-    println(U[μ][:,:,2,1])
+    for μ=1:2
+        println(U[μ][:,:,1,1])
+        println(U[μ][:,:,2,1])
+        mapfunc!(A,V,ix,it) = staggered_phase!(A,V,ix,it,NX,NT,NC,μ)
+        map_U_sequential!(U[μ],mapfunc!,V)
+        println(U[μ][:,:,1,1])
+        println(U[μ][:,:,2,1])
+    end
 end
 
 test()
