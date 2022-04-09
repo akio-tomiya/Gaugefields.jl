@@ -1068,3 +1068,157 @@ end
 test1()
 ```
 
+## Mapping example
+We have a mapping function ```map_U_sequential!(U,func!,V)```. 
+This function is used in the heatbath updates. 
+```func!(U,V,ix,iy,iz,it)``` updates the matrix ```U[ix,iy,iz,it]``` on each site. 
+```V``` is an input array or field. 
+For example, in the heatbath update, the updated new matrix depends on the Gauge field ```U```, so we set ```map_U_sequential!(U[mu],func!,U)```. 
+Then ```U``` is updated sequentially. 
+
+We show the example to apply "staggered phase" to the Gauge field. 
+Since this phase does not depend on the Gauge field does depend only on the site index, ```V``` is a dummy variable. 
+
+This is 4D case
+
+```julia
+using Gaugefields
+function test()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+
+    μ = 4
+
+    function staggered_phase!(A,V,ix,iy,iz,it ) 
+
+        t = it-1
+        t += ifelse(t<0,NT,0)
+        t += ifelse(t ≥ NT,-NT,0)
+        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
+        z = iz-1
+        z += ifelse(z<0,NZ,0)
+        z += ifelse(z ≥ NZ,-NZ,0)
+        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
+        y = iy-1
+        y += ifelse(y<0,NY,0)
+        y += ifelse(y ≥ NY,-NY,0)
+        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
+        x = ix-1
+        x += ifelse(x<0,NX,0)
+        x += ifelse(x ≥ NX,-NX,0)
+        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
+        if μ ==1
+            η = 1
+        elseif μ ==2
+            #η = (-1.0)^(x)
+            η = ifelse(x%2 == 0,1,-1)
+        elseif μ ==3
+            #η = (-1.0)^(x+y)
+            η = ifelse((x+y)%2 == 0,1,-1)
+        elseif μ ==4
+            #η = (-1.0)^(x+y+z)
+            η = ifelse((x+y+z)%2 == 0,1,-1)
+        else
+            error("η should be positive but η = $η")
+        end
+
+        for ic=1:NC
+            for jc=1:NC
+                A[jc,ic] *= η
+            end
+        end
+
+    end
+    V = similar(U)
+
+    println(U[μ][:,:,1,1,1,1])
+    println(U[μ][:,:,2,1,1,1])
+
+    map_U_sequential!(U[μ],staggered_phase!,V)
+
+    println(U[μ][:,:,1,1,1,1])
+    println(U[μ][:,:,2,1,1,1])
+end
+
+test()
+```
+
+This is 2D case:
+
+```julia
+using Gaugefields
+function test()
+    NX = 4
+    #NY = 4
+    #NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "cold")
+
+    μ = 2
+
+    function staggered_phase!(A,V,ix,it ) 
+
+        t = it-1
+        t += ifelse(t<0,NT,0)
+        t += ifelse(t ≥ NT,-NT,0)
+        #=
+        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
+        z = iz-1
+        z += ifelse(z<0,NZ,0)
+        z += ifelse(z ≥ NZ,-NZ,0)
+        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
+        y = iy-1
+        y += ifelse(y<0,NY,0)
+        y += ifelse(y ≥ NY,-NY,0)
+        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
+        =#
+        x = ix-1
+        x += ifelse(x<0,NX,0)
+        x += ifelse(x ≥ NX,-NX,0)
+        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
+        if μ ==1
+            η = 1
+        elseif μ ==2
+            #η = (-1.0)^(x)
+            η = ifelse(x%2 == 0,1,-1)
+            #=
+        elseif μ ==3
+            #η = (-1.0)^(x+y)
+            η = ifelse((x+y)%2 == 0,1,-1)
+        elseif μ ==4
+            #η = (-1.0)^(x+y+z)
+            η = ifelse((x+y+z)%2 == 0,1,-1)
+            =#
+        else
+            error("η should be positive but η = $η")
+        end
+
+        for ic=1:NC
+            for jc=1:NC
+                A[jc,ic] *= η
+            end
+        end
+
+    end
+    V = similar(U)
+
+    println(U[μ][:,:,1,1])
+    println(U[μ][:,:,2,1])
+
+    map_U_sequential!(U[μ],staggered_phase!,V)
+
+    println(U[μ][:,:,1,1])
+    println(U[μ][:,:,2,1])
+end
+
+test()
+```

@@ -89,7 +89,8 @@ import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfi
             construct_Λmatrix_forSTOUT!,
             evaluate_gaugelinks_evenodd!,
             map_U!,initialize_TA_Gaugefields,gauss_distribution!,Initialize_Gaugefields,
-            construct_Adjoint_rep_Gaugefields,get_myrank,getvalue,get_nprocs     
+            construct_Adjoint_rep_Gaugefields,get_myrank,getvalue,get_nprocs,
+            write_to_numpyarray,map_U_sequential!     
 import Wilsonloop:make_loops_fromname
 import .GaugeAction_module:GaugeAction,evaluate_GaugeAction_untraced!,evaluate_GaugeAction_untraced,calc_dSdUμ,calc_dSdUμ!,get_temporary_gaugefields,evaluate_GaugeAction
 
@@ -115,6 +116,7 @@ export Heatbath_update
 export println_verbose_level1,println_verbose_level2,println_verbose_level3
 export overrelaxation!
 export AbstractGaugefields,Traceless_antihermitian
+export write_to_numpyarray,map_U_sequential!
 
 
 

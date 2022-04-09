@@ -102,6 +102,20 @@ using Random
         end
     end
 
+    function write_to_numpyarray(U::T,filename) where T <: Gaugefields_4D_wing
+        data =  Dict{String,Any}()
+        data["U"] = U.U
+        data["NX"] = U.NX
+        data["NY"] = U.NY
+        data["NZ"] = U.NZ
+        data["NT"] = U.NT
+        data["NV"] = U.NV
+        data["NDW"] = U.NDW
+        data["NC"] = U.NC
+
+        npzwrite(filename, data)
+    end
+
     function Base.similar(U::T) where T <: Gaugefields_4D_wing
         Uout = Gaugefields_4D_wing(U.NC,U.NDW,U.NX,U.NY,U.NZ,U.NT,verbose_level = U.verbose_print.level)
         #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)

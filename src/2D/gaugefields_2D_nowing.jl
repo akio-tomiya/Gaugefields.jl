@@ -35,6 +35,18 @@ module Gaugefields_2D_nowing_module
         end
     end
 
+    function write_to_numpyarray(U::T,filename) where T <: Gaugefields_2D_nowing
+        data = Dict{String,Any}()
+        data["U"] = U.U
+        data["NX"] = U.NX
+        data["NT"] = U.NT
+        data["NV"] = U.NV
+        data["NDW"] = U.NDW
+        data["NC"] = U.NC
+
+        npzwrite(filename, data)
+    end
+
 
 
 

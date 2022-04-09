@@ -43,6 +43,21 @@ using Random
         end
     end
 
+    function write_to_numpyarray(U::T,filename) where T <: Gaugefields_4D_nowing
+        data = Dict{String,Any}()
+        data["U"] = U.U
+        data["NX"] = U.NX
+        data["NY"] = U.NY
+        data["NZ"] = U.NZ
+        data["NT"] = U.NT
+        data["NV"] = U.NV
+        data["NDW"] = U.NDW
+        data["NC"] = U.NC
+
+        npzwrite(filename, data)
+    end
+
+
 
 
 

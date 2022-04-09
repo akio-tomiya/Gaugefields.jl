@@ -12,6 +12,7 @@ module AbstractGaugefields_module
     #using MPI
     using InteractiveUtils
     
+    
     abstract type Abstractfields end
 
 
@@ -162,6 +163,11 @@ module AbstractGaugefields_module
     
     #include("./gaugefields_4D_wing_mpi.jl")
 
+    using NPZ
+
+    function write_to_numpyarray(U::T,filename) where T <: AbstractGaugefields
+        error("write_to_numpyarray! is not implemented in type $(typeof(U)) ")
+    end
 
     function Base.similar(U::T) where T <: AbstractGaugefields
         error("similar! is not implemented in type $(typeof(U)) ")
