@@ -72,7 +72,7 @@ import .Gradientflow_module:Gradientflow,Gradientflow_general,flow!,get_tempG,ge
 #import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
 #    print_verbose1,print_verbose2,print_verbose3
 
-import .ILDG_format:ILDG,load_gaugefield,load_gaugefield!,save_binarydata
+import .ILDG_format:ILDG,load_gaugefield,load_gaugefield!,save_binarydata,load_binarydata!
 import .IOmodule:saveU,loadU,loadU!    
 
 
@@ -117,6 +117,7 @@ export println_verbose_level1,println_verbose_level2,println_verbose_level3
 export overrelaxation!
 export AbstractGaugefields,Traceless_antihermitian
 export write_to_numpyarray,map_U_sequential!
+export load_binarydata!
 
 
 

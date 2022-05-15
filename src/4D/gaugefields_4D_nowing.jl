@@ -467,6 +467,46 @@ using Random
         @inbounds return η*u.parent[i1,i2,i3,i4,i5,i6]
     end
 
+    function Base.getindex(u::Staggered_Gaugefields{T,μ},i1,i2,i3,i4,i5,i6) where {T <: Shifted_Gaugefields_4D,μ}
+        NT = u.parent.NT
+        NZ = u.parent.NZ
+        NY = u.parent.NY
+        NX = u.parent.NX
+
+        t = i6-1+ u.parent.shift[4]
+        t += ifelse(t<0,NT,0)
+        t += ifelse(t ≥ NT,-NT,0)
+        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
+        z = i5-1+ u.parent.shift[3]
+        z += ifelse(z<0,NZ,0)
+        z += ifelse(z ≥ NZ,-NZ,0)
+        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
+        y = i4-1+ u.parent.shift[2]
+        y += ifelse(y<0,NY,0)
+        y += ifelse(y ≥ NY,-NY,0)
+        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
+        x = i3-1+ u.parent.shift[1]
+        x += ifelse(x<0,NX,0)
+        x += ifelse(x ≥ NX,-NX,0)
+        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
+        if μ ==1
+            η = 1
+        elseif μ ==2
+            #η = (-1.0)^(x)
+            η = ifelse(x%2 == 0,1,-1)
+        elseif μ ==3
+            #η = (-1.0)^(x+y)
+            η = ifelse((x+y)%2 == 0,1,-1)
+        elseif μ ==4
+            #η = (-1.0)^(x+y+z)
+            η = ifelse((x+y+z)%2 == 0,1,-1)
+        else
+            error("η should be positive but η = $η")
+        end
+
+        @inbounds return η*u.parent[i1,i2,i3,i4,i5,i6]
+    end
+
     function map_U!(U::Gaugefields_4D_nowing{NC},f!::Function,V::Gaugefields_4D_nowing{NC},iseven::Bool) where {NC} 
         NT = U.NT
         NZ = U.NZ

@@ -125,6 +125,21 @@ module Gaugefields_4D_mpi_module
         return U[1].nprocs
     end
 
+    function calc_rank_and_indices(x::Gaugefields_4D_nowing_mpi,ix,iy,iz,it)
+        pex = (ix-1) ÷ x.PN[1]
+        ix_local = (ix-1) % x.PN[1] + 1
+
+        pey = (iy-1) ÷ x.PN[2]
+        iy_local = (iy-1) % x.PN[2] + 1
+
+        pez = (iz-1) ÷ x.PN[3]
+        iz_local = (iz-1) % x.PN[3] + 1
+
+        pet = (it-1) ÷ x.PN[4]
+        it_local = (it-1) % x.PN[4] + 1
+        myrank = get_myrank((pex,pey,pez,pet),x.PEs)
+        return myrank,ix_local,iy_local,iz_local,it_local
+    end
 
     function barrier(x::T) where T <: Gaugefields_4D_nowing_mpi
         #println("ba")

@@ -6,7 +6,10 @@ module ILDG_format
 
     function __init__()
         @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
-            import ..AbstractGaugefields_module:Gaugefields_4D_wing_mpi
+            import ..AbstractGaugefields_module:Gaugefields_4D_wing_mpi,Gaugefields_4D_nowing_mpi
+            import ..AbstractGaugefields_module:identityGaugefields_4D_wing_mpi,
+                Gaugefields_4D_wing_mpi,calc_rank_and_indices,barrier,comm,
+                setvalue!,getvalue
 
             function load_binarydata!(U::Array{T,1},NX,NY,NZ,NT,NC,filename,precision) where T <: Gaugefields_4D_wing_mpi
                 if U[1].myrank == 0
@@ -128,6 +131,188 @@ module ILDG_format
                 
         
                 #close(fp)
+            end
+
+            function load_binarydata!(U::Array{T,1},NX,NY,NZ,NT,NC,filename,precision) where T <: Gaugefields_4D_nowing_mpi
+                if U[1].myrank == 0
+                    bi = Binarydata_ILDG(filename,precision)
+                end
+                
+                data = zeros(ComplexF64,NC,NC,4,prod(U[1].PN),U[1].nprocs)
+                counts = zeros(Int64,U[1].nprocs)
+                totalnum = NX*NY*NZ*NT*NC*NC*2*4
+                PN = U[1].PN
+                barrier(U[1])
+        
+                N = NC*NC*4
+                send_mesg1 =  Array{ComplexF64}(undef, 1)
+                recv_mesg1 = Array{ComplexF64}(undef, 1)
+        
+                send_mesg =  Array{ComplexF64}(undef, N)
+                recv_mesg = Array{ComplexF64}(undef, N)
+        
+                #if U[1].myrank == 0
+                    i = 0
+                    counttotal = 0
+                    for it=1:NT
+                        for iz=1:NZ
+                            for iy=1:NY
+                                for ix=1:NX
+                                    rank,ix_local,iy_local,iz_local,it_local = Gaugefields.calc_rank_and_indices(U[1],ix,iy,iz,it)
+                                    #counts[rank+1] += 1
+                                    counttotal += 1
+                                    
+                                    #=
+                                    if U[1].myrank == 0
+                                        println("rank = $rank")
+                                        println("$ix $(ix_local)")
+                                        println("$iy $(iy_local)")
+                                        println("$iz $(iz_local)")
+                                        println("$it $(it_local)")
+                                    end
+                                    =#
+                                    Gaugefields.barrier(U[1])
+                                    if U[1].myrank == 0
+                                        count = 0
+                                        for μ=1:4
+                                            for ic2 = 1:NC
+                                                for ic1 = 1:NC
+                                                    count += 1
+                                                    send_mesg[count] = read!(bi)
+                                                end
+                                            end
+                                        end
+                                        sreq = MPI.Isend(send_mesg, rank, counttotal, Gaugefields.comm) 
+                                    end
+                                    if U[1].myrank == rank
+                                        rreq = MPI.Irecv!(recv_mesg, 0, counttotal, Gaugefields.comm)
+                                        MPI.Wait!(rreq)
+                                        count = 0
+                                        for μ=1:4
+                                            for ic2 = 1:NC
+                                                for ic1 = 1:NC
+                                                    count += 1
+                                                    v = recv_mesg[count] 
+                                                    Gaugefields.setvalue!(U[μ],v,ic2,ic1,ix_local,iy_local,iz_local,it_local) 
+                                                end
+                                            end
+                                        end
+                                    end
+                                    Gaugefields.barrier(U[1])
+                                end
+                            end
+                        end
+                    end
+                #end
+        
+                Gaugefields.barrier(U[1])        
+                update!(U)
+                
+        
+                #close(fp)
+            end
+
+            function save_binarydata(U::Array{T,1},filename) where T <: Gaugefields_4D_nowing_mpi
+        
+                NX = U[1].NX
+                NY = U[1].NY
+                NZ = U[1].NZ
+                NT = U[1].NT
+                NC = U[1].NC
+
+                barrier(U[1])
+        
+                N = NC*NC*4
+                send_mesg1 =  Array{ComplexF64}(undef, 1)
+                recv_mesg1 = Array{ComplexF64}(undef, 1)
+        
+                send_mesg =  Array{ComplexF64}(undef, N)
+                recv_mesg = Array{ComplexF64}(undef, N)
+        
+        
+                #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
+                #print(li.doc)
+                #write("test.xml", li.doc)
+        
+                if U[1].myrank == 0
+                    fp = open("testbin.dat","w")
+                end
+                i = 0
+                i = 0
+
+                i = 0
+                    counttotal = 0
+                    for it=1:NT
+                        for iz=1:NZ
+                            for iy=1:NY
+                                for ix=1:NX
+                                    rank,ix_local,iy_local,iz_local,it_local = calc_rank_and_indices(U[1],ix,iy,iz,it)
+                                    #counts[rank+1] += 1
+                                    counttotal += 1
+                                    
+                                    #=
+                                    if U[1].myrank == 0
+                                        println("rank = $rank")
+                                        println("$ix $(ix_local)")
+                                        println("$iy $(iy_local)")
+                                        println("$iz $(iz_local)")
+                                        println("$it $(it_local)")
+                                    end
+                                    =#
+                                    barrier(U[1])
+                                    if U[1].myrank == rank
+                                        count = 0
+                                        for μ=1:4
+                                            for ic2 = 1:NC
+                                                for ic1 = 1:NC
+                                                    count += 1
+                                                    send_mesg[count] = getvalue(U[μ],ic2,ic1,ix_local,iy_local,iz_local,it_local)
+                                                    #send_mesg[count] = U[μ][ic2,ic1,ix_local,iy_local,iz_local,it_local]
+                                                end
+                                            end
+                                        end
+                                        sreq = MPI.Isend(send_mesg, rank, counttotal, U[1].comm) 
+                                    end
+                                    if U[1].myrank == 0
+                                        rreq = MPI.Irecv!(recv_mesg, 0, counttotal, U[1].comm)
+                                        MPI.Wait!(rreq)
+                                        count = 0
+                                        for μ=1:4
+                                            for ic2 = 1:NC
+                                                for ic1 = 1:NC
+                                                    count += 1
+                                                    v = recv_mesg[count] 
+                                                    write(fp,hton(real(v)))
+                                                    write(fp,hton(imag(v)))
+                                                    #Gaugefields.setvalue!(U[μ],v,ic2,ic1,ix_local,iy_local,iz_local,it_local) 
+                                                end
+                                            end
+                                        end
+                                    end
+                                    barrier(U[1])
+                                end
+                            end
+                        end
+                    end
+
+                if U[1].myrank == 0
+                    close(fp)
+            
+                    fp = open("filelist.dat","w")
+                    #println(fp,"test.xml ","ildg-format")
+                    println(fp,"testbin.dat ","ildg-binary-data")
+                    close(fp)
+            
+                    lime_pack() do exe
+                        run(`$exe filelist.dat $filename`)
+                    end
+                    
+                end
+                barrier(U[1])
+        
+        
+                return
+        
             end
         end
     end
@@ -285,7 +470,18 @@ module ILDG_format
         #close(fp)
     end
 
-
+    function load_binarydata!(U,filename)
+        NX = U[1].NX
+        NY = U[1].NY
+        NZ = U[1].NZ
+        NT = U[1].NT
+        NC = U[1].NC
+        NDW = U[1].NDW
+        ildg = ILDG(filename)
+        i = 1
+        L = [NX,NY,NZ,NT]
+        load_gaugefield!(U,i,ildg,L,NC,NDW = NDW)
+    end
 
     function load_gaugefield!(U,i,ildg::ILDG,L,NC;NDW = 1)
         NX = L[1]
