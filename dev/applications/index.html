@@ -943,6 +943,33 @@ function test()
 end
 
 test()</code></pre><p>This is 2D case:</p><pre><code class="language-julia hljs">using Gaugefields
+
+function staggered_phase!(A,V,ix,it,NX,NT,NC,μ)
+    t = it-1
+    t += ifelse(t&lt;0,NT,0)
+    t += ifelse(t ≥ NT,-NT,0)
+
+    x = ix-1
+    x += ifelse(x&lt;0,NX,0)
+    x += ifelse(x ≥ NX,-NX,0)
+    if μ ==1
+        η = 1
+    elseif μ ==2
+        #η = (-1.0)^(x)
+        η = ifelse(x%2 == 0,1,-1)
+
+    else
+        error(&quot;η should be positive but η = $η&quot;)
+    end
+
+    for ic=1:NC
+        for jc=1:NC
+            A[jc,ic] *= η
+        end
+    end
+
+end
+
 function test()
     NX = 4
     #NY = 4
@@ -955,59 +982,15 @@ function test()
 
     μ = 2
 
-    function staggered_phase!(A,V,ix,it ) 
-
-        t = it-1
-        t += ifelse(t&lt;0,NT,0)
-        t += ifelse(t ≥ NT,-NT,0)
-        #=
-        #boundary_factor_t = ifelse(t == NT -1,BoundaryCondition[4],1)
-        z = iz-1
-        z += ifelse(z&lt;0,NZ,0)
-        z += ifelse(z ≥ NZ,-NZ,0)
-        #boundary_factor_z = ifelse(z == NZ -1,BoundaryCondition[3],1)
-        y = iy-1
-        y += ifelse(y&lt;0,NY,0)
-        y += ifelse(y ≥ NY,-NY,0)
-        #boundary_factor_y = ifelse(y == NY -1,BoundaryCondition[2],1)
-        =#
-        x = ix-1
-        x += ifelse(x&lt;0,NX,0)
-        x += ifelse(x ≥ NX,-NX,0)
-        #boundary_factor_x = ifelse(x == NX -1,BoundaryCondition[1],1)
-        if μ ==1
-            η = 1
-        elseif μ ==2
-            #η = (-1.0)^(x)
-            η = ifelse(x%2 == 0,1,-1)
-            #=
-        elseif μ ==3
-            #η = (-1.0)^(x+y)
-            η = ifelse((x+y)%2 == 0,1,-1)
-        elseif μ ==4
-            #η = (-1.0)^(x+y+z)
-            η = ifelse((x+y+z)%2 == 0,1,-1)
-            =#
-        else
-            error(&quot;η should be positive but η = $η&quot;)
-        end
-
-        for ic=1:NC
-            for jc=1:NC
-                A[jc,ic] *= η
-            end
-        end
-
-    end
     V = similar(U)
-
-    println(U[μ][:,:,1,1])
-    println(U[μ][:,:,2,1])
-
-    map_U_sequential!(U[μ],staggered_phase!,V)
-
-    println(U[μ][:,:,1,1])
-    println(U[μ][:,:,2,1])
+    for μ=1:2
+        println(U[μ][:,:,1,1])
+        println(U[μ][:,:,2,1])
+        mapfunc!(A,V,ix,it) = staggered_phase!(A,V,ix,it,NX,NT,NC,μ)
+        map_U_sequential!(U[μ],mapfunc!,V)
+        println(U[μ][:,:,1,1])
+        println(U[μ][:,:,2,1])
+    end
 end
 
-test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 9 April 2022 09:47">Saturday 9 April 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../utilities/">« Utilities</a><a class="docs-footer-nextpage" href="../usefulfunctions/">Useful functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Sunday 15 May 2022 04:05">Sunday 15 May 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
