@@ -623,7 +623,7 @@ Gaugefields with using MPI is not well tested.
         Ushift1 = shift_U(Unew,position)
 
         #ix,iy,iz,it=(2,2,2,2)
-        #println("posotion = $position")
+        #println("position = $position")
         #pos = Tuple([ix,iy,iz,it] .+ collect(position))
         #U1 = Unew[:,:,pos...]
         #println("U1, ",Unew[:,:,pos...])
