@@ -61,7 +61,7 @@ module AbstractGaugefields_module
         error("type $(typeof(U)) has no setindex method. This type is read only.")
     end
 
-    function Base.getindex(U::T,v...)  where T <:  Unit_Gaugefield
+    function Base.getindex(U::T,v...)  where T <:  Staggered_Gaugefields
         error("type $(typeof(U)) has no getindex method")
     end
 
