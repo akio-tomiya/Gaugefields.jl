@@ -61,6 +61,10 @@ module AbstractGaugefields_module
         error("type $(typeof(U)) has no setindex method. This type is read only.")
     end
 
+    function Base.getindex(U::T,v...)  where T <:  Unit_Gaugefield
+        error("type $(typeof(U)) has no getindex method")
+    end
+
     struct Gaugefield_latticeindices{Dim,NC,T}
         NN::NTuple{Dim,Int64}
         NC::Int8
