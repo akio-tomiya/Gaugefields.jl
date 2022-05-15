@@ -467,6 +467,10 @@ using Random
         @inbounds return η*u.parent[i1,i2,i3,i4,i5,i6]
     end
 
+    function Base.getindex(u::Staggered_Gaugefields{T,μ},i1,i2,i3,i4,i5,i6)  where {T <: Shifted_Gaugefields_4D_nowing,μ}
+        error("type $(typeof(U)) has no getindex method")
+    end
+
     function Base.getindex(u::Staggered_Gaugefields{T,μ},i1,i2,i3,i4,i5,i6) where {T <: Shifted_Gaugefields_4D,μ}
         NT = u.parent.NT
         NZ = u.parent.NZ
