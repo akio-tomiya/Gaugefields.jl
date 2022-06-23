@@ -7,46 +7,45 @@ module Gaugefields_4D_module
     import Base
     =#
 
-    abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4}
+abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4} end
+
+
+include("./gaugefields_4D_wing.jl")
+include("./gaugefields_4D_nowing.jl")
+
+function __init__()
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        include("./gaugefields_4D_mpi.jl")
+        include("./gaugefields_4D_mpi_nowing.jl")
+        include("../2D/gaugefields_2D_mpi_nowing.jl")
+        include("./TA_gaugefields_4D_mpi.jl")
+        include("../2D/TA_gaugefields_2D_mpi.jl")
+    end
+end
+
+
+
+function Base.size(U::Gaugefields_4D{NC}) where {NC}
+    return NC, NC, U.NX, U.NY, U.NZ, U.NT
+end
+
+
+
+
+function clear_U!(U::Array{T,1}) where {T<:Gaugefields_4D}
+    for μ = 1:4
+        clear_U!(U[μ])
     end
 
-
-    include("./gaugefields_4D_wing.jl")
-    include("./gaugefields_4D_nowing.jl")
-
-    function __init__()
-        @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
-            include("./gaugefields_4D_mpi.jl")    
-            include("./gaugefields_4D_mpi_nowing.jl")   
-            include("../2D/gaugefields_2D_mpi_nowing.jl")  
-            include("./TA_gaugefields_4D_mpi.jl")    
-            include("../2D/TA_gaugefields_2D_mpi.jl")  
-        end
-    end
-
-    
-
-    function Base.size(U::Gaugefields_4D{NC}) where NC
-        return NC,NC,U.NX,U.NY,U.NZ,U.NT
-    end
+end
 
 
 
-
-    function clear_U!(U::Array{T,1}) where T <: Gaugefields_4D
-        for μ=1:4
-            clear_U!(U[μ])
-        end
-        
-    end
-
-
-
-    #=
-    function calculate_Plaquet(U::Array{T,1}) where T <: Gaugefields_4D
-        error("calculate_Plaquet is not implemented in type $(typeof(U)) ")
-    end
-    =#
+#=
+function calculate_Plaquet(U::Array{T,1}) where T <: Gaugefields_4D
+    error("calculate_Plaquet is not implemented in type $(typeof(U)) ")
+end
+=#
 
 
 
