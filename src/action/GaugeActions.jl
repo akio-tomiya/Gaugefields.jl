@@ -13,6 +13,8 @@ import Wilsonloop: Wilsonline, make_staple
 using LinearAlgebra
 using InteractiveUtils
 
+
+
 struct GaugeAction_dataset{Dim}
     #β::Float64
     β::ComplexF64
@@ -20,10 +22,10 @@ struct GaugeAction_dataset{Dim}
     staples::Vector{Vector{Wilsonline{Dim}}}
 end
 
-struct GaugeAction{Dim,T}
+struct GaugeAction{Dim,T,Tdata} 
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
-    dataset::Vector{GaugeAction_dataset{Dim}}
+    dataset::Vector{Tdata}
     _temp_U::Vector{T}
 end
 
@@ -156,19 +158,20 @@ function GaugeAction(
     end
 
 
-    return GaugeAction{Dim,eltype(U)}(hascovnet, covneuralnet, dataset, _temp_U)
+    return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
 end
 
 function Base.push!(
-    S::GaugeAction{Dim,T1},
+    S::GaugeAction{Dim,T1,Tdata},
     β::T,
     closedloops::Vector{Wilsonline{Dim}},
-) where {Dim,T<:Number,T1}
+) where {Dim,T<:Number,T1,Tdata}
     dataset = GaugeAction_dataset(β, closedloops)
+    @assert Tdata == typeof(dataset) "type of dataset should be $Tdata but now $(typeof(dataset))"
     push!(S.dataset, dataset)
 end
 
-function Base.show(s::GaugeAction{Dim,T}) where {Dim,T}
+function Base.show(s::GaugeAction{Dim,T,Tdata}) where {Dim,T,Tdata}
     println("----------------------------------------------")
     println("Structure of the actions for Gaugefields")
     println("num. of terms: ", length(s.dataset))

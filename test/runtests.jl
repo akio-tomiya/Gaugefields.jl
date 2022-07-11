@@ -6,6 +6,14 @@ import Wilsonloop:loops_staple
 
 const eps = 1e-1
 
+#=
+@testset "Ising field" begin
+    println("Ising field")
+    include("Isingtest.jl")
+end
+=#
+
+
 @testset "gradientflow_general" begin
     println("gradientflow with general action")
     include("gradientflow_general.jl")
