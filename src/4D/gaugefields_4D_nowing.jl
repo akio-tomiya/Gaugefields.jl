@@ -1645,6 +1645,13 @@ function partial_tr(a::Gaugefields_4D_nowing{NC}, μ) where {NC}
     return s
 end
 
+function Base.:+(a::T1, b::T2) where {NC,T1<:Abstractfields,T2<:Abstractfields}
+    c = deepcopy(a)
+    add_U!(c,b)
+    return c
+end
+
+
 function add_U!(c::Gaugefields_4D_nowing{NC}, a::T1) where {NC,T1<:Abstractfields}
     @inbounds for i = 1:length(c.U)
         c.U[i] += a.U[i]
@@ -1796,6 +1803,12 @@ function LinearAlgebra.mul!(
         end
     end
     set_wing_U!(c)
+end
+
+function Base.:*(a::T1,b::T2) where {T1<:Abstractfields,T2<:Abstractfields}
+    c = similar(a)
+    LinearAlgebra.mul!(c,a,b)
+    return c
 end
 
 function LinearAlgebra.mul!(
