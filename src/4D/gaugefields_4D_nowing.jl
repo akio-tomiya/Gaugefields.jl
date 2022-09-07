@@ -1822,11 +1822,13 @@ function LinearAlgebra.mul!(
     a::T1,
     b::T2,
 ) where {NC,T1<:Number,T2<:Abstractfields}
+    #=
     @assert NC != 2 && NC != 3 "This function is for NC != 2,3"
     @inbounds for i = 1:length(c)
         c.U[i] = a * b.U[i]
     end
     return
+    =#
 
 
     NT = c.NT
