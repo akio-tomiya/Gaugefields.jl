@@ -52,7 +52,9 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         end
     end
     
-    close(fp)
+    #close(fp)
+    filename = "hoge.ildg"
+    save_binarydata(U,filename)
     return plaq_t
 
 end
@@ -209,6 +211,7 @@ We show three definitions.
 using Gaugefields
 using Wilsonloop
 using LinearAlgebra
+using Combinatorics
 
 function calculate_topological_charge_plaq(U::Array{T,1},temp_UμνTA,temps) where T
     UμνTA = temp_UμνTA
@@ -359,51 +362,17 @@ end
 
 
 #topological charge
-function epsilon_tensor(mu::Int,nu::Int,rho::Int,sigma::Int) 
-    sign=1 # (3) 1710.09474 extended epsilon tensor
-    if mu < 0
-        sign*=-1
-        mu=-mu
+function epsilon_tensor(inputindex...)
+    sign = 1
+    for mu in inputindex
+        if mu < 0
+            sign *= -1
+        end
     end
-    if nu < 0
-        sign*=-1
-        nu=-nu
-    end
-    if rho < 0
-        sign*=-1
-        rh=-rho
-    end
-    if sigma < 0
-        sign*=-1
-        sigma=-sigma
-    end
-    epsilon = zeros(Int,4,4,4,4)
-    epsilon[ 1, 2, 3, 4 ] = 1
-    epsilon[ 1, 2, 4, 3 ] = -1
-    epsilon[ 1, 3, 2, 4 ] = -1
-    epsilon[ 1, 3, 4, 2 ] = 1
-    epsilon[ 1, 4, 2, 3 ] = 1
-    epsilon[ 1, 4, 3, 2 ] = -1
-    epsilon[ 2, 1, 3, 4 ] = -1
-    epsilon[ 2, 1, 4, 3 ] = 1
-    epsilon[ 2, 3, 1, 4 ] = 1
-    epsilon[ 2, 3, 4, 1 ] = -1
-    epsilon[ 2, 4, 1, 3 ] = -1
-    epsilon[ 2, 4, 3, 1 ] = 1
-    epsilon[ 3, 1, 2, 4 ] = 1
-    epsilon[ 3, 1, 4, 2 ] = -1
-    epsilon[ 3, 2, 1, 4 ] = -1
-    epsilon[ 3, 2, 4, 1 ] = 1
-    epsilon[ 3, 4, 1, 2 ] = 1
-    epsilon[ 3, 4, 2, 1 ] = -1
-    epsilon[ 4, 1, 2, 3 ] = -1
-    epsilon[ 4, 1, 3, 2 ] = 1
-    epsilon[ 4, 2, 1, 3 ] = 1
-    epsilon[ 4, 2, 3, 1 ] = -1
-    epsilon[ 4, 3, 1, 2 ] = -1
-    epsilon[ 4, 3, 2, 1 ] = 1
-    return epsilon[mu,nu,rho,sigma]*sign
+    epsilon = levicivita(abs.(collect(inputindex)))
+    return epsilon*sign
 end
+
 
 function test()
     NX = 8

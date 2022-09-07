@@ -1300,67 +1300,6 @@ function Traceless_antihermitian!(
 end
 
 
-#=
-function Traceless_antihermitian!(vout::Gaugefields_4D_nowing{3},vin::Gaugefields_4D_nowing{3})
-    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
-    fac13 = 1/3
-    NX = vin.NX
-    NY = vin.NY
-    NZ = vin.NZ
-    NT = vin.NT
-
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
-                    v11 = vin[1,1,ix,iy,iz,it]
-                    v22 = vin[2,2,ix,iy,iz,it]
-                    v33 = vin[3,3,ix,iy,iz,it]
-
-                    tri = fac13*(imag(v11)+imag(v22)+imag(v33))
-
-                    vout[1,1,ix,iy,iz,it] = (imag(v11)-tri)*im
-                    vout[2,2,ix,iy,iz,it] = (imag(v22)-tri)*im
-                    vout[3,3,ix,iy,iz,it] = (imag(v33)-tri)*im
-                end
-            end
-        end
-    end
-
-    for it=1:NT
-        for iz=1:NZ
-            for iy=1:NY
-                @simd for ix=1:NX
-
-                    v12 = vin[1,2,ix,iy,iz,it]
-                    v13 = vin[1,3,ix,iy,iz,it]
-                    v21 = vin[2,1,ix,iy,iz,it]
-                    v23 = vin[2,3,ix,iy,iz,it]
-                    v31 = vin[3,1,ix,iy,iz,it]
-                    v32 = vin[3,2,ix,iy,iz,it]
-
-                    x12 = v12 - conj(v21)
-                    x13 = v13 - conj(v31)
-                    x23 = v23 - conj(v32)
-
-                    x21 = - conj(x12)
-                    x31 = - conj(x13)
-                    x32 = - conj(x23)
-
-                    vout[1,2,ix,iy,iz,it] = 0.5  * x12
-                    vout[1,3,ix,iy,iz,it] = 0.5  * x13
-                    vout[2,1,ix,iy,iz,it] = 0.5  * x21
-                    vout[2,3,ix,iy,iz,it] = 0.5  * x23
-                    vout[3,1,ix,iy,iz,it] = 0.5  * x31
-                    vout[3,2,ix,iy,iz,it] = 0.5  * x32
-                end
-            end
-        end
-    end
-
-end
-=#
-
 function Traceless_antihermitian!(
     vout::Gaugefields_4D_nowing{2},
     vin::Gaugefields_4D_nowing{2},
@@ -1450,6 +1389,48 @@ function Traceless_antihermitian!(
                                 )
                             vout[k1, k2, ix, iy, iz, it] = vv
                             vout[k2, k1, ix, iy, iz, it] = -conj(vv)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+
+end
+
+function Antihermitian!(
+    vout::Gaugefields_4D_nowing{NC},
+    vin::Gaugefields_4D_nowing{NC};factor = 1
+) where {NC} #vout = factor*(vin - vin^+)
+
+    #NC = vout.NC
+    fac1N = 1 / NC
+    nv = vin.NV
+
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                @simd for ix = 1:NX
+                    for k1 = 1:NC
+                        #@simd for k2 = k1+1:NC
+                        @simd for k2 = k1:NC
+                            vv =
+                                factor*(
+                                    vin[k1, k2, ix, iy, iz, it] -
+                                    conj(vin[k2, k1, ix, iy, iz, it])
+                                )
+                            vout[k1, k2, ix, iy, iz, it] = vv
+                            if k1 != k2
+                                vout[k2, k1, ix, iy, iz, it] = -conj(vv)
+                            end
                         end
                     end
                 end

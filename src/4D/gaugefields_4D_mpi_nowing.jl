@@ -2900,6 +2900,40 @@ function LinearAlgebra.mul!(
     end
 end
 
+function Antihermitian!(
+    vin::Gaugefields_4D_nowing_mpi{NC},
+    vout::Gaugefields_4D_nowing_mpi{NC};
+    factor = 1
+) where {NC}
+
+    PN = vin.PN
+    for it = 1:PN[4]
+        for iz = 1:PN[3]
+            for iy = 1:PN[2]
+                for ix = 1:PN[1]
+
+                    for k1 = 1:NC
+                        #@simd for k2 = k1+1:NC
+                        @simd for k2 = k1:NC
+                            vv =
+                                factor*(
+                                    getvalue(vin,k1, k2, ix, iy, iz, it) -
+                                    conj(getvalue(vin,k2, k1, ix, iy, iz, it))
+                                )
+                            setvalue!(vout,vv,k1, k2, ix, iy, iz, it)
+                            if k1 != k2
+                                setvalue!(vout,-conj(vv),k2, k1, ix, iy, iz, it)
+                            end
+                        end
+                    end
+
+                end
+            end
+        end
+    end
+    #set_wing_U!(c)
+end
+
 function set_wing_U!(u::Array{Gaugefields_4D_nowing_mpi{NC},1}) where {NC}
     return
 end

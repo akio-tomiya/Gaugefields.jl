@@ -1732,6 +1732,46 @@ function Traceless_antihermitian!(
 
 end
 
+function Antihermitian!(
+    vout::Gaugefields_4D_wing{NC},
+    vin::Gaugefields_4D_wing{NC};factor = 1
+) where {NC} #vout = vin - vin^+
+    #NC = vout.NC
+
+
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                @simd for ix = 1:NX
+                    for k1 = 1:NC
+                        @simd for k2 = k1:NC
+                            vv =
+                                factor*(
+                                    vin[k1, k2, ix, iy, iz, it] -
+                                    conj(vin[k2, k1, ix, iy, iz, it])
+                                )
+                            vout[k1, k2, ix, iy, iz, it] = vv
+                            if k1 != k2
+                                vout[k2, k1, ix, iy, iz, it] = -conj(vv)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+
+end
+
 function LinearAlgebra.tr(a::Gaugefields_4D_wing{NC}, b::Gaugefields_4D_wing{NC}) where {NC}
     NX = a.NX
     NY = a.NY

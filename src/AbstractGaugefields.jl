@@ -1918,6 +1918,10 @@ function Traceless_antihermitian!(vout::T, vin::T) where {T<:AbstractGaugefields
     error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
 end
 
+function Antihermitian!(vout::T, vin::T;factor=1) where {T<:AbstractGaugefields} #vout = vin - vin^+
+    error("Antihermitian! is not implemented in type $(typeof(vout)) ")
+end
+
 function add_U!(c::T, a::T1) where {T<:AbstractGaugefields,T1<:Abstractfields}
     error("add_U! is not implemented in type $(typeof(c)) ")
 end
