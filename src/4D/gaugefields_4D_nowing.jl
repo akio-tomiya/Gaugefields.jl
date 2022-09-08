@@ -1653,10 +1653,10 @@ end
 
 
 function add_U!(c::Gaugefields_4D_nowing{NC}, a::T1) where {NC,T1<:Abstractfields}
-    @inbounds for i = 1:length(c.U)
-        c.U[i] += a.U[i]
-    end
-    return
+    #@inbounds for i = 1:length(c.U)
+    #    c.U[i] += a.U[i]
+    #end
+    #return
 
 
     NT = c.NT
@@ -1668,7 +1668,7 @@ function add_U!(c::Gaugefields_4D_nowing{NC}, a::T1) where {NC,T1<:Abstractfield
             for iy = 1:NY
                 for ix = 1:NX
                     for k2 = 1:NC
-                        @simd for k1 = 1:NC
+                        @inbounds @simd for k1 = 1:NC
                             c[k1, k2, ix, iy, iz, it] += a[k1, k2, ix, iy, iz, it]
                         end
                     end
