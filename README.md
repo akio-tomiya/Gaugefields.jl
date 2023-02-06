@@ -571,8 +571,12 @@ If you want to calculate the matrix-matrix multiplicaetion on each lattice site,
 As a mathematical expression, for matrix-valued fields ``A(n), B(n)``,
 we define "matrix-field matrix-field product" as,
 
-<img src="https://latex.codecogs.com/svg.image?[A(n)B(n)]_{ij}&space;=&space;\sum_k&space;[A(n)]_{ik}&space;[B(n)]_{kj}" title="[A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}" />
+```math
+A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}
+```
+
 for all site index n.
+<!--<img src="https://latex.codecogs.com/svg.image?[A(n)B(n)]_{ij}&space;=&space;\sum_k&space;[A(n)]_{ik}&space;[B(n)]_{kj}" title="[A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}" />-->
 
 In our package, this is expressed as,
 
@@ -824,8 +828,11 @@ L"$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$"
 # How to calculate derivatives
 We can easily calculate the matrix derivative of the actions. The matrix derivative is defined as 
 
-<img src="https://latex.codecogs.com/svg.image?[\frac{\partial&space;S}{\partial&space;U_{\mu}(n)}]_{ij}&space;=&space;\frac{\partial&space;S}{\partial&space;U_{\mu,ji}(n)}" title="[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}" />
+```math
+\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}
+```
 
+<!--<img src="https://latex.codecogs.com/svg.image?[\frac{\partial&space;S}{\partial&space;U_{\mu}(n)}]_{ij}&space;=&space;\frac{\partial&space;S}{\partial&space;U_{\mu,ji}(n)}" title="[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}" />-->
 
 
 We can calculate this like 
@@ -839,7 +846,9 @@ or
 ```julia
 calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
 ```
+
 ## Hybrid Monte Carlo
+
 With the use of the matrix derivative, we can do the Hybrid Monte Carlo method. 
 The simple code is as follows. 
 
@@ -970,7 +979,11 @@ test1()
 ## Stout smearing
 We can use stout smearing. 
 
-<img src="https://latex.codecogs.com/svg.image?U_{\rm&space;fat}&space;=&space;{\cal&space;F}(U)" title="U_{\rm fat} = {\cal F}(U)" />
+```math
+U_{\rm fat} = {\cal F}(U)
+```
+
+<!--<img src="https://latex.codecogs.com/svg.image?U_{\rm&space;fat}&space;=&space;{\cal&space;F}(U)" title="U_{\rm fat} = {\cal F}(U)" />-->
 
 The smearing is regarded as gauge covariant neural networks [Tomiya and Nagai, arXiv:2103.11965](https://arxiv.org/abs/2103.11965). 
 The network is constructed as follows. 
@@ -1012,7 +1025,11 @@ L"$U_{3}(n)U_{4}(n+e_{3})U^{\dagger}_{3}(n+e_{4})U^{\dagger}_{4}(n)$"
 
 Since we ragard the smearing as the neural networks, we can calculate the derivative with the use of the back propergation techques. 
 
-<img src="https://latex.codecogs.com/svg.image?\frac{\partial&space;S}{\partial&space;U}&space;=&space;G&space;\left(&space;\frac{dS}{dU_{\rm&space;fat}},U&space;\right)" title="\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)" />
+```math
+\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)
+```
+
+<!--<img src="https://latex.codecogs.com/svg.image?\frac{\partial&space;S}{\partial&space;U}&space;=&space;G&space;\left(&space;\frac{dS}{dU_{\rm&space;fat}},U&space;\right)" title="\frac{\partial S}{\partial U} = G \left( \frac{dS}{dU_{\rm fat}},U \right)" />-->
 
 For example, 
 
@@ -1219,12 +1236,3 @@ end
 
 test1()
 ```
-
-
-
-
-
-
-
-
-
