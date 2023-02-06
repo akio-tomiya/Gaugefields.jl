@@ -55,7 +55,11 @@ import .AbstractGaugefields_module:
     initialize_TA_Gaugefields,
     substitute_U!,
     Traceless_antihermitian!,
-    Traceless_antihermitian
+    Traceless_antihermitian,
+    Antihermitian!,
+    cloverloops_4D,
+    make_Cloverloopterms,
+    make_Cloverloopterms!
 
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,

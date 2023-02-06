@@ -14,7 +14,7 @@ import ..Wilsonloops_module:
     get_rightstartposition,
     Wilson_loop,
     calc_loopset_μν_name
-import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag
+import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag,make_cloverloops
 using Requires
 using Distributions
 using StableRNGs
@@ -2413,5 +2413,52 @@ function gramschmidt_special!(v)
     end
 end
 
+function make_cloverloops(;Dim=4)
+    cloverloops = Vector{Vector{Wilsonline{Dim}}}(undef,6)
+    μν = 0
+    for μ=1:3
+        for ν=μ+1:4
+            μν += 1
+            if μν > 6
+                error("μν > 6 ?")
+            end
+            cloverloops[μν] = make_cloverloops(μ,ν,Dim=Dim)
+        end
+    end
+    return cloverloops 
+end
+
+const cloverloops_4D = make_cloverloops()
+
+"""
+    Clover terms.
+    If you multiply 0.125*kappa*Clover_coefficients, this becomes the Wilson Clover terms.
+"""
+function make_Cloverloopterms(U,temps)
+    CloverFμν = Array{eltype(U)}(undef,6)
+    for μν=1:6
+        CloverFμν[μν] = similar(U[1])
+    end
+    make_Cloverloopterms!(CloverFμν,U,temps)
+    return CloverFμν
+end
+
+function make_Cloverloopterms!(CloverFμν,U,temps)
+    #println(length(temps))
+    @assert length(temps) > 2 "length of temp Gaugefields should be larger than 1"
+    xout = temps[end]
+    μν = 0
+    for μ=1:3
+        for ν=μ+1:4
+            μν += 1
+            if μν > 6
+                error("μν > 6 ?")
+            end
+            wclover = cloverloops_4D[μν]
+            evaluate_gaugelinks!(xout,wclover,U,temps)
+            Antihermitian!(CloverFμν[μν],xout)
+        end
+    end
+end
 
 end
