@@ -59,7 +59,8 @@ import .AbstractGaugefields_module:
     Antihermitian!,
     cloverloops_4D,
     make_Cloverloopterms,
-    make_Cloverloopterms!
+    make_Cloverloopterms!,
+    lambda_k_mul!
 
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,

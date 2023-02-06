@@ -2461,4 +2461,12 @@ function make_Cloverloopterms!(CloverFμν,U,temps)
     end
 end
 
+"""
+    b = (lambda_k/2)*a
+    lambda_k : GellMann matrices. k=1, 8 
+"""
+function lambda_k_mul!(a::T1, b::T2,k,generator) where {T1<:Abstractfields,T2<:Abstractfields}
+    error("lambda_k_mul! is not implemented in type $(typeof(a)) and $(typeof(b))")
+end
+
 end
