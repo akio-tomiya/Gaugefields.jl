@@ -293,7 +293,8 @@ function randomGaugefields_4D_wing(
 )
     U = Gaugefields_4D_wing(NC, NDW, NX, NY, NZ, NT, verbose_level = verbose_level)
     if randomnumber == "Random"
-        rng = MersenneTwister()
+        #rng = MersenneTwister()
+        rng = nothing
         #randomfunc() = rand()
     elseif randomnumber == "Reproducible"
         rng = StableRNG(123)
@@ -304,14 +305,23 @@ function randomGaugefields_4D_wing(
         )
     end
 
+
+
     for it = 1:NT
         for iz = 1:NZ
             for iy = 1:NY
                 for ix = 1:NX
                     for j = 1:NC
                         @simd for i = 1:NC
-                            U[i, j, ix, iy, iz, it] =
+                            if rng == nothing
+                                U[i, j, ix, iy, iz, it] =
+                                    rand() - 0.5 + im * (rand() - 0.5)
+                            else
+                                U[i, j, ix, iy, iz, it] =
                                 rand(rng) - 0.5 + im * (rand(rng) - 0.5)
+                            end
+                                #rand(rng) - 0.5 + im * (rand(rng) - 0.5)
+                                #randomfunc() - 0.5 + im * (rand(rng) - 0.5)
                         end
                     end
                 end

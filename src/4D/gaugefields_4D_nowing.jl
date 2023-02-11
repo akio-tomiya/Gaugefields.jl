@@ -1422,14 +1422,11 @@ function Antihermitian!(
                     for k1 = 1:NC
                         #@simd for k2 = k1+1:NC
                         @simd for k2 = k1:NC
-                            vv =
-                                factor*(
-                                    vin[k1, k2, ix, iy, iz, it] -
+                            vv =vin[k1, k2, ix, iy, iz, it] -
                                     conj(vin[k2, k1, ix, iy, iz, it])
-                                )
-                            vout[k1, k2, ix, iy, iz, it] = vv
+                            vout[k1, k2, ix, iy, iz, it] = vv*factor
                             if k1 != k2
-                                vout[k2, k1, ix, iy, iz, it] = -conj(vv)
+                                vout[k2, k1, ix, iy, iz, it] = -conj(vv)*factor
                             end
                         end
                     end
@@ -1440,6 +1437,56 @@ function Antihermitian!(
 
 
 end
+
+function Antihermitian!(
+    vout::Gaugefields_4D_nowing{3},
+    vin::Gaugefields_4D_nowing{3};factor = 1
+) where {NC} #vout = factor*(vin - vin^+)
+
+    #NC = vout.NC
+    fac1N = 1 / NC
+    nv = vin.NV
+
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                @simd for ix = 1:NX
+                    z11 = vin[1,1,ix,iy,iz,it] - conj(vin[1,1,ix,iy,iz,it] ) 
+                    z12 = vin[1,2,ix,iy,iz,it] - conj(vin[2,1,ix,iy,iz,it] ) 
+                    z13 = vin[1,3,ix,iy,iz,it] - conj(vin[3,1,ix,iy,iz,it] ) 
+
+                    z22 = vin[2,2,ix,iy,iz,it] - conj(vin[2,2,ix,iy,iz,it] ) 
+                    z23 = vin[2,3,ix,iy,iz,it] - conj(vin[3,2,ix,iy,iz,it] ) 
+
+                    z33 = vin[3,3,ix,iy,iz,it] - conj(vin[3,3,ix,iy,iz,it] ) 
+
+                    vout[1,1,ix,iy,iz,it] = z11*factor
+                    vout[1,2,ix,iy,iz,it] = z12*factor
+                    vout[1,3,ix,iy,iz,it] = z13*factor
+            
+                    vout[2,1,ix,iy,iz,it] = -conj(z12)*factor
+                    vout[2,2,ix,iy,iz,it] = z22*factor
+                    vout[2,3,ix,iy,iz,it] = z23 *factor
+            
+                    vout[3,1,ix,iy,iz,it] = -conj(z13) *factor
+                    vout[3,2,ix,iy,iz,it] = -conj(z23) *factor
+                    vout[3,3,ix,iy,iz,it] = z33*factor
+
+                end
+            end
+        end
+    end
+
+
+end
+
 
 function LinearAlgebra.tr(
     a::Gaugefields_4D_nowing{NC},
