@@ -10,6 +10,7 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
 
     Random.seed!(123)
 
+    #U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
 
     temp1 = similar(U[1])

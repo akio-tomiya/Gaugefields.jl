@@ -14,6 +14,14 @@ end
 =#
 
 
+@testset "HMC nowing" begin
+    println("HMC nowing")
+    include("HMC_test_nowing.jl")
+end
+
+
+
+
 @testset "gradientflow_general" begin
     println("gradientflow with general action")
     include("gradientflow_general.jl")
@@ -31,12 +39,6 @@ end
 end
 
 
-
-
-@testset "HMC nowing" begin
-    println("HMC nowing")
-    include("HMC_test_nowing.jl")
-end
 
 
 @testset "HMC" begin
