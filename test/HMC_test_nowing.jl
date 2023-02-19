@@ -288,7 +288,19 @@ println("4D system")
     NY = 4
     NZ = 4
     NT = 4
-    Nwing = 1
+    Nwing = 0
+
+    @testset "NC=1" begin
+        β = 2.3
+        NC = 1
+        println("NC = $NC")
+        #val =0.6414596466929057
+        #val = 0.5920897445000382
+        val  =0.7887418522553702
+        @time plaq_t,ratio = HMC_test_4D(NX,NY,NZ,NT,NC,β)
+        #@test abs(plaq_t-val)/abs(val) < eps
+        @test ratio > 0.5
+    end
     
     @testset "NC=2" begin
         β = 2.3

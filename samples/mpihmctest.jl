@@ -3,6 +3,11 @@ using MPI
 using LinearAlgebra
 using Random
 
+if length(ARGS) < 5
+    error("USAGE: ","""
+    mpirun -np 2 exe.jl 1 1 1 2 true
+    """)
+end
 const pes = Tuple(parse.(Int64,ARGS[1:4]))
 const mpi = parse(Bool,ARGS[5])
 
@@ -27,7 +32,7 @@ function MDtest!(snet,U,Dim,mpi=false)
     end
 
 
-    numtrj = 10
+    numtrj = 100
     for itrj = 1:numtrj
         @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
         numaccepted += ifelse(accepted,1,0)

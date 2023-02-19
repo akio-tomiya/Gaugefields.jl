@@ -319,6 +319,31 @@ function Traceless_antihermitian_add!(
 
 end
 
+function Traceless_antihermitian_add!(
+    c::TA_Gaugefields_4D_serial{1,NumofBasis},
+    factor,
+    vin::Union{Gaugefields_4D_wing{1},Gaugefields_4D_nowing{1}},
+) where {NumofBasis}
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) "
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                @simd for ix = 1:NX
+                    v11 = vin[1, 1, ix, iy, iz, it]
+                    c[1, ix,iy,iz, it] = 2 * imag(v11) * factor + c[1, ix, iy,iz,it]
+                end
+            end
+        end
+    end
+
+
+end
+
 """
 -----------------------------------------------------c
      !!!!!   vin and vout should be different vectors
@@ -572,6 +597,58 @@ function Traceless_antihermitian_add!(
 
 end
 
+#=
+function exptU!(
+    uout::T,
+    t::N,
+    u::TA_Gaugefields_4D_serial{1,NumofBasis},
+    temps::Array{T,1},
+) where {N<:Number,T<:Gaugefields_4D,NumofBasis} #uout = exp(t*u)
+    NT = u.NT
+    NZ = u.NZ
+    NY = u.NY
+    NX = u.NX
+
+    @inbounds for it = 1:NT
+        for iz=1:NZ
+            for iy=1:NY
+                for ix = 1:NX
+                    uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
+        
+                end
+            end
+        end
+    end
+    #error("exptU! is not implemented in type $(typeof(u)) ")
+end
+=#
+
+function exptU!(
+    uout::T,
+    t::N,
+    u::TA_Gaugefields_4D_serial{1,NumofBasis},
+    temps::Array{T,1},
+) where {N<:Number,T<:Gaugefields_4D,NumofBasis} #uout = exp(t*u)
+    #@assert NC != 3 && NC != 2 "This function is for NC != 2,3"
+    #g = u.generators
+    NT = u.NT
+    NZ = u.NZ
+    NY = u.NY
+    NX = u.NX
+
+
+    @inbounds for it = 1:NT
+        for iz=1:NZ
+            for iy=1:NY
+                for ix = 1:NX
+                    uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
+        
+                end
+            end
+        end
+    end
+    #error("exptU! is not implemented in type $(typeof(u)) ")
+end
 
 
 
@@ -866,6 +943,8 @@ function exptU!(
             end
         end
     end
+
+
 
 
 
