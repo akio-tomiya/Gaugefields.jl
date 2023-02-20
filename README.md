@@ -407,7 +407,12 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
 
     numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        t = @timed begin
+            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        end
+        if get_myrank(U) == 0
+            println("elapsed time for MDsteps: $(t.time) [s]")
+        end
         numaccepted += ifelse(accepted,1,0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -832,14 +837,19 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
 
     numtrj = 100
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        t = @timed begin
+            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        end
+        if get_myrank(U) == 0
+            println("elapsed time for MDsteps: $(t.time) [s]")
+        end
         numaccepted += ifelse(accepted,1,0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
         #println("$itrj plaq_t = $plaq_t")
         
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
             if get_myrank(U) == 0
                 println("$itrj plaq_t = $plaq_t")
             end
