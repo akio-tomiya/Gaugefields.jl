@@ -688,10 +688,11 @@ mpirun -np 2 julia exe.jl 1 1 1 2 true
 
 The sample code is written as 
 ```julia
-using Gaugefields
-using MPI
-using LinearAlgebra
+
 using Random
+using Gaugefields
+using LinearAlgebra
+using MPI
 
 if length(ARGS) < 5
     error("USAGE: ","""
@@ -701,65 +702,28 @@ end
 const pes = Tuple(parse.(Int64,ARGS[1:4]))
 const mpi = parse(Bool,ARGS[5])
 
-
-function MDtest!(snet,U,Dim,mpi=false)
-    p = initialize_TA_Gaugefields(U)
-    Uold = similar(U)
-    substitute_U!(Uold,U)
-    MDsteps = 200
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    numaccepted = 0
-
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
-    if get_myrank(U) == 0
-        println("0 plaq_t = $plaq_t")
-        println("polyakov loop = $(real(poly)) $(imag(poly))")
-    end
-
-
-    numtrj = 100
-    for itrj = 1:numtrj
-        @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
-        numaccepted += ifelse(accepted,1,0)
-
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2) 
-        
-        if get_myrank(U) == 0
-            println("$itrj plaq_t = $plaq_t")
-            println("acceptance ratio ",numaccepted/itrj)
-            println("polyakov loop = $(real(poly)) $(imag(poly))")
-        end
-    end
-end
-
-function calc_action(snet,U,p)
+function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -evaluate_GaugeAction(snet,U)/NC
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)
 end
 
-function MDstep!(snet,U,p,MDsteps,Dim,Uold)
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     Δτ = 1/MDsteps
     gauss_distribution!(p)
-    Sold = calc_action(snet,U,p)
+    Sold = calc_action(gauge_action,U,p)
     substitute_U!(Uold,U)
 
     for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,snet)
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
 
-        P_update!(U,p,1.0,Δτ,Dim,snet)
-        U_update!(U,p,0.5,Δτ,Dim,snet)
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
     end
-    
-    Snew = calc_action(snet,U,p)
+    Snew = calc_action(gauge_action,U,p)
     if get_myrank(U) == 0
         println("Sold = $Sold, Snew = $Snew")
         println("Snew - Sold = $(Snew-Sold)")
@@ -769,6 +733,7 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
     if mpi
         r = MPI.bcast(r, 0, MPI.COMM_WORLD)
     end
+    #ratio = min(1,exp(Snew-Sold))
     if r > ratio
         substitute_U!(U,Uold)
         return false
@@ -777,8 +742,8 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
     end
 end
 
-function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporary_gaugefields(snet)
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
+    temps = get_temporary_gaugefields(gauge_action)
     temp1 = temps[1]
     temp2 = temps[2]
     expU = temps[3]
@@ -792,54 +757,117 @@ function U_update!(U,p,ϵ,Δτ,Dim,snet)
     end
 end
 
-function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
+    temps = get_temporary_gaugefields(gauge_action)
     dSdUμ = temps[end]
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,snet,μ,U)
+        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
         mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
         Traceless_antihermitian_add!(p[μ],factor,temps[1])
     end
 end
 
 
-
-function test1()
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
-    Nwing = 0
+function HMC_test_4D(NX,NY,NZ,NT,NC,β)
     Dim = 4
-    NC = 3
+    Nwing = 0
+
+    Random.seed!(123)
 
     if mpi
         PEs = pes#(1,1,1,2)
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold",mpi=true,PEs = PEs,mpiinit = false)
-        
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",mpi=true,PEs = PEs,mpiinit = false) 
     else
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
-
+        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
     end
 
-    Random.seed!(123+get_myrank(U[1]))    
+    if get_myrank(U) == 0
+        println(typeof(U))
+    end
 
-    snet = GaugeAction(U)
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    if Dim == 4
+        comb = 6 #4*3/2
+    elseif Dim == 3
+        comb = 3
+    elseif Dim == 2
+        comb = 1
+    else
+        error("dimension $Dim is not supported")
+    end
+
+    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    if get_myrank(U) == 0
+        println("0 plaq_t = $plaq_t")
+    end
+    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    if get_myrank(U) == 0
+        println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+    end
+
+    gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
     append!(plaqloop,plaqloop')
-    β = 5.7/2
-    push!(snet,β,plaqloop)
+    β = β/2
+    push!(gauge_action,β,plaqloop)
     
-    MDtest!(snet,U,Dim,mpi)
+    #show(gauge_action)
+
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    Uold = similar(U)
+    substitute_U!(Uold,U)
+    MDsteps = 100
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    comb = 6
+    factor = 1/(comb*U[1].NV*U[1].NC)
+    numaccepted = 0
+
+    numtrj = 100
+    for itrj = 1:numtrj
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        numaccepted += ifelse(accepted,1,0)
+
+        #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        #println("$itrj plaq_t = $plaq_t")
+        
+        if itrj % 10 == 0
+            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            if get_myrank(U) == 0
+                println("$itrj plaq_t = $plaq_t")
+            end
+            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            if get_myrank(U) == 0
+                println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
+                println("acceptance ratio ",numaccepted/itrj)
+            end
+        end
+    end
+
+
+    return plaq_t,numaccepted/numtrj
 
 end
 
 
-test1()
 
+function main()
+    β = 5.7
+    NX = 8
+    NY = 8
+    NZ = 8
+    NT = 8
+    NC = 3
+    HMC_test_4D(NX,NY,NZ,NT,NC,β)
+end
+main()
 ```
 
 # Utilities
