@@ -590,6 +590,43 @@ function map_U!(
     set_wing_U!(U)
 end
 
+function map_U!(
+    U::Gaugefields_4D_nowing_mpi{NC},
+    f!::Function,
+    V::Gaugefields_4D_nowing_mpi{NC},
+) where {NC}
+
+    A = zeros(ComplexF64, NC, NC)
+    B = zeros(ComplexF64, NC, NC)
+    for it = 1:U.PN[4]
+        for iz = 1:U.PN[3]
+            for iy = 1:U.PN[2]
+                for ix = 1:U.PN[1]
+                    #evenodd = ifelse((ix + iy + iz + it) % 2 == 0, true, false)
+                    #if evenodd == iseven
+                        for k2 = 1:NC
+                            for k1 = 1:NC
+
+                                A[k1, k2] = getvalue(V, k1, k2, ix, iy, iz, it)
+                                B[k1, k2] = getvalue(U, k1, k2, ix, iy, iz, it)
+                            end
+                        end
+                        f!(B, A)
+                        for k2 = 1:NC
+                            for k1 = 1:NC
+                                v = B[k1, k2]
+                                setvalue!(U, v, k1, k2, ix, iy, iz, it)
+                                #U[k1,k2,ix,iy,iz,it] = B[k1,k2]
+                            end
+                        end
+                    #end
+                end
+            end
+        end
+    end
+    set_wing_U!(U)
+end
+
 function map_U_sequential!(U::Gaugefields_4D_nowing_mpi{NC}, f!::Function, Uin) where {NC}
     error("The function map_U_sequential! can not be used with MPI")
 end
