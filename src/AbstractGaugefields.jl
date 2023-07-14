@@ -2069,9 +2069,15 @@ function calc_Mmatrix!(
         end
         for i = 1:2
             for j = 1:2
-                Mn[j, i] = (sin(q) / q) * Unδn[j, i] + trsum * Qn[j, i]
+                 #Mn[j, i] = (sin(q) / q) * Unδn[j, i] + trsum * Qn[j, i]
+                 #=
+                 The above code is coming from arXiv:1303.6187v1.
+                 But it seems wrong. The correct equation is given as
+                 =#
+                Mn[j, i] = cos(q) * Unδn[j, i] + trsum * Qn[j, i]
+                
             end
-        end
+        end 
     end
 end
 
