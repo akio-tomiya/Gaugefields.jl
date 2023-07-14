@@ -43,7 +43,7 @@ end
 
 abstract type Unit_Gaugefield{NC,Dim} <: Abstractfields end
 
-function Base.adjoint(U::Unit_Gaugefield) where {T<:Unit_Gaugefield}
+function Base.adjoint(U::Unit_Gaugefield)
     return U
 end
 
@@ -722,7 +722,7 @@ function map_U!(
     f::Function,
     V::AbstractGaugefields{NC,Dim},
     iseven::Bool,
-) where {NC,Dim,T<:Abstractfields}
+) where {NC,Dim}
     error("map_U! is not implemented in type $(typeof(U)) ")
     return nothing
 end
@@ -731,7 +731,7 @@ function map_U!(
     U::AbstractGaugefields{NC,Dim},
     f::Function,
     V::AbstractGaugefields{NC,Dim},
-) where {NC,Dim,T<:Abstractfields}
+) where {NC,Dim}
     error("map_U! is not implemented in type $(typeof(U)) ")
     return nothing
 end
@@ -741,7 +741,7 @@ function map_U_sequential!(
     U::AbstractGaugefields{NC,Dim},
     f::Function,
     Uin,
-) where {NC,Dim,T<:Abstractfields}
+) where {NC,Dim}
     error("map_U_sequential! is not implemented in type $(typeof(U)) ")
     return nothing
 end
@@ -1656,7 +1656,7 @@ function calculate_Plaquette(
     return real(plaq * 0.5)
 end
 
-function construct_staple!(staple::AbstractGaugefields, U, μ) where {T<:AbstractGaugefields}
+function construct_staple!(staple::AbstractGaugefields, U, μ) 
     error("construct_staple! is not implemented in type $(typeof(U)) ")
 end
 

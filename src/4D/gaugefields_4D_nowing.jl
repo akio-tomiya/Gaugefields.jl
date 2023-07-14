@@ -1728,7 +1728,7 @@ function partial_tr(a::Gaugefields_4D_nowing{NC}, μ) where {NC}
     return s
 end
 
-function Base.:+(a::T1, b::T2) where {NC,T1<:Abstractfields,T2<:Abstractfields}
+function Base.:+(a::T1, b::T2) where {T1<:Abstractfields,T2<:Abstractfields}
     c = deepcopy(a)
     add_U!(c,b)
     return c
@@ -2054,7 +2054,7 @@ function LinearAlgebra.mul!(
     b::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
+) where {T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
     NT = c.NT
     NZ = c.NZ
     NY = c.NY
@@ -2214,7 +2214,7 @@ function LinearAlgebra.mul!(
     b::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
+) where {T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
     NT = c.NT
     NZ = c.NZ
     NY = c.NY

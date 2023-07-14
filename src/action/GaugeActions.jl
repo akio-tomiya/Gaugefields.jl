@@ -105,7 +105,7 @@ function evaluate_staple_eachindex!(
     U::Vector{<:AbstractGaugefields{NC,Dim}},
     mat_temps,
     indices...,
-) where {Dim,NC,T}
+) where {Dim,NC}
     temp3 = mat_temps[5]
     numterm = length(S.dataset)
     mat_U .= 0
@@ -122,7 +122,7 @@ function evaluate_GaugeAction_untraced!(
     uout,
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
-) where {Dim,NC,T}
+) where {Dim,NC}
     numterm = length(S.dataset)
     temp1 = S._temp_U[1]
     temp2 = S._temp_U[2]

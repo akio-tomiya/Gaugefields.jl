@@ -1810,7 +1810,7 @@ function LinearAlgebra.mul!(
     b::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
+) where {T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
     NT = c.NT
     #NZ = c.NZ
     #NY = c.NY
@@ -1966,7 +1966,7 @@ function LinearAlgebra.mul!(
     b::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
+) where {T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
     NT = c.NT
     #NZ = c.NZ
     #NY = c.NY
