@@ -6,18 +6,19 @@ struct Verbose_print
     fp::Union{Nothing,IOStream}
     myid::Int64
 
-    function Verbose_print(level; myid = 0, filename = nothing)
-        if filename == nothing
-            fp = nothing
+end
+
+function Verbose_print(level; myid = 0, filename = nothing)
+    if filename == nothing
+        fp = nothing
+    else
+        if myid == 0
+            fp = open(filename, "w")
         else
-            if myid == 0
-                fp = open(filename, "w")
-            else
-                fp = nothing
-            end
+            fp = nothing
         end
-        return new(level, fp, myid)
     end
+    return Verbose_print(level, fp, myid)
 end
 
 function println_verbose_level1(v::Verbose_print, val...)
