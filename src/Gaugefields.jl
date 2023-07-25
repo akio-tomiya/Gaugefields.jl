@@ -28,7 +28,9 @@ function __init__()
     end
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
         import .AbstractGaugefields_module:
-            Gaugefields_4D_gpu
+            Gaugefields_4D_gpu,
+            identityGaugefields_4D_gpu,
+            randomGaugefields_4D_gpu
     end
 end
 

@@ -114,20 +114,82 @@ function IdentityGauges_4D(NC, NX, NY, NZ, NT; verbose_level = 2)
     return identityGaugefields_4D_gpu(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
 end
 
+#=
+function identityGaugefields_4D_gpu_core!(U::Gaugefields_4D_gpu{A,NC,NX,NY,NZ,NT},N) where {A,NC,NX,NY,NZ,NT}
+    error("NC = $NC is not supported in identityGaugefields_4D_gpu_core!")
+end
+=#
+
+function identityGaugefields_4D_gpu_core!(U::Gaugefields_4D_gpu{A,NC,NX,NY,NZ,NT},N) where {A,NC,NX,NY,NZ,NT}
+    #@assert NC == 3 "NC should be 3 now! NC = $NC"
+    index = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    stride = gridDim().x * blockDim().x
+    #@cuprintln("thread $index, block $stride")
+    for i = index:stride:N
+        ii = (i-1)*NC^2 + 1
+        U.U[ii] = 1
+        ii = (i-1)*NC^2 + 4
+        U.U[ii] = 1
+        ii = (i-1)*NC^2 + 9
+        U.U[ii] = 1
+        #@inbounds y[i] += x[i]
+    end
+    return nothing
+end
+
 function identityGaugefields_4D_gpu(NC, NX, NY, NZ, NT; verbose_level = 2)
     U = Gaugefields_4D_gpu(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+    N = NX*NY*NZ*NT
 
-    for it = 1:NT
-        for iz = 1:NZ
-            for iy = 1:NY
-                for ix = 1:NX
-                    @simd for ic = 1:NC
-                        U[ic, ic, ix, iy, iz, it] = 1
-                    end
-                end
-            end
-        end
+    CUDA.@sync begin
+        @cuda threads=N identityGaugefields_4D_gpu_core!(U,N)
     end
-    set_wing_U!(U)
+    #=
+
+    kernel = @cuda launch=false identityGaugefields_4D_gpu_core!(U,N)
+    config = launch_configuration(kernel.fun)
+    @cuprintln("threads $(config.threads)")
+    threads = min(N, config.threads)
+    @cuprintln("threads $threads")
+    blocks = cld(N, threads)
+    @cuprintln("threads $threads, blocks $blocks")
+
+    CUDA.@sync begin
+        kernel(U; threads, blocks)
+    end
+    =#
+
+    return U
+end
+
+function randomGaugefields_4D_gpu_core!(U,NNC,rng)#,randomnumber = "Random")
+
+    index = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    stride = gridDim().x * blockDim().x
+    #@cuprintln("thread $index, block $stride")
+    for i = index:stride:N
+        ii = (i-1)*NC^2 + 1
+        U.U[ii] = 1
+        ii = (i-1)*NC^2 + 4
+        U.U[ii] = 1
+        ii = (i-1)*NC^2 + 9
+        U.U[ii] = 1
+        #@inbounds y[i] += x[i]
+    end
+
+end
+
+function randomGaugefields_4D_gpu(
+    NC,
+    NX,
+    NY,
+    NZ,
+    NT;
+    verbose_level = 2
+)
+    U = Gaugefields_4D_gpu(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+    U.U .=  Random.rand(CURAND.default_rng(), Float64, NC,NC,NX,NY,NZ,NT) .-0.5 .+ im.*( Random.rand(CURAND.default_rng(), Float64, NC,NC,NX,NY,NZ,NT) .- 0.5)
+
+   # normalize_U!(U)
     return U
 end
