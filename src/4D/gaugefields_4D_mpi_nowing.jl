@@ -604,21 +604,21 @@ function map_U!(
                 for ix = 1:U.PN[1]
                     #evenodd = ifelse((ix + iy + iz + it) % 2 == 0, true, false)
                     #if evenodd == iseven
-                        for k2 = 1:NC
-                            for k1 = 1:NC
+                    for k2 = 1:NC
+                        for k1 = 1:NC
 
-                                A[k1, k2] = getvalue(V, k1, k2, ix, iy, iz, it)
-                                B[k1, k2] = getvalue(U, k1, k2, ix, iy, iz, it)
-                            end
+                            A[k1, k2] = getvalue(V, k1, k2, ix, iy, iz, it)
+                            B[k1, k2] = getvalue(U, k1, k2, ix, iy, iz, it)
                         end
-                        f!(B, A)
-                        for k2 = 1:NC
-                            for k1 = 1:NC
-                                v = B[k1, k2]
-                                setvalue!(U, v, k1, k2, ix, iy, iz, it)
-                                #U[k1,k2,ix,iy,iz,it] = B[k1,k2]
-                            end
+                    end
+                    f!(B, A)
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            v = B[k1, k2]
+                            setvalue!(U, v, k1, k2, ix, iy, iz, it)
+                            #U[k1,k2,ix,iy,iz,it] = B[k1,k2]
                         end
+                    end
                     #end
                 end
             end
@@ -2940,7 +2940,7 @@ end
 function Antihermitian!(
     vin::Gaugefields_4D_nowing_mpi{NC},
     vout::Gaugefields_4D_nowing_mpi{NC};
-    factor = 1
+    factor = 1,
 ) where {NC}
 
     PN = vin.PN
@@ -2953,13 +2953,13 @@ function Antihermitian!(
                         #@simd for k2 = k1+1:NC
                         @simd for k2 = k1:NC
                             vv =
-                                factor*(
-                                    getvalue(vin,k1, k2, ix, iy, iz, it) -
-                                    conj(getvalue(vin,k2, k1, ix, iy, iz, it))
+                                factor * (
+                                    getvalue(vin, k1, k2, ix, iy, iz, it) -
+                                    conj(getvalue(vin, k2, k1, ix, iy, iz, it))
                                 )
-                            setvalue!(vout,vv,k1, k2, ix, iy, iz, it)
+                            setvalue!(vout, vv, k1, k2, ix, iy, iz, it)
                             if k1 != k2
-                                setvalue!(vout,-conj(vv),k2, k1, ix, iy, iz, it)
+                                setvalue!(vout, -conj(vv), k2, k1, ix, iy, iz, it)
                             end
                         end
                     end
@@ -2981,157 +2981,162 @@ end
 
 
 const sr3 = sqrt(3)
-const sr3i = 1/sr3
-const sr3ih = 0.5*sr3i
+const sr3i = 1 / sr3
+const sr3ih = 0.5 * sr3i
 const sqr3inv = sr3i
 
 """
     b = (lambda_k/2)*a
     lambda_k : GellMann matrices. k=1, 8 
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing_mpi{3}, a::Gaugefields_4D_nowing_mpi{3},k,generator)
+function lambda_k_mul!(
+    b::Gaugefields_4D_nowing_mpi{3},
+    a::Gaugefields_4D_nowing_mpi{3},
+    k,
+    generator,
+)
     PN = a.PN
 
-    if k==1
+    if k == 1
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = 0.5 * a[2,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = 0.5 * a[2,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = 0.5 * a[2,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0.5 * a[1,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] = 0.5 * a[1,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = 0.5 * a[1,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[2, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[2, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[2, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==2
+    elseif k == 2
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = -0.5*im * a[2,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[2,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = -0.5*im * a[2,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] =  0.5*im * a[1,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] =  0.5*im * a[1,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] =  0.5*im * a[1,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[2, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[2, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = -0.5 * im * a[2, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0.5 * im * a[1, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * im * a[1, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * im * a[1, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==3
+    elseif k == 3
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] =  0.5 * a[1,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] =  0.5 * a[1,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] =  0.5 * a[1,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = -0.5 * a[2,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] = -0.5 * a[2,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = -0.5 * a[2,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = -0.5 * a[2, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = -0.5 * a[2, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = -0.5 * a[2, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==4
+    elseif k == 4
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = 0.5 * a[3,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = 0.5 * a[3,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = 0.5 * a[3,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0
-                        b[2,2,ix,iy,iz,it] = 0
-                        b[2,3,ix,iy,iz,it] = 0
-                        b[3,1,ix,iy,iz,it] = 0.5 * a[1,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = 0.5 * a[1,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = 0.5 * a[1,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[3, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[3, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[3, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0
+                        b[2, 2, ix, iy, iz, it] = 0
+                        b[2, 3, ix, iy, iz, it] = 0
+                        b[3, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==5
+    elseif k == 5
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = -0.5*im * a[3,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[3,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = -0.5*im * a[3,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0
-                        b[2,2,ix,iy,iz,it] = 0
-                        b[2,3,ix,iy,iz,it] = 0
-                        b[3,1,ix,iy,iz,it] =  0.5*im * a[1,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] =  0.5*im * a[1,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] =  0.5*im * a[1,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[3, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[3, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = -0.5 * im * a[3, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0
+                        b[2, 2, ix, iy, iz, it] = 0
+                        b[2, 3, ix, iy, iz, it] = 0
+                        b[3, 1, ix, iy, iz, it] = 0.5 * im * a[1, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * im * a[1, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * im * a[1, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==6
+    elseif k == 6
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = 0
-                        b[1,2,ix,iy,iz,it] = 0
-                        b[1,3,ix,iy,iz,it] = 0
-                        b[2,1,ix,iy,iz,it] = 0.5 * a[3,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] = 0.5 * a[3,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = 0.5 * a[3,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0.5 * a[2,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = 0.5 * a[2,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = 0.5 * a[2,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0
+                        b[1, 2, ix, iy, iz, it] = 0
+                        b[1, 3, ix, iy, iz, it] = 0
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[3, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[3, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * a[3, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0.5 * a[2, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * a[2, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * a[2, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==7
+    elseif k == 7
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = 0
-                        b[1,2,ix,iy,iz,it] = 0
-                        b[1,3,ix,iy,iz,it] = 0
-                        b[2,1,ix,iy,iz,it] = -0.5*im * a[3,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] = -0.5*im * a[3,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = -0.5*im * a[3,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] =  0.5*im * a[2,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] =  0.5*im * a[2,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] =  0.5*im * a[2,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0
+                        b[1, 2, ix, iy, iz, it] = 0
+                        b[1, 3, ix, iy, iz, it] = 0
+                        b[2, 1, ix, iy, iz, it] = -0.5 * im * a[3, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = -0.5 * im * a[3, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = -0.5 * im * a[3, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0.5 * im * a[2, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * im * a[2, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * im * a[2, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==8
+    elseif k == 8
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] =  sr3ih * a[1,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] =  sr3ih * a[1,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] =  sr3ih * a[1,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] =  sr3ih * a[2,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] =  sr3ih * a[2,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] =  sr3ih * a[2,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = -sqr3inv * a[3,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = -sqr3inv * a[3,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = -sqr3inv * a[3,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = sr3ih * a[1, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = sr3ih * a[1, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = sr3ih * a[1, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = sr3ih * a[2, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = sr3ih * a[2, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = sr3ih * a[2, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = -sqr3inv * a[3, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = -sqr3inv * a[3, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = -sqr3inv * a[3, 3, ix, iy, iz, it]
                     end
                 end
             end
@@ -3146,48 +3151,53 @@ end
     b = (lambda_k/2)*a
     lambda_k : SU2 matrices. k=1, 3
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing_mpi{2}, a::Gaugefields_4D_nowing_mpi{2},k,generator)
+function lambda_k_mul!(
+    b::Gaugefields_4D_nowing_mpi{2},
+    a::Gaugefields_4D_nowing_mpi{2},
+    k,
+    generator,
+)
     PN = a.PN
 
 
-    if k==1
+    if k == 1
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = -0.5*im* a[2,1,ix,iy,iz,it]*im
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[2,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[2, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[2, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] = -0.5*im * a[1,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] = -0.5*im * a[1,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = -0.5 * im * a[1, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = -0.5 * im * a[1, 2, ix, iy, iz, it] * im
                     end
                 end
             end
         end
-    elseif k==2
+    elseif k == 2
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] = -0.5 * a[2,1,ix,iy,iz,it] *im
-                        b[1,2,ix,iy,iz,it] = -0.5 * a[2,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * a[2, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * a[2, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] =  0.5 * a[1,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] =  0.5 * a[1,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it] * im
                     end
                 end
             end
         end
-    elseif k==3
+    elseif k == 3
         for it = 1:PN[1]
             for iz = 1:PN[2]
                 for iy = 1:PN[3]
                     @inbounds @simd for ix = 1:PN[4]
-                        b[1,1,ix,iy,iz,it] =  -0.5*im * a[1,1,ix,iy,iz,it] *im
-                        b[1,2,ix,iy,iz,it] =  -0.5*im * a[1,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[1, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[1, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] = 0.5*im * a[2,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] = 0.5*im * a[2,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = 0.5 * im * a[2, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = 0.5 * im * a[2, 2, ix, iy, iz, it] * im
                     end
                 end
             end
@@ -3203,7 +3213,12 @@ end
     b = (lambda_k/2)*a
     lambda_k : SUN matrices. k=1, ...
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing_mpi{NC},a::Gaugefields_4D_nowing_mpi{NC},k,generator) where NC
+function lambda_k_mul!(
+    b::Gaugefields_4D_nowing_mpi{NC},
+    a::Gaugefields_4D_nowing_mpi{NC},
+    k,
+    generator,
+) where {NC}
     PN = a.PN
     #NV = a.NV
     #NC = generator.NC
@@ -3212,11 +3227,12 @@ function lambda_k_mul!(b::Gaugefields_4D_nowing_mpi{NC},a::Gaugefields_4D_nowing
         for iz = 1:PN[2]
             for iy = 1:PN[3]
                 @inbounds @simd for ix = 1:PN[4]
-                    for k2=1:NC
-                        for k1=1:NC
-                            b[k1,k2,ix,iy,iz,it] = 0
-                            @simd for l=1:NC
-                                b[k1,k2,ix,iy,iz,it] += matrix[k1,l]*a[l,k2,ix,iy,iz,it]/2
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            b[k1, k2, ix, iy, iz, it] = 0
+                            @simd for l = 1:NC
+                                b[k1, k2, ix, iy, iz, it] +=
+                                    matrix[k1, l] * a[l, k2, ix, iy, iz, it] / 2
                             end
                         end
                     end

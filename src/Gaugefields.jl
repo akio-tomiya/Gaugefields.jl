@@ -6,6 +6,7 @@ include("./output/verboseprint_mpi.jl")
 include("./SUN_generator.jl")
 include("./autostaples/wilsonloops.jl")
 include("./AbstractGaugefields.jl")
+include("./autograd/starproducts.jl")
 include("./output/io.jl")
 include("./output/ildg_format.jl")
 include("./output/bridge_format.jl")
@@ -15,6 +16,7 @@ include("./smearing/Abstractsmearing.jl")
 include("./action/GaugeActions.jl")
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
+
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin

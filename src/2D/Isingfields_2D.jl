@@ -9,11 +9,7 @@ struct Isingfields_2D <: Gaugefields_2D{1}
     verbose_print::Verbose_print
     ϕshifted::Array{Int64,4}
 
-    function Isingfields_2D(
-        NX::T,
-        NT::T;
-        verbose_level = 2,
-    ) where {T<:Integer}
+    function Isingfields_2D(NX::T, NT::T; verbose_level = 2) where {T<:Integer}
         NC = 1
         NV = NX * NT
         NDW = 0
@@ -29,38 +25,38 @@ struct Isingfields_2D <: Gaugefields_2D{1}
     end
 end
 
-function Base.setindex!(x::Isingfields_2D , v, i1, i2, i3, i6)
+function Base.setindex!(x::Isingfields_2D, v, i1, i2, i3, i6)
     @inbounds x.ϕ[i1, i2, i3, i6] = v
 end
 
-@inline function Base.getindex(x::Isingfields_2D , i1, i2, i3, i6)
+@inline function Base.getindex(x::Isingfields_2D, i1, i2, i3, i6)
     @inbounds return x.ϕ[i1, i2, i3, i6]
 end
 
-function Base.setindex!(x::Isingfields_2D , v, i3, i6)
+function Base.setindex!(x::Isingfields_2D, v, i3, i6)
     @inbounds x.ϕ[1, 1, i3, i6] = v
 end
 
-@inline function Base.getindex(x::Isingfields_2D , i3, i6)
-    @inbounds return x.ϕ[1,1,i3, i6]
+@inline function Base.getindex(x::Isingfields_2D, i3, i6)
+    @inbounds return x.ϕ[1, 1, i3, i6]
 end
 
-function Base.setindex!(x::Isingfields_2D , v, i1, i2, ii)
+function Base.setindex!(x::Isingfields_2D, v, i1, i2, ii)
     ix, it = get_latticeindex(ii, x.NX, x.NT)
     @inbounds x.ϕ[i1, i2, ix, it] = v
 end
 
-@inline function Base.getindex(x::Isingfields_2D , i1, i2, ii)
+@inline function Base.getindex(x::Isingfields_2D, i1, i2, ii)
     ix, it = get_latticeindex(ii, x.NX, x.NT)
     @inbounds return x.ϕ[i1, i2, ix, it]
 end
 
-function Base.setindex!(x::Isingfields_2D , v, ii)
+function Base.setindex!(x::Isingfields_2D, v, ii)
     ix, it = get_latticeindex(ii, x.NX, x.NT)
     @inbounds x.ϕ[1, 1, ix, it] = v
 end
 
-@inline function Base.getindex(x::Isingfields_2D , ii)
+@inline function Base.getindex(x::Isingfields_2D, ii)
     ix, it = get_latticeindex(ii, x.NX, x.NT)
     @inbounds return x.ϕ[1, 1, ix, it]
 end
@@ -81,11 +77,7 @@ function substitute_U!(a::Isingfields_2D, b::T2) where {T2<:Abstractfields}
     end
 end
 
-function substitute_U!(
-    a::Isingfields_2D,
-    b::T2,
-    iseven::Bool,
-) where {T2<:Abstractfields}
+function substitute_U!(a::Isingfields_2D, b::T2, iseven::Bool) where {T2<:Abstractfields}
     NT = a.NT
     #NZ = a.NZ
     #NY = a.NY
@@ -106,7 +98,7 @@ function substitute_U!(
 end
 
 function identityIsingfields_2D(NX, NT; verbose_level = 2)
-    ϕ =  Isingfields_2D(NX, NT, verbose_level = verbose_level)
+    ϕ = Isingfields_2D(NX, NT, verbose_level = verbose_level)
 
     for it = 1:NT
         for ix = 1:NX
@@ -115,4 +107,3 @@ function identityIsingfields_2D(NX, NT; verbose_level = 2)
     end
     return U
 end
-

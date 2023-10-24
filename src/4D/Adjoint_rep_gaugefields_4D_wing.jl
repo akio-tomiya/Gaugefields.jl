@@ -155,16 +155,7 @@ function shift_U(
     return Shifted_Adjoint_rep_Gaugefields_4D(U, shift)
 end
 
-function Base.setindex!(
-    U::Shifted_Adjoint_rep_Gaugefields_4D,
-    v,
-    i1,
-    i2,
-    i3,
-    i4,
-    i5,
-    i6,
-) 
+function Base.setindex!(U::Shifted_Adjoint_rep_Gaugefields_4D, v, i1, i2, i3, i4, i5, i6)
     error("type $(typeof(U)) has no setindex method. This type is read only.")
 end
 

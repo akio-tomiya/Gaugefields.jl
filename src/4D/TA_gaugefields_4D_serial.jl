@@ -335,7 +335,7 @@ function Traceless_antihermitian_add!(
             for iy = 1:NY
                 @simd for ix = 1:NX
                     v11 = vin[1, 1, ix, iy, iz, it]
-                    c[1, ix,iy,iz, it] = 2 * imag(v11) * factor + c[1, ix, iy,iz,it]
+                    c[1, ix, iy, iz, it] = 2 * imag(v11) * factor + c[1, ix, iy, iz, it]
                 end
             end
         end
@@ -614,7 +614,7 @@ function exptU!(
             for iy=1:NY
                 for ix = 1:NX
                     uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
-        
+
                 end
             end
         end
@@ -638,11 +638,11 @@ function exptU!(
 
 
     @inbounds for it = 1:NT
-        for iz=1:NZ
-            for iy=1:NY
+        for iz = 1:NZ
+            for iy = 1:NY
                 for ix = 1:NX
-                    uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
-        
+                    uout[1, 1, ix, iy, iz, it] = exp(t * im * u[1, ix, iy, iz, it])
+
                 end
             end
         end

@@ -22,7 +22,7 @@ struct GaugeAction_dataset{Dim}
     staples::Vector{Vector{Wilsonline{Dim}}}
 end
 
-struct GaugeAction{Dim,T,Tdata} 
+struct GaugeAction{Dim,T,Tdata}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
     dataset::Vector{Tdata}
@@ -158,7 +158,12 @@ function GaugeAction(
     end
 
 
-    return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
+    return GaugeAction{Dim,eltype(U),eltype(dataset)}(
+        hascovnet,
+        covneuralnet,
+        dataset,
+        _temp_U,
+    )
 end
 
 function Base.push!(

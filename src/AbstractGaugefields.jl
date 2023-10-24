@@ -14,7 +14,14 @@ import ..Wilsonloops_module:
     get_rightstartposition,
     Wilson_loop,
     calc_loopset_μν_name
-import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag,make_cloverloops
+import Wilsonloop:
+    loops_staple_prime,
+    Wilsonline,
+    get_position,
+    get_direction,
+    GLink,
+    isdag,
+    make_cloverloops
 using Requires
 using Distributions
 using StableRNGs
@@ -737,11 +744,7 @@ function map_U!(
 end
 
 
-function map_U_sequential!(
-    U::AbstractGaugefields{NC,Dim},
-    f::Function,
-    Uin,
-) where {NC,Dim}
+function map_U_sequential!(U::AbstractGaugefields{NC,Dim}, f::Function, Uin) where {NC,Dim}
     error("map_U_sequential! is not implemented in type $(typeof(U)) ")
     return nothing
 end
@@ -1656,7 +1659,7 @@ function calculate_Plaquette(
     return real(plaq * 0.5)
 end
 
-function construct_staple!(staple::AbstractGaugefields, U, μ) 
+function construct_staple!(staple::AbstractGaugefields, U, μ)
     error("construct_staple! is not implemented in type $(typeof(U)) ")
 end
 
@@ -1918,7 +1921,7 @@ function Traceless_antihermitian!(vout::T, vin::T) where {T<:AbstractGaugefields
     error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
 end
 
-function Antihermitian!(vout::T, vin::T;factor=1) where {T<:AbstractGaugefields} #vout = vin - vin^+
+function Antihermitian!(vout::T, vin::T; factor = 1) where {T<:AbstractGaugefields} #vout = vin - vin^+
     error("Antihermitian! is not implemented in type $(typeof(vout)) ")
 end
 
@@ -2069,15 +2072,15 @@ function calc_Mmatrix!(
         end
         for i = 1:2
             for j = 1:2
-                 Mn[j, i] = (sin(q) / q) * Unδn[j, i] + trsum * Qn[j, i]
-                 #=
-                 The above code is coming from arXiv:1303.6187v1.
-                 But it seems wrong. Now we are cheking it.
-                 =#
+                Mn[j, i] = (sin(q) / q) * Unδn[j, i] + trsum * Qn[j, i]
+                #=
+                The above code is coming from arXiv:1303.6187v1.
+                But it seems wrong. Now we are cheking it.
+                =#
                 #Mn[j, i] = cos(q) * Unδn[j, i] + trsum * Qn[j, i]
-                
+
             end
-        end 
+        end
     end
 end
 
@@ -2419,19 +2422,19 @@ function gramschmidt_special!(v)
     end
 end
 
-function make_cloverloops(;Dim=4)
-    cloverloops = Vector{Vector{Wilsonline{Dim}}}(undef,6)
+function make_cloverloops(; Dim = 4)
+    cloverloops = Vector{Vector{Wilsonline{Dim}}}(undef, 6)
     μν = 0
-    for μ=1:3
-        for ν=μ+1:4
+    for μ = 1:3
+        for ν = μ+1:4
             μν += 1
             if μν > 6
                 error("μν > 6 ?")
             end
-            cloverloops[μν] = make_cloverloops(μ,ν,Dim=Dim)
+            cloverloops[μν] = make_cloverloops(μ, ν, Dim = Dim)
         end
     end
-    return cloverloops 
+    return cloverloops
 end
 
 const cloverloops_4D = make_cloverloops()
@@ -2440,29 +2443,29 @@ const cloverloops_4D = make_cloverloops()
     Clover terms.
     If you multiply 0.125*kappa*Clover_coefficients, this becomes the Wilson Clover terms.
 """
-function make_Cloverloopterms(U,temps)
-    CloverFμν = Array{eltype(U)}(undef,6)
-    for μν=1:6
+function make_Cloverloopterms(U, temps)
+    CloverFμν = Array{eltype(U)}(undef, 6)
+    for μν = 1:6
         CloverFμν[μν] = similar(U[1])
     end
-    make_Cloverloopterms!(CloverFμν,U,temps)
+    make_Cloverloopterms!(CloverFμν, U, temps)
     return CloverFμν
 end
 
-function make_Cloverloopterms!(CloverFμν,U,temps)
+function make_Cloverloopterms!(CloverFμν, U, temps)
     #println(length(temps))
     @assert length(temps) > 2 "length of temp Gaugefields should be larger than 1"
     xout = temps[end]
     μν = 0
-    for μ=1:3
-        for ν=μ+1:4
+    for μ = 1:3
+        for ν = μ+1:4
             μν += 1
             if μν > 6
                 error("μν > 6 ?")
             end
             wclover = cloverloops_4D[μν]
-            evaluate_gaugelinks!(xout,wclover,U,temps)
-            Antihermitian!(CloverFμν[μν],xout)
+            evaluate_gaugelinks!(xout, wclover, U, temps)
+            Antihermitian!(CloverFμν[μν], xout)
         end
     end
 end
@@ -2471,7 +2474,12 @@ end
     b = (lambda_k/2)*a
     lambda_k : GellMann matrices. k=1, 8 
 """
-function lambda_k_mul!(a::T1, b::T2,k,generator) where {T1<:Abstractfields,T2<:Abstractfields}
+function lambda_k_mul!(
+    a::T1,
+    b::T2,
+    k,
+    generator,
+) where {T1<:Abstractfields,T2<:Abstractfields}
     error("lambda_k_mul! is not implemented in type $(typeof(a)) and $(typeof(b))")
 end
 
