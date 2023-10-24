@@ -42,10 +42,40 @@ function evaluate_pullback_numerical!(
             Usd[μ][j,i,isite...] += η
             evaluate_gaugelinks!(WUd, w, Usd, temps[6:end])
             mul!(dWU_1,L,WUd) #L*WU(U*η)
-            substitute_U!(dWdU,dWU_0)
+            clear_U!(dWdU)
+            add_U!(dWdU,1,dWU_0)
             add_U!(dWdU,-1,dWU_1)
+
+            #=
+            add_U!(dWdU,1/2,dWU_0)
+            add_U!(dWdU,-1/2,dWU_1)
+
+            Usd = deepcopy(Us)
+            Usd[μ][j,i,isite...] += im*η
+            evaluate_gaugelinks!(WUd, w, Usd, temps[6:end])
+            mul!(dWU_1,L,WUd) #L*WU(U*η)
+            clear_U!(dWdU)
+            add_U!(dWdU,-im/2,dWU_0)
+            add_U!(dWdU,im/2,dWU_1)
+            =#
+            
             B[i,j] = (-1/η)*tr(dWdU[:,:,isite...])
         end
+    end
+end
+
+function evaluate_pullback!(
+    B::AbstractGaugefields{NC,Dim},
+    L::AbstractGaugefields{NC,Dim},
+    Us::Vector{<:AbstractGaugefields{NC,Dim}},
+    vector_dwdU::Vector{Wilsonloop.DwDU{Dim}},
+    temps::Vector{<:AbstractGaugefields{NC,Dim}},
+) where {NC,Dim}
+    Btemp = temps[end]
+    clear_U!(B)
+    for dwdU in vector_dwdU
+        evaluate_pullback!(Btemp,L,Us,dwdU,temps[1:end-1])
+        add_U!(B,Btemp)
     end
 end
 
@@ -58,6 +88,7 @@ function evaluate_pullback!(
     temps::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {NC,Dim}
     @assert length(Us) == Dim "The number of the Gaugefields should be $Dim but $(length(Us))"
+    @assert length(temps) >= 4 "The number of temperal gaugefields should be larger than 3"
     position = dwdU.position
     m = Tuple(-collect(position))
 
