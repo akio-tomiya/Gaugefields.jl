@@ -10,7 +10,7 @@ Treating gauge fields (links), gauge actions with MPI and autograd.
 
 <img src="LQCDjl_block.png" width=300> 
 
-This package will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
+This package is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
 
 # What this package can do:
 This package has following functionarities
