@@ -928,6 +928,41 @@ shifted_u = shift_U(u, shift)
 This is also evaluated with the lazy evaluation. 
 Here ``shift`` is ``shift=(1,0,0,0)`` for example.
 
+## Evaluate Wilson links
+Here the example to evaluate the Wilson links.
+
+```julia
+using Gaugefields
+using Wilsonloop
+function main()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    Nwing = 0
+    NC = 3
+
+    U1 = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
+
+    temps = typeof(U1[1])[]
+    for i=1:10
+        push!(temps,similar(U1[1]))
+    end
+
+    loop = [(1,+1),(2,+1),(1,-1),(2,-1)]
+    println(loop)
+    w = Wilsonline(loop)
+    println("P: ")
+    show(w)
+
+    Uloop = similar(U1[1])
+
+    Gaugefields.evaluate_gaugelinks!(Uloop, w, U1, temps)
+    display(Uloop[:,:,1,1,1,1])
+end
+main()
+```
+
 ## matrix-field matrix-field product
 If you want to calculate the matrix-matrix multiplicaetion on each lattice site, you can do like
 
