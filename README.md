@@ -58,6 +58,7 @@ Dim = 4
 
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
+filename = "hoge.ildg"
 ildg = ILDG(filename)
 i = 1
 L = [NX,NY,NZ,NT]
