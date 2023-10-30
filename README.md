@@ -53,6 +53,7 @@ NX = 4
 NY = 4
 NZ = 4
 NT = 4
+NC = 3
 Nwing = 1
 Dim = 4
 
