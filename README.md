@@ -49,6 +49,8 @@ add Gaugefields.jl
 We can read ILDG format like: 
 
 ```julia
+using Gaugefields
+
 NX = 4
 NY = 4
 NZ = 4
@@ -92,6 +94,8 @@ Gaugefields.jl also supports a text format for [Bridge++](https://bridge.kek.jp/
 ### File loading
 
 ```julia
+using Gaugefields
+
 filename = "testconf.txt"
 load_BridgeText!(filename,U,L,NC)
 ```
