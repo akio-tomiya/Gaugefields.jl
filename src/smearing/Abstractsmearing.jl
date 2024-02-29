@@ -55,7 +55,7 @@ end
 
 
 
-function CovNeuralnet(; Dim = 4)
+function CovNeuralnet(; Dim=4)
     layers = CovLayer{Dim}[]
     return CovNeuralnet{Dim}(layers)
 end
@@ -95,6 +95,7 @@ end
 
 
 include("./stout.jl")
+include("./stout_b.jl")
 #include("./gradientflow.jl")
 
 function set_parameters(s::CovNeuralnet, i, v)
@@ -125,7 +126,7 @@ function construct_smearing(smearingparameters, loops_list, L, coefficients, num
             input_coefficients = coefficients
         end
         println("covnet verion of the stout smearing will be used")
-        smearing = CovNeuralnet_STOUT(loops_list, input_coefficients, L; Dim = length(L))
+        smearing = CovNeuralnet_STOUT(loops_list, input_coefficients, L; Dim=length(L))
     else
         error("smearing = $smearing is not supported")
     end
@@ -135,8 +136,8 @@ end
 function calc_smearedU(
     Uin::Array{T,1},
     smearing;
-    calcdSdU = false,
-    temps = nothing,
+    calcdSdU=false,
+    temps=nothing,
 ) where {T<:AbstractGaugefields}
     if smearing != nothing && typeof(smearing) != Nosmearing
         #println(smearing)
