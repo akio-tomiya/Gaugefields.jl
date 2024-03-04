@@ -132,8 +132,9 @@ import .Abstractsmearing_module:
     get_parameter_derivatives,
     apply_smearing_U
 
-import .Abstractsmearing_module:
-    STOUT_Layer_b
+#import .Abstractsmearing_module:
+#    STOUT_Layer_b
+import .Abstractsmearing_module: STOUTsmearing_layer
 import .SUN_generator: Generator
 import .Gradientflow_module: Gradientflow, Gradientflow_general, flow!, get_tempG, get_eps
 #import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
@@ -227,7 +228,8 @@ export AbstractGaugefields, Traceless_antihermitian
 export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 
-export STOUT_Layer_b
+export STOUTsmearing_layer
+#export STOUT_Layer_b
 
 
 

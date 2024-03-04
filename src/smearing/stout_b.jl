@@ -127,7 +127,7 @@ function layer_pullback!(
 
         calc_dSdu1!(δ_prev[μ], δ_current[μ], eQ)
 
-        calc_dSdQ!(dSdQ, δ_current[μ], Qμ, Uprev[μ], temps)
+        calc_dSdQ!(dSdQ, δ_current[μ], Qμ, Uprev[μ], temps[1])
         calc_dSdΩ!(dSdΩ, dSdQ)
         calc_dSdC!(dSdCs[μ], dSdΩ, Uprev[μ])
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
