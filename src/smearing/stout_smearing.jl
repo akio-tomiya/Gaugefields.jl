@@ -3,8 +3,8 @@
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!
 import ..AbstractGaugefields_module: calc_coefficients_Q
 
-mutable struct STOUTsmearing_layer{T,Dim} <: CovLayer{Dim}
-    const ρs::Vector{Float64}
+mutable struct STOUTsmearing_layer{T,Dim,Tρ} <: CovLayer{Dim}
+    ρs::Tρ#Vector{Tρ}
     const dataset::Vector{STOUT_dataset{Dim}}
     const Uinα::Vector{T}
     const Uinβ::Vector{T}
@@ -12,11 +12,22 @@ mutable struct STOUTsmearing_layer{T,Dim} <: CovLayer{Dim}
     const Cs::Vector{T}
     const Qs::Vector{T}
     const temps::Vector{T}
+    const dSdCs::Vector{T}
+    islocalρ::Bool
     isαβsame::Bool
+    hasdSdCs::Bool
+    dSdρ::Union{Nothing,Tρ}
 end
 export STOUTsmearing_layer
 
 function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
+    loopset = make_loopforactions(loops_smearing, L)
+    return STOUTsmearing_layer(loopset, U, ρ)
+end
+
+#=
+#function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
+function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
 
     T = eltype(U)
     numg = 5 + Dim - 1
@@ -24,8 +35,10 @@ function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{
     for i = 1:numg
         temps[i] = similar(U[1])
     end
-    num = length(loops_smearing)
-    loopset = make_loopforactions(loops_smearing, L)
+    #num = length(loops_smearing)
+    num = length(loopset)
+    #loopset = make_loopforactions(loops_smearing, L)
+
     dataset = Array{STOUT_dataset{Dim},1}(undef, num)
     for i = 1:num
         closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
@@ -48,8 +61,57 @@ function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{
         Qs[μ] = similar(U[1])
     end
 
-    return STOUTsmearing_layer{T,Dim}(ρs, dataset, Uinα, Uinβ, eQs, Cs, Qs, temps, false)
+    Tρ = typeof(ρs)
+
+    return STOUTsmearing_layer{T,Dim,Tρ}(ρs, dataset, Uinα, Uinβ, eQs, Cs, Qs, temps, false)
 end
+=#
+
+function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
+    T = eltype(U)
+    numg = 5 + Dim - 1
+    temps = Vector{T}(undef, numg)
+    for i = 1:numg
+        temps[i] = similar(U[1])
+    end
+    #num = length(loops_smearing)
+    #loopset = make_loopforactions(loops_smearing, L)
+    num = length(loopset)
+    #display(loopset)
+    #error("d")
+    dataset = Array{STOUT_dataset{Dim},1}(undef, num)
+    for i = 1:num
+        closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
+    end
+    #ρs = zeros(Float64, num)
+    #
+    Tρ = typeof(ρs)#eltype(ρs)
+    if eltype(ρs) <: Number
+        islocalρ = false
+    else
+        islocalρ = true
+    end
+
+    Uinα = Vector{T}(undef, Dim)
+    Uinβ = Vector{T}(undef, Dim)
+    eQs = Vector{T}(undef, Dim)
+    Cs = Vector{T}(undef, Dim)
+    Qs = Vector{T}(undef, Dim)
+    dSdCs = Vector{T}(undef, Dim)
+
+    for μ = 1:Dim
+        Uinα[μ] = similar(U[1])
+        Uinβ[μ] = similar(U[1])
+        eQs[μ] = similar(U[1])
+        Cs[μ] = similar(U[1])
+        Qs[μ] = similar(U[1])
+        dSdCs[μ] = similar(U[1])
+    end
+    dSdρ = zero(ρs)
+    return STOUTsmearing_layer{T,Dim,Tρ}(ρs, dataset, Uinα, Uinβ, eQs, Cs, Qs, temps, dSdCs, islocalρ, false, false, dSdρ)
+end
+
 
 function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs, Uinα, Uinβ) where {T,Dim} #Uout = exp(Q(Uin,ρs))*Uinα
     s.isαβsame = (Uinα == Uinβ)
@@ -583,7 +645,7 @@ end
 
 
 
-
+#=
 function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3},
     Q::Gaugefields_4D_nowing{3}) # C star dexpQ/dQ
     NT = Q.NT
@@ -617,6 +679,68 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3}
                     for jc = 1:NC
                         for ic = 1:NC
                             CdeQdQ[ic, jc, ix, iy, iz, it] = CdeQdQn[ic, jc]
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+export CdexpQdQ!
+=#
+
+function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3},
+    Q::Gaugefields_4D_nowing{3}; eps_Q=1e-18) # C star dexpQ/dQ
+    NT = Q.NT
+    NY = Q.NY
+    NZ = Q.NZ
+    NX = Q.NX
+    NC = 3
+    Qnim = zeros(ComplexF64, NC, NC) #Qn/im
+    B1 = zero(Qnim)
+    B2 = zero(Qnim)
+    Cn = zero(Qnim)
+    CdeQdQn = zero(Qnim)
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    trQ2 = 0.0im
+                    for i = 1:3
+                        for j = 1:3
+                            trQ2 += Q[i, j, ix, iy, iz, it] * Q[j, i, ix, iy, iz, it]
+                        end
+                    end
+
+                    if abs(trQ2) > eps_Q
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                Qnim[ic, jc] = Q[ic, jc, ix, iy, iz, it] / im
+                                Cn[ic, jc] = C[ic, jc, ix, iy, iz, it]
+                            end
+                        end
+                        f0, f1, f2, b10, b11, b12, b20, b21, b22 = calc_coefficients_Q(Qnim)
+                        #if ix == iy == iz == it == 1
+                        #    println((f0, f1, f2, b10, b11, b12, b20, b21, b22))
+                        #end
+
+                        construct_B1B2!(B1, B2, Qnim, b10, b11, b12, b20, b21, b22)
+                        trCB1, trCB2 = construct_trCB1B2(B1, B2, Cn)
+                        construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qnim, Cn)
+
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                CdeQdQ[ic, jc, ix, iy, iz, it] = CdeQdQn[ic, jc]
+                            end
+                        end
+                    else
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                #CdeQdQ[ic, jc, ix, iy, iz, it] = C[ic, jc, ix, iy, iz, it]
+                            end
                         end
                     end
                 end

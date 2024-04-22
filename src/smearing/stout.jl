@@ -80,12 +80,12 @@ end
 
 
 
-function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim = 4)
+function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim=4)
 
     numlayers = length(ρs)
     layers = Array{CovLayer,1}(undef, numlayers)
     for i = 1:numlayers
-        stout_layer = STOUT_Layer(loops_smearing, ρs[i], L, Dim = Dim)
+        stout_layer = STOUT_Layer(loops_smearing, ρs[i], L, Dim=Dim)
         layers[i] = stout_layer
     end
 
@@ -99,7 +99,7 @@ Cmu = dP_nm/dUmu
 dCmu/dUnu = (d/dUnu) dP_nm/dUmu
 =#
 
-function STOUT_dataset(closedloops; Dim = 4)
+function STOUT_dataset(closedloops; Dim=4)
     #Ci = #Dict{Tuple{Int64,Int64},Array{Wilsonline{Dim},1}}[]
     #dCmudUnu = #Dict{Tuple{Int64,Int64,Int64},Array{DwDU{Dim},1}}[]
     num = length(closedloops) #number of loops 
@@ -196,13 +196,26 @@ function STOUT_dataset(closedloops; Dim = 4)
     return STOUT_dataset{Dim}(closedloops, Cμs, CmudUnu, CmudagdUnu)
 end
 
-function STOUT_Layer(loops_smearing, ρ, L; Dim = 4)
+function STOUT_Layer(loops_smearing, ρ, L; Dim=4)
+    num = length(loops_smearing)
+    loopset = make_loopforactions(loops_smearing, L)
+
+    dataset = Array{STOUT_dataset{Dim},1}(undef, num)
+    for i = 1:num
+        closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
+    end
+
+    return STOUT_Layer{Dim}(ρ, dataset)
+end
+
+function STOUT_Layer(loops, ρ; Dim=4)
     num = length(loops_smearing)
     loopset = make_loopforactions(loops_smearing, L)
     dataset = Array{STOUT_dataset{Dim},1}(undef, num)
     for i = 1:num
         closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
-        dataset[i] = STOUT_dataset(closedloops, Dim = Dim)
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
     end
 
     return STOUT_Layer{Dim}(ρ, dataset)

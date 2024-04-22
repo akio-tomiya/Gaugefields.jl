@@ -130,7 +130,8 @@ import .Abstractsmearing_module:
     construct_smearing,
     set_parameters,
     get_parameter_derivatives,
-    apply_smearing_U
+    apply_smearing_U,
+    CASK_layer
 
 #import .Abstractsmearing_module:
 #    STOUT_Layer_b
@@ -206,6 +207,7 @@ export save_textdata, load_BridgeText!
 export shift_U, evaluate_gaugelinks!, Gradientflow, flow!
 export heatbath!, Heatbath
 export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname
+
 export GaugeAction,
     evaluate_GaugeAction_untraced!, evaluate_GaugeAction_untraced, calc_dSdUμ, calc_dSdUμ!
 export initialize_TA_Gaugefields, gauss_distribution!
@@ -229,6 +231,7 @@ export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 
 export STOUTsmearing_layer
+export CASK_layer
 #export STOUT_Layer_b
 
 

@@ -97,6 +97,7 @@ end
 include("./stout.jl")
 #include("./stout_b.jl")
 include("./stout_smearing.jl")
+include("./CASK_smearing.jl")
 #include("./gradientflow.jl")
 
 function set_parameters(s::CovNeuralnet, i, v)
