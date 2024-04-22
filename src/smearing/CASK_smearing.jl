@@ -130,6 +130,32 @@ function layer_pullback!(
 end
 
 
+function parameter_derivatives(
+    δ_current,
+    layer::CASK_layer,
+    U_current,
+    temps,
+)
+    #clear_U!(δ_prev)
+    δ_prev = temps
+
+    dSdρ = layer.stout.dSdρ
+    dSdρQ = layer.attention_matrix.Qstout.dSdρ
+    dSdρK = layer.attention_matrix.Kstout.dSdρ
+    dSdρV = layer.Vstout.dSdρ
+
+    dSdρ .= 0
+    dSdρQ .= 0
+    dSdρK .= 0
+    dSdρV .= 0
+
+    backward_dSdU_dSdρQKV_add!(layer, δ_prev, dSdρ, dSdρQ, dSdρK, dSdρV,
+        δ_current)
+
+    return (dSdρ=dSdρ, dSdρQ=dSdρQ, dSdρK=dSdρK, dSdρV=dSdρV)
+
+
+end
 
 function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN}, ρs_K::Vector{TN}, ρs_V::Vector{TN}) where {TN<:Number}
     attention_matrix = cask.attention_matrix

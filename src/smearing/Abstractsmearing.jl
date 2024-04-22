@@ -227,15 +227,26 @@ function get_parameter_derivatives(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin)
     temps = similar(Uout_multi[1])
     δs = get_δ_from_back_prop(δL, net, Uout_multi, Uin)
     numlayer = get_numlayers(net)
-    dSdp = Array{Vector{Float64},1}(undef, numlayer)
 
-    for i = 1:numlayer
+    i = 1
+    layer = net.layers[i]
+    U_current = Uout_multi[i]
+    dSdps = parameter_derivatives(δs[i], layer, U_current, temps)
+
+    dSdW = Vector{typeof(dSdps)}(undef, numlayer)
+    dSdW[1] = dSdps
+    #dSdp = Array{Vector{Float64},1}(undef, numlayer)
+
+    for i = 2:numlayer
         layer = net.layers[i]
         U_current = Uout_multi[i]
-        dSdp[i] = parameter_derivatives(δs[i], layer, U_current, temps)
+        dSdW[i] = parameter_derivatives(δs[i], layer, U_current, temps)
+        #dSdp[i] = parameter_derivatives(δs[i], layer, U_current, temps)
     end
-    return dSdp
+    return dSdW
+    #return dSdp
 end
+
 
 function get_δ_from_back_prop(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
     temps = similar(Uout_multi[1])
