@@ -23,14 +23,14 @@ function CASK_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, L,
     U::Vector{<:AbstractGaugefields{NC,Dim}}, maxS=1,
     ρs=zeros(Float64, length(loopset))
 ) where {NC,Dim}
-    return CASK_layer(loopset, loopset, loopset, loopset, L, U, maxS, ρs, ρs, ρs, ρs)
+    return CASK_layer(loopset, loopset, loopset, loopset, L, U, maxS, deepcopy(ρs), deepcopy(ρs), deepcopy(ρs), deepcopy(ρs))
 end
 
 function CASK_layer(loops_smearing, L,
     U::Vector{<:AbstractGaugefields{NC,Dim}}, maxS=1,
     ρs=zeros(Float64, length(loopset))
 ) where {NC,Dim}
-    return CASK_layer(loops_smearing, loops_smearing, loops_smearing, loops_smearing, L, U, maxS, ρs, ρs, ρs, ρs)
+    return CASK_layer(loops_smearing, loops_smearing, loops_smearing, loops_smearing, L, U, maxS, deepcopy(ρs), deepcopy(ρs), deepcopy(ρs), deepcopy(ρs))
 end
 
 function CASK_layer(loops_smearing, loops_smearing_Q, loops_smearing_K,
@@ -83,6 +83,72 @@ function CASK_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, loopset_Q::Vector{
 
 
     return CASK_layer{T,Dim,Dim3,Tρ,NW}(attention_matrix, stout, Vstout, Astout, UV, UA)
+end
+
+function set_parameters!(layer::CASK_layer, params)
+    start_index = 1
+    numparam = get_numparameters(layer.stout)
+    end_index = start_index + numparam - 1
+    params_i = view(params, start_index:end_index)
+    set_parameters!(layer.stout, params_i)
+
+    start_index = end_index + 1
+    numparam = get_numparameters(layer.attention_matrix.Qstout)
+    end_index = start_index + numparam - 1
+    params_i = view(params, start_index:end_index)
+    set_parameters!(layer.attention_matrix.Qstout, params_i)
+
+
+    start_index = end_index + 1
+    numparam = get_numparameters(layer.attention_matrix.Kstout)
+    end_index = start_index + numparam - 1
+    params_i = view(params, start_index:end_index)
+
+    set_parameters!(layer.attention_matrix.Kstout, params_i)
+
+
+    start_index = end_index + 1
+    numparam = get_numparameters(layer.Vstout)
+    end_index = start_index + numparam - 1
+    params_i = view(params, start_index:end_index)
+    set_parameters!(layer.Vstout, params_i)
+
+end
+
+function get_parameters(layer::CASK_layer)
+    s = Float64[]
+    append!(s, get_parameters(layer.stout))
+    append!(s, get_parameters(layer.attention_matrix.Qstout))
+    append!(s, get_parameters(layer.attention_matrix.Kstout))
+    append!(s, get_parameters(layer.Vstout))
+    return s
+end
+
+function get_parameter_derivatives(layer::CASK_layer)
+    s = Float64[]
+    #println(get_parameters(layer.stout))
+    append!(s, get_parameter_derivatives(layer.stout))
+    append!(s, get_parameter_derivatives(layer.attention_matrix.Qstout))
+    append!(s, get_parameter_derivatives(layer.attention_matrix.Kstout))
+    append!(s, get_parameter_derivatives(layer.Vstout))
+    #println(s)
+    return s
+end
+
+function get_numparameters(layer::CASK_layer)
+    s = 0
+    s += length(layer.stout.ρs)
+    s += length(layer.attention_matrix.Qstout.ρs)
+    s += length(layer.attention_matrix.Kstout.ρs)
+    s += length(layer.Vstout.ρs)
+    return s
+end
+
+function zero_grad!(layer::CASK_layer)
+    zero_grad!(layer.stout)
+    zero_grad!(layer.attention_matrix.Qstout)
+    zero_grad!(layer.attention_matrix.Kstout)
+    zero_grad!(layer.Vstout)
 end
 
 

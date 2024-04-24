@@ -1,8 +1,9 @@
 
+#include("./forbackprop.jl")
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!
 import ..AbstractGaugefields_module: calc_coefficients_Q
 
-mutable struct STOUTsmearing_layer{T,Dim,Tρ}
+mutable struct STOUTsmearing_layer{T,Dim,Tρ} <: CovLayer{Dim}
     ρs::Tρ#Vector{Tρ}
     const dataset::Vector{STOUT_dataset{Dim}}
     const Uinα::Vector{T}
@@ -19,10 +20,52 @@ mutable struct STOUTsmearing_layer{T,Dim,Tρ}
 end
 export STOUTsmearing_layer
 
-function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loops_smearing))) where {NC,Dim}
+function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
     loopset = make_loopforactions(loops_smearing, L)
-    return STOUTsmearing_layer(loopset, U, ρs)
+    return STOUTsmearing_layer(loopset, U, ρ)
 end
+
+#=
+#function STOUTsmearing_layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
+function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, num)) where {NC,Dim}
+
+    T = eltype(U)
+    numg = 5 + Dim - 1
+    temps = Vector{T}(undef, numg)
+    for i = 1:numg
+        temps[i] = similar(U[1])
+    end
+    #num = length(loops_smearing)
+    num = length(loopset)
+    #loopset = make_loopforactions(loops_smearing, L)
+
+    dataset = Array{STOUT_dataset{Dim},1}(undef, num)
+    for i = 1:num
+        closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
+    end
+    #ρs = zeros(Float64, num)
+    #
+
+    Uinα = Vector{T}(undef, Dim)
+    Uinβ = Vector{T}(undef, Dim)
+    eQs = Vector{T}(undef, Dim)
+    Cs = Vector{T}(undef, Dim)
+    Qs = Vector{T}(undef, Dim)
+
+    for μ = 1:Dim
+        Uinα[μ] = similar(U[1])
+        Uinβ[μ] = similar(U[1])
+        eQs[μ] = similar(U[1])
+        Cs[μ] = similar(U[1])
+        Qs[μ] = similar(U[1])
+    end
+
+    Tρ = typeof(ρs)
+
+    return STOUTsmearing_layer{T,Dim,Tρ}(ρs, dataset, Uinα, Uinβ, eQs, Cs, Qs, temps, false)
+end
+=#
 
 function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
     T = eltype(U)
@@ -66,81 +109,18 @@ function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector
         dSdCs[μ] = similar(U[1])
     end
     dSdρ = zero(ρs)
-
     return STOUTsmearing_layer{T,Dim,Tρ}(ρs, dataset, Uinα, Uinβ, eQs, Cs, Qs, temps, dSdCs, islocalρ, false, false, dSdρ)
 end
 
-function set_parameters!(s::STOUTsmearing_layer, ρs)
-    s.ρs[:] .= ρs
-    #println(ρs)
-end
 
-function get_parameters(s::STOUTsmearing_layer)
-    return s.ρs
-end
-
-function get_parameter_derivatives(s::STOUTsmearing_layer)
-    return s.dSdρ
-end
-
-function get_numparameters(s::STOUTsmearing_layer)
-    return 1
-end
-
-function zero_grad!(s::STOUTsmearing_layer)
-    if s.dSdρ != nothing
-        s.dSdρ .= 0
-    end
-end
-
-function Base.length(layer::STOUTsmearing_layer)
-    return length(layer.ρs)
-end
-
-function get_Cμ(layer::STOUTsmearing_layer, i)
-    return layer.dataset[i].Cμ
-end
-
-function get_dCμdUν(layer::STOUTsmearing_layer, i)
-    return layer.dataset[i].dCμdUν
-end
-
-function get_dCμdagdUν(layer::STOUTsmearing_layer, i)
-    return layer.dataset[i].dCμdagdUν
-end
-
-function get_ρ(layer::STOUTsmearing_layer, i)
-    return layer.ρs[i]
-end
-
-
-function make_longstaple_pair(μ, ν, s)
-    loop = [(μ, +1), (ν, +s), (μ, -1), (ν, -s)]
-    #loop = [(ν, +s), (μ, +1), (ν, -s)]
-    w1 = Wilsonline(loop)
-    #w = Vector{typeof(w1)}(undef, 2)
-    w = Vector{typeof(w1)}(undef, 1)
-    w[1] = w1
-    #loop = [(ν, -s), (μ, +1), (ν, +s)]
-    #w2 = Wilsonline(loop)
-    #w[2] = w2
-    return w
-end
-export make_longstaple_pair
-
-
-
-function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
+function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs, Uinα, Uinβ) where {T,Dim} #Uout = exp(Q(Uin,ρs))*Uinα
     s.isαβsame = (Uinα == Uinβ)
-    s.islocalρ = false
     #println("is $isαβsame")
     substitute_U!(s.Uinα, Uinα)
     if s.isαβsame == false
         substitute_U!(s.Uinβ, Uinβ)
     end
-    for i = 1:length(s.ρs)
-        s.ρs[i] = deepcopy(ρs[i])
-    end
+    s.ρs .= ρs
     temps = s.temps
     Ω = temps[end]
     for μ = 1:Dim
@@ -152,133 +132,16 @@ function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, U
         mul!(Uout[μ], s.eQs[μ], Uinα[μ])
     end
     set_wing_U!(Uout)
-    s.hasdSdCs = false
 end
 export forward!
 
-
-
-function backward_dSdU_add!(s::STOUTsmearing_layer{T,Dim}, dSdUin, dSdUout) where {T,Dim}
-    backward_dSdUα_add!(s, dSdUin, dSdUout)
-    backward_dSdUβ_add!(s, dSdUin, dSdUout)
-end
-export backward_dSdU_add!
-
-function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim}, dSdUα, dSdUβ, dSdρ, dSdUout) where {T,Dim}
-    @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
+function backward_dSdUβ_add!(s::STOUTsmearing_layer{T,Dim}, dSdUβ, dSdUout) where {T,Dim} # Uout = 
     temps = s.temps
     temp1 = temps[1]
     dSdQ = temps[2]
     dSdΩ = temps[3]
     dSdUdag = temps[4]
     dSdCs = temps[5:5+Dim-1]
-
-    if s.isαβsame
-        Uin = s.Uinα
-    else
-        Uin = s.Uinβ
-    end
-
-
-    for μ = 1:Dim
-
-        #dS/dUα
-        calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
-        add_U!(dSdUα[μ], temp1)
-
-        #dS/dUβ
-        Cμ = s.Cs[μ]
-        Qμ = s.Qs[μ]
-
-        calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uinα[μ], temp1)
-        calc_dSdΩ!(dSdΩ, dSdQ)
-        calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
-
-        calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
-        add_U!(dSdUβ[μ], dSdUdag')
-
-        if s.islocalρ == false
-            Cμi = temps[4] #dSdUdag
-            #dS/dρ
-            num = length(s.ρs)
-            for i = 1:num
-                loops = s.dataset[i].Cμ[μ]
-                evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
-                mul!(temp1, dSdCs[μ], Cμi)
-                dSdρ[i] += real(tr(temp1)) * 2
-            end
-        else
-            error("not supported yet")
-        end
-
-    end
-
-    for ν = 1:Dim
-        for μ = 1:Dim
-            calc_dSdUν_fromdSCμ_add!(dSdUβ[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, temps)
-        end
-    end
-end
-export backward_dSdUαUβρ_add!
-
-
-
-function backward_dSdρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdρ, dSdUout) where {T,Dim,Tρ}
-    @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
-    temps = s.temps
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    #dSdUdag = temps[4]
-    #dSdCs = temps[5:5+Dim-1]
-    if s.isαβsame
-        Uin = s.Uinα
-    else
-        Uin = s.Uinβ
-    end
-
-
-    for μ = 1:Dim
-
-        if s.hasdSdCs == false
-            Qμ = s.Qs[μ]
-            calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
-            calc_dSdΩ!(dSdΩ, dSdQ)
-            calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
-        end
-        if s.islocalρ == false
-            Cμi = temps[4] #dSdUdag
-            #dS/dρ
-            num = length(s.ρs)
-            for i = 1:num
-                loops = s.dataset[i].Cμ[μ]
-                #println(loops)
-                evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
-                #display(Cμi[:, :, 1, 1, 1, 1])
-                #error("d")
-                mul!(temp1, s.dSdCs[μ], Cμi)
-                #display(s.dSdCs[μ][:, :, 1, 1, 1, 1])
-                dSdρ[i] += real(tr(temp1)) * 2
-            end
-        else
-            error("not supported yet")
-        end
-
-    end
-    s.hasdSdCs = true
-end
-export backward_dSdρ_add!
-
-
-
-function backward_dSdUβ_add!(s::STOUTsmearing_layer{T,Dim}, dSdUβ, dSdUout) where {T,Dim} # Uout =  exp(Q(Uin,ρs))*Uinα
-    temps = s.temps
-    temps = similar(s.temps)
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    dSdUdag = temps[4]
-    #dSdCs = temps[5:5+Dim-1]
     if s.isαβsame
         Uin = s.Uinα
     else
@@ -310,13 +173,7 @@ function backward_dSdUβ_add!(s::STOUTsmearing_layer{T,Dim}, dSdUβ, dSdUout) wh
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
         #calc_dSdu1!(dSdUin[μ], dSdUout[μ], s.eQ)
-        #println("Cμ")
-        #display(Cμ[:, :, 1, 1, 1, 1])
-        #println("Qμ")
-        #display(Qμ[:, :, 1, 1, 1, 1])
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
-        #println("dSdQ")
-        #display(dSdQ[:, :, 1, 1, 1, 1])
 
         #dSdQ_n = calc_dSdQ(Qμ, Uin[μ], 1, 1, 1, 1)
         #println("dSdQ_n")
@@ -325,34 +182,27 @@ function backward_dSdUβ_add!(s::STOUTsmearing_layer{T,Dim}, dSdUβ, dSdUout) wh
         #display(dSdQ[:, :, 1, 1, 1, 1])
 
         calc_dSdΩ!(dSdΩ, dSdQ)
-        #println("dSdΩ")
-        #display(dSdΩ[:, :, 1, 1, 1, 1])
 
         #dSdΩ_n = calc_dSdΩ(Ω, Uin[μ], 1, 1, 1, 1)
         #display(dSdΩ_n)
         #display(dSdΩ[:, :, 1, 1, 1, 1])
         #error("ee")
 
-        calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
-        #println("dSdCs")
-        #display(s.dSdCs[μ][:, :, 1, 1, 1, 1])
+        calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
         add_U!(dSdUβ[μ], dSdUdag')
     end
 
     for ν = 1:Dim
         for μ = 1:Dim
-            calc_dSdUν_fromdSCμ_add!(dSdUβ[ν], s.dataset, s.dSdCs[μ], s.ρs, Uin, μ, ν, temps)
+            calc_dSdUν_fromdSCμ_add!(dSdUβ[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, temps)
         end
     end
-    s.hasdSdCs = true
 end
 export backward_dSdUβ_add!
 
-
 function backward_dSdUα_add!(s::STOUTsmearing_layer{T,Dim}, dSdUα, dSdUout) where {T,Dim}
     temps = s.temps
-    temps = similar(s.temps)
     temp1 = temps[1]
 
     for μ = 1:Dim
@@ -362,7 +212,7 @@ function backward_dSdUα_add!(s::STOUTsmearing_layer{T,Dim}, dSdUα, dSdUout) wh
 end
 export backward_dSdUα_add!
 
-function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Uin, temps_g) where {Dim,TN<:Number}
+function calc_C!(C, μ, ρs, dataset::Vector{STOUT_dataset{Dim}}, Uin, temps_g) where {Dim}
     temp1 = temps_g[1]
     temp2 = temps_g[2]
     temp3 = temps_g[3]
@@ -380,8 +230,6 @@ function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Ui
 end
 export calc_C!
 
-
-
 function calc_dSdu1!(dSdu1, dSdUbar, expQ) # Ubar = exp(Q)*U
     mul!(dSdu1, dSdUbar, expQ)
 end
@@ -393,10 +241,6 @@ function calc_dSdQ!(dSdQ, dSdUbar, Qμ, Uμ, temp)
     CdexpQdQ!(dSdQ, dSdUU, Qμ)
 end
 export calc_dSdQ!
-
-function LdQdΩ!(LdQdΩ, L) # L star dQ/dΩ
-    Traceless_antihermitian!(LdQdΩ, L)
-end
 
 function calc_dSdΩ!(dSdΩ, dSdQ)
     LdQdΩ!(dSdΩ, dSdQ)
@@ -413,17 +257,6 @@ function calc_dSdUdag!(dSdUdag, dSdΩ, C)
 end
 export calc_dSdUdag!
 
-
-
-function LdCdU_i_add!(LdCdU, L, A, B, ρ, temps_g) #dCdU = ρ sum_i A_i otimes B_i , dCdagdU = ρ sum_i Abar_i otimes Bbar_i
-    BL = temps_g[1]
-    BLA = temps_g[2]
-    mul!(BL, B, L)
-    mul!(BLA, BL, A)
-    add_U!(LdCdU, ρ, BLA)
-end
-
-export calc_dSdUν_fromdSCμ_add!
 function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, dSdCμ, ρs, Us, μ, ν, temps_g) where {Dim}  #use pullback for C(U): dS/dCμ star dCμ/dUν
     temp1 = temps_g[1]
     temp2 = temps_g[2]
@@ -475,6 +308,9 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
 
     end
 end
+export calc_dSdUν_fromdSCμ_add!
+
+
 
 function calc_dSdΩ(Ω, Uμ, ix, iy, iz, it, eta=1e-12; NC=3)
     numg = 5
@@ -483,7 +319,7 @@ function calc_dSdΩ(Ω, Uμ, ix, iy, iz, it, eta=1e-12; NC=3)
         temps_g[i] = similar(Ω)
     end
     Qμ = similar(Ω)
-    Traceless_antihermitian!(Qμ, Ω)
+    Gaugefields.Traceless_antihermitian!(Qμ, Ω)
     eQ = similar(Qμ)
     barU = similar(Qμ)
     eQ = expU(Qμ)
@@ -497,7 +333,7 @@ function calc_dSdΩ(Ω, Uμ, ix, iy, iz, it, eta=1e-12; NC=3)
             Ωd = deepcopy(Ω)
             Ωd[jc, ic, ix, iy, iz, it] += eta
 
-            Traceless_antihermitian!(Qd, Ωd)
+            Gaugefields.Traceless_antihermitian!(Qd, Ωd)
             eQ = expU(Qd)
             mul!(barU, eQ, Uμ)
             Sd = real(tr(barU * barU))
@@ -505,7 +341,7 @@ function calc_dSdΩ(Ω, Uμ, ix, iy, iz, it, eta=1e-12; NC=3)
 
             Ωd = deepcopy(Ω)
             Ωd[jc, ic, ix, iy, iz, it] += im * eta
-            Traceless_antihermitian!(Qd, Ωd)
+            Gaugefields.Traceless_antihermitian!(Qd, Ωd)
             eQ = expU(Qd)
             mul!(barU, eQ, Uμ)
             Sdm = real(tr(barU * barU))
@@ -581,6 +417,291 @@ function calc_dSdQ(Q, Uμ, ix, iy, iz, it, eta=1e-12; NC=3)
 
 end
 
+
+function get_name(s::STOUTsmearing_layer)
+    return "STOUT"
+end
+
+function Base.show(s::STOUTsmearing_layer{T,Dim}) where {T,Dim}
+    println("num. of terms: ", length(s.ρs))
+    for i = 1:length(s.ρs)
+        if i == 1
+            string = "st"
+        elseif i == 2
+            string = "nd"
+        elseif i == 3
+            string = "rd"
+        else
+            string = "th"
+        end
+        println("-------------------------------")
+        println("      $i-$string term: ")
+        println("          coefficient: ", s.ρs[i])
+        println("      -------------------------")
+        show(s.dataset[i].closedloop)
+        println("      -------------------------")
+    end
+end
+
+function set_parameters!(s::STOUTsmearing_layer, ρs)
+    s.ρs[:] .= ρs
+    #println(ρs)
+end
+
+function get_parameters(s::STOUTsmearing_layer)
+    return s.ρs
+end
+
+function get_parameter_derivatives(s::STOUTsmearing_layer)
+    return s.dSdρ
+end
+
+function get_numparameters(s::STOUTsmearing_layer)
+    return 1
+end
+
+function Base.length(layer::STOUTsmearing_layer)
+    return length(layer.ρs)
+end
+
+function get_Cμ(layer::STOUTsmearing_layer, i)
+    return layer.dataset[i].Cμ
+end
+
+function get_dCμdUν(layer::STOUTsmearing_layer, i)
+    return layer.dataset[i].dCμdUν
+end
+
+function get_dCμdagdUν(layer::STOUTsmearing_layer, i)
+    return layer.dataset[i].dCμdagdUν
+end
+
+function get_ρ(layer::STOUTsmearing_layer, i)
+    return layer.ρs[i]
+end
+
+
+
+
+#=
+closedloops -> sum_{nm} P_nm
+Cmu = dP_nm/dUmu
+dCmu/dUnu = (d/dUnu) dP_nm/dUmu
+=#
+
+
+
+
+"""
+δ_prev = δ_current*exp(Q) - C^+ Λ 
+        + sum_{i} sum_{μ',m}  [B^i_{μ,m} U_{μ'}^+ Λ_{μ',m} A_{μ,m} - bar{B}_{μ,m} Λ_{μ',m}U_{μ',m} bar{A}_{μ,m} ]
+
+"""
+function layer_pullback!(
+    δ_prev::Array{<:AbstractGaugefields{NC,Dim},1},
+    δ_current,
+    layer::STOUTsmearing_layer{T,Dim},
+    Uprev,
+    temps,
+    tempf,
+) where {NC,Dim,T}
+    clear_U!(δ_prev)
+
+    backward_dSdUα_add!(layer, δ_prev, δ_current)
+    backward_dSdUβ_add!(layer, δ_prev, δ_current)
+    set_wing_U!(δ_prev)
+    return
+end
+
+function parameter_derivatives(
+    δ_current,
+    layer::STOUTsmearing_layer{T,Dim},
+    U_current,
+    temps,
+) where {T,Dim}
+    #δ_prev[ν](n) = δ_current[ν](n)*exp(Qν[Uprev](n)) + F(δ_current,Uprev)
+    #F(δ_current,Uprev) = sum_μ sum_m Fm[μ](δ_current,Uprev)
+    #δ_prev[ν](n) = dS/dU[ν](n)
+
+    Cμs = similar(δ_current)
+    construct_Cμ!(Cμs, layer, U_current, temps)
+
+    Qμs = similar(U_current)
+
+    #F0 = tempf[1]
+    #construct_Qμs!(F0,Cμs,Uprev,temps)
+    #substitute_U!(Qμs,F0)
+
+
+    construct_Qμs!(Qμs, Cμs, U_current, temps)
+    Λs = similar(U_current)
+    temp1 = temps[1]
+    temp2 = temps[2]
+    temp3 = temps[3]
+    temp4 = temps[4]
+
+    for μ = 1:Dim
+        construct_Λmatrix_forSTOUT!(Λs[μ], δ_current[μ], Qμs[μ], U_current[μ])
+    end
+
+
+    #error("lambda!")
+
+    numterms = length(layer)
+    dSdρ = zeros(Float64, numterms)
+
+    for i = 1:numterms
+        C = get_Cμ(layer, i)
+        s = 0.0
+        for μ = 1:Dim
+            Λμ = Λs[μ]
+            Uμ = U_current[μ]
+            Cμ = C[μ]
+
+            dCμdρ = temp3
+            evaluate_gaugelinks!(dCμdρ, Cμ, U_current, [temp1, temp2])
+            #Udag Λ dCμdρ
+            mul!(temp1, Λμ, dCμdρ)
+            mul!(temp2, Uμ', temp1)
+            s += 2 * real(tr(temp2))
+        end
+        dSdρ[i] = s
+    end
+    return dSdρ
+
+end
+
+"""
+M = U δ star dexp(Q)/dQ
+"""
+
+
+
+function apply_layer!(
+    Uout::Array{<:AbstractGaugefields{NC,Dim},1},
+    layer::STOUTsmearing_layer{T,Dim},
+    Uin,
+    temps,
+    tempf,
+) where {NC,Dim,T}
+
+
+    ρs = layer.ρs
+    forward!(layer, Uout, ρs, Uin, Uin)
+    set_wing_U!(Uout)
+    return
+end
+
+
+
+
+
+function CdexpQdQ!(CdeQdQ, C, Q)
+    error("CdexpQdQ! is not implemented in types of CdeQdQ, C, Q: $(typeof(CdeQdQ)) $(typeof(C)) $(typeof(Q)) ")
+end
+function construct_B1B2!(B1, B2, Qn, b10, b11, b12, b20, b21, b22)
+    B1 .= 0
+    B2 .= 0
+    for i = 1:3
+        B1[i, i] = b10
+        B2[i, i] = b20
+    end
+    for j = 1:3
+        for i = 1:3
+            B1[i, j] += b11 * Qn[i, j]
+            B2[i, j] += b21 * Qn[i, j]
+            for k = 1:3
+                B1[i, j] += b12 * Qn[i, k] * Qn[k, j]
+                B2[i, j] += b22 * Qn[i, k] * Qn[k, j]
+            end
+        end
+    end
+end
+function construct_trCB1B2(B1, B2, C)
+    trB1 = 0.0im
+    trB2 = 0.0im
+    for i = 1:3
+        for j = 1:3
+            trB1 += C[i, j] * B1[j, i]
+            trB2 += C[i, j] * B2[j, i]
+        end
+    end
+    return trB1, trB2
+end
+
+function construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qn, Cn)
+    for j = 1:3
+        for i = 1:3
+            CdeQdQn[i, j] = trCB1 * Qn[i, j] + f1 * Cn[i, j]
+            for k = 1:3
+                CdeQdQn[i, j] +=
+                    trCB2 * Qn[i, k] * Qn[k, j] +
+                    f2 * (Qn[i, k] * Cn[k, j] + Cn[i, k] * Qn[k, j])
+            end
+        end
+    end
+    CdeQdQn ./= im
+    return
+end
+
+
+
+
+function LdCdU_i_add!(LdCdU, L, A, B, ρ, temps_g) #dCdU = ρ sum_i A_i otimes B_i , dCdagdU = ρ sum_i Abar_i otimes Bbar_i
+    BL = temps_g[1]
+    BLA = temps_g[2]
+    mul!(BL, B, L)
+    mul!(BLA, BL, A)
+    add_U!(LdCdU, ρ, BLA)
+end
+
+
+
+
+#=
+function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3},
+    Q::Gaugefields_4D_nowing{3}) # C star dexpQ/dQ
+    NT = Q.NT
+    NY = Q.NY
+    NZ = Q.NZ
+    NX = Q.NX
+    NC = 3
+    Qnim = zeros(ComplexF64, NC, NC) #Qn/im
+    B1 = zero(Qnim)
+    B2 = zero(Qnim)
+    Cn = zero(Qnim)
+    CdeQdQn = zero(Qnim)
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    for jc = 1:NC
+                        for ic = 1:NC
+                            Qnim[ic, jc] = Q[ic, jc, ix, iy, iz, it] / im
+                            Cn[ic, jc] = C[ic, jc, ix, iy, iz, it]
+                        end
+                    end
+                    f0, f1, f2, b10, b11, b12, b20, b21, b22 = calc_coefficients_Q(Qnim)
+                    construct_B1B2!(B1, B2, Qnim, b10, b11, b12, b20, b21, b22)
+                    trCB1, trCB2 = construct_trCB1B2(B1, B2, Cn)
+                    construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qnim, Cn)
+
+                    for jc = 1:NC
+                        for ic = 1:NC
+                            CdeQdQ[ic, jc, ix, iy, iz, it] = CdeQdQn[ic, jc]
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+export CdexpQdQ!
+=#
+
 function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3},
     Q::Gaugefields_4D_nowing{3}; eps_Q=1e-18) # C star dexpQ/dQ
     NT = Q.NT
@@ -642,51 +763,14 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3}
 end
 export CdexpQdQ!
 
-
-function CdexpQdQ!(CdeQdQ, C, Q)
-    error("CdexpQdQ! is not implemented in types of CdeQdQ, C, Q: $(typeof(CdeQdQ)) $(typeof(C)) $(typeof(Q)) ")
-end
-function construct_B1B2!(B1, B2, Qn, b10, b11, b12, b20, b21, b22)
-    B1 .= 0
-    B2 .= 0
-    for i = 1:3
-        B1[i, i] = b10
-        B2[i, i] = b20
-    end
-    for j = 1:3
-        for i = 1:3
-            B1[i, j] += b11 * Qn[i, j]
-            B2[i, j] += b21 * Qn[i, j]
-            for k = 1:3
-                B1[i, j] += b12 * Qn[i, k] * Qn[k, j]
-                B2[i, j] += b22 * Qn[i, k] * Qn[k, j]
-            end
-        end
-    end
-end
-function construct_trCB1B2(B1, B2, C)
-    trB1 = 0.0im
-    trB2 = 0.0im
-    for i = 1:3
-        for j = 1:3
-            trB1 += C[i, j] * B1[j, i]
-            trB2 += C[i, j] * B2[j, i]
-        end
-    end
-    return trB1, trB2
+function LdQdΩ!(LdQdΩ, L) # L star dQ/dΩ
+    Traceless_antihermitian!(LdQdΩ, L)
 end
 
-function construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qn, Cn)
-    for j = 1:3
-        for i = 1:3
-            CdeQdQn[i, j] = trCB1 * Qn[i, j] + f1 * Cn[i, j]
-            for k = 1:3
-                CdeQdQn[i, j] +=
-                    trCB2 * Qn[i, k] * Qn[k, j] +
-                    f2 * (Qn[i, k] * Cn[k, j] + Cn[i, k] * Qn[k, j])
-            end
-        end
-    end
-    CdeQdQn ./= im
+#=
+function LdQdΩ!(LdQdΩ::Gaugefields_4D_nowing{3}, L::Gaugefields_4D_nowing{3}) # L star dQ/dΩ
+    Gaugefields.Traceless_antihermitian!(LdQdΩ, L)
     return
 end
+=#
+export LdQdΩ!

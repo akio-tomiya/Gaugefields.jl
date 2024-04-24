@@ -128,10 +128,14 @@ import .Abstractsmearing_module:
     CovNeuralnet,
     calc_smearedU,
     construct_smearing,
-    set_parameters,
+    set_parameters!,
+    get_parameters,
     get_parameter_derivatives,
     apply_smearing_U,
-    CASK_layer
+    CASK_layer,
+    get_numparameters,
+    get_parameter_derivatives,
+    zero_grad!
 
 #import .Abstractsmearing_module:
 #    STOUT_Layer_b
@@ -220,7 +224,8 @@ export exptU!,
     Traceless_antihermitian!
 export Initialize_Gaugefields, back_prop
 export Initialize_4DGaugefields
-export set_parameters, get_parameter_derivatives, apply_smearing_U
+export set_parameters!, get_parameter_derivatives, apply_smearing_U, get_parameters, get_numparameters,
+    get_parameter_derivatives
 export construct_Adjoint_rep_Gaugefields
 export get_myrank, getvalue, get_nprocs, Gradientflow_general
 export Heatbath_update
@@ -231,7 +236,7 @@ export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 
 export STOUTsmearing_layer
-export CASK_layer
+export CASK_layer, zero_grad!
 #export STOUT_Layer_b
 
 

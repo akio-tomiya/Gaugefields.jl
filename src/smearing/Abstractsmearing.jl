@@ -46,7 +46,7 @@ abstract type CovLayer{Dim} end
 
 struct CovNeuralnet{Dim} <: Abstractsmearing
     #numlayers::Int64
-    layers::Array{CovLayer{Dim},1}
+    layers::Vector{CovLayer{Dim}}
 end
 
 function get_numlayers(c::CovNeuralnet)
@@ -100,9 +100,64 @@ include("./stout_smearing.jl")
 include("./CASK_smearing.jl")
 #include("./gradientflow.jl")
 
-function set_parameters(s::CovNeuralnet, i, v)
-    set_parameters(s[i], v)
+function set_parameters!(s::CovNeuralnet, i, v)
+    set_parameters!(s[i], v)
 end
+
+function get_parameters(s::CovNeuralnet, i)
+    get_parameters(s[i])
+end
+
+function set_parameters!(s::CovNeuralnet, params)
+    numlayers = get_numlayers(s)
+    start_index = 1
+    for i = 1:numlayers
+        numparam_i = get_numparameters(s[i])
+        end_index = start_index + numparam_i - 1
+        params_i = view(params, start_index:end_index)
+        start_index = end_index + 1
+        set_parameters!(s[i], params_i)
+        #println(get_parameters(s[i]))
+    end
+end
+
+function get_parameters(s::CovNeuralnet)
+    numlayers = get_numlayers(s)
+    params = Float64[]
+    #params = Vector{Vector{Float64}}[]
+    for i = 1:numlayers
+        append!(params, get_parameters(s[i]))
+        #push!(params, get_parameters(s[i]))
+    end
+    return params
+end
+
+function get_parameter_derivatives(s::CovNeuralnet)
+    numlayers = get_numlayers(s)
+    parameter_derivatives = Float64[]
+    for i = 1:numlayers
+        append!(parameter_derivatives, get_parameter_derivatives(s[i]))
+    end
+    return parameter_derivatives
+end
+
+function get_numparameters(s::CovNeuralnet)
+    numlayers = get_numlayers(s)
+    num = 0
+    for i = 1:numlayers
+        num += get_numparameters(s[i])
+    end
+    return num
+end
+
+function zero_grad!(s::CovNeuralnet)
+    numlayers = get_numlayers(s)
+    for i = 1:numlayers
+        zero_grad!(s[i])
+    end
+end
+
+
 
 
 function construct_smearing(smearingparameters, loops_list, L, coefficients, numlayers)
@@ -222,6 +277,8 @@ function back_prop(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
 
     return δ_current
 end
+
+
 
 function get_parameter_derivatives(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
     temps = similar(Uout_multi[1])
