@@ -155,9 +155,15 @@ function layer_pullback!(
 
     dSdρ = layer.dSdρ
 
-    backward_dSdUα_add!(layer, δ_prev, δ_current)
-    backward_dSdUβ_add!(layer, δ_prev, δ_current)
-    backward_dSdρ_add!(layer, dSdρ, δ_current)
+    dSdU2 = temps[1:Dim]
+    clear_U!(dSdU2)
+    backward_dSdUαUβρ_add!(layer, δ_prev, dSdU2, dSdρ, δ_current)
+    add_U!(δ_prev, dSdU2)
+
+
+    #backward_dSdUα_add!(layer, δ_prev, δ_current)
+    #backward_dSdUβ_add!(layer, δ_prev, δ_current)
+    #backward_dSdρ_add!(layer, dSdρ, δ_current)
     set_wing_U!(δ_prev)
     return
 end
