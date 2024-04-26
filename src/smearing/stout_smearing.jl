@@ -128,6 +128,36 @@ function make_longstaple_pair(μ, ν, s)
 end
 export make_longstaple_pair
 
+function apply_layer!(
+    Uout::Array{<:AbstractGaugefields{NC,Dim},1},
+    layer::STOUTsmearing_layer{T,Dim},
+    Uin,
+    temps,
+    tempf,
+) where {NC,Dim,T}
+
+
+    ρs = layer.ρs
+    forward!(layer, Uout, ρs, Uin, Uin)
+    set_wing_U!(Uout)
+    return
+end
+
+function layer_pullback!(
+    δ_prev::Array{<:AbstractGaugefields{NC,Dim},1},
+    δ_current,
+    layer::STOUTsmearing_layer{T,Dim},
+    Uprev,
+    temps,
+    tempf,
+) where {NC,Dim,T}
+    clear_U!(δ_prev)
+
+    backward_dSdUα_add!(layer, δ_prev, δ_current)
+    backward_dSdUβ_add!(layer, δ_prev, δ_current)
+    set_wing_U!(δ_prev)
+    return
+end
 
 
 function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
