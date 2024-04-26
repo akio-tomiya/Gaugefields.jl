@@ -160,6 +160,7 @@ end
 
 
 
+
 function construct_smearing(smearingparameters, loops_list, L, coefficients, numlayers)
     if smearingparameters == "nothing"
         smearing = Nosmearing()
