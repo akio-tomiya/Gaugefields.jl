@@ -153,8 +153,11 @@ function layer_pullback!(
 ) where {NC,Dim,T}
     clear_U!(δ_prev)
 
+    dSdρ = layer.dSdρ
+
     backward_dSdUα_add!(layer, δ_prev, δ_current)
     backward_dSdUβ_add!(layer, δ_prev, δ_current)
+    backward_dSdρ_add!(layer, dSdρ, δ_current)
     set_wing_U!(δ_prev)
     return
 end
