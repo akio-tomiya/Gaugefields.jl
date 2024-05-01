@@ -117,7 +117,7 @@ function set_parameters!(s::CovNeuralnet, params)
         params_i = view(params, start_index:end_index)
         start_index = end_index + 1
         set_parameters!(s[i], params_i)
-        #println(get_parameters(s[i]))
+        println(get_parameters(s[i]))
     end
 end
 

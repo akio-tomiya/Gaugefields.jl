@@ -84,7 +84,7 @@ function get_parameter_derivatives(s::STOUTsmearing_layer)
 end
 
 function get_numparameters(s::STOUTsmearing_layer)
-    return 1
+    return length(s.ρs)
 end
 
 function zero_grad!(s::STOUTsmearing_layer)
