@@ -679,6 +679,70 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{3}, C::Gaugefields_4D_nowing{3}
         end
     end
 end
+function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{2}, C::Gaugefields_4D_nowing{2},
+    Q::Gaugefields_4D_nowing{2}; eps_Q=1e-18) # C star dexpQ/dQ
+    NT = Q.NT
+    NY = Q.NY
+    NZ = Q.NZ
+    NX = Q.NX
+    NC = 2
+    Qn = zeros(ComplexF64, NC, NC) #Qn
+    B = zero(Qnim)
+    B2 = zero(Qnim)
+    Cn = zero(Qnim)
+    CdeQdQn = zero(Qnim)
+
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    trQ2 = 0.0im
+                    for i = 1:3
+                        for j = 1:3
+                            trQ2 += Q[i, j, ix, iy, iz, it] * Q[j, i, ix, iy, iz, it]
+                        end
+                    end
+
+                    if abs(trQ2) > eps_Q
+                        q = sqrt((-1 / 2) * trQ2)
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                Qn[ic, jc] = Q[ic, jc, ix, iy, iz, it] 
+                                Cn[ic, jc] = C[ic, jc, ix, iy, iz, it]
+                            end
+                        end
+                        calc_Bmatrix!(B, q, Qn, NC)
+                        trsum = 0.0im
+                        for i = 1:2
+                            for j = 1:2
+                                trsum += Cn[i, j] * B[j, i]
+                            end
+                        end
+                        for i = 1:2
+                            for j = 1:2
+                                CdeQdQn[j, i] = (sin(q) / q) * Cn[j, i] + trsum * Qn[j, i]
+                            end
+                        end 
+
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                CdeQdQ[ic, jc, ix, iy, iz, it] = CdeQdQn[ic, jc]
+                            end
+                        end
+                    else
+                        for jc = 1:NC
+                            for ic = 1:NC
+                                #CdeQdQ[ic, jc, ix, iy, iz, it] = C[ic, jc, ix, iy, iz, it]
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
 export CdexpQdQ!
 
 
