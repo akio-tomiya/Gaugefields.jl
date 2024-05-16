@@ -1,6 +1,6 @@
 
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!
-import ..AbstractGaugefields_module: calc_coefficients_Q
+import ..AbstractGaugefields_module: calc_coefficients_Q,calc_Bmatrix!
 
 mutable struct STOUTsmearing_layer{T,Dim,Tρ} <: CovLayer{Dim}
     ρs::Tρ#Vector{Tρ}
