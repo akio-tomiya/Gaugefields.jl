@@ -687,10 +687,10 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{2}, C::Gaugefields_4D_nowing{2}
     NX = Q.NX
     NC = 2
     Qn = zeros(ComplexF64, NC, NC) #Qn
-    B = zero(Qnim)
-    B2 = zero(Qnim)
-    Cn = zero(Qnim)
-    CdeQdQn = zero(Qnim)
+    B = zero(Qn)
+    B2 = zero(Qn)
+    Cn = zero(Qn)
+    CdeQdQn = zero(Qn)
 
 
     for it = 1:NT
