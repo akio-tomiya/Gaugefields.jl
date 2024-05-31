@@ -100,16 +100,18 @@ include("./stout_smearing.jl")
 include("./CASK_smearing.jl")
 #include("./gradientflow.jl")
 
-function set_parameters!(s::CovNeuralnet, i, v)
-    set_parameters!(s[i], v)
-end
+#
+#function set_parameters!(s::CovNeuralnet, i, v)
+#    set_parameters!(s[i], v)
+#end
 
-function get_parameters(s::CovNeuralnet, i)
-    get_parameters(s[i])
-end
+#function get_parameters(s::CovNeuralnet, i)
+#    get_parameters(s[i])
+#end
 
 function set_parameters!(s::CovNeuralnet, params)
     numlayers = get_numlayers(s)
+    #println("num layers")
     start_index = 1
     for i = 1:numlayers
         numparam_i = get_numparameters(s[i])
@@ -117,7 +119,7 @@ function set_parameters!(s::CovNeuralnet, params)
         params_i = view(params, start_index:end_index)
         start_index = end_index + 1
         set_parameters!(s[i], params_i)
-        println(get_parameters(s[i]))
+        #println(get_parameters(s[i]))
     end
 end
 
