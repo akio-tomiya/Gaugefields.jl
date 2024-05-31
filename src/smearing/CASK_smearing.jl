@@ -235,6 +235,7 @@ function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN
     end
 
     forward!(cask.Vstout, cask.UV, ρs_V, Uin, Uin)
+    add_U!(cask.UV, Uin, -1)
     forward!(cask.Astout, cask.UA, attention_matrix, Uin, cask.UV)
     forward!(cask.stout, Uout, ρs, Uin, cask.UA)
     #forward!(cask.stout, Uout, ρs, Uin, Uin)
@@ -320,6 +321,7 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #println("autograd: dSdUV")
     #display(dSdUV[μ][:, :, ix, iy, iz, it])
     backward_dSdUαUβρ_add!(cask.Vstout, dSdUin, dSdUVbeta, dSdρV, dSdUV)
+    add_U!(dSdUin, dSdUV, -1)
     #println("autograd: dSdUin 3")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
     add_U!(dSdUin, 1, dSdUVbeta)

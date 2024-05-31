@@ -87,7 +87,9 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, Uin, ρs_Q::Vector{TN},
     end
 
     forward!(a.Qstout, a.UQ, ρs_Q, Uin, Uin)
+    add_U!(a.UQ, Uin, -1)
     forward!(a.Kstout, a.UK, ρs_K, Uin, Uin)
+    add_U!(a.UK, Uin, -1)
 
     #display(a.UQ[1][:, :, 1, 1, 1, 1])
     # display(a.UK[1][:, :, 1, 1, 1, 1])
@@ -129,6 +131,7 @@ function backward_dSdU_add_fromdSda!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, dSdU
     #dSdUαQ = a.temps[Dim+1]
     #dSdUβQ = a.temps[Dim+2]
     backward_dSdUα_add!(a.Qstout, dSdUin, dSdUQ)
+    add_U!(dSdUin, dSdUQ, -1)
     backward_dSdUβ_add!(a.Qstout, dSdUin, dSdUQ)
 
     backward_dSdρ_add!(a.Qstout, dSdρQ, dSdUQ)
@@ -142,6 +145,7 @@ function backward_dSdU_add_fromdSda!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, dSdU
     clear_U!(dSdUK)
     backward_dSdUK_add!(a, dSdUK, dSda)
     backward_dSdUα_add!(a.Kstout, dSdUin, dSdUK)
+    add_U!(dSdUin, dSdUK, -1)
     backward_dSdUβ_add!(a.Kstout, dSdUin, dSdUK)
 
     backward_dSdρ_add!(a.Kstout, dSdρK, dSdUK)

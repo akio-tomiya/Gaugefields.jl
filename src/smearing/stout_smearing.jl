@@ -76,11 +76,11 @@ function set_parameters!(s::STOUTsmearing_layer, ρs)
 end
 
 function get_parameters(s::STOUTsmearing_layer)
-    return s.ρs
+    return deepcopy(s.ρs)
 end
 
 function get_parameter_derivatives(s::STOUTsmearing_layer)
-    return s.dSdρ
+    return deepcopy(s.dSdρ)
 end
 
 function get_numparameters(s::STOUTsmearing_layer)
