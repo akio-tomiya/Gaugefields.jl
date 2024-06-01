@@ -147,8 +147,11 @@ function backward_dSdU_add_fromdSda!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, dSdU
     backward_dSdUα_add!(a.Kstout, dSdUin, dSdUK)
     add_U!(dSdUin, -1, dSdUK)
     backward_dSdUβ_add!(a.Kstout, dSdUin, dSdUK)
-
+    #println("UK")
+    #display(dSdUK)
     backward_dSdρ_add!(a.Kstout, dSdρK, dSdUK)
+    #display(dSdρK)
+
     #dSdUαK = a.temps[Dim+1]
     #dSdUβK = a.temps[Dim+2]
     #backward_dSdUαUβρ_add!(a.Qstout, dSdUαK, dSdUβK, dSdρK, dSdUK)

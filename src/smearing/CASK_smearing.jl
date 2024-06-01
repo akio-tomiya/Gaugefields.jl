@@ -128,12 +128,10 @@ function get_parameter_derivatives(layer::CASK_layer)
     s = Float64[]
     #println(get_parameters(layer.stout))
     append!(s, get_parameter_derivatives(layer.stout))
-
     append!(s, get_parameter_derivatives(layer.attention_matrix.Qstout))
-
     append!(s, get_parameter_derivatives(layer.attention_matrix.Kstout))
     append!(s, get_parameter_derivatives(layer.Vstout))
-    #println(s)
+
     return s
 end
 
@@ -192,7 +190,6 @@ function layer_pullback!(
     #    δ_current)
     backward_dSdU_dSdρQKV_add!(layer, δ_prev, dSdρ, dSdρQ, dSdρK, dSdρV,
         δ_current)
-
     #set_wing_U!(δ_prev)
     return
 end
@@ -295,6 +292,7 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
 
     #println("autograd: dSdUin 1")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
+    #display(dSdρ)
 
     #dSda = cask.attention_matrix.dSdatilde
     dSdUV = cask.stout.temps
@@ -305,6 +303,10 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #println("autograd: dSdUA")
     #display(dSdUA[μ][:, :, ix, iy, iz, it])
     backward_dSdUαUβρ_add!(cask.Astout, dSdUin, dSdUV, dSda, dSdUA)
+    #println("autograd: dSdUin 1")
+    #display(dSdUin[μ][:, :, ix, iy, iz, it])
+    #display(dSda)
+    #error("dsd")
     #dSda .= dSda2
 
     #error("dSda")
@@ -349,6 +351,10 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #forward!(cask, Uout, cask.Vstout.Uinα, ρ, ρ_Q, ρ_K, ρ_V)
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda2)
     backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin, dSdρQ, dSdρK, dSda)
+    #println("autograd: dSdUin 2")
+    #display(dSdUin[μ][:, :, ix, iy, iz, it])
+
+
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda)
     #println(sum(dSda2 - dSda))
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda2)

@@ -1,6 +1,6 @@
 
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!
-import ..AbstractGaugefields_module: calc_coefficients_Q,calc_Bmatrix!
+import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
 
 mutable struct STOUTsmearing_layer{T,Dim,Tρ} <: CovLayer{Dim}
     ρs::Tρ#Vector{Tρ}
@@ -184,7 +184,6 @@ function forward!(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, U
     Ω = temps[end]
     for μ = 1:Dim
         calc_C!(s.Cs[μ], μ, ρs, s.dataset, Uinβ, s.temps)
-        #display(s.Cs[μ][:, :, 1, 1, 1, 1])
         mul!(Ω, s.Cs[μ], Uinβ[μ]') #Ω = C*Udag
         Traceless_antihermitian!(s.Qs[μ], Ω)
         exptU!(s.eQs[μ], 1, s.Qs[μ], temps[1:2])
@@ -268,6 +267,7 @@ function backward_dSdρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdρ, dSdUout) 
     temp1 = temps[1]
     dSdQ = temps[2]
     dSdΩ = temps[3]
+
     #dSdUdag = temps[4]
     #dSdCs = temps[5:5+Dim-1]
     if s.isαβsame
@@ -276,15 +276,19 @@ function backward_dSdρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdρ, dSdUout) 
         Uin = s.Uinβ
     end
 
+    #tempout = temps[3]
+    #forward!(s, temps, s.ρs, s.Uinα, s.Uinβ)
 
     for μ = 1:Dim
 
         if s.hasdSdCs == false
             Qμ = s.Qs[μ]
             calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
+
             calc_dSdΩ!(dSdΩ, dSdQ)
             calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
         end
+        #display(s.dSdCs[μ][:, :, 1, 1, 1, 1])
         if s.islocalρ == false
             Cμi = temps[4] #dSdUdag
             #dS/dρ
@@ -293,10 +297,9 @@ function backward_dSdρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdρ, dSdUout) 
                 loops = s.dataset[i].Cμ[μ]
                 #println(loops)
                 evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
-                #display(Cμi[:, :, 1, 1, 1, 1])
-                #error("d")
+
                 mul!(temp1, s.dSdCs[μ], Cμi)
-                #display(s.dSdCs[μ][:, :, 1, 1, 1, 1])
+
                 dSdρ[i] += real(tr(temp1)) * 2
             end
         else
@@ -434,6 +437,8 @@ end
 export calc_dSdQ!
 
 function LdQdΩ!(LdQdΩ, L) # L star dQ/dΩ
+    #println("LdQ")
+    #display(L[:, :, 4, 4, 4, 4])
     Traceless_antihermitian!(LdQdΩ, L)
 end
 
@@ -699,17 +704,18 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{2}, C::Gaugefields_4D_nowing{2}
                 for ix = 1:NX
 
                     trQ2 = 0.0im
-                    for i = 1:3
-                        for j = 1:3
+                    for i = 1:2
+                        for j = 1:2
                             trQ2 += Q[i, j, ix, iy, iz, it] * Q[j, i, ix, iy, iz, it]
                         end
                     end
+
 
                     if abs(trQ2) > eps_Q
                         q = sqrt((-1 / 2) * trQ2)
                         for jc = 1:NC
                             for ic = 1:NC
-                                Qn[ic, jc] = Q[ic, jc, ix, iy, iz, it] 
+                                Qn[ic, jc] = Q[ic, jc, ix, iy, iz, it]
                                 Cn[ic, jc] = C[ic, jc, ix, iy, iz, it]
                             end
                         end
@@ -724,7 +730,7 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_nowing{2}, C::Gaugefields_4D_nowing{2}
                             for j = 1:2
                                 CdeQdQn[j, i] = (sin(q) / q) * Cn[j, i] + trsum * Qn[j, i]
                             end
-                        end 
+                        end
 
                         for jc = 1:NC
                             for ic = 1:NC
