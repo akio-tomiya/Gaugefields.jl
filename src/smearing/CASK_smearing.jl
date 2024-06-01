@@ -128,8 +128,9 @@ function get_parameter_derivatives(layer::CASK_layer)
     s = Float64[]
     #println(get_parameters(layer.stout))
     append!(s, get_parameter_derivatives(layer.stout))
-    error("dd")
+
     append!(s, get_parameter_derivatives(layer.attention_matrix.Qstout))
+
     append!(s, get_parameter_derivatives(layer.attention_matrix.Kstout))
     append!(s, get_parameter_derivatives(layer.Vstout))
     #println(s)
