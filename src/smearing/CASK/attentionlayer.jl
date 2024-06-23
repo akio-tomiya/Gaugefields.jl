@@ -77,7 +77,8 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{<:AbstractGa
     #map!(x -> ifelse(x > 0, x, zero(x)), a.data, a.data)
     #z = ReLU(x)*π/2NC, -NC <=  z <= NC
     dNC = 0.1
-    map!(x -> ifelse(x > 0, tan(x * (π / 2(NC + dNC))), zero(x)), a.data, a.data)
+    map!(x -> tan(x * (π / 2(NC + dNC))), a.data, a.data)
+    #map!(x -> ifelse(x > 0, tan(x * (π / 2(NC + dNC))), zero(x)), a.data, a.data)
     #(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number}
 end
 
