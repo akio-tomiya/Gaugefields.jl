@@ -99,7 +99,7 @@ end
 export forward!
 
 
-function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dSdUβ::Vector{AbstractGaugefields{NC,Dim}}, dSdρ::Array{N,7}, dSdUout) where {NC,T,Dim,Tρ<:WeightMatrix_layer,N<:Number}
+function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dSdUβ::Vector{<:AbstractGaugefields{NC,Dim}}, dSdρ::Array{N,7}, dSdUout) where {NC,T,Dim,Tρ<:WeightMatrix_layer,N<:Number}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
     temps = s.temps
     temp1 = temps[1]
