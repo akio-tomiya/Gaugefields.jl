@@ -41,7 +41,7 @@ function WeightMatrix_layer(loopset_Q::Vector{Vector{Wilsonline{Dim}}}, loopset_
 end
 #function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
 
-function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{T}, UK::Vector{T}) where {T,Dim,Dim3,Tρ}
+function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{AbstractGaugefields{NC,Dim}}, UK::Vector{T}) where {T,Dim,Dim3,Tρ,NC}
     #for i = 1:length(a.Qstout.ρs)
     #    a.Qstout.ρs[i] = deepcopy(ρs_Q[i])
     #end
@@ -74,7 +74,9 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{T}, UK::Vect
 
         end
     end
-    map!(x -> ifelse(x > 0, x, zero(x)), a.data, a.data)
+    #map!(x -> ifelse(x > 0, x, zero(x)), a.data, a.data)
+    #z = ReLU(x)*π/2NC, -NC <=  z <= NC
+    map!(x -> ifelse(x > 0, tan(x * (π / 2NC)), zero(x)), a.data, a.data)
     #(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number}
 end
 

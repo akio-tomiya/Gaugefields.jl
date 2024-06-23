@@ -99,13 +99,16 @@ end
 export forward!
 
 
-function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dSdUβ, dSdρ::Array{N,7}, dSdUout) where {T,Dim,Tρ<:WeightMatrix_layer,N<:Number}
+function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dSdUβ::Vector{AbstractGaugefields{NC,Dim}}, dSdρ::Array{N,7}, dSdUout) where {NC,T,Dim,Tρ<:WeightMatrix_layer,N<:Number}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
     temps = s.temps
     temp1 = temps[1]
     dSdQ = temps[2]
     dSdΩ = temps[3]
     dSdUdag = temps[4]
+
+    #filterfunc(x) = ifelse(x > 0, 1, zero(x))
+    filterfunc(x) = ifelse(x > 0, (1 + x^2) * π / (2NC), zero(x))
     #tempnew = similar(dSdUout)
     #dSdCs = temps[5:5+Dim-1]
     #error(s.isαβsame)
@@ -161,7 +164,7 @@ function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dS
                 #site_realtrace_add!(view(dSdρ, μ, ν, si, :, :, :, :), temp1, 2)
                 #site_realtrace_add!(view(dSdρtemp, μ, ν, si, :, :, :, :), temp1, 2)
                 #map!(x -> ifelse(x > 0, x, zero(x)), dSdρtemp, s.ρs.data)
-                site_realtrace_filter_add!(view(dSdρ, μ, ν, si, :, :, :, :), temp1, view(s.ρs.data, μ, ν, si, :, :, :, :), x -> ifelse(x > 0, 1, zero(x)), 2)
+                site_realtrace_filter_add!(view(dSdρ, μ, ν, si, :, :, :, :), temp1, view(s.ρs.data, μ, ν, si, :, :, :, :), filterfunc, 2)
             end
         end
 
