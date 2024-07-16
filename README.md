@@ -1590,6 +1590,7 @@ or
 ```math
 U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n) e^{-2\pi B_{12}(n) / N} ,
 ```
+which is Z(Nc) 1-form gauge invariant [[arXiv:2303.10977 [hep-lat]](https://arxiv.org/abs/2303.10977)].
 
 You can use Wilsonloop.jl as follows
 
