@@ -1543,7 +1543,7 @@ As a mathematical expression, for matrix-valued fields ``A(n), B(n)``,
 we define "matrix-field matrix-field product" as,
 
 ```math
-A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}
+[A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}
 ```
 
 for all site index n.
@@ -1586,6 +1586,10 @@ For example, if you want to calculate the following quantity:
 ```math
 U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n)
 ```
+or
+```math
+U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n) e^{-2\pi B_{12}(n) / N} ,
+```
 
 You can use Wilsonloop.jl as follows
 
@@ -1593,10 +1597,6 @@ You can use Wilsonloop.jl as follows
 using Wilsonloop
 loop = [(1,1),(2,1),(1,-1),(2,-1)]
 w = Wilsonline(loop)
-```
-or
-```math
-U_{1}(n)U_{2}(n+\hat{1}) U^{\dagger}_{1}(n+\hat{2}) U^{\dagger}_2(n) e^{-2\pi B_{12}(n) / N} ,
 ```
 The output is ```L"$U_{1}(n)U_{2}(n+e_{1})U^{\dagger}_{1}(n+e_{2})U^{\dagger}_{2}(n)$"```. 
 Then, you can evaluate this loop with the use of the Gaugefields.jl like: 
@@ -2035,7 +2035,7 @@ We can calculate the topological charge as
 We can easily calculate the matrix derivative of the actions. The matrix derivative is defined as 
 
 ```math
-\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}
+[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}
 ```
 
 <!--<img src="https://latex.codecogs.com/svg.image?[\frac{\partial&space;S}{\partial&space;U_{\mu}(n)}]_{ij}&space;=&space;\frac{\partial&space;S}{\partial&space;U_{\mu,ji}(n)}" title="[\frac{\partial S}{\partial U_{\mu}(n)}]_{ij} = \frac{\partial S}{\partial U_{\mu,ji}(n)}" />-->
