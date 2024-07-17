@@ -26,6 +26,7 @@ struct WeightMatrix_layer{T,Dim,Dim3,Tρ}
     UK::Vector{T}
     dSdatilde::Array{Float64,Dim3}
     temps::Vector{T}
+    Uin::Vector{T}
 end
 export WeightMatrix_layer
 

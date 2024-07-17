@@ -23,6 +23,7 @@ function WeightMatrix_layer(loopset_Q::Vector{Vector{Wilsonline{Dim}}}, loopset_
 
     UQ = similar(U)
     UK = similar(U)
+    Uin = similar(U)
 
 
 
@@ -37,7 +38,7 @@ function WeightMatrix_layer(loopset_Q::Vector{Vector{Wilsonline{Dim}}}, loopset_
     end
 
     dSdatilde = zero(data)
-    return WeightMatrix_layer{T,Dim,Dim3,Tρ}(data, maxS, Qstout, Kstout, UQ, UK, dSdatilde, temps)
+    return WeightMatrix_layer{T,Dim,Dim3,Tρ}(data, maxS, Qstout, Kstout, UQ, UK, dSdatilde, temps, Uin)
 end
 
 #function STOUTsmearing_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
@@ -149,13 +150,14 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, Uin, ρs_Q::Vector{TN},
     forward!(a.Qstout, a.UQ, ρs_Q, Uin, Uin)
     #add_U!(a.UQ, -1, Uin)
     forward!(a.Kstout, a.UK, ρs_K, Uin, Uin)
+    substitute_U!(a.Uin, Uin)
     #add_U!(a.UK, -1, Uin)
 
     #display(a.UQ[1][:, :, 1, 1, 1, 1])
     # display(a.UK[1][:, :, 1, 1, 1, 1])
 
     #forward!(a, a.UQ, a.UK)
-    forward!(a, a.UQ, a.UK, Uin)
+    forward!(a, a.UQ, a.UK, a.Uin)
     return
 
 end
@@ -220,8 +222,8 @@ function backward_dSdU_add_fromdSda!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, dSdU
     #add_U!(dSdUout, dSdUαK)
     #add_U!(dSdUout, dSdUβK)
 
-    backward_dSdUQ_add!(a, dSdUin, dSda, Uin, -1)
-    backward_dSdUK_add!(a, dSdUin, dSda, Uin, Uin, -1)
+    backward_dSdUQ_add!(a, dSdUin, dSda, a.Uin, -1)
+    backward_dSdUK_add!(a, dSdUin, dSda, a.Uin, a.Uin, -1)
 
 
 end
