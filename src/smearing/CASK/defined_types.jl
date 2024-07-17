@@ -45,6 +45,6 @@ struct CASK_layer{T,Dim,Dim3,Tρ,NW} <: CovLayer{Dim}
     Astout::STOUTsmearing_layer{T,Dim,WeightMatrix_layer{T,Dim,Dim3,Tρ}}
     UV::Vector{T}
     UA::Vector{T}
-    attention_matrix_0::NW
+    #attention_matrix_0::NW
 end
 export CASK_layer
