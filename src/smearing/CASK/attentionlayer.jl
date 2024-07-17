@@ -85,9 +85,7 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{<:AbstractGa
     #(s::STOUTsmearing_layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number}
 end
 
-```
-re(tr(UQ VK)) - re(tr(U V))
-```
+#re(tr(UQ VK)) - re(tr(U V))
 function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, UQ::Vector{<:AbstractGaugefields{NC,Dim}}, UK::Vector{T}, UIN::Vector{T}) where {T,Dim,Dim3,Tρ,NC}
     #for i = 1:length(a.Qstout.ρs)
     #    a.Qstout.ρs[i] = deepcopy(ρs_Q[i])
