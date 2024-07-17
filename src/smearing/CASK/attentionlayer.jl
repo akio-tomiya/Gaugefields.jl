@@ -160,7 +160,7 @@ function forward!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, Uin, ρs_Q::Vector{TN},
 
 end
 
-```
+"""
 -----------------------------------
 a = re(tr(UQ VK)) - re(tr(Uin_1 V(Uin_2)))
 Input: dS/da
@@ -181,7 +181,7 @@ dS/dUK = dS/da da/dUK
 
 Output: dS/dρQ = dS/dUQ dUQ/dρQ
 Output: dS/dρK = dS/dUK dUK/dρK
-```
+"""
 function backward_dSdU_add_fromdSda!(a::WeightMatrix_layer{T,Dim,Dim3,Tρ}, dSdUin::Vector{T}, dSdρQ, dSdρK, dSda) where {T,Dim,Dim3,Tρ}
     dSdUQ = a.temps[1:Dim]
     dSdUQ = similar(a.temps[1:Dim]) #debug
