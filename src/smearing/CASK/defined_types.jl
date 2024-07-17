@@ -20,8 +20,8 @@ export STOUTsmearing_layer
 struct WeightMatrix_layer{T,Dim,Dim3,Tρ}
     data::Array{Float64,Dim3} # mu,nu,is,ix,iy,iz,it
     maxS::Int64
-    Qstout::STOUTsmearing_layer{T,Dim,Vector{Tρ}}
-    Kstout::STOUTsmearing_layer{T,Dim,Vector{Tρ}}
+    Qstout::Union{STOUTsmearing_layer{T,Dim,Vector{Tρ}},Nothing}
+    Kstout::Union{STOUTsmearing_layer{T,Dim,Vector{Tρ}},Nothing}
     UQ::Vector{T}
     UK::Vector{T}
     dSdatilde::Array{Float64,Dim3}
@@ -45,5 +45,6 @@ struct CASK_layer{T,Dim,Dim3,Tρ,NW} <: CovLayer{Dim}
     Astout::STOUTsmearing_layer{T,Dim,WeightMatrix_layer{T,Dim,Dim3,Tρ}}
     UV::Vector{T}
     UA::Vector{T}
+    attention_matrix_0::NW
 end
 export CASK_layer

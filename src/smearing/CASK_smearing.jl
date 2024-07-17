@@ -69,6 +69,8 @@ function CASK_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, loopset_Q::Vector{
 ) where {NC,Dim}
 
     attention_matrix = WeightMatrix_layer(loopset_Q, loopset_K, U, maxS, ρs_Q, ρs_K)
+    #attention_matrix_0 = WeightMatrix_layer(U, maxS)
+
     Vstout = STOUTsmearing_layer(loopset_V, U, ρs_V)
     stout = STOUTsmearing_layer(loopset, U, ρs)
     UV = similar(U)
@@ -226,6 +228,9 @@ function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN
     attention_matrix = cask.attention_matrix
     forward!(attention_matrix, Uin, ρs_Q, ρs_K)
 
+    #attention_matrix_0 = cask.attention_matrix_0
+    #forward!(attention_matrix_0, Uin, Uin)
+
     for i = 1:length(cask.Vstout.ρs)
         cask.Vstout.ρs[i] = deepcopy(ρs_V[i])
     end
@@ -234,7 +239,7 @@ function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN
     end
 
     forward!(cask.Vstout, cask.UV, ρs_V, Uin, Uin)
-    add_U!(cask.UV, -1, Uin)
+    #add_U!(cask.UV, -1, Uin)
     forward!(cask.Astout, cask.UA, attention_matrix, Uin, cask.UV)
     forward!(cask.stout, Uout, ρs, Uin, cask.UA)
     #forward!(cask.stout, Uout, ρs, Uin, Uin)
@@ -288,7 +293,7 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #dSdUA = cask.attention_matrix.Kstout.temps
     clear_U!(dSdUA)
     #dSdUβ = cask.attention_matrix.Kstout.temps
-    backward_dSdUαUβρ_add!(cask.stout, dSdUin, dSdUA, dSdρ, dSdUout)
+    backward_dSdUαUβρ_add!(cask.stout, dSdUin, dSdUA, dSdρ, dSdUout) #dS/dUout dUout/dUin etc.
 
     #println("autograd: dSdUin 1")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
@@ -325,7 +330,7 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #println("autograd: dSdUV")
     #display(dSdUV[μ][:, :, ix, iy, iz, it])
     backward_dSdUαUβρ_add!(cask.Vstout, dSdUin, dSdUVbeta, dSdρV, dSdUV)
-    add_U!(dSdUin, -1, dSdUV)
+    #add_U!(dSdUin, -1, dSdUV)
     #println("autograd: dSdUin 3")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
     add_U!(dSdUin, 1, dSdUVbeta)

@@ -108,8 +108,9 @@ function backward_dSdUαUβρ_add!(s::STOUTsmearing_layer{T,Dim,Tρ}, dSdUα, dS
     dSdUdag = temps[4]
 
     #filterfunc(x) = ifelse(x > 0, 1, zero(x))
-    dNC = 0.1
-    filterfunc(x) = (1 + x^2) * π / (2(NC + dNC))
+    dNC = 0.01
+    #filterfunc(x) = (1 + x^2) * π / (2(NC + dNC))
+    filterfunc(x) = (1 + x^2) * π / (4(NC + dNC))
     #filterfunc(x) = ifelse(x > 0, (1 + x^2) * π / (2(NC + dNC)), zero(x))
 
 

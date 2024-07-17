@@ -114,6 +114,31 @@ function site_realtrace_add!(value, U::AbstractGaugefields{NC,Dim}, a::N) where 
     end
     #return value
 end
+
+function site_realtrace_add!(value, U::AbstractGaugefields{NC,Dim}) where {Dim,NC}
+    @assert Dim == 4 "4 dimension is only supported. Now Dim = $Dim"
+    _, _, NN... = size(U)
+    #Nsite = prod(NN)
+    #value = IdentityGauges_4D(NC, NN...)
+    #value = zeros(ComplexF64, NN...)
+    for it = 1:NN[4]
+        for iz = 1:NN[3]
+            for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    tr = 0.0im
+                    for ic = 1:NC
+                        tr += U[ic, ic, ix, iy, iz, it]
+                        #value[ix, iy, iz, it] += U[ic, ic, ix, iy, iz, it]
+                    end
+                    #for ic = 1:NC
+                    value[ix, iy, iz, it] += real(tr)
+                    #end
+                end
+            end
+        end
+    end
+    #return value
+end
 export site_realtrace_add!
 
 
