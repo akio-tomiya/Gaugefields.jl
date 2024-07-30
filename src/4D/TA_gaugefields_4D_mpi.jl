@@ -356,7 +356,6 @@ function Traceless_antihermitian!(
                     y31 = 0.5 * x31
                     y32 = 0.5 * x32
 
-
                     c[1, ix, iy, iz, it] = (imag(y12) + imag(y21))
                     c[2, ix, iy, iz, it] = (real(y12) - real(y21))
                     c[3, ix, iy, iz, it] = (imag(y11) - imag(y22))
@@ -371,6 +370,52 @@ function Traceless_antihermitian!(
         end
     end
     barrier(c)
+
+
+end
+
+function Traceless_antihermitian!(
+    c::TA_Gaugefields_4D_mpi{2,NumofBasis},
+    vin::Union{Gaugefields_4D_wing_mpi{2},Gaugefields_4D_nowing_mpi{2}},
+) where {NumofBasis}
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+    fac12 = 1 / 2
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+    for it = 1:vin.PN[4]
+        for iz = 1:vin.PN[3]
+            for iy = 1:vin.PN[2]
+                @simd for ix = 1:vin.PN[1]
+                    v11 = vin[1, 1, ix, iy, iz, it]
+                    v22 = vin[2, 2, ix, iy, iz, it]
+
+                    tri = fac12 * (imag(v11) + imag(v22))
+
+
+
+                    v12 = vin[1, 2, ix, iy, iz, it]
+                    #v13 = vin[1,3,ix,iy,iz,it]
+                    v21 = vin[2, 1, ix, iy, iz, it]
+
+                    x12 = v12 - conj(v21)
+
+                    x21 = -conj(x12)
+
+                    y11 = (imag(v11) - tri) * im
+                    y12 = 0.5 * x12
+                    y21 = 0.5 * x21
+                    y22 = (imag(v22) - tri) * im
+
+                    c[1, ix, iy, iz, it] = (imag(y12) + imag(y21))
+                    c[2, ix, iy, iz, it] = (real(y12) - real(y21))
+                    c[3, ix, iy, iz, it] = (imag(y11) - imag(y22))
+                end
+            end
+        end
+    end
 
 
 end
@@ -398,25 +443,26 @@ function Traceless_antihermitian!(
                 @simd for ix = 1:vin.PN[1]
                     tri = 0.0
                     @simd for k = 1:NC
-                        tri += imag(getvalue(vin, k, k, ix, iy, iz, it))
+                        v = getvalue(vin, k, k, ix, iy, iz, it)
+                        tri += imag(v)
                     end
                     tri *= fac1N
                     @simd for k = 1:NC
                         #vout[k,k,ix,iy,iz,it] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
-                        matrix[k, k] =
-                            (imag(getvalue(vin, k, k, ix, iy, iz, it)) - tri) * im
+                        v = getvalue(vin, k, k, ix, iy, iz, it)
+                        matrix[k, k] = (imag(v) - tri) * im
                     end
 
-                    @simd for k2 = k1+1:NC
-                        vv =
-                            0.5 * (
-                                getvalue(vin, k1, k2, ix, iy, iz, it) -
-                                conj(getvalue(vin, k2, k1, ix, iy, iz, it))
-                            )
-                        #vout[k1,k2,ix,iy,iz,it] = vv
-                        #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
-                        matrix[k1, k2] = vv
-                        matrix[k2, k1] = -conj(vv)
+                    for k1 = 1:NC
+                        @simd for k2 = k1+1:NC
+                            v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
+                            v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
+                            vv = 0.5 * ( v12 - conj(v21) )
+                            #vout[k1,k2,ix,iy,iz,it] = vv
+                            #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
+                            matrix[k1, k2] = vv
+                            matrix[k2, k1] = -conj(vv)
+                        end
                     end
 
                     matrix2lie!(a, g, matrix)
@@ -433,6 +479,7 @@ function Traceless_antihermitian!(
 
 
 end
+
 
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_4D_mpi{NC,NumofBasis},
@@ -458,22 +505,21 @@ function Traceless_antihermitian_add!(
                 @simd for ix = 1:vin.PN[1]
                     tri = 0.0
                     @simd for k = 1:NC
-                        tri += imag(getvalue(vin, k, k, ix, iy, iz, it))
+                        v = getvalue(vin, k, k, ix, iy, iz, it)
+                        tri += imag(v)
                     end
                     tri *= fac1N
                     @simd for k = 1:NC
                         #vout[k,k,ix,iy,iz,it] = (imag(getvalue(vin,k,k,ix,iy,iz,it))-tri)*im
-                        matrix[k, k] =
-                            (imag(getvalue(vin, k, k, ix, iy, iz, it)) - tri) * im
+                        v = getvalue(vin, k, k, ix, iy, iz, it)
+                        matrix[k, k] = (imag(v) - tri) * im
                     end
 
                     for k1 = 1:NC
                         @simd for k2 = k1+1:NC
-                            vv =
-                                0.5 * (
-                                    getvalue(vin, k1, k2, ix, iy, iz, it) -
-                                    conj(getvalue(vin, k2, k1, ix, iy, iz, it))
-                                )
+                            v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
+                            v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
+                            vv = 0.5 * ( v12 - conj(v21) )
                             #vout[k1,k2,ix,iy,iz,it] = vv
                             #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
                             matrix[k1, k2] = vv
