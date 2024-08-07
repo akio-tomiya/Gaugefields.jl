@@ -972,6 +972,7 @@ function exptU!(
                     u1 = t * c1_0 / 2
                     u2 = t * c2_0 / 2
                     u3 = t * c3_0 / 2
+
                     R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
                     sR = sin(R) / R
                     #sR = ifelse(R == 0,1,sR)
@@ -1386,6 +1387,8 @@ function Traceless_antihermitian!(
     NZ = vin.NZ
     NT = vin.NT
 
+    #println("vij")
+    #display(vin[:, :, 4, 4, 4, 4])
 
     for it = 1:NT
         for iz = 1:NZ
@@ -1682,8 +1685,10 @@ function LinearAlgebra.tr(a::Gaugefields_4D_nowing{NC}) where {NC}
             for iy = 1:NY
                 for ix = 1:NX
                     @simd for k = 1:NC
+                        #println(a[k, k, ix, iy, iz, it])
                         s += a[k, k, ix, iy, iz, it]
-                        #println(a[k,k,ix,iy,iz,it])
+                        #println((it, iz, iy, ix), " ", s)
+                        #println(a[k, k, ix, iy, iz, it])
                     end
                 end
             end

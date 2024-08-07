@@ -69,6 +69,8 @@ function CASK_layer(loopset::Vector{Vector{Wilsonline{Dim}}}, loopset_Q::Vector{
 ) where {NC,Dim}
 
     attention_matrix = WeightMatrix_layer(loopset_Q, loopset_K, U, maxS, ρs_Q, ρs_K)
+    #attention_matrix_0 = WeightMatrix_layer(U, maxS)
+
     Vstout = STOUTsmearing_layer(loopset_V, U, ρs_V)
     stout = STOUTsmearing_layer(loopset, U, ρs)
     UV = similar(U)
@@ -131,7 +133,7 @@ function get_parameter_derivatives(layer::CASK_layer)
     append!(s, get_parameter_derivatives(layer.attention_matrix.Qstout))
     append!(s, get_parameter_derivatives(layer.attention_matrix.Kstout))
     append!(s, get_parameter_derivatives(layer.Vstout))
-    #println(s)
+
     return s
 end
 
@@ -190,7 +192,6 @@ function layer_pullback!(
     #    δ_current)
     backward_dSdU_dSdρQKV_add!(layer, δ_prev, dSdρ, dSdρQ, dSdρK, dSdρV,
         δ_current)
-
     #set_wing_U!(δ_prev)
     return
 end
@@ -227,6 +228,9 @@ function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN
     attention_matrix = cask.attention_matrix
     forward!(attention_matrix, Uin, ρs_Q, ρs_K)
 
+    #attention_matrix_0 = cask.attention_matrix_0
+    #forward!(attention_matrix_0, Uin, Uin)
+
     for i = 1:length(cask.Vstout.ρs)
         cask.Vstout.ρs[i] = deepcopy(ρs_V[i])
     end
@@ -235,7 +239,7 @@ function forward!(cask::CASK_layer, Uout, Uin, ρs::Vector{TN}, ρs_Q::Vector{TN
     end
 
     forward!(cask.Vstout, cask.UV, ρs_V, Uin, Uin)
-    add_U!(cask.UV, -1, Uin)
+    #add_U!(cask.UV, -1, Uin)
     forward!(cask.Astout, cask.UA, attention_matrix, Uin, cask.UV)
     forward!(cask.stout, Uout, ρs, Uin, cask.UA)
     #forward!(cask.stout, Uout, ρs, Uin, Uin)
@@ -289,10 +293,11 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #dSdUA = cask.attention_matrix.Kstout.temps
     clear_U!(dSdUA)
     #dSdUβ = cask.attention_matrix.Kstout.temps
-    backward_dSdUαUβρ_add!(cask.stout, dSdUin, dSdUA, dSdρ, dSdUout)
+    backward_dSdUαUβρ_add!(cask.stout, dSdUin, dSdUA, dSdρ, dSdUout) #dS/dUout dUout/dUin etc.
 
     #println("autograd: dSdUin 1")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
+    #display(dSdρ)
 
     #dSda = cask.attention_matrix.dSdatilde
     dSdUV = cask.stout.temps
@@ -303,6 +308,10 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #println("autograd: dSdUA")
     #display(dSdUA[μ][:, :, ix, iy, iz, it])
     backward_dSdUαUβρ_add!(cask.Astout, dSdUin, dSdUV, dSda, dSdUA)
+    #println("autograd: dSdUin 1")
+    #display(dSdUin[μ][:, :, ix, iy, iz, it])
+    #display(dSda)
+    #error("dsd")
     #dSda .= dSda2
 
     #error("dSda")
@@ -321,7 +330,7 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #println("autograd: dSdUV")
     #display(dSdUV[μ][:, :, ix, iy, iz, it])
     backward_dSdUαUβρ_add!(cask.Vstout, dSdUin, dSdUVbeta, dSdρV, dSdUV)
-    add_U!(dSdUin, -1, dSdUV)
+    #add_U!(dSdUin, -1, dSdUV)
     #println("autograd: dSdUin 3")
     #display(dSdUin[μ][:, :, ix, iy, iz, it])
     add_U!(dSdUin, 1, dSdUVbeta)
@@ -347,6 +356,10 @@ function backward_dSdU_dSdρQKV_add!(cask::CASK_layer, dSdUin, dSdρ, dSdρQ, dS
     #forward!(cask, Uout, cask.Vstout.Uinα, ρ, ρ_Q, ρ_K, ρ_V)
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda2)
     backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin, dSdρQ, dSdρK, dSda)
+    #println("autograd: dSdUin 2")
+    #display(dSdUin[μ][:, :, ix, iy, iz, it])
+
+
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda)
     #println(sum(dSda2 - dSda))
     #backward_dSdU_add_fromdSda!(cask.attention_matrix, dSdUin2, dSdρQ, dSdρK, dSda2)
