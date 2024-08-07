@@ -20,7 +20,13 @@ function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
         import .AbstractGaugefields_module:
             identityGaugefields_4D_wing_mpi,
+            identityGaugefields_4D_nowing_mpi,
+            minusidentityGaugefields_4D_wing_mpi,
+            minusidentityGaugefields_4D_nowing_mpi,
+            thooftFlux_4D_B_at_bndry_wing_mpi,
+            thooftFlux_4D_B_at_bndry_nowing_mpi,
             Gaugefields_4D_wing_mpi,
+            Gaugefields_4D_nowing_mpi,
             calc_rank_and_indices,
             barrier,
             comm,
@@ -163,6 +169,7 @@ import .AbstractGaugefields_module:
     construct_gauges,
     Gaugefields_4D_wing,
     identityGaugefields_4D_wing,
+    thooftFlux_4D_B_at_bndry,
     add_force!,
     exp_aF_U!,
     clear_U!,
@@ -184,6 +191,14 @@ import .AbstractGaugefields_module:
     initialize_TA_Gaugefields,
     gauss_distribution!,
     Initialize_Gaugefields,
+    Initialize_Bfields,
+    B_RandomGauges,
+    B_TfluxGauges,
+    evaluate_Bplaquettes!,
+    multiply_Bplaquettes!,
+    sweepaway_4D_Bplaquettes!,
+    isLoopwithB,
+    isStaplewithB,
     construct_Adjoint_rep_Gaugefields,
     get_myrank,
     getvalue,
@@ -202,6 +217,7 @@ import .GaugeAction_module:
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
+export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
 export ILDG, load_gaugefield!, save_binarydata
 export SU2update_KP!, SUNupdate_matrix!, SU3update_matrix!
 export map_U!
@@ -209,6 +225,7 @@ export evaluate_gaugelinks_evenodd!, normalize!, normalize3!, normalizeN!
 export loops_staple
 export save_textdata, load_BridgeText!
 export shift_U, evaluate_gaugelinks!, Gradientflow, flow!
+export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, isLoopwithB, isStaplewithB
 export heatbath!, Heatbath
 export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname
 
@@ -224,8 +241,8 @@ export exptU!,
     Traceless_antihermitian!
 export Initialize_Gaugefields, back_prop
 export Initialize_4DGaugefields
-export set_parameters!, get_parameter_derivatives, apply_smearing_U, get_parameters, get_numparameters,
-    get_parameter_derivatives
+export Initialize_Bfields
+export set_parameters, get_parameter_derivatives, apply_smearing_U
 export construct_Adjoint_rep_Gaugefields
 export get_myrank, getvalue, get_nprocs, Gradientflow_general
 export Heatbath_update

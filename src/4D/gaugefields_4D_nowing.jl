@@ -100,6 +100,19 @@ function substitute_U!(
         substitute_U!(a[μ], b[μ])
     end
 end
+function substitute_U!(
+    a::Array{T1,2},
+    b::Array{T2,2},
+) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_nowing}
+    for μ = 1:4
+        for ν = 1:4
+            if μ == ν
+                continue
+            end
+            substitute_U!(a[μ, ν], b[μ, ν])
+        end
+    end
+end
 
 function substitute_U!(
     a::Array{T1,1},
@@ -108,6 +121,20 @@ function substitute_U!(
 ) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_nowing}
     for μ = 1:4
         substitute_U!(a[μ], b[μ], iseven)
+    end
+end
+function substitute_U!(
+    a::Array{T1,2},
+    b::Array{T2,2},
+    iseven,
+) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_nowing}
+    for μ = 1:4
+        for ν = 1:4
+            if μ == ν
+                continue
+            end
+            substitute_U!(a[μ, ν], b[μ, ν], iseven)
+        end
     end
 end
 
@@ -128,6 +155,18 @@ function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_nowing}
     Uout = Array{T,1}(undef, 4)
     for μ = 1:4
         Uout[μ] = similar(U[μ])
+    end
+    return Uout
+end
+function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing}
+    Uout = Array{T,2}(undef, 4, 4)
+    for μ = 1:4
+        for ν = 1:4
+            if μ == ν
+                continue
+            end
+            Uout[μ, ν] = similar(U[μ, ν])
+        end
     end
     return Uout
 end
@@ -1477,7 +1516,7 @@ end
 function Antihermitian!(
     vout::Gaugefields_4D_nowing{3},
     vin::Gaugefields_4D_nowing{3}; factor=1
-)  #vout = factor*(vin - vin^+)
+)# where {NC} #vout = factor*(vin - vin^+)
 
     #NC = vout.NC
     fac1N = 1 / NC
@@ -2753,5 +2792,140 @@ function lambda_k_mul!(b::Gaugefields_4D_nowing{NC}, a::Gaugefields_4D_nowing{NC
 
     return
 end
+
+
+
+
+
+function minusidentityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level=2)
+    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, iy, iz, it] = -1
+                    end
+                end
+            end
+        end
+    end
+    set_wing_U!(U)
+    return U
+end
+
+
+function thooftFlux_4D_B_at_bndry(
+    NC,
+    FLUX,
+    FLUXNUM,
+    NN...;
+    overallminus=false,
+    verbose_level=2,
+)
+    dim = length(NN)
+    if dim == 4
+        if overallminus
+            U = minusidentityGaugefields_4D_nowing(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3],
+                NN[4],
+                verbose_level=verbose_level,
+            )
+        else
+            U = identityGaugefields_4D_nowing(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3],
+                NN[4],
+                verbose_level=verbose_level,
+            )
+        end
+
+        v = exp(-im * (2pi / NC) * FLUX)
+        if FLUXNUM == 1
+            for it = 1:NN[4]
+                for iz = 1:NN[3]
+                    #for iy = 1:NN[2]
+                    #for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], NN[2], iz, it] *= v
+                    end
+                    #end
+                    #end
+                end
+            end
+        elseif FLUXNUM == 2
+            for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                for iy = 1:NN[2]
+                    #for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], iy, NN[3], it] *= v
+                    end
+                    #end
+                end
+                #end
+            end
+        elseif FLUXNUM == 3
+            #for it = 1:NN[4]
+            for iz = 1:NN[3]
+                for iy = 1:NN[2]
+                    #for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], iy, iz, NN[4]] *= v
+                    end
+                    #end
+                end
+            end
+            #end
+        elseif FLUXNUM == 4
+            for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                #for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, NN[2], NN[3], it] *= v
+                    end
+                end
+                #end
+                #end
+            end
+        elseif FLUXNUM == 5
+            #for it = 1:NN[4]
+            for iz = 1:NN[3]
+                #for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, NN[2], iz, NN[4]] *= v
+                    end
+                end
+                #end
+            end
+            #end
+        elseif FLUXNUM == 6
+            #for it = 1:NN[4]
+            #for iz = 1:NN[3]
+            for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, iy, NN[3], NN[4]] *= v
+                    end
+                end
+            end
+            #end
+            #end
+        else
+            error("NumofFlux is out")
+        end
+    end
+    set_wing_U!(U)
+    return U
+end
+
 
 # end

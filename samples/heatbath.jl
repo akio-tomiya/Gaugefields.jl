@@ -29,7 +29,7 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     factor = 1/(comb*U[1].NV*U[1].NC)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temp1,temp2)
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 1000
@@ -38,15 +38,14 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         heatbath!(U,hnew)
 
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2) 
+        poly = calculate_Polyakov_loop(U,temp1,temp2)
 
         if itrj % 40 == 0
             println("$itrj plaq_t = $plaq_t")
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
-    
-    close(fp)
+
     return plaq_t
 
 end
