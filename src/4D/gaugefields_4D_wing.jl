@@ -424,6 +424,19 @@ function identityGaugefields_4D_wing(NC, NX, NY, NZ, NT, NDW; verbose_level = 2)
     return U
 end
 
+    # https://inspirehep.net/literature/213949
+    # One instanto for finite volume, SU(2)
+    #=
+    A CLASSICAL INSTANTON ON A FOUR-DIMENSIONAL PERIODIC LATTICE
+    I.A. Fox(DESY), M.L. Laursen(DESY), G. Schierholz(DESY), J.P. Gilchrist(Edinburgh U.), M. Gockeler(Heidelberg U.)
+    Apr, 1985
+    3 pages
+    Published in: Phys.Lett.B 158 (1985) 332-334
+    Published: 1985
+    DOI: 10.1016/0370-2693(85)91193-1
+    Report number: DESY-85-031
+    View in: ADS Abstract Service
+    =#
 function Oneinstanton_4D_wing(NC, NX, NY, NZ, NT, NDW; verbose_level = 2)
     @assert NC == 2 "NC should be 2"
     u = Gaugefields_4D_wing(NC, NDW, NX, NY, NZ, NT, verbose_level = verbose_level)
