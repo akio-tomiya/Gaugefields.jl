@@ -109,7 +109,7 @@ function test1()
     NY = 4
     NZ = 4
     NT = 4
-    Nwing = 1
+    Nwing = 0
     Dim = 4
     NC = 3
 
