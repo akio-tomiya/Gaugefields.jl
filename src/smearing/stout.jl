@@ -6,13 +6,6 @@ mutable struct Stoutsmearing <: Abstractsmearing
     ρs::Array{Array{Float64,1},1}
 end
 
-struct STOUT_dataset{Dim}
-    closedloop::Vector{Wilsonline{Dim}}
-    Cμ::Vector{Vector{Wilsonline{Dim}}}
-    dCμdUν::Matrix{Vector{DwDU{Dim}}} #(mu,nu) num loops
-    dCμdagdUν::Matrix{Vector{DwDU{Dim}}} #(mu,nu) num loops
-    #dCmudUnu::Dict{Tuple{Int64,Int64,Int64},Array{DwDU{Dim},1}}
-end
 #=
 struct STOUT_dataset{Dim}
     closedloop::Vector{Wilsonline{Dim}}
@@ -22,6 +15,8 @@ struct STOUT_dataset{Dim}
     #dCmudUnu::Dict{Tuple{Int64,Int64,Int64},Array{DwDU{Dim},1}}
 end
 =#
+
+include("stout_dataset.jl")
 
 struct STOUT_Layer{Dim} <: CovLayer{Dim}
     ρs::Vector{Float64}
@@ -80,12 +75,12 @@ end
 
 
 
-function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim = 4)
+function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim=4)
 
     numlayers = length(ρs)
     layers = Array{CovLayer,1}(undef, numlayers)
     for i = 1:numlayers
-        stout_layer = STOUT_Layer(loops_smearing, ρs[i], L, Dim = Dim)
+        stout_layer = STOUT_Layer(loops_smearing, ρs[i], L, Dim=Dim)
         layers[i] = stout_layer
     end
 
@@ -93,120 +88,32 @@ function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim = 4)
 
 end
 
-#=
-closedloops -> sum_{nm} P_nm
-Cmu = dP_nm/dUmu
-dCmu/dUnu = (d/dUnu) dP_nm/dUmu
-=#
+function STOUT_Layer(loops_smearing, ρ, L; Dim=4)
+    num = length(loops_smearing)
+    loopset = make_loopforactions(loops_smearing, L)
 
-function STOUT_dataset(closedloops; Dim = 4)
-    #Ci = #Dict{Tuple{Int64,Int64},Array{Wilsonline{Dim},1}}[]
-    #dCmudUnu = #Dict{Tuple{Int64,Int64,Int64},Array{DwDU{Dim},1}}[]
-    num = length(closedloops) #number of loops 
-
-    Cμs = Vector{Vector{Wilsonline{Dim}}}(undef, Dim)
-    for μ = 1:Dim
-        Cμs[μ] = Vector{Wilsonline{Dim}}[] #set of staples. In the case of plaq, there are six staples. 
-    end
-
-
-
+    dataset = Array{STOUT_dataset{Dim},1}(undef, num)
     for i = 1:num
-        glinks = closedloops[i]
-        for μ = 1:Dim
-            Cμ = make_Cμ(glinks, μ)
-            for j = 1:length(Cμ)
-                push!(Cμs[μ], Cμ[j])
-            end
-        end
+        closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
     end
 
-    CmudUnu = Matrix{Vector{DwDU{Dim}}}(undef, Dim, Dim)
-    CmudagdUnu = Matrix{Vector{DwDU{Dim}}}(undef, Dim, Dim)
-
-    #=
-    CmudUnu = Array{Array{Dict{Tuple{Int8,Int8},Vector{DwDU{Dim}}},1},1}(undef,Dim)
-    CmudUnudag = Array{Array{Dict{Tuple{Int8,Int8},Vector{DwDU{Dim}}},1},1}(undef,Dim)
-    for μ=1:Dim
-        Cμ = Cμs[μ]
-        numCμ = length(Cμ)
-        CmudUnu[μ] = Array{Dict{Int8,Vector{DwDU{Dim}}},1}(undef,numCμ )
-        CmudUnudag[μ] = Array{Dict{Int8,Vector{DwDU{Dim}}},1}(undef,numCμ )
-
-
-        for i=1:numCμ 
-            Cμi = Cμ[i]
-            CmudUnu[μ][i]=  Dict{Int8,Vector{DwDU{Dim}}}()
-            CmudUnudag[μ][i]=  Dict{Int8,Vector{DwDU{Dim}}}()
-            for ν=1:4
-                CmudUnu[μ][i][ν] = derive_U(Cμi,ν)
-                CmudUnudag[μ][i][ν] = derive_Udag(Cμi,ν)
-            end
-        end
-    end
-
-    return STOUT_dataset{Dim}(closedloops,Cμs,CmudUnu,CmudUnudag)
-    =#
-
-
-    for ν = 1:Dim
-        for μ = 1:Dim
-            CmudUnu[μ, ν] = Vector{DwDU{Dim}}[]
-            CmudagdUnu[μ, ν] = Vector{DwDU{Dim}}[]
-            Cμ = Cμs[μ]
-            numCμ = length(Cμ)
-            for j = 1:numCμ
-                Cμj = Cμ[j]
-                dCμjν = derive_U(Cμj, ν)
-                numdCμjν = length(dCμjν)
-                for k = 1:numdCμjν
-                    push!(CmudUnu[μ, ν], dCμjν[k])
-                end
-
-                dCμjνdag = derive_U(Cμj', ν)
-                numdCμjνdag = length(dCμjνdag)
-                for k = 1:numdCμjνdag
-                    push!(CmudagdUnu[μ, ν], dCμjνdag[k])
-                end
-
-            end
-            #println("dC$(μ)/dU$(ν): ")
-            #show(CmudUnu[μ,ν])
-        end
-    end
-
-
-    #=
-    for μ=1:Dim
-        println("μ = $μ")
-        show(Cμs[μ])
-        for ν=1:Dim
-            println("dC$(μ)/dU$(ν): ")
-            show(CmudUnu[μ,ν])
-        end
-
-        for ν=1:Dim
-            println("dCdag$(μ)/dU$(ν): ")
-            show(CmudagdUnu[μ,ν])
-        end
-    end
-    =#
-
-
-    return STOUT_dataset{Dim}(closedloops, Cμs, CmudUnu, CmudagdUnu)
+    return STOUT_Layer{Dim}(ρ, dataset)
 end
 
-function STOUT_Layer(loops_smearing, ρ, L; Dim = 4)
+function STOUT_Layer(loops, ρ; Dim=4)
     num = length(loops_smearing)
     loopset = make_loopforactions(loops_smearing, L)
     dataset = Array{STOUT_dataset{Dim},1}(undef, num)
     for i = 1:num
         closedloops = loopset[i] #one of loopset, like plaq. There are several loops. 
-        dataset[i] = STOUT_dataset(closedloops, Dim = Dim)
+        dataset[i] = STOUT_dataset(closedloops, Dim=Dim)
     end
 
     return STOUT_Layer{Dim}(ρ, dataset)
 end
+
+
 
 """
 δ_prev = δ_current*exp(Q) - C^+ Λ 
