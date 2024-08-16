@@ -1,7 +1,7 @@
 using Gaugefields
 using Test
 using Random
-import Wilsonloop:loops_staple
+import Wilsonloop: loops_staple
 
 
 const eps = 1e-1
@@ -13,6 +13,13 @@ const eps = 1e-1
 end
 =#
 
+@testset "HMCstout nowing" begin
+    println("HMCstout nowing")
+    include("HMCstout_test_nowing.jl")
+end
+
+
+#=
 
 @testset "HMC nowing" begin
     println("HMC nowing")
@@ -96,3 +103,4 @@ end
 
 
 
+=#
