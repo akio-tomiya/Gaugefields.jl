@@ -2,16 +2,16 @@
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!, Gaugefields_4D_wing
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
 
-mutable struct STOUT_Layer_fast{T,Dim,TN} <: CovLayer{Dim}
+struct STOUT_Layer_fast{T,Dim,TN} <: CovLayer{Dim}
     ρs::Vector{TN}
-    const dataset::Vector{STOUT_dataset{Dim}}
-    const Uin::Vector{T}
-    const eQs::Vector{T}
-    const Cs::Vector{T}
-    const Qs::Vector{T}
-    const temps::Vector{T}
-    const dSdCs::Vector{T}
-    hasdSdCs::Bool
+    dataset::Vector{STOUT_dataset{Dim}}
+    Uin::Vector{T}
+    eQs::Vector{T}
+    Cs::Vector{T}
+    Qs::Vector{T}
+    temps::Vector{T}
+    dSdCs::Vector{T}
+    hasdSdCs::Vector{Bool}
     dSdρ::Vector{TN}
 end
 export STOUT_Layer_fast
@@ -73,8 +73,9 @@ function STOUT_Layer_fast(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:
     end
     dSdρ = zero(ρs)
     TN = eltype(ρs)
+    hasdSdCs = [false]
 
-    st = STOUT_Layer_fast{T,Dim,TN}(ρs, dataset, Uin, eQs, Cs, Qs, temps, dSdCs, false, dSdρ)
+    st = STOUT_Layer_fast{T,Dim,TN}(ρs, dataset, Uin, eQs, Cs, Qs, temps, dSdCs, hasdSdCs, dSdρ)
 
     return st
 end
@@ -220,7 +221,7 @@ function forward!(s::STOUT_Layer_fast{T,Dim}, Uout, ρs::Vector{TN}, Uin) where 
         mul!(Uout[μ], s.eQs[μ], Uin[μ])
     end
     set_wing_U!(Uout)
-    s.hasdSdCs = false
+    s.hasdSdCs[1] = false
 end
 export forward!
 
@@ -297,7 +298,7 @@ function backward_dSdρ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdρ, dSdUout) wher
 
     for μ = 1:Dim
 
-        if s.hasdSdCs == false
+        if s.hasdSdCs[1] == false
             Qμ = s.Qs[μ]
             calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
 
@@ -320,7 +321,7 @@ function backward_dSdρ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdρ, dSdUout) wher
 
 
     end
-    s.hasdSdCs = true
+    s.hasdSdCs[1] = true
 end
 export backward_dSdρ_add!
 
@@ -361,7 +362,7 @@ function backward_dSdUβ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdU, dSdUout) wher
             calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, s.dSdCs[μ], s.ρs, Uin, μ, ν, temps)
         end
     end
-    s.hasdSdCs = true
+    s.hasdSdCs[1] = true
 end
 export backward_dSdUβ_add!
 
