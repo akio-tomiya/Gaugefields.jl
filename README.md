@@ -10,7 +10,8 @@ Treating gauge fields (links), gauge actions with MPI and autograd.
 
 <img src="LQCDjl_block.png" width=300> 
 
-This package is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
+This package is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
+and a code in a project [JuliaQCD](https://github.com/JuliaQCD/).
 
 [NOTE: This is an extended version in order to implement higher-form gauge fields
  (i.e., 't Hooft twisted boundary condition/flux).
