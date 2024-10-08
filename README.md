@@ -124,6 +124,57 @@ filename = "testconf.txt"
 save_textdata(U,filename)
 ```
 
+## JLD2 format
+Gaugefields.jl also supports [JLD2 format](https://github.com/JuliaIO/JLD2.jl).
+
+### File save and loading
+
+```julia
+function main()
+using Gaugefields
+
+function savingexample()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+    Dim = 4
+
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot")
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    comb = 6
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("plaq_t = $plaq_t")
+
+
+    filename = "test.jld2"
+    saveU(filename, U)
+end
+
+function loadingexample()
+    filename = "test.jld2"
+    U = loadU(filename)
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    comb = 6
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("plaq_t = $plaq_t")
+end
+
+savingexample()
+loadingexample()
+```
+
+
+
 ## Z(Nc) 2-form gauge fields
 
 SU(N) gauge fields possess Z(N) center symmetry,

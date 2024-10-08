@@ -1,6 +1,6 @@
 module IOmodule
 using JLD2
-import ..AbstractGaugefields_module: AbstractGaugefields
+import ..AbstractGaugefields_module: AbstractGaugefields, IdentityGauges
 #using ..Gaugefields
 #import ..Gaugefields:GaugeFields,SU2GaugeFields,SU3GaugeFields,SUNGaugeFields
 #import Main.LatticeQCD.Gaugefields:GaugeFields
