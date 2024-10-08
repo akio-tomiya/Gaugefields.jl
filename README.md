@@ -687,6 +687,7 @@ HMC simulations with dynamical B fields are as follows:
 
 using Random
 using Gaugefields
+using Wilsonloop
 using LinearAlgebra
 
 function calc_action(gauge_action,U,B,p)
@@ -697,15 +698,11 @@ function calc_action(gauge_action,U,B,p)
     return real(S)
 end
 
-function MDstep!(gauge_action,U,B,flux,p,MDsteps,Dim,Uold,Bold,flux_old,temp1,temp2)
+function MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temp1,temp2)
     Δτ = 1.0/MDsteps
     gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,B,p)
     substitute_U!(Uold,U)
-    substitute_U!(Bold,B)
-    flux_old[:] = flux[:]
-
-    Flux_update!(B,flux)
 
     for itrj=1:MDsteps
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
@@ -715,15 +712,58 @@ function MDstep!(gauge_action,U,B,flux,p,MDsteps,Dim,Uold,Bold,flux_old,temp1,te
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
     end
     Snew = calc_action(gauge_action,U,B,p)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold)) # bug is fixed
+#    println("Sold = $Sold, Snew = $Snew")
+#    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+end
+
+function MDstep!(
+    gauge_action,
+    U,
+    B,
+    flux,
+    p,
+    MDsteps,
+    num_HMC,
+    Dim,
+    Uold1,
+    Uold2,
+    Bold,
+    flux_old,
+    temp1,
+    temp2
+)
+    p0 = initialize_TA_Gaugefields(U)
+    Sold = calc_action(gauge_action,U,B,p0)
+
+    substitute_U!(Uold1,U)
+    substitute_U!(Bold, B)
+    flux_old[:] = flux[:]
+
+    Flux_update!(B,flux)
+
+    for ihmc=1:num_HMC
+        MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold2,temp1,temp2)
+    end
+
+    Snew = calc_action(gauge_action,U,B,p0)
+    println("Sold = $Sold, Snew = $Snew")
+    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
+    if rand() > ratio
+        println("rejected! flux = ", flux_old)
+        substitute_U!(U,Uold1)
         substitute_U!(B,Bold)
         flux[:] = flux_old[:]
         return false
     else
+        println("accepted! flux_old = ", flux_old, " -> flux_new = ", flux)
         return true
     end
 end
@@ -819,13 +859,16 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
 
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients.
 
-    Uold = similar(U)
-    substitute_U!(Uold,U)
+    Uold  = similar(U)
+    Uold2 = similar(U)
+    substitute_U!(Uold, U)
+    substitute_U!(Uold2,U)
     Bold = similar(B)
     substitute_U!(Bold,B)
     flux_old = zeros(Int, 6)
 
     MDsteps = 50
+    num_HMC = 10
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -842,8 +885,10 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
                 flux,
                 p,
                 MDsteps,
+                num_HMC,
                 Dim,
                 Uold,
+                Uold2,
                 Bold,
                 flux_old,
                 temp1,
