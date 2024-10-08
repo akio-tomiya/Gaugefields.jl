@@ -10,7 +10,8 @@ Treating gauge fields (links), gauge actions with MPI and autograd.
 
 <img src="LQCDjl_block.png" width=300> 
 
-This package is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
+This package is used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl)
+and a code in a project [JuliaQCD](https://github.com/JuliaQCD/).
 
 [NOTE: This is an extended version in order to implement higher-form gauge fields
  (i.e., 't Hooft twisted boundary condition/flux).
@@ -122,6 +123,57 @@ load_BridgeText!(filename,U,L,NC)
 filename = "testconf.txt"
 save_textdata(U,filename)
 ```
+
+## JLD2 format
+Gaugefields.jl also supports [JLD2 format](https://github.com/JuliaIO/JLD2.jl).
+
+### File saving and loading
+
+```julia
+function main()
+using Gaugefields
+
+function savingexample()
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    NC = 3
+    Nwing = 0
+    Dim = 4
+
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot")
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    comb = 6
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("plaq_t = $plaq_t")
+
+
+    filename = "test.jld2"
+    saveU(filename, U)
+end
+
+function loadingexample()
+    filename = "test.jld2"
+    U = loadU(filename)
+
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+
+    comb = 6
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("plaq_t = $plaq_t")
+end
+
+savingexample()
+loadingexample()
+```
+
+
 
 ## Z(Nc) 2-form gauge fields
 
@@ -2159,7 +2211,7 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(Snew-Sold))
+    ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         substitute_U!(U,Uold)
         return false
@@ -2488,3 +2540,20 @@ end
 
 test1()
 ```
+
+# Acknowledgment
+If you write a paper using this package, please refer this code.
+
+BibTeX citation is following
+```
+@article{Nagai:2024yaf,
+    author = "Nagai, Yuki and Tomiya, Akio",
+    title = "{JuliaQCD: Portable lattice QCD package in Julia language}",
+    eprint = "2409.03030",
+    archivePrefix = "arXiv",
+    primaryClass = "hep-lat",
+    month = "9",
+    year = "2024"
+}
+```
+and the paper is [arXiv:2409.03030](https://arxiv.org/abs/2409.03030).
