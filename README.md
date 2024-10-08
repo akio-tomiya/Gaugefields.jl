@@ -127,7 +127,7 @@ save_textdata(U,filename)
 ## JLD2 format
 Gaugefields.jl also supports [JLD2 format](https://github.com/JuliaIO/JLD2.jl).
 
-### File save and loading
+### File saving and loading
 
 ```julia
 function main()
