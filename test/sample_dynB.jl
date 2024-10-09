@@ -47,6 +47,57 @@ function MDstep!(
     B,
     flux,
     p,
+    MDsteps, # MDsteps should be an even integer
+    Dim,
+    Uold,
+    Bold,
+    flux_old,
+    temp1,
+    temp2
+) # Halfway-updating HMC
+    Δτ = 1.0/MDsteps
+    gauss_distribution!(p)
+
+    Sold = calc_action(gauge_action,U,B,p)
+
+    substitute_U!(Uold,U)
+    substitute_U!(Bold,B)
+    flux_old[:] = flux[:]
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        if itrj == Int(MDsteps/2)
+            Flux_update!(B,flux)
+        end
+    end
+
+    Snew = calc_action(gauge_action,U,B,p)
+#    println("Sold = $Sold, Snew = $Snew")
+#    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
+    if rand() > ratio
+        println("rejected! flux = ", flux_old)
+        substitute_U!(U,Uold)
+        substitute_U!(B,Bold)
+        flux[:] = flux_old[:]
+        return false
+    else
+        println("accepted! flux_old = ", flux_old, " -> flux_new = ", flux)
+        return true
+    end
+end
+
+function MDstep!(
+    gauge_action,
+    U,
+    B,
+    flux,
+    p,
     MDsteps,
     num_HMC,
     Dim,
@@ -56,7 +107,7 @@ function MDstep!(
     flux_old,
     temp1,
     temp2
-)
+) # Double-tesing HMC
     p0 = initialize_TA_Gaugefields(U)
     Sold = calc_action(gauge_action,U,B,p0)
 
@@ -230,15 +281,12 @@ function HMC_test_4D_dynamicalB(
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
 
     Uold  = similar(U)
-    Uold2 = similar(U)
     substitute_U!(Uold, U)
-    substitute_U!(Uold2,U)
     Bold = similar(B)
     substitute_U!(Bold,B)
     flux_old = zeros(Int, 6)
 
-    MDsteps = 50
-    num_HMC = 10
+    MDsteps = 50 # even integer!!!
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -258,10 +306,8 @@ function HMC_test_4D_dynamicalB(
                 flux,
                 p,
                 MDsteps,
-                num_HMC,
                 Dim,
                 Uold,
-                Uold2,
                 Bold,
                 flux_old,
                 temp1,
