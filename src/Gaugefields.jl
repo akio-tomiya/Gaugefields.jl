@@ -131,6 +131,7 @@ import .Bridge_format: save_textdata, load_BridgeText!
 import Wilsonloop: loops_staple
 import .Abstractsmearing_module:
     STOUT_Layer,
+    STOUT_Layer_fast,
     CovNeuralnet,
     calc_smearedU,
     construct_smearing,
@@ -218,7 +219,7 @@ export save_textdata, load_BridgeText!
 export shift_U, evaluate_gaugelinks!, Gradientflow, flow!
 export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, isLoopwithB, isStaplewithB
 export heatbath!, Heatbath
-export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname
+export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname, STOUT_Layer_fast
 export GaugeAction,
     evaluate_GaugeAction_untraced!, evaluate_GaugeAction_untraced, calc_dSdUμ, calc_dSdUμ!
 export initialize_TA_Gaugefields, gauss_distribution!
@@ -241,7 +242,7 @@ export overrelaxation!
 export AbstractGaugefields, Traceless_antihermitian
 export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
-
+export loadU, saveU
 
 
 
