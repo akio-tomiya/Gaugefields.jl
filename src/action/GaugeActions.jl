@@ -70,7 +70,7 @@ function calc_dSdUμ(
 end
 
 function calc_dSdUμ!(
-    dSdUμ::T,
+    dSdUμ::T, # dSdUμ -> S._temp_U[end] or other-temp
     S::GaugeAction,
     μ,
     U::Vector{T},
@@ -93,7 +93,7 @@ function calc_dSdUμ!(
 
 end
 function calc_dSdUμ!(
-    dSdUμ::T,
+    dSdUμ::T, # dSdUμ -> S._temp_U[end] or other-temp
     S::GaugeAction,
     μ,
     U::Vector{T},
@@ -164,7 +164,7 @@ function evaluate_staple_eachindex!(
     μ,
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
-    mat_temps,
+    mat_temps, # length >= 5
     indices...,
 ) where {Dim,NC}
     temp3 = mat_temps[5]
@@ -174,27 +174,25 @@ function evaluate_staple_eachindex!(
         dataset = S.dataset[i]
         β = dataset.β
         staples_μ = dataset.staples[μ]
-        evaluate_gaugelinks_eachsite!(temp3, staples_μ, U, view(mat_temps, 1:4), indices...)
+        evaluate_gaugelinks_eachsite!(temp3, staples_μ, U, view(mat_temps, 1:4), indices...) # length >~ 3,4
         mat_U .+= β * temp3
     end
 end
 
 function evaluate_GaugeAction_untraced!(
     uout,
-    S::GaugeAction, # length(temps) > 3
+    S::GaugeAction, # length(temps) > 3 + 1
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
     numterm = length(S.dataset)
-    temp1 = S._temp_U[1]
-    temp2 = S._temp_U[2]
-    temp3 = S._temp_U[3]
+    temp4 = S._temp_U[4]
     clear_U!(uout)
 
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         w = dataset.closedloops
-        evaluate_gaugelinks!(temp3, w, U, [temp1, temp2])
+        evaluate_gaugelinks!(temp4, w, U, S._temp_U[1:3])
         add_U!(uout, β, temp3)
     end
     set_wing_U!(uout)
@@ -203,7 +201,7 @@ function evaluate_GaugeAction_untraced!(
 end
 function evaluate_GaugeAction_untraced!(
     uout,
-    S::GaugeAction, # length(temps) > 9
+    S::GaugeAction, # length(temps) > 6
     U::Vector{T},
     B::Array{T,2}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
@@ -233,7 +231,7 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 4
+    num = 5
     _temp_U = Array{eltype(U)}(undef, num)
     for i = 1:num
         _temp_U[i] = similar(U[1])
