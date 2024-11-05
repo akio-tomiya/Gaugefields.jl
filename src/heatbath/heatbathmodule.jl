@@ -19,8 +19,8 @@ struct Heatbath{T}
 
 
     function Heatbath(U::Array{T,1}, β; ITERATION_MAX = 10^5) where {T<:AbstractGaugefields}
-        _tempotal_gauges = Array{T,1}(undef, 3)
-        for i = 1:3
+        _tempotal_gauges = Array{T,1}(undef, 5) # length >= 5
+        for i = 1:5
             _tempotal_gauges[i] = similar(U[1])
         end
         return new{T}(_tempotal_gauges, β, ITERATION_MAX)
@@ -38,9 +38,9 @@ struct Heatbath_update{Dim,T}
         gauge_action;
         ITERATION_MAX = 10^5,
     ) where {T<:AbstractGaugefields}
-        _temporary_gaugefields = Array{T,1}(undef, 3)
+        _temporary_gaugefields = Array{T,1}(undef, 5) # length >= 5
         Dim = length(U)
-        for i = 1:3
+        for i = 1:5
             _temporary_gaugefields[i] = similar(U[1])
         end
         return new{Dim,T}(_temporary_gaugefields, gauge_action, ITERATION_MAX)
@@ -59,7 +59,7 @@ function heatbath_update_eachsite_SU2!(
 ) where {NC,Dim,T}
     @assert NC == 2
     V = mat_temps[1]
-    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps, 2:6), indices...)
+    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps, 2:6), indices...) # length >= 5
     SU2update_KP!(A, V, heatbath_factor, NC, view(mat_temps, 7:8), h.ITERATION_MAX)
 end
 
@@ -95,7 +95,7 @@ function heatbath_update_eachsite_SU3!(
 ) where {NC,Dim,T}
     @assert NC == 3
     V = mat_temps1[1]
-    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...)
+    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...) # length >= 5
     SU3update_matrix!(
         A,
         V,
@@ -118,7 +118,7 @@ function heatbath_update_eachsite_SUN!(
     indices...,
 ) where {NC,Dim,T}
     V = mat_temps1[1]
-    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...)
+    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...) # length >= 5
     SUNupdate_matrix!(
         A,
         V,
@@ -141,7 +141,7 @@ function overrelaxation_update_eachsite_SUN!(
     indices...,
 ) where {NC,Dim,T}
     V = mat_temps1[1]
-    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...)
+    evaluate_staple_eachindex!(V, μ, h.gauge_action, U, view(mat_temps1, 2:6), indices...) # length >= 5
     SUN_overrelaxation!(
         A,
         V,
@@ -248,14 +248,14 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{2,Dim},1},
-    temps,
+    temps, # length >= 5
     β;
     ITERATION_MAX = 10^5,
 ) where {Dim}
     NC = 2
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    V = temps[5]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -278,11 +278,11 @@ function heatbath!(
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven) # length >~ 3,4
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven) # length >~ 3,4
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -290,14 +290,14 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{3,Dim},1},
-    temps,
+    temps, # length >= 5
     β;
     ITERATION_MAX = 10^5,
 ) where {Dim}
     NC = 3
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    V = temps[5]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -321,11 +321,11 @@ function heatbath!(
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -333,15 +333,15 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{3,Dim},1},
-    temps,
+    temps, # length >= 5
     β,
     gauge_action;
     ITERATION_MAX = 10^5,
 ) where {Dim} #This function is for debugging
     NC = 3
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    V = temps[5]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -366,11 +366,11 @@ function heatbath!(
         loops = gauge_action.dataset[1].staples[μ]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -379,14 +379,14 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{NC,Dim},1},
-    temps,
+    temps, # length >= 5
     β;
     ITERATION_MAX = 10^5,
 ) where {Dim,NC}
 
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    V = temps[5]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -409,11 +409,11 @@ function heatbath!(
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -421,13 +421,13 @@ end
 
 function overrelaxation!(
     U::Array{<:AbstractGaugefields{NC,Dim},1},
-    temps,
+    temps, # length >= 5
     β;
     ITERATION_MAX = 10^5,
 ) where {Dim,NC}
 
-    temp1 = temps[1]
-    temp2 = temps[2]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
     V = temps[3]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -451,11 +451,11 @@ function overrelaxation!(
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps[1:4], iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -470,51 +470,51 @@ function heatbath!(
     heatbath!(U, h._tempotal_gauges, h.gauge_action; ITERATION_MAX = h.ITERATION_MAX)
 end
 
-function heatbath!(
-    U::Array{<:AbstractGaugefields{2,Dim},1},
-    temps,
-    S::GaugeAction;
-    ITERATION_MAX = 10^5,
-) where {Dim}
-    NC = 2
-
-
-    temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
-    for i = 1:5
-        temps2[i] = zeros(ComplexF64, 2, 2)
-    end
-
-    if NC != 2
-        temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
-        for i = 1:5
-            temps3[i] = zeros(ComplexF64, NC, NC)
-        end
-    end
-
-    mapfunc!(A, B) = SU2update_KP!(A, B, 1, NC, temps2, ITERATION_MAX)
-
-    numterm = length(S.dataset)
-    temp1 = S._temp_U[1]
-    temp2 = S._temp_U[2]
-    temp3 = S._temp_U[3]
-
-    error("error")
-
-
-    for μ = 1:Dim
-
-        loops = loops_staple[(Dim, μ)]
-        iseven = true
-
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
-        map_U!(U[μ], mapfunc!, V, iseven)
-
-        iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
-        map_U!(U[μ], mapfunc!, V, iseven)
-    end
-
-end
+# function heatbath!(
+#     U::Array{<:AbstractGaugefields{2,Dim},1},
+#     temps,
+#     S::GaugeAction;
+#     ITERATION_MAX = 10^5,
+# ) where {Dim}
+#     NC = 2
+#
+#
+#     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
+#     for i = 1:5
+#         temps2[i] = zeros(ComplexF64, 2, 2)
+#     end
+#
+#     if NC != 2
+#         temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
+#         for i = 1:5
+#             temps3[i] = zeros(ComplexF64, NC, NC)
+#         end
+#     end
+#
+#     mapfunc!(A, B) = SU2update_KP!(A, B, 1, NC, temps2, ITERATION_MAX)
+#
+#     numterm = length(S.dataset)
+#     temp1 = S._temp_U[1]
+#     temp2 = S._temp_U[2]
+#     temp3 = S._temp_U[3]
+#
+#     error("error")
+#
+#
+#     for μ = 1:Dim
+#
+#         loops = loops_staple[(Dim, μ)]
+#         iseven = true
+#
+#         evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+#         map_U!(U[μ], mapfunc!, V, iseven)
+#
+#         iseven = false
+#         evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+#         map_U!(U[μ], mapfunc!, V, iseven)
+#     end
+#
+# end
 
 
 function SU2update_KP!(Unew, V, beta, NC, temps, ITERATION_MAX = 10^5)
