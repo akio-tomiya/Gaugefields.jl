@@ -2339,6 +2339,12 @@ The smearing is regarded as gauge covariant neural networks [Tomiya and Nagai, a
 The network is constructed as follows. 
 
 ```julia
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
+    L = [NX,NY,NZ,NT]
+
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
