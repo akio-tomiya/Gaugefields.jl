@@ -207,9 +207,7 @@ using Gaugefields
 
 function heatbath_SU3!(U,NC,temps,β)
     Dim = 4
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V = temps[5]
     ITERATION_MAX = 10^5
 
     temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
@@ -227,11 +225,11 @@ function heatbath_SU3!(U,NC,temps,β)
         loops = loops_staple[(Dim,μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
     end
     
@@ -245,7 +243,11 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
+
+    # for heatbath update
     temp3 = similar(U[1])
+    temp4 = similar(U[1])
+    temp5 = similar(U[1])
 
     comb = 6
     factor = 1/(comb*U[1].NV*U[1].NC)
@@ -256,7 +258,7 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     numhb = 40
     for itrj = 1:numhb
-        heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
+        heatbath_SU3!(U,NC,[temp1,temp2,temp3,temp4,temp5],β)
 
         if itrj % 10 == 0
             @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -312,7 +314,6 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
-    temp3 = similar(U[1])
 
     comb = 6
     factor = 1/(comb*U[1].NV*U[1].NC)
@@ -335,7 +336,6 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         end
     end
     
-    close(fp)
     return plaq_t
 
 end
@@ -739,6 +739,7 @@ HMC simulations with dynamical B fields are as follows:
 
 using Random
 using Gaugefields
+using Wilsonloop
 using LinearAlgebra
 
 function calc_action(gauge_action,U,B,p)
@@ -749,15 +750,11 @@ function calc_action(gauge_action,U,B,p)
     return real(S)
 end
 
-function MDstep!(gauge_action,U,B,flux,p,MDsteps,Dim,Uold,Bold,flux_old,temp1,temp2)
+function MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temp1,temp2)
     Δτ = 1.0/MDsteps
     gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,B,p)
     substitute_U!(Uold,U)
-    substitute_U!(Bold,B)
-    flux_old[:] = flux[:]
-
-    Flux_update!(B,flux)
 
     for itrj=1:MDsteps
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
@@ -767,15 +764,109 @@ function MDstep!(gauge_action,U,B,flux,p,MDsteps,Dim,Uold,Bold,flux_old,temp1,te
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
     end
     Snew = calc_action(gauge_action,U,B,p)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold)) # bug is fixed
+#    println("Sold = $Sold, Snew = $Snew")
+#    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
+        substitute_U!(U,Uold)
+        return false
+    else
+        return true
+    end
+end
+
+function MDstep!(
+    gauge_action,
+    U,
+    B,
+    flux,
+    p,
+    MDsteps, # MDsteps should be an even integer
+    Dim,
+    Uold,
+    Bold,
+    flux_old,
+    temp1,
+    temp2
+) # Halfway-updating HMC
+    Δτ = 1.0/MDsteps
+    gauss_distribution!(p)
+
+    Sold = calc_action(gauge_action,U,B,p)
+
+    substitute_U!(Uold,U)
+    substitute_U!(Bold,B)
+    flux_old[:] = flux[:]
+
+    for itrj=1:MDsteps
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
+
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        if itrj == Int(MDsteps/2)
+            Flux_update!(B,flux)
+        end
+    end
+
+    Snew = calc_action(gauge_action,U,B,p)
+#    println("Sold = $Sold, Snew = $Snew")
+#    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
+    if rand() > ratio
+        println("rejected! flux = ", flux_old)
         substitute_U!(U,Uold)
         substitute_U!(B,Bold)
         flux[:] = flux_old[:]
         return false
     else
+        println("accepted! flux_old = ", flux_old, " -> flux_new = ", flux)
+        return true
+    end
+end
+
+function MDstep!(
+    gauge_action,
+    U,
+    B,
+    flux,
+    p,
+    MDsteps,
+    num_HMC,
+    Dim,
+    Uold1,
+    Uold2,
+    Bold,
+    flux_old,
+    temp1,
+    temp2
+) # Double-tesing HMC
+    p0 = initialize_TA_Gaugefields(U)
+    Sold = calc_action(gauge_action,U,B,p0)
+
+    substitute_U!(Uold1,U)
+    substitute_U!(Bold, B)
+    flux_old[:] = flux[:]
+
+    Flux_update!(B,flux)
+
+    for ihmc=1:num_HMC
+        MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold2,temp1,temp2)
+    end
+
+    Snew = calc_action(gauge_action,U,B,p0)
+    println("Sold = $Sold, Snew = $Snew")
+    println("Snew - Sold = $(Snew-Sold)")
+    ratio = min(1,exp(-Snew+Sold))
+    if rand() > ratio
+        println("rejected! flux = ", flux_old)
+        substitute_U!(U,Uold1)
+        substitute_U!(B,Bold)
+        flux[:] = flux_old[:]
+        return false
+    else
+        println("accepted! flux_old = ", flux_old, " -> flux_new = ", flux)
         return true
     end
 end
@@ -871,13 +962,13 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
 
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients.
 
-    Uold = similar(U)
-    substitute_U!(Uold,U)
+    Uold  = similar(U)
+    substitute_U!(Uold, U)
     Bold = similar(B)
     substitute_U!(Bold,B)
     flux_old = zeros(Int, 6)
 
-    MDsteps = 50
+    MDsteps = 50 # even integer!!!
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
