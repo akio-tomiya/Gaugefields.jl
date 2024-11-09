@@ -131,11 +131,11 @@ import .Bridge_format: save_textdata, load_BridgeText!
 import Wilsonloop: loops_staple
 import .Abstractsmearing_module:
     STOUT_Layer,
-    STOUT_Layer_fast,
+    #STOUT_Layer_fast,
     CovNeuralnet,
     calc_smearedU,
     construct_smearing,
-    set_parameters,
+    set_parameters!,
     get_parameter_derivatives,
     apply_smearing_U
 import .SUN_generator: Generator
