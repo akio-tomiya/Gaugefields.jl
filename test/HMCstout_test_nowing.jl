@@ -129,7 +129,7 @@ function test1()
     ρ = [0.1] #* 1e-10
     layername = ["plaquette"]
 
-    st = STOUT_Layer_fast(layername, ρ, U)
+    st = STOUT_Layer(layername, ρ, U)
 
     #return
     #st = STOUT_Layer(layername, ρ, L)

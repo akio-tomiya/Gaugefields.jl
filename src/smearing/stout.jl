@@ -18,6 +18,7 @@ end
 
 include("stout_dataset.jl")
 
+#=
 struct STOUT_Layer{Dim} <: CovLayer{Dim}
     ρs::Vector{Float64}
     dataset::Vector{STOUT_dataset{Dim}}
@@ -72,6 +73,8 @@ function get_ρ(layer::STOUT_Layer, i)
     return layer.ρs[i]
 end
 
+=#
+#=
 
 
 
@@ -88,6 +91,9 @@ function CovNeuralnet_STOUT(loops_smearing, ρs, L; Dim=4)
 
 end
 
+=#
+
+#=
 function STOUT_Layer(loops_smearing, ρ, L; Dim=4)
     num = length(loops_smearing)
     loopset = make_loopforactions(loops_smearing, L)
@@ -113,7 +119,9 @@ function STOUT_Layer(loops, ρ; Dim=4)
     return STOUT_Layer{Dim}(ρ, dataset)
 end
 
+=#
 
+#=
 
 """
 δ_prev = δ_current*exp(Q) - C^+ Λ 
@@ -259,6 +267,10 @@ function layer_pullback!(
 
 end
 
+=#
+
+#=
+
 function parameter_derivatives(
     δ_current,
     layer::STOUT_Layer{Dim},
@@ -323,7 +335,7 @@ M = U δ star dexp(Q)/dQ
 
 
 
-
+=#
 
 function construct_Qμ!(
     Qμ,
@@ -351,6 +363,7 @@ function construct_Qμs!(
     end
 end
 
+#=
 
 function construct_Cμ!(
     Cμs,
@@ -441,6 +454,8 @@ function apply_layer!(
     =#
 
 end
+
+=#
 
 
 function Stoutsmearing(loops_smearing, ρs)

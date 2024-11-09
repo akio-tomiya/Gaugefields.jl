@@ -22,7 +22,7 @@ struct GaugeAction_dataset{Dim}
     staples::Vector{Vector{Wilsonline{Dim}}}
 end
 
-struct GaugeAction{Dim,T,Tdata} 
+struct GaugeAction{Dim,T,Tdata}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
     dataset::Vector{Tdata}
@@ -185,15 +185,15 @@ function evaluate_GaugeAction_untraced!(
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
     numterm = length(S.dataset)
-    temp4 = S._temp_U[4]
+    temp5 = S._temp_U[5]
     clear_U!(uout)
 
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         w = dataset.closedloops
-        evaluate_gaugelinks!(temp4, w, U, S._temp_U[1:3])
-        add_U!(uout, β, temp3)
+        evaluate_gaugelinks!(temp5, w, U, S._temp_U[1:4])
+        add_U!(uout, β, temp5)
     end
     set_wing_U!(uout)
 
@@ -223,15 +223,15 @@ end
 
 function GaugeAction(
     U::Vector{<:AbstractGaugefields{NC,Dim}};
-    hascovnet = false,
+    hascovnet=false,
 ) where {NC,Dim}
     if hascovnet
-        covneuralnet = CovNeuralnet(Dim = Dim)
+        covneuralnet = CovNeuralnet(Dim=Dim)
     else
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 5
+    num = 6
     _temp_U = Array{eltype(U)}(undef, num)
     for i = 1:num
         _temp_U[i] = similar(U[1])
@@ -242,10 +242,10 @@ end
 function GaugeAction(
     U::Vector{T},
     B::Array{T,2};
-    hascovnet = false,
+    hascovnet=false,
 ) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
     if hascovnet
-        covneuralnet = CovNeuralnet(Dim = Dim)
+        covneuralnet = CovNeuralnet(Dim=Dim)
     else
         covneuralnet = nothing
     end

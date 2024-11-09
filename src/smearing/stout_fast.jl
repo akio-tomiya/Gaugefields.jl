@@ -2,7 +2,7 @@
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!, Gaugefields_4D_wing
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
 
-struct STOUT_Layer_fast{T,Dim,TN} <: CovLayer{Dim}
+struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     ρs::Vector{TN}
     dataset::Vector{STOUT_dataset{Dim}}
     Uin::Vector{T}
@@ -14,19 +14,19 @@ struct STOUT_Layer_fast{T,Dim,TN} <: CovLayer{Dim}
     hasdSdCs::Vector{Bool}
     dSdρ::Vector{TN}
 end
-export STOUT_Layer_fast
+export STOUT_Layer
 
-function STOUT_Layer_fast(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs::Vector{<:Number}) where {NC,Dim}
+function STOUT_Layer(loops_smearing, L, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs::Vector{<:Number}) where {NC,Dim}
     loopset = make_loopforactions(loops_smearing, L)
-    return STOUT_Layer_fast(loopset, U, ρs)
+    return STOUT_Layer(loopset, U, ρs)
 end
 
-function STOUT_Layer_fast(loops_smearing, ρs::Vector{<:Number}, L, U::Vector{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
+function STOUT_Layer(loops_smearing, ρs::Vector{<:Number}, L, U::Vector{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
     loopset = make_loopforactions(loops_smearing, L)
-    return STOUT_Layer_fast(loopset, U, ρs)
+    return STOUT_Layer(loopset, U, ρs)
 end
 
-function STOUT_Layer_fast(loops_smearing, ρs::Vector{<:Number}, U::Vector{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
+function STOUT_Layer(loops_smearing, ρs::Vector{<:Number}, U::Vector{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
     _, _, NN... = size(U[1])
     if Dim == 2
         L = [NN[1], NN[2]]
@@ -35,14 +35,14 @@ function STOUT_Layer_fast(loops_smearing, ρs::Vector{<:Number}, U::Vector{<:Abs
     end
 
     loopset = make_loopforactions(loops_smearing, L)
-    return STOUT_Layer_fast(loopset, U, ρs)
+    return STOUT_Layer(loopset, U, ρs)
 end
 
 
 
-function STOUT_Layer_fast(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
+function STOUT_Layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
     T = eltype(U)
-    numg = 5 + Dim - 1
+    numg = 5 + Dim - 1 + 2
     temps = Vector{T}(undef, numg)
     for i = 1:numg
         temps[i] = similar(U[1])
@@ -75,16 +75,16 @@ function STOUT_Layer_fast(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:
     TN = eltype(ρs)
     hasdSdCs = [false]
 
-    st = STOUT_Layer_fast{T,Dim,TN}(ρs, dataset, Uin, eQs, Cs, Qs, temps, dSdCs, hasdSdCs, dSdρ)
+    st = STOUT_Layer{T,Dim,TN}(ρs, dataset, Uin, eQs, Cs, Qs, temps, dSdCs, hasdSdCs, dSdρ)
 
     return st
 end
 
-function get_name(s::STOUT_Layer_fast)
+function get_name(s::STOUT_Layer)
     return "STOUT"
 end
 
-function Base.show(s::STOUT_Layer_fast{T,Dim,TN}) where {T,Dim,TN}
+function Base.show(s::STOUT_Layer{T,Dim,TN}) where {T,Dim,TN}
     println("num. of terms: ", length(s.ρs))
     for i = 1:length(s.ρs)
         if i == 1
@@ -106,46 +106,46 @@ function Base.show(s::STOUT_Layer_fast{T,Dim,TN}) where {T,Dim,TN}
 end
 
 
-function set_parameters!(s::STOUT_Layer_fast, ρs)
+function set_parameters!(s::STOUT_Layer, ρs)
     s.ρs[:] .= ρs
     #println(ρs)
 end
 
-function get_parameters(s::STOUT_Layer_fast)
+function get_parameters(s::STOUT_Layer)
     return deepcopy(s.ρs)
 end
 
-function get_parameter_derivatives(s::STOUT_Layer_fast)
+function get_parameter_derivatives(s::STOUT_Layer)
     return deepcopy(s.dSdρ)
 end
 
-function get_numparameters(s::STOUT_Layer_fast)
+function get_numparameters(s::STOUT_Layer)
     return length(s.ρs)
 end
 
-function zero_grad!(s::STOUT_Layer_fast)
+function zero_grad!(s::STOUT_Layer)
     if s.dSdρ != nothing
         s.dSdρ .= 0
     end
 end
 
-function Base.length(layer::STOUT_Layer_fast)
+function Base.length(layer::STOUT_Layer)
     return length(layer.ρs)
 end
 
-function get_Cμ(layer::STOUT_Layer_fast, i)
+function get_Cμ(layer::STOUT_Layer, i)
     return layer.dataset[i].Cμ
 end
 
-function get_dCμdUν(layer::STOUT_Layer_fast, i)
+function get_dCμdUν(layer::STOUT_Layer, i)
     return layer.dataset[i].dCμdUν
 end
 
-function get_dCμdagdUν(layer::STOUT_Layer_fast, i)
+function get_dCμdagdUν(layer::STOUT_Layer, i)
     return layer.dataset[i].dCμdagdUν
 end
 
-function get_ρ(layer::STOUT_Layer_fast, i)
+function get_ρ(layer::STOUT_Layer, i)
     return layer.ρs[i]
 end
 
@@ -166,7 +166,7 @@ export make_longstaple_pair
 
 function apply_layer!(
     Uout::Array{<:AbstractGaugefields{NC,Dim},1},
-    layer::STOUT_Layer_fast{T,Dim,TN},
+    layer::STOUT_Layer{T,Dim,TN},
     Uin,
     temps,
     tempf,
@@ -182,7 +182,7 @@ end
 function layer_pullback!(
     δ_prev::Array{<:AbstractGaugefields{NC,Dim},1},
     δ_current,
-    layer::STOUT_Layer_fast{T,Dim},
+    layer::STOUT_Layer{T,Dim},
     Uprev,
     temps,
     tempf,
@@ -205,7 +205,7 @@ function layer_pullback!(
 end
 
 
-function forward!(s::STOUT_Layer_fast{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
+function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
     isαβsame = true
     substitute_U!(s.Uin, Uin)
     for i = 1:length(s.ρs)
@@ -227,20 +227,21 @@ export forward!
 
 
 
-function backward_dSdU_add!(s::STOUT_Layer_fast, dSdUin, dSdUout)
+function backward_dSdU_add!(s::STOUT_Layer, dSdUin, dSdUout)
     backward_dSdUα_add!(s, dSdUin, dSdUout)
     backward_dSdUβ_add!(s, dSdUin, dSdUout)
 end
 export backward_dSdU_add!
 
-function backward_dSdUαUβρ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdU, dSdρ, dSdUout) where {T,Dim,TN}
+function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
     temps = s.temps
     temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    dSdUdag = temps[4]
-    dSdCs = temps[5:5+Dim-1]
+    dng = 2
+    dSdQ = temps[2+dng]
+    dSdΩ = temps[3+dng]
+    dSdUdag = temps[4+dng]
+    dSdCs = temps[5+dng:5+Dim-1+dng]
 
     Uin = s.Uin
 
@@ -264,12 +265,15 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdU, dSdρ, d
         add_U!(dSdU[μ], dSdUdag')
 
 
-        Cμi = temps[4] #dSdUdag
+        Cμi = temps[4+dng] #dSdUdag
         #dS/dρ
         num = length(s.ρs)
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
+            #Cμi = temps[6]
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:4])
+            #temp1 = temps[1]
+            #dSdCs = temps[7:7+Dim-1]
             mul!(temp1, dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
         end
@@ -286,7 +290,7 @@ export backward_dSdUαUβρ_add!
 
 
 
-function backward_dSdρ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdρ, dSdUout) where {T,Dim,TN}
+function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
     temps = s.temps
     temp1 = temps[1]
@@ -327,7 +331,7 @@ export backward_dSdρ_add!
 
 
 
-function backward_dSdUβ_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN} # Uout =  exp(Q(Uin,ρs))*Uinα
+function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN} # Uout =  exp(Q(Uin,ρs))*Uinα
     temps = s.temps
     temps = similar(s.temps)
     temp1 = temps[1]
@@ -367,7 +371,7 @@ end
 export backward_dSdUβ_add!
 
 
-function backward_dSdUα_add!(s::STOUT_Layer_fast{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN}
+function backward_dSdUα_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN}
     temps = s.temps
     temps = similar(s.temps)
     temp1 = temps[1]
@@ -382,13 +386,14 @@ export backward_dSdUα_add!
 function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Uin, temps_g) where {Dim,TN<:Number}
     temp1 = temps_g[1]
     temp2 = temps_g[2]
-    temp3 = temps_g[3]
+    #temp3 = temps_g[3]
+    temp3 = temps_g[5]
     num = length(ρs)
     clear_U!(C)
     for i = 1:num
         #println("ρi  = ",ρs[i] )
         loops = dataset[i].Cμ[μ]
-        evaluate_gaugelinks!(temp3, loops, Uin, [temp1, temp2])
+        evaluate_gaugelinks!(temp3, loops, Uin, temps_g[1:4])
         #println("i = $i")
         #println(temp3[1,1,1,1,1,1])
         add_U!(C, ρs[i], temp3)
@@ -444,8 +449,9 @@ export calc_dSdUν_fromdSCμ_add!
 function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, dSdCμ, ρs, Us, μ, ν, temps_g) where {Dim}  #use pullback for C(U): dS/dCμ star dCμ/dUν
     temp1 = temps_g[1]
     temp2 = temps_g[2]
-    temp3 = temps_g[3]
-    temp4 = temps_g[4]
+    dng = 2
+    temp3 = temps_g[3+dng]
+    temp4 = temps_g[4+dng]
 
     numterms = length(ρs)
     for iterm = 1:numterms
@@ -465,10 +471,10 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             rightlinks = get_rightlinks(dCμdUν_j)
 
             A = temp3
-            evaluate_gaugelinks!(A, leftlinks, Us, [temp1, temp2])
+            evaluate_gaugelinks!(A, leftlinks, Us, temps_g[1:4])
 
             B = temp4
-            evaluate_gaugelinks!(B, rightlinks, Us, [temp1, temp2])
+            evaluate_gaugelinks!(B, rightlinks, Us, temps_g[1:4])
             LdCdU_i_add!(dSdU, dSdCμm, A, B, ρi, temps_g)
         end
 
@@ -483,9 +489,9 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             rightlinks = get_rightlinks(dCμdagdUν_j)
 
             barA = temp3
-            evaluate_gaugelinks!(barA, leftlinks, Us, [temp1, temp2])
+            evaluate_gaugelinks!(barA, leftlinks, Us, temps_g[1:4])
             barB = temp4
-            evaluate_gaugelinks!(barB, rightlinks, Us, [temp1, temp2])
+            evaluate_gaugelinks!(barB, rightlinks, Us, temps_g[1:4])
             LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
         end
         #end
