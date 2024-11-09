@@ -92,8 +92,6 @@ function get_name(s::CovLayer)
 end
 
 
-
-
 include("./stout.jl")
 include("./stout_fast.jl")
 #include("./stout_b.jl")
