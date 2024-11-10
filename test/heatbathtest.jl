@@ -1,8 +1,5 @@
 function heatbath_SU2!(U,NC,temps,β,Dim=4)
-
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V = temps[5]
     ITERATION_MAX = 10^5
 
     temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
@@ -17,20 +14,18 @@ function heatbath_SU2!(U,NC,temps,β,Dim=4)
         loops = loops_staple[(Dim,μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
     end
     
 end
 
 function heatbath_SU3!(U,NC,temps,β,Dim=4)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V = temps[5]
     ITERATION_MAX = 10^5
 
     temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
@@ -47,11 +42,11 @@ function heatbath_SU3!(U,NC,temps,β,Dim=4)
         loops = loops_staple[(Dim,μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
     end
     
@@ -60,9 +55,7 @@ end
 
 function heatbath_SUN!(U,NC,temps,β,Dim = 4)
     #Dim = 4
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V = temps[5]
     ITERATION_MAX = 10^5
 
     temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
@@ -79,11 +72,11 @@ function heatbath_SUN!(U,NC,temps,β,Dim = 4)
         loops = loops_staple[(Dim,μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,[temp1,temp2],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
     end
     
@@ -118,7 +111,13 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     
     temp1 = similar(U[1])
     temp2 = similar(U[1])
+
+    #=
+    # for heatbath update
     temp3 = similar(U[1])
+    temp4 = similar(U[1])
+    temp5 = similar(U[1])
+    =#
 
     comb = 6
     factor = 1/(comb*U[1].NV*U[1].NC)
@@ -135,11 +134,11 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
         heatbath!(U,h)
         #=
         if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SU2!(U,NC,[temp1,temp2,temp3,temp4,temp5],β)
         elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SU3!(U,NC,[temp1,temp2,temp3,temp4,temp5],β)
         else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SUN!(U,NC,[temp1,temp2,temp3,temp4,temp5],β)
         end
         =#
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -185,7 +184,11 @@ function heatbathtest_2D(NX,NT,β,NC)
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
+
+    # for heatbath update
     temp3 = similar(U[1])
+    temp4 = similar(U[1])
+    temp5 = similar(U[1])
 
     #comb = 6
     if Dim == 4
@@ -218,14 +221,14 @@ function heatbathtest_2D(NX,NT,β,NC)
     plaq_ave = 0.0
     for itrj = 1:numhb
         #heatbath!(U,hnew)
-        heatbath!(U,[temp1,temp2,temp3],β)
+        heatbath!(U,[temp1,temp2,temp3,temp4,temp5],β)
         #=
         if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SU2!(U,NC,[temp1,temp2,temp3,temp4,temp5],β,Dim)
         elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SU3!(U,NC,[temp1,temp2,temp3,temp4,temp5],β,Dim)
         else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SUN!(U,NC,[temp1,temp2,temp3,temp4,temp5],β,Dim)
         end
         =#
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
