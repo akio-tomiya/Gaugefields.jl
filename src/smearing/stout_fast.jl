@@ -218,12 +218,15 @@ function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Di
         s.ρs[i] = deepcopy(ρs[i])
     end
     temps = s.temps
-    Ω = temps[end]
+    #Ω = temps[end]
     for μ = 1:Dim
         calc_C!(s.Cs[μ], μ, ρs, s.dataset, Uin, s.temps)
+        Ω = temps[1]
         mul!(Ω, s.Cs[μ], Uin[μ]') #Ω = C*Udag
         Traceless_antihermitian!(s.Qs[μ], Ω)
+        unused!(temps, 1)
         exptU!(s.eQs[μ], 1, s.Qs[μ], temps[1:2])
+        unused!(temps, 1:2)
         mul!(Uout[μ], s.eQs[μ], Uin[μ])
     end
     set_wing_U!(Uout)
