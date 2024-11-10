@@ -1275,6 +1275,64 @@ function evaluate_gaugelinks_evenodd!(
 
 end
 
+function evaluate_gaugelinks_evenodd!(
+    uout::T,
+    w::Wilsonline{Dim},
+    U::Array{T,1},
+    B::Array{T,2},
+    temps::Array{T,1}, # length >= 4
+    iseven,
+) where {T<:AbstractGaugefields,Dim}
+    Unew = temps[1]
+    origin = Tuple(zeros(Int64, Dim))
+
+    Ushift1 = temps[2]
+    Ushift2 = temps[3]
+
+    glinks = w
+    numlinks = length(glinks)
+    if numlinks == 0
+        unit_U!(uout)
+        return
+    end
+
+    j = 1
+    U1link = glinks[1]
+    direction = get_direction(U1link)
+    position = get_position(U1link)
+    isU1dag = isdag(U1link)
+
+    if numlinks == 1
+        substitute_U!(Unew, U[direction])
+        Ushift1 = shift_U(Unew, position)
+        if isU1dag
+            substitute_U!(uout, Ushift1', iseven)
+        else
+            substitute_U!(uout, Ushift1, iseven)
+        end
+        return
+    end
+
+    substitute_U!(Unew, U[direction])
+    Ushift1 = shift_U(Unew, position)
+
+    for j = 2:numlinks
+        Ujlink = glinks[j]
+        isUkdag = isdag(Ujlink)
+        position = get_position(Ujlink)
+        direction = get_direction(Ujlink)
+        Ushift2 = shift_U(U[direction], position)
+
+        multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag, iseven)
+
+        substitute_U!(Unew, uout)
+        Ushift1 = shift_U(Unew, origin)
+    end
+
+    multiply_Bplaquettes_evenodd!(uout, w, B, temps, iseven)
+
+end
+
 function evaluate_gaugelinks!(
     uout::T,
     w::Wilsonline{Dim},
@@ -1385,7 +1443,7 @@ function evaluate_gaugelinks!(
     w::Wilsonline{Dim},
     U::Array{T,1},
     B::Array{T,2},
-    temps::Array{T,1}, # length >= 3
+    temps::Array{T,1}, # length >= 4
 ) where {T<:AbstractGaugefields,Dim}
     Unew = temps[1]
     origin = Tuple(zeros(Int64, Dim))
@@ -1755,6 +1813,326 @@ function sweepaway_4D_Bplaquettes!(
 end
 
 
+function evaluate_Bplaquettes_evenodd!(
+    uout::T,
+    w::Wilsonline{Dim},
+    B::Array{T,2},
+    temps::Array{T,1},
+    iseven,
+) where {T<:AbstractGaugefields,Dim}
+    multiply_Bplaquettes_evenodd!(uout,w,B,temps,iseven,true)
+end
+function multiply_Bplaquettes_evenodd!(
+    uout::T,
+    w::Wilsonline{Dim},
+    B::Array{T,2},
+    temps::Array{T,1},
+    iseven::Bool,
+    unity = false,
+) where {T<:AbstractGaugefields,Dim}
+    if unity
+        unit_U!(uout)
+    end
+
+    glinks = w
+    numlinks = length(glinks)
+    if numlinks < 3
+        return
+    end
+
+    if !(isLoopwithB(glinks) || isStaplewithB(glinks))
+        return
+    end
+
+    for j = 1:numlinks
+        sweepaway_4D_Bplaquettes_evenodd!(uout, glinks, B, temps, iseven, j)
+    end
+
+end
+
+function sweepaway_4D_Bplaquettes_evenodd!(
+    uout::T,
+    w::Wilsonline{Dim},
+    B::Array{T,2},
+    temps::Array{T,1}, # length(temps) >= 4
+    iseven::Bool,
+    linknum,
+) where {T<:AbstractGaugefields,Dim}
+    Unew = temps[1]
+    glinks = w
+    origin = get_position(glinks[1])  #Tuple(zeros(Int64, Dim))
+    if isdag(glinks[1])
+        origin_shift = [0,0,0,0]
+        origin_shift[get_direction(glinks[1])] += 1
+        origin = Tuple(origin_shift .+ collect(origin))
+    end
+
+    numlinks = length(glinks)
+    if numlinks < linknum
+        return
+    end
+
+    U1link = glinks[linknum]
+    direction = get_direction(U1link)
+    isU1dag = isdag(U1link)
+
+    coordinate = [0,0,0,0] .+ collect(origin)
+    for j = 1:(linknum-1)
+        Ujlink = glinks[j]
+        j_direction = get_direction(Ujlink)
+        isUjdag = isdag(Ujlink)
+
+        if isUjdag
+            coordinate[j_direction] += -1
+        else
+            coordinate[j_direction] += +1
+        end
+    end
+    if isU1dag
+        coordinate[direction] += -1
+    end
+
+    substitute_U!(Unew,uout)
+    Ushift = shift_U(Unew, (0,0,0,0))
+
+    if direction == 1
+        if isU1dag
+            Bshift12 = shift_U(B[1,2], (0,0,0,0))
+            Bshift13 = shift_U(B[1,3], (0,0,0,0))
+            Bshift14 = shift_U(B[1,4], (0,0,0,0))
+        else
+            Bshift12 = shift_U(B[1,2], (0,0,0,0))'
+            Bshift13 = shift_U(B[1,3], (0,0,0,0))'
+            Bshift14 = shift_U(B[1,4], (0,0,0,0))'
+        end
+
+        Bshift12new = temps[2]
+        Bshift13new = temps[3]
+        Bshift14new = temps[4]
+
+        for ix = 1:abs(coordinate[1])
+            if coordinate[1] > 0
+                substitute_U!(Bshift12new,Bshift12)
+                Bshift12 = shift_U(Bshift12new, (1,0,0,0))
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (1,0,0,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (1,0,0,0))
+            else # coordinate[1] < 0
+                substitute_U!(Bshift12new,Bshift12)
+                Bshift12 = shift_U(Bshift12new, (-1,0,0,0))
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (-1,0,0,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (-1,0,0,0))
+            end
+        end
+        
+        for iy = 1:abs(coordinate[2])
+            if coordinate[2] > 0
+                multiply_12!(uout, Ushift, Bshift12, 0, false, false, iseven)
+
+                substitute_U!(Bshift12new,Bshift12)
+                Bshift12 = shift_U(Bshift12new, (0,1,0,0))
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0,1,0,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,1,0,0))
+            else # coordinate[2] < 0
+                substitute_U!(Bshift12new,Bshift12)
+                Bshift12 = shift_U(Bshift12new, (0,-1,0,0))
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0,-1,0,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,-1,0,0))
+
+                multiply_12!(uout, Ushift, Bshift12, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+            
+        end
+        
+        for iz = 1:abs(coordinate[3])
+            if coordinate[3] > 0
+                multiply_12!(uout, Ushift, Bshift13, 0, false, false, iseven)
+
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0,0,1,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,0,1,0))
+            else # coordinate[3] < 0
+                substitute_U!(Bshift13new,Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0,0,-1,0))
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,0,-1,0))
+
+                multiply_12!(uout, Ushift, Bshift13, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+            
+        end
+
+        for it = 1:abs(coordinate[4])
+            if coordinate[4] > 0
+                multiply_12!(uout, Ushift, Bshift14, 0, false, false, iseven)
+
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,0,0,1))
+            else # coordinate[4] < 0
+                substitute_U!(Bshift14new,Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0,0,0,-1))
+
+                multiply_12!(uout, Ushift, Bshift14, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+            
+        end
+    elseif direction == 2
+        if isU1dag
+            Bshift23 = shift_U(B[2,3], (0,0,0,0))
+            Bshift24 = shift_U(B[2,4], (0,0,0,0))
+        else
+            Bshift23 = shift_U(B[2,3], (0,0,0,0))'
+            Bshift24 = shift_U(B[2,4], (0,0,0,0))'
+        end
+
+        Bshift23new = temps[2]
+        Bshift24new = temps[3]
+
+        for ix = 1:abs(coordinate[1])
+            if coordinate[1] > 0
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (1,0,0,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (1,0,0,0))
+            else # coordinate[1] < 0
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (-1,0,0,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (-1,0,0,0))
+            end
+        end
+        
+        for iy = 1:abs(coordinate[2])
+            if coordinate[2] > 0
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0,1,0,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,1,0,0))
+            else # coordinate[2] < 0
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0,-1,0,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,-1,0,0))
+            end
+        end
+
+        for iz = 1:abs(coordinate[3])
+            if coordinate[3] > 0
+                multiply_12!(uout, Ushift, Bshift23, 0, false, false, iseven)
+
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0,0,1,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,0,1,0))
+            else # coordinate[3] < 0
+                substitute_U!(Bshift23new,Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0,0,-1,0))
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,0,-1,0))
+
+                multiply_12!(uout, Ushift, Bshift23, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+            
+        end
+
+        for it = 1:abs(coordinate[4])
+            if coordinate[4] > 0
+                multiply_12!(uout, Ushift, Bshift24, 0, false, false, iseven)
+
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,0,0,1))
+            else # coordinate[4] < 0
+                substitute_U!(Bshift24new,Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0,0,0,-1))
+
+                multiply_12!(uout, Ushift, Bshift24, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+        end
+    elseif direction == 3
+        if isU1dag
+            Bshift34 = shift_U(B[3,4], (0,0,0,0))
+        else
+            Bshift34 = shift_U(B[3,4], (0,0,0,0))'
+        end
+
+        Bshift34new = temps[2]
+
+        for ix = 1:abs(coordinate[1])
+            if coordinate[1] > 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (1,0,0,0))
+            else # coordinate[1] < 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (-1,0,0,0))
+            end
+        end
+        
+        for iy = 1:abs(coordinate[2])
+            if coordinate[2] > 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,1,0,0))
+            else # coordinate[2] < 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,-1,0,0))
+            end
+        end
+        
+        for iz = 1:abs(coordinate[3])
+            if coordinate[3] > 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,0,1,0))
+            else # coordinate[3] < 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,0,-1,0))
+            end
+        end
+        
+        for it = 1:abs(coordinate[4])
+            if coordinate[4] > 0
+                multiply_12!(uout, Ushift, Bshift34, 0, false, false, iseven)
+
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,0,0,1))
+            else # coordinate[4] < 0
+                substitute_U!(Bshift34new,Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0,0,0,-1))
+
+                multiply_12!(uout, Ushift, Bshift34, 0, true, false, iseven)
+            end
+            
+            substitute_U!(Unew,uout)
+            Ushift = shift_U(Unew, origin)
+            
+        end
+    else
+        # direction==4: no multiplications
+    end
+end
+
+
 function isLoopwithB(
     w::Wilsonline{Dim},
 ) where {Dim}
@@ -1878,6 +2256,29 @@ function evaluate_gaugelinks_evenodd!(
     return
 
 
+end
+
+function evaluate_gaugelinks_evenodd!(
+    xout::T,
+    w::Array{<:Wilsonline{Dim},1},
+    U::Array{T,1},
+    B::Array{T,2},
+    temps::Array{T,1}, # length >= 5
+    iseven,
+) where {T<:AbstractGaugefields,Dim}
+    num = length(w)
+    temp = temps[5]
+
+    #ix,iy,iz,it=(2,2,2,2)
+
+    clear_U!(xout, iseven)
+    for i = 1:num
+        glinks = w[i]
+        evaluate_gaugelinks_evenodd!(temp, glinks, U, temps[1:4], iseven) # length >= 4
+        add_U!(xout, temp, iseven)
+    end
+
+    return
 end
 
 function evaluate_gaugelinks!(
