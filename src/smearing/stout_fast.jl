@@ -537,9 +537,9 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             evaluate_gaugelinks!(barB, rightlinks, Us, temps_g[1:4])
             unused!(temps_g, 1:4)
             LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
-            unused(temps_g, 1:4)
-            unused(temps_g, 3 + dng)
-            unused(temps_g, 4 + dng)
+            unused!(temps_g, 1:4)
+            unused!(temps_g, 3 + dng)
+            unused!(temps_g, 4 + dng)
         end
         #end
 
