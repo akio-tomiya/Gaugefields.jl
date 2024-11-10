@@ -34,7 +34,7 @@ function MDtest!(snet,U,Dim,mpi=false)
 
     numtrj = 100
     for itrj = 1:numtrj
-        @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
+        @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold,temp1,temp2)
         numaccepted += ifelse(accepted,1,0)
 
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -56,7 +56,7 @@ function calc_action(snet,U,p)
     return real(S)
 end
 
-function MDstep!(snet,U,p,MDsteps,Dim,Uold)
+function MDstep!(snet,U,p,MDsteps,Dim,Uold,temp1,temp2)
     Δτ = 1/MDsteps
     gauss_distribution!(p)
     Sold = calc_action(snet,U,p)
@@ -66,7 +66,7 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
         U_update!(U,p,0.5,Δτ,Dim,snet)
         #println(getvalue(U[1],1,1,1,1,1,1))
 
-        P_update!(U,p,1.0,Δτ,Dim,snet)
+        P_update!(U,p,1.0,Δτ,Dim,snet,temp1,temp2)
         #if get_myrank(U) == 0
         #    println(getvalue(U[1],1,1,1,1,1,1))
         #    println("p = ",p[1][1,1,1,1,1])
@@ -86,7 +86,7 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
         println("Sold = $Sold, Snew = $Snew")
         println("Snew - Sold = $(Snew-Sold)")
     end
-    ratio = min(1,exp(Snew-Sold))
+    ratio = min(1,exp(-Snew+Sold))
     r = rand()
     if mpi
         r = MPI.bcast(r, 0, MPI.COMM_WORLD)
@@ -116,17 +116,17 @@ function U_update!(U,p,ϵ,Δτ,Dim,snet)
     end
 end
 
-function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
+function P_update!(U,p,ϵ,Δτ,Dim,snet,temp1,temp2) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
-    dSdUμ = temps[end]
+    temp  = temp1
+    dSdUμ = temp2
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
         calc_dSdUμ!(dSdUμ,snet,μ,U)
         #println("dSdU = ",getvalue(dSdUμ,1,1,1,1,1,1))
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+        mul!(temp,U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temp)
     end
 end
 
