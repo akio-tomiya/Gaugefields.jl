@@ -267,12 +267,18 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
 
+        dSdQ = temps[2+dng]
+        dSdΩ = temps[3+dng]
+
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uin[μ], temp1)
+        unused!(temps, 1)
         calc_dSdΩ!(dSdΩ, dSdQ)
+        unused!(temps, 2 + dng)
         calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
 
         dSdUdag = temps[4+dng]
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
+        unused!(temps, 3 + dng)
         add_U!(dSdU[μ], dSdUdag')
         unused!(temps, 4 + dng)
 
