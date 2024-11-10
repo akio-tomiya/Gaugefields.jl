@@ -13,7 +13,7 @@ function calc_action(gauge_action, U, p)
     return real(S)
 end
 
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temp1, temp2)
     Δτ = 1 / MDsteps
     gauss_distribution!(p)
     Sold = calc_action(gauge_action, U, p)
@@ -22,7 +22,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
     for itrj = 1:MDsteps
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action)
+        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temp1, temp2)
 
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
     end
@@ -53,16 +53,16 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
     end
 end
 
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action) # p -> p +factor*U*dSdUμ
+function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temp1, temp2) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = temps[end]
+    temp  = temp1
+    dSdUμ = temp2
     factor = -ϵ * Δτ / (NC)
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
-        mul!(temps[1], U[μ], dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ], factor, temps[1])
+        mul!(temp, U[μ], dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp)
     end
 end
 
@@ -126,7 +126,7 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
 
     numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temp1, temp2)
         numaccepted += ifelse(accepted, 1, 0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -203,7 +203,7 @@ function HMC_test_2D(NX, NT, NC)
 
     numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temp1, temp2)
         numaccepted += ifelse(accepted, 1, 0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor

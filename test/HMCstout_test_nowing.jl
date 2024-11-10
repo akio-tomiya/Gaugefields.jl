@@ -17,7 +17,7 @@ function MDtest!(gauge_action, U, Dim, nn)
 
     numtrj = 100
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temp1, temp2)
         numaccepted += ifelse(accepted, 1, 0)
 
         plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
@@ -35,7 +35,7 @@ function calc_action(gauge_action, U, p)
 end
 
 
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
+function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temp1, temp2)
 
 
     Δτ = 1 / MDsteps
@@ -49,7 +49,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
     for itrj = 1:MDsteps
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn)
+        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temp1, temp2)
 
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
     end
@@ -86,10 +86,10 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
     end
 end
 
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn) # p -> p +factor*U*dSdUμ
+function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temp1, temp2) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
     factor = -ϵ * Δτ / (NC)
-    temps = get_temporary_gaugefields(gauge_action)
+    temp = temp1
     Uout, Uout_multi, _ = calc_smearedU(U, nn)
 
     for μ = 1:Dim
@@ -99,8 +99,8 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn) # p -> p +factor
     dSdUbare = back_prop(dSdU, nn, Uout_multi, U)
 
     for μ = 1:Dim
-        mul!(temps[1], U[μ], dSdUbare[μ]) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ], factor, temps[1])
+        mul!(temp, U[μ], dSdUbare[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp)
     end
 end
 
