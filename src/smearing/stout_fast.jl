@@ -248,8 +248,8 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
     temps = s.temps
     temp1 = temps[1]
     dng = 2
-    dSdQ = temps[2+dng]
-    dSdΩ = temps[3+dng]
+    #dSdQ = temps[2+dng]
+    #dSdΩ = temps[3+dng]
     #dSdUdag = temps[4+dng]
     dSdCs = temps[5+dng:5+Dim-1+dng]
 
@@ -298,7 +298,7 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
         end
         unused!(temps, 4 + dng)
     end
-    unused!(temps)
+
 
 
     for ν = 1:Dim
