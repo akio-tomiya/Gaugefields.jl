@@ -16,6 +16,8 @@ include("./action/GaugeActions.jl")
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
+include("./Temporalfields/temporalfields.jl")
+
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
         import .AbstractGaugefields_module:
@@ -208,6 +210,9 @@ import .GaugeAction_module:
     calc_dSdUμ!,
     get_temporary_gaugefields,
     evaluate_GaugeAction
+
+import .Temporalfields_module: Temporalfields, unused!
+export Temporalfields, unused!
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
