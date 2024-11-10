@@ -48,7 +48,7 @@ function Base.getindex(t::Temporalfields{TG}, i::Int) where {TG}
         t._flagusing[index] = true
         t._indices[i] = index
     else
-        @warn "This index $i is being using.  You should pay attention"
+        @error "This index $i is being using.  You should pay attention"
     end
 
     return t._data[t._indices[i]]
