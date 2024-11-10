@@ -310,13 +310,13 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
             calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
         end
 
-        Cμi = temps[4] #dSdUdag
+        Cμi = temps[5] #dSdUdag
         #dS/dρ
         num = length(s.ρs)
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #println(loops)
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:4])
 
             mul!(temp1, s.dSdCs[μ], Cμi)
 
