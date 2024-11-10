@@ -1,6 +1,7 @@
 module Gaugefields
 
 using Requires
+include("./Temporalfields/temporalfields.jl")
 include("./output/verboseprint_mpi.jl")
 #include("./output/verboseprint.jl")
 include("./SUN_generator.jl")
@@ -16,7 +17,7 @@ include("./action/GaugeActions.jl")
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
-include("./Temporalfields/temporalfields.jl")
+
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
