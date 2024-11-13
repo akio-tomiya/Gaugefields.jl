@@ -324,11 +324,15 @@ export backward_dSdUαUβρ_add!
 
 function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
-    temps = s.temps
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    Cμi = temps[4] #dSdUdag
+    #temps = s.temps
+    #temp1, it_temp1 = get_temp(s.temps)
+    #temp1 = temps[1]
+    #dSdQ = temps[2]
+    #dSdQ, it_dSdQ = get_temp(s.temps)
+    #dSdΩ = temps[3]
+    #dSdΩ, it_dSdΩ = get_temp(s.temps)
+    #Cμi = temps[4] #dSdUdag
+    #Cμi, it_Cμi = get_temp(s.temps)
 
 
     Uin = s.Uin
@@ -337,10 +341,15 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
 
         if s.hasdSdCs[1] == false
             Qμ = s.Qs[μ]
-            calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temps[1])
-            unused!(temps, 1)
+            temp1, it_temp1 = get_temp(s.temps)
+            dSdQ, it_dSdQ = get_temp(s.temps)
+            calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
+            unused!(s.temps, it_temp1)
+            dSdΩ, it_dSdΩ = get_temp(s.temps)
             calc_dSdΩ!(dSdΩ, dSdQ)
+            unused!(s.temps, it_dSdQ)
             calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
+            unused!(s.temps, it_dSdQ)
         end
 
 
@@ -349,32 +358,34 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #println(loops)
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
-            unused!(temps, 1:2)
-            temp1 = temps[1]
+            temps, its_temps = get_temp(s.temps, 2)
+            Cμi, it_Cμi = get_temp(s.temps)
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps)
+            unused!(s.temps, its_temps)
+            temp1, it_temp1 = get_temp(s.temps)
             mul!(temp1, s.dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
 
-            unused!(temps, 1)
+            unused(s.temps, it_Cμi)
+            unused!(s.temps, it_temp1)
         end
-        unused!(temps, 1:3)
     end
     s.hasdSdCs[1] = true
 
-    unused!(temps)
+    #unused!(temps)
 end
 export backward_dSdρ_add!
 
 
 
 function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN} # Uout =  exp(Q(Uin,ρs))*Uinα
-    temps = s.temps
+    #temps = s.temps
     #temps = similar(s.temps)
 
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    dSdUdag = temps[4]
+    #temp1 = temps[1]
+    #dSdQ = temps[2]
+    #dSdΩ = temps[3]
+    #dSdUdag = temps[4]
 
     Uin = s.Uin
 
@@ -387,17 +398,21 @@ function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,
 
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
-
+        temp1, it_temps = get_temp(s.temps)
+        dSdQ, it_dSdQ = get_temp(s.temps)
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
-
+        unused!(s.temps, it_temps)
+        dSdΩ, it_dSdΩ = get_temp(s.temps)
         calc_dSdΩ!(dSdΩ, dSdQ)
+        unused!(s.temps, it_dSdQ)
 
         calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
-
+        dSdUdag, it_dSdUdag = get_temp(s.temps)
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
+        unused!(s.temps, it_dSdΩ)
         add_U!(dSdU[μ], dSdUdag')
+        unused!(s.temps, it_dSdUdag)
     end
-    unused!(temps, 1:4)
 
     for ν = 1:Dim
         for μ = 1:Dim
@@ -405,21 +420,21 @@ function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,
         end
     end
     s.hasdSdCs[1] = true
-    unused!(temps)
 end
 export backward_dSdUβ_add!
 
 
 function backward_dSdUα_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN}
-    temps = s.temps
+    #temps = s.temps
     #temps = similar(s.temps)
-    temp1 = temps[1]
+    #temp1 = temps[1]
+    temp1, it_temp1 = get_temp(s.temps)
 
     for μ = 1:Dim
         calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
         add_U!(dSdU[μ], temp1)
     end
-    unused!(temps, 1)
+    unused!(temps, it_temp1)
 end
 export backward_dSdUα_add!
 
@@ -427,8 +442,10 @@ function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Ui
     #temp1 = temps_g[1]
     #temp2 = temps_g[2]
     #temp3 = temps_g[3]
-    temp3 = temps_g[5]
-    vec_temps = temps_g[1:4]
+    temp3, it_temp3 = get_temp(temps_g)
+    #temp3 = temps_g[5]
+    #vec_temps = temps_g[1:4]
+    vec_temps, its_vec_temps = get_temp(temps_g, 4)
     num = length(ρs)
     clear_U!(C)
     for i = 1:num
@@ -439,7 +456,8 @@ function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Ui
         #println(temp3[1,1,1,1,1,1])
         add_U!(C, ρs[i], temp3)
     end
-    unused!(temps_g, 1:5)
+    unused!(temps_g, it_temp3)
+    unused!(temps_g, its_vec_temps)
     #println("U ", Uin[1][1,1,1,1,1,1])
 end
 export calc_C!
