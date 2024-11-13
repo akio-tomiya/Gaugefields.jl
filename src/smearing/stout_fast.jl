@@ -247,13 +247,15 @@ export backward_dSdU_add!
 
 function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
-    temps = s.temps
-    temp1 = temps[1]
-    dng = 2
+    #temps = s.temps
+    temp1, it_1 = get_temp(s.temps)
+    #temp1 = temps[1]
+    #dng = 2
     #dSdQ = temps[2+dng]
     #dSdΩ = temps[3+dng]
     #dSdUdag = temps[4+dng]
-    dSdCs = temps[5+dng:5+Dim-1+dng]
+    #dSdCs = temps[5+dng:5+Dim-1+dng]
+    dSdCs, it_dSdCs = get_temp(s.temps, Dim - 1)
 
     Uin = s.Uin
 
@@ -269,46 +271,52 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
 
-        dSdQ = temps[2+dng]
-        dSdΩ = temps[3+dng]
+        #dSdQ = temps[2+dng]
+        dSdQ, it_dSdQ = get_temp(s.temps)
+        #dSdΩ = temps[3+dng]
+        dSdΩ, it_dSdΩ = get_temp(s.temps)
 
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uin[μ], temp1)
-        unused!(temps, 1)
+        unused!(s.temps, it_1)
         calc_dSdΩ!(dSdΩ, dSdQ)
-        unused!(temps, 2 + dng)
+        unused!(s.temps, it_dSdQ)
         calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
 
-        dSdUdag = temps[4+dng]
+
+        dSdUdag, it_dSdUdag = get_temp(s.temps)
+        #dSdUdag = temps[4+dng]
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
-        unused!(temps, 3 + dng)
+        unused!(s.temps, it_dSdΩ)
         add_U!(dSdU[μ], dSdUdag')
-        unused!(temps, 4 + dng)
+        unused!(s.temps, it_dSdUdag)
 
 
-        Cμi = temps[4+dng] #dSdUdag
+        #Cμi = temps[4+dng] #dSdUdag
+        Cμi, it_Cμi = get_temp(s.temps)
         #dS/dρ
         num = length(s.ρs)
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #Cμi = temps[6]
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:4])
+            temps, its_temps = get_temp(s.temps, 4)
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps)
             #temp1 = temps[1]
             #dSdCs = temps[7:7+Dim-1]
             mul!(temp1, dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
-            unused!(temps, 1:4)
+            unused!(s.temps, its_temps)
         end
-        unused!(temps, 4 + dng)
+        unused!(s.temps, it_Cμi)
     end
 
 
 
     for ν = 1:Dim
         for μ = 1:Dim
-            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, temps)
+            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, s.temps)
         end
     end
-    unused!(temps)
+    unused!(s.temps)
 end
 export backward_dSdUαUβρ_add!
 
