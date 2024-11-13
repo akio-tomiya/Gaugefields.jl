@@ -13,6 +13,8 @@ import Wilsonloop: Wilsonline, make_staple
 using LinearAlgebra
 using InteractiveUtils
 
+using ..Temporalfields_module
+
 
 
 struct GaugeAction_dataset{Dim}
