@@ -77,10 +77,34 @@ function Base.display(t::Temporalfields{TG}) where {TG}
     println("The total number of fields used: $numused")
     for i = 1:n
         if t._indices[i] != 0
-            println("The adress $i is used as the index $(t._indices[i])")
+            #println("The adress $i is used as the index $(t._indices[i])")
+            println("The adress $(t._indices[i]) is used as the index $i")
         end
     end
     println("The flags: $(t._flagusing)")
+    println("The indices: $(t._indices)")
+end
+
+function get_temp(t::Temporalfields{TG}) where {TG}
+    n = length(t._data)
+    i = findfirst(x -> x == 0, t._indices)
+    if i == nothing
+        @warn "All tempral fields are used. New one is created."
+        i = n + 1
+    end
+    return t[i], i
+end
+
+function get_temp(t::Temporalfields{TG}, num) where {TG}
+    n = length(t._data)
+    i_s = Int64[]
+    t_s = TG[]
+    for k = 1:num
+        tk, i = get(t)
+        push!(t_s, tk)
+        push!(i_s, i)
+    end
+    return t_s, i_s
 end
 
 function unused!(t::Temporalfields{TG}, i) where {TG}

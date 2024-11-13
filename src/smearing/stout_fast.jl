@@ -1,7 +1,7 @@
 
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!, Gaugefields_4D_wing
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
-import ..Temporalfields_module: Temporalfields, unused!
+import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     ρs::Vector{TN}
@@ -217,16 +217,18 @@ function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Di
     for i = 1:length(s.ρs)
         s.ρs[i] = deepcopy(ρs[i])
     end
-    temps = s.temps
+    #temps = s.temps
     #Ω = temps[end]
     for μ = 1:Dim
         calc_C!(s.Cs[μ], μ, ρs, s.dataset, Uin, s.temps)
-        Ω = temps[1]
+        Ω, iΩ = get_temp(s.temps)
+        #Ω = temps[1]
         mul!(Ω, s.Cs[μ], Uin[μ]') #Ω = C*Udag
         Traceless_antihermitian!(s.Qs[μ], Ω)
-        unused!(temps, 1)
-        exptU!(s.eQs[μ], 1, s.Qs[μ], temps[1:2])
-        unused!(temps, 1:2)
+        unused!(s.temps, iΩ)
+        temps, it_s = get_temp(s.temps, 2)
+        exptU!(s.eQs[μ], 1, s.Qs[μ], temps)
+        unused!(temps, it_s)
         mul!(Uout[μ], s.eQs[μ], Uin[μ])
     end
     set_wing_U!(Uout)
