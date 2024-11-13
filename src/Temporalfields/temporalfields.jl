@@ -25,11 +25,11 @@ Base.length(t::Temporalfields{TG}) where {TG} = length(t._data)
 Base.size(t::Temporalfields{TG}) where {TG} = size(t._data)
 
 function Base.firstindex(t::Temporalfields{TG}) where {TG}
-    return t[1]
+    return 1
 end
 
 function Base.lastindex(t::Temporalfields{TG}) where {TG}
-    return t[length(t)]
+    return length(t._data)
 end
 
 function Base.getindex(t::Temporalfields{TG}, i::Int) where {TG}

@@ -190,7 +190,7 @@ mutable struct Gradientflow{TA,T} <: Abstractsmearing
         #for i = 1:2
         #    Utemps[i] = similar(U)
         #end
-        tempG = Temporalfields(U[1], num=3)
+        tempG = Temporalfields(U[1], num=10)
         #tempG = Array{T,1}(undef, 3)
         ##for i = 1:3
         #    tempG[i] = similar(U[1])
@@ -225,9 +225,9 @@ function flow!(U, g::T) where {T<:Gradientflow}
     #W2 = Utemps[2]
     W1, it_W1 = get_temp(Utemps)
     W2, it_W2 = get_temp(Utemps)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    temp3, it_temp3 = get_temp(temps)
+    #temp1, it_temp1 = get_temp(temps)
+    #temp2, it_temp2 = get_temp(temps)
+    #temp3, it_temp3 = get_temp(temps)
     eps = g.eps
 
     for istep = 1:g.Nflow #RK4 integrator -> RK3?
@@ -236,12 +236,12 @@ function flow!(U, g::T) where {T<:Gradientflow}
 
         #add_force!(F0,U,[temp1,temp2,temp3],gparam)
 
-        exp_aF_U!(W1, -eps * (1 / 4), F0, U, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W1, -eps * (1 / 4), F0, U, temps) #exp(a*F)*U
 
         #println("W1 ",W1[1][1,1,1,1,1,1])
         #
         clear_U!(F1)
-        add_force!(F1, W1, [temp1, temp2, temp3], plaqonly=true)
+        add_force!(F1, W1, temps, plaqonly=true)
         #add_force!(F1,W1,[temp1,temp2,temp3],gparam) #F
         #println("F1 ",F1[1][1,1,1,1,1,1])
         clear_U!(Ftmp)
@@ -249,13 +249,13 @@ function flow!(U, g::T) where {T<:Gradientflow}
         #println("Ftmp ",Ftmp[1][1,1,1,1,1,1])
         add_U!(Ftmp, (17 / 36 * eps), F0)
         #println("Ftmp1 ",Ftmp[1][1,1,1,1,1,1])
-        exp_aF_U!(W2, 1, Ftmp, W1, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W2, 1, Ftmp, W1, temps) #exp(a*F)*U
         #exp_aF_U!(W2,1,Ftmp,U,[temp1,temp2,temp3]) #exp(a*F)*U
         #println("W2 ",W2[1][1,1,1,1,1,1])
 
         #
         clear_U!(F2)
-        add_force!(F2, W2, [temp1, temp2, temp3], plaqonly=true)
+        add_force!(F2, W2, temps, plaqonly=true)
         #add_force!(F2,W2,[temp1,temp2,temp3],gparam) #F
         #calc_gaugeforce!(F2,W2,univ) #F
         clear_U!(Ftmp)
@@ -263,7 +263,7 @@ function flow!(U, g::T) where {T<:Gradientflow}
         add_U!(Ftmp, (8 / 9 * eps), F1)
         add_U!(Ftmp, -(17 / 36 * eps), F0)
         #exp_aF_U!(W1,1,Ftmp,U,[temp1,temp2,temp3]) #exp(a*F)*U  
-        exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
+        exp_aF_U!(U, 1, Ftmp, W2, temps) #exp(a*F)*U  
 
         #println(typeof(U[1]))
         #println(U[1][1,1,1,1,1,1])
@@ -272,9 +272,9 @@ function flow!(U, g::T) where {T<:Gradientflow}
     end
     unused!(Utemps, it_W1)
     unused!(Utemps, it_W2)
-    unused!(temps, it_temp1)
-    unused!(temps, it_temp2)
-    unused!(temps, it_temp3)
+    #unused!(temps, it_temp1)
+    #unused!(temps, it_temp2)
+    #unused!(temps, it_temp3)
 
 end
 function flow!(U, B, g::T) where {T<:Gradientflow}
@@ -289,9 +289,9 @@ function flow!(U, B, g::T) where {T<:Gradientflow}
 
     W1, it_W1 = get_temp(Utemps)
     W2, it_W2 = get_temp(Utemps)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    temp3, it_temp3 = get_temp(temps)
+    #temp1, it_temp1 = get_temp(temps)
+    #temp2, it_temp2 = get_temp(temps)
+    #temp3, it_temp3 = get_temp(temps)
 
     #W1 = Utemps[1]
     #W2 = Utemps[2]
@@ -304,29 +304,29 @@ function flow!(U, B, g::T) where {T<:Gradientflow}
         clear_U!(F0)
         add_force!(F0, U, B, temps, plaqonly=true)
 
-        exp_aF_U!(W1, -eps * (1 / 4), F0, U, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W1, -eps * (1 / 4), F0, U, temps) #exp(a*F)*U
 
         #
         clear_U!(F1)
-        add_force!(F1, W1, B, [temp1, temp2, temp3], plaqonly=true)
+        add_force!(F1, W1, B, temps, plaqonly=true)
         clear_U!(Ftmp)
         add_U!(Ftmp, -(8 / 9 * eps), F1)
         add_U!(Ftmp, (17 / 36 * eps), F0)
-        exp_aF_U!(W2, 1, Ftmp, W1, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W2, 1, Ftmp, W1, temps) #exp(a*F)*U
         #
         clear_U!(F2)
-        add_force!(F2, W2, B, [temp1, temp2, temp3], plaqonly=true)
+        add_force!(F2, W2, B, temps, plaqonly=true)
         clear_U!(Ftmp)
         add_U!(Ftmp, -(3 / 4 * eps), F2)
         add_U!(Ftmp, (8 / 9 * eps), F1)
         add_U!(Ftmp, -(17 / 36 * eps), F0)
-        exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
+        exp_aF_U!(U, 1, Ftmp, W2, temps) #exp(a*F)*U  
     end
     unused!(Utemps, it_W1)
     unused!(Utemps, it_W2)
-    unused!(temps, it_temp1)
-    unused!(temps, it_temp2)
-    unused!(temps, it_temp3)
+    #unused!(temps, it_temp1)
+    #unused!(temps, it_temp2)
+    #unused!(temps, it_temp3)
 
 end
 
@@ -344,9 +344,9 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
     #Ftmp = similar(U)
     W1, it_W1 = get_temp(Utemps)
     W2, it_W2 = get_temp(Utemps)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    temp3, it_temp3 = get_temp(temps)
+    #temp1, it_temp1 = get_temp(temps)
+    #temp2, it_temp2 = get_temp(temps)
+    #temp3, it_temp3 = get_temp(temps)
     #W1 = Utemps[1]
     #W2 = Utemps[2]
     #temp1 = temps[1]
@@ -363,7 +363,7 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
 
         #add_force!(F0,U,[temp1,temp2,temp3],gparam)
 
-        exp_aF_U!(W1, -eps * (1 / 4), F0, U, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W1, -eps * (1 / 4), F0, U, temps) #exp(a*F)*U
 
         #println("W1 ",W1[1][1,1,1,1,1,1])
         #
@@ -377,7 +377,7 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         #println("Ftmp ",Ftmp[1][1,1,1,1,1,1])
         add_U!(Ftmp, (17 / 36 * eps), F0)
         #println("Ftmp1 ",Ftmp[1][1,1,1,1,1,1])
-        exp_aF_U!(W2, 1, Ftmp, W1, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W2, 1, Ftmp, W1, temps) #exp(a*F)*U
         #exp_aF_U!(W2,1,Ftmp,U,[temp1,temp2,temp3]) #exp(a*F)*U
         #println("W2 ",W2[1][1,1,1,1,1,1])
 
@@ -392,7 +392,7 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         add_U!(Ftmp, (8 / 9 * eps), F1)
         add_U!(Ftmp, -(17 / 36 * eps), F0)
         #exp_aF_U!(W1,1,Ftmp,U,[temp1,temp2,temp3]) #exp(a*F)*U  
-        exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
+        exp_aF_U!(U, 1, Ftmp, W2, temps) #exp(a*F)*U  
 
         #println(typeof(U[1]))
         #println(U[1][1,1,1,1,1,1])
@@ -402,9 +402,9 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
 
     unused!(Utemps, it_W1)
     unused!(Utemps, it_W2)
-    unused!(temps, it_temp1)
-    unused!(temps, it_temp2)
-    unused!(temps, it_temp3)
+    ##unused!(temps, it_temp1)
+    #unused!(temps, it_temp2)
+    #unused!(temps, it_temp3)
 
 
 
@@ -421,9 +421,9 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
 
     W1, it_W1 = get_temp(Utemps)
     W2, it_W2 = get_temp(Utemps)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    temp3, it_temp3 = get_temp(temps)
+    #temp1, it_temp1 = get_temp(temps)
+    #temp2, it_temp2 = get_temp(temps)
+    #temp3, it_temp3 = get_temp(temps)
     #W1 = Utemps[1]
     #W2 = Utemps[2]
     #temp1 = temps[1]
@@ -436,7 +436,7 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
 
         F_update!(F0, U, B, 1, Dim, g.gaugeaction)
 
-        exp_aF_U!(W1, -eps * (1 / 4), F0, U, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W1, -eps * (1 / 4), F0, U, temps) #exp(a*F)*U
 
         #
         clear_U!(F1)
@@ -444,7 +444,7 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         clear_U!(Ftmp)
         add_U!(Ftmp, -(8 / 9 * eps), F1)
         add_U!(Ftmp, (17 / 36 * eps), F0)
-        exp_aF_U!(W2, 1, Ftmp, W1, [temp1, temp2, temp3]) #exp(a*F)*U
+        exp_aF_U!(W2, 1, Ftmp, W1, temps) #exp(a*F)*U
         #
         clear_U!(F2)
         F_update!(F2, W2, B, 1, Dim, g.gaugeaction)
@@ -452,14 +452,14 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         add_U!(Ftmp, -(3 / 4 * eps), F2)
         add_U!(Ftmp, (8 / 9 * eps), F1)
         add_U!(Ftmp, -(17 / 36 * eps), F0)
-        exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
+        exp_aF_U!(U, 1, Ftmp, W2, temps) #exp(a*F)*U  
     end
 
     unused!(Utemps, it_W1)
     unused!(Utemps, it_W2)
-    unused!(temps, it_temp1)
-    unused!(temps, it_temp2)
-    unused!(temps, it_temp3)
+    #unused!(temps, it_temp1)
+    #unused!(temps, it_temp2)
+    #unused!(temps, it_temp3)
 
 end
 
