@@ -514,18 +514,22 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             rightlinks = get_rightlinks(dCμdUν_j)
 
             #A = temp3
-            A = temps_g[3+dng]
-            evaluate_gaugelinks!(A, leftlinks, Us, temps_g[1:4])
-            unused!(temps_g, 1:4)
+            A, it_A = get_temp(temps_g)
+            #A = temps_g[3+dng]
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(A, leftlinks, Us, temps)
+            unused!(temps_g, its_temps)
 
             #B = temp4
-            B = temps_g[4+dng]
-            evaluate_gaugelinks!(B, rightlinks, Us, temps_g[1:4])
-            unused!(temps_g, 1:4)
+            #B = temps_g[4+dng]
+            B, it_B = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(B, rightlinks, Us, temps)
+            unused!(temps_g, its_temps)
             LdCdU_i_add!(dSdU, dSdCμm, A, B, ρi, temps_g)
-            unused!(temps_g, 1:4)
-            unused!(temps_g, 3 + dng)
-            unused!(temps_g, 4 + dng)
+            #unused!(temps_g, its_temps)
+            unused!(temps_g, it_A)
+            unused!(temps_g, it_B)
         end
 
         numdCμdagdUν = length(dCμdagdUν[μ, ν])
@@ -539,17 +543,21 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             rightlinks = get_rightlinks(dCμdagdUν_j)
 
             #barA = temp3
-            barA = temps_g[3+dng]
-            evaluate_gaugelinks!(barA, leftlinks, Us, temps_g[1:4])
-            unused!(temps_g, 1:4)
+            #barA = temps_g[3+dng]
+            barA, it_barA = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(barA, leftlinks, Us, temps)
+            unused!(temps_g, its_temps)
             #barB = temp4
-            barB = temps_g[4+dng]
-            evaluate_gaugelinks!(barB, rightlinks, Us, temps_g[1:4])
-            unused!(temps_g, 1:4)
+            #barB = temps_g[4+dng]
+            barB, it_barB = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(barB, rightlinks, Us, temps)
+            unused!(temps_g, its_temps)
             LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
-            unused!(temps_g, 1:4)
-            unused!(temps_g, 3 + dng)
-            unused!(temps_g, 4 + dng)
+
+            unused!(temps_g, it_barA)
+            unused!(temps_g, it_barB)
         end
         #end
 
