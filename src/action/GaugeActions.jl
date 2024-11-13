@@ -26,7 +26,8 @@ struct GaugeAction{Dim,T,Tdata}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
     dataset::Vector{Tdata}
-    _temp_U::Vector{T}
+    #_temp_U::Vector{T}
+    _temp_U::Temporalfields{T}
 end
 
 function GaugeAction_dataset(β, closedloops::Vector{Wilsonline{Dim}}) where {Dim}
@@ -231,11 +232,15 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
+
     num = 6
+    _temp_U = Temporalfields(U[1]; num=num)
+    #=
     _temp_U = Array{eltype(U)}(undef, num)
     for i = 1:num
         _temp_U[i] = similar(U[1])
     end
+    =#
 
     return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
 end
