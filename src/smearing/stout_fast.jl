@@ -255,7 +255,7 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
     #dSdΩ = temps[3+dng]
     #dSdUdag = temps[4+dng]
     #dSdCs = temps[5+dng:5+Dim-1+dng]
-    dSdCs, it_dSdCs = get_temp(s.temps, Dim - 1)
+    dSdCs, it_dSdCs = get_temp(s.temps, Dim)
 
     Uin = s.Uin
 
