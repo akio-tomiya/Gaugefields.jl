@@ -100,7 +100,7 @@ function get_temp(t::Temporalfields{TG}, num) where {TG}
     i_s = Int64[]
     t_s = TG[]
     for k = 1:num
-        tk, i = get(t)
+        tk, i = get_temp(t)
         push!(t_s, tk)
         push!(i_s, i)
     end
