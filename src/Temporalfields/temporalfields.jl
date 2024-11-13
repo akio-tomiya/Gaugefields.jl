@@ -129,6 +129,6 @@ function unused!(t::Temporalfields{TG}) where {TG}
 end
 
 
-export Temporalfields, unused!
+export Temporalfields, unused!, get_temp
 
 end
