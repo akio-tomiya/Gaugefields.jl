@@ -13,7 +13,7 @@ import Wilsonloop: Wilsonline, make_staple
 using LinearAlgebra
 using InteractiveUtils
 
-using ..Temporalfields_module
+import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 
 
