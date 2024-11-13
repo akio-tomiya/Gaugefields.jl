@@ -480,12 +480,15 @@ export calc_dSdUdag!
 
 
 function LdCdU_i_add!(LdCdU, L, A, B, ρ, temps_g) #dCdU = ρ sum_i A_i otimes B_i , dCdagdU = ρ sum_i Abar_i otimes Bbar_i
-    BL = temps_g[1]
-    BLA = temps_g[2]
+    #BL = temps_g[1]
+    BL, it_BL = get_temp(temps_g)
+    #BLA = temps_g[2]
+    BLA, it_BLA = get_temp(temps_g)
     mul!(BL, B, L)
     mul!(BLA, BL, A)
     add_U!(LdCdU, ρ, BLA)
-    unused!(temps_g, 1:2)
+    unused!(temps_g, it_BL)
+    unused!(temps_g, it_BLA)
 end
 
 export calc_dSdUν_fromdSCμ_add!
