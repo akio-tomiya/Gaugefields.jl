@@ -122,9 +122,11 @@ function evaluate_GaugeAction(
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
-    temp1 = S._temp_U[end]
+    temp1, it_temp1 = get_temp(S._temp_U)
+    #temp1 = S._temp_U[end]
     evaluate_GaugeAction_untraced!(temp1, S, U)
     value = tr(temp1)
+    unused!(S._temp_U, it_temp1)
     return value
 end
 function evaluate_GaugeAction(
