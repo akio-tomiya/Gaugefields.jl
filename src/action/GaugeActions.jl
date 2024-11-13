@@ -190,17 +190,21 @@ function evaluate_GaugeAction_untraced!(
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
     numterm = length(S.dataset)
-    temp5 = S._temp_U[5]
+    temp5, it_temp5 = get_temp(S._temp_U)
+    #temp5 = S._temp_U[5]
     clear_U!(uout)
 
+    temps, its_temps = get_temp(S._temp_U, 4)
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         w = dataset.closedloops
-        evaluate_gaugelinks!(temp5, w, U, S._temp_U[1:4])
+        evaluate_gaugelinks!(temp5, w, U, temps)
         add_U!(uout, β, temp5)
     end
     set_wing_U!(uout)
+    unused!(S._temp_U, its_temps)
+    unused!(S._temp_U, it_temp5)
 
     return
 end
