@@ -1,5 +1,8 @@
 using Gaugefields
 using LinearAlgebra
+import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
+
+
 
 function MDtest!(gauge_action, U, Dim, nn)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
@@ -8,16 +11,18 @@ function MDtest!(gauge_action, U, Dim, nn)
 
     substitute_U!(Uold, U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1]; num=10)
+    temp1 = temps[1]#similar(U[1])
+    temp2 = temps[2] #similar(U[1])
+
     comb = 6
     factor = 1 / (comb * U[1].NV * U[1].NC)
     numaccepted = 0
 
 
-    numtrj = 100
+    numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
         numaccepted += ifelse(accepted, 1, 0)
 
         plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
@@ -35,7 +40,7 @@ function calc_action(gauge_action, U, p)
 end
 
 
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
+function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
 
 
     Δτ = 1 / MDsteps
@@ -47,11 +52,11 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
     substitute_U!(Uold, U)
 
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn)
+        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temps)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
     end
 
     Uout, Uout_multi, _ = calc_smearedU(U, nn)
@@ -71,12 +76,12 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU)
 
 end
 
-function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
+    #temps = get_temporary_gaugefields(gauge_action)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    expU, it_expU = get_temp(temps)
+    W, it_W = get_temp(temps)
 
     for μ = 1:Dim
         exptU!(expU, ϵ * Δτ, p[μ], [temp1, temp2])
@@ -84,12 +89,19 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
         substitute_U!(U[μ], W)
 
     end
+
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_expU)
+    unused!(temps, it_W)
 end
 
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn) # p -> p +factor*U*dSdUμ
+function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temps) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
     factor = -ϵ * Δτ / (NC)
-    temps = get_temporary_gaugefields(gauge_action)
+    #temps = get_temporary_gaugefields(gauge_action)
+    temp1, it_temp1 = get_temp(temps)
+
     Uout, Uout_multi, _ = calc_smearedU(U, nn)
 
     for μ = 1:Dim
@@ -99,9 +111,10 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn) # p -> p +factor
     dSdUbare = back_prop(dSdU, nn, Uout_multi, U)
 
     for μ = 1:Dim
-        mul!(temps[1], U[μ], dSdUbare[μ]) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ], factor, temps[1])
+        mul!(temp1, U[μ], dSdUbare[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp1)
     end
+    unused!(temps, it_temp1)
 end
 
 function test1()

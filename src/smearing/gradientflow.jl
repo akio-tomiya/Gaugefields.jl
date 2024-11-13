@@ -21,55 +21,58 @@ import ..Abstractsmearing_module: Abstractsmearing
 import Wilsonloop: make_loops_fromname, Wilsonline
 using LinearAlgebra
 import Wilsonloop: LinearAlgebra.adjoint
+import ..Temporalfields_module: Temporalfields, unused!, get_temp
+
 
 struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
     Nflow::Int64
     eps::Float64
     gaugeaction::GaugeAction{Dim,T}
     _temporal_TA_field::Array{TA,1}
-    _temporal_G_field::Array{T,1}
-    _temporal_U_field::Array{Array{T,1},1}
+    _temporal_G_field::Temporalfields{T}
+    #_temporal_G_field::Array{T,1}
+    _temporal_U_field::Temporalfields{Vector{T}}#Array{Array{T,1},1}
 
     function Gradientflow_general(
         U::Array{<:AbstractGaugefields{NC,Dim},1},
         linknames,
         linkvalues;
-        Nflow = 1,
-        eps = 0.01,
+        Nflow=1,
+        eps=0.01,
     ) where {NC,Dim}
         @assert length(linknames) == length(linkvalues)
         numlinks = length(linknames)
         links = Vector{Vector{Wilsonline{Dim}}}(undef, numlinks)
         for i = 1:numlinks
-            links[i] = make_loops_fromname(linknames[i], Dim = Dim)
+            links[i] = make_loops_fromname(linknames[i], Dim=Dim)
         end
 
-        return Gradientflow_general(U, links, linkvalues, Nflow = Nflow, eps = eps)
+        return Gradientflow_general(U, links, linkvalues, Nflow=Nflow, eps=eps)
     end
     function Gradientflow_general(
         U::Array{T1,1},
         B::Array{T1,2},
         linknames,
         linkvalues;
-        Nflow = 1,
-        eps = 0.01,
+        Nflow=1,
+        eps=0.01,
     ) where {NC,Dim,T1<:AbstractGaugefields{NC,Dim}}
         @assert length(linknames) == length(linkvalues)
         numlinks = length(linknames)
         links = Vector{Vector{Wilsonline{Dim}}}(undef, numlinks)
         for i = 1:numlinks
-            links[i] = make_loops_fromname(linknames[i], Dim = Dim)
+            links[i] = make_loops_fromname(linknames[i], Dim=Dim)
         end
 
-        return Gradientflow_general(U, B, links, linkvalues, Nflow = Nflow, eps = eps)
+        return Gradientflow_general(U, B, links, linkvalues, Nflow=Nflow, eps=eps)
     end
 
     function Gradientflow_general(
         U::Array{<:AbstractGaugefields{NC,Dim},1},
         links::Vector{Vector{Wilsonline{Dim}}},
         linkvalues;
-        Nflow = 1,
-        eps = 0.01,
+        Nflow=1,
+        eps=0.01,
     ) where {NC,Dim}
         F0 = initialize_TA_Gaugefields(U)
         Ftemps = Array{typeof(F0),1}(undef, 4)
@@ -78,15 +81,17 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
             Ftemps[i] = initialize_TA_Gaugefields(U)
         end
         T = eltype(U)
-        Utemps = Array{Array{T,1},1}(undef, 2)
-        for i = 1:2
-            Utemps[i] = similar(U)
-        end
+        Utemps = Temporalfields(U, num=2)
+        #Utemps = Array{Temporalfields{T},1}(undef, 2)
+        #Utemps = Array{Array{T,1},1}(undef, 2)
+        #for i = 1:2
+        #    Utemps[i] = similar(U)
+        #end
 
-        tempG = Array{T,1}(undef, 3)
-        for i = 1:3
-            tempG[i] = similar(U[1])
-        end
+        tempG = Temporalfields(U[1], num=3)#Array{T,1}(undef, 3)
+        #for i = 1:3
+        #    tempG[i] = similar(U[1])
+        #end
 
         gaugeaction = GaugeAction(U)
         @assert length(links) == length(linkvalues)
@@ -115,8 +120,8 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
         B::Array{T1,2},
         links::Vector{Vector{Wilsonline{Dim}}},
         linkvalues;
-        Nflow = 1,
-        eps = 0.01,
+        Nflow=1,
+        eps=0.01,
     ) where {NC,Dim,T1<:AbstractGaugefields{NC,Dim}}
         F0 = initialize_TA_Gaugefields(U)
         Ftemps = Array{typeof(F0),1}(undef, 4)
@@ -135,7 +140,7 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
             tempG[i] = similar(U[1])
         end
 
-        gaugeaction = GaugeAction(U,B)
+        gaugeaction = GaugeAction(U, B)
         @assert length(links) == length(linkvalues)
         numlinks = length(links)
         for i = 1:numlinks
@@ -162,14 +167,16 @@ mutable struct Gradientflow{TA,T} <: Abstractsmearing
     Nflow::Int64
     eps::Float64
     _temporal_TA_field::Array{TA,1}
-    _temporal_G_field::Array{T,1}
-    _temporal_U_field::Array{Array{T,1},1}
+    _temporal_G_field::Temporalfields{T}
+    #_temporal_G_field::Array{T,1}
+    #_temporal_U_field::Array{Array{T,1},1}
+    _temporal_U_field::Temporalfields{Vector{T}}
 
     function Gradientflow(
         U::Array{T,1};
-        Nflow = 1,
-        eps = 0.01,
-        mpi = false,
+        Nflow=1,
+        eps=0.01,
+        mpi=false,
     ) where {T<:AbstractGaugefields}
         F0 = initialize_TA_Gaugefields(U)
         Ftemps = Array{typeof(F0),1}(undef, 4)
@@ -178,15 +185,16 @@ mutable struct Gradientflow{TA,T} <: Abstractsmearing
             Ftemps[i] = initialize_TA_Gaugefields(U)
         end
 
-        Utemps = Array{Array{T,1},1}(undef, 2)
-        for i = 1:2
-            Utemps[i] = similar(U)
-        end
-
-        tempG = Array{T,1}(undef, 3)
-        for i = 1:3
-            tempG[i] = similar(U[1])
-        end
+        Utemps = Temporalfields(U, num=2)
+        #Utemps = Array{Array{T,1},1}(undef, 2)
+        #for i = 1:2
+        #    Utemps[i] = similar(U)
+        #end
+        tempG = Temporalfields(U[1], num=3)
+        #tempG = Array{T,1}(undef, 3)
+        ##for i = 1:3
+        #    tempG[i] = similar(U[1])
+        #end
 
         return new{typeof(F0),T}(Nflow, eps, Ftemps, tempG, Utemps)
     end
@@ -213,16 +221,18 @@ function flow!(U, g::T) where {T<:Gradientflow}
     Ftmp = Ftemps[4]
 
     #Ftmp = similar(U)
-    W1 = Utemps[1]
-    W2 = Utemps[2]
-    temp1 = temps[1]
-    temp2 = temps[2]
-    temp3 = temps[3]
+    #W1 = Utemps[1]
+    #W2 = Utemps[2]
+    W1, it_W1 = get_temp(Utemps)
+    W2, it_W2 = get_temp(Utemps)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    temp3, it_temp3 = get_temp(temps)
     eps = g.eps
 
     for istep = 1:g.Nflow #RK4 integrator -> RK3?
         clear_U!(F0)
-        add_force!(F0, U, temps, plaqonly = true)
+        add_force!(F0, U, temps, plaqonly=true)
 
         #add_force!(F0,U,[temp1,temp2,temp3],gparam)
 
@@ -231,7 +241,7 @@ function flow!(U, g::T) where {T<:Gradientflow}
         #println("W1 ",W1[1][1,1,1,1,1,1])
         #
         clear_U!(F1)
-        add_force!(F1, W1, [temp1, temp2, temp3], plaqonly = true)
+        add_force!(F1, W1, [temp1, temp2, temp3], plaqonly=true)
         #add_force!(F1,W1,[temp1,temp2,temp3],gparam) #F
         #println("F1 ",F1[1][1,1,1,1,1,1])
         clear_U!(Ftmp)
@@ -245,7 +255,7 @@ function flow!(U, g::T) where {T<:Gradientflow}
 
         #
         clear_U!(F2)
-        add_force!(F2, W2, [temp1, temp2, temp3], plaqonly = true)
+        add_force!(F2, W2, [temp1, temp2, temp3], plaqonly=true)
         #add_force!(F2,W2,[temp1,temp2,temp3],gparam) #F
         #calc_gaugeforce!(F2,W2,univ) #F
         clear_U!(Ftmp)
@@ -260,6 +270,11 @@ function flow!(U, g::T) where {T<:Gradientflow}
 
         #error("U")
     end
+    unused!(Utemps, it_W1)
+    unused!(Utemps, it_W2)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_temp3)
 
 end
 function flow!(U, B, g::T) where {T<:Gradientflow}
@@ -272,35 +287,46 @@ function flow!(U, B, g::T) where {T<:Gradientflow}
     F2 = Ftemps[3]
     Ftmp = Ftemps[4]
 
-    W1 = Utemps[1]
-    W2 = Utemps[2]
-    temp1 = temps[1]
-    temp2 = temps[2]
-    temp3 = temps[3]
+    W1, it_W1 = get_temp(Utemps)
+    W2, it_W2 = get_temp(Utemps)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    temp3, it_temp3 = get_temp(temps)
+
+    #W1 = Utemps[1]
+    #W2 = Utemps[2]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    #temp3 = temps[3]
     eps = g.eps
 
     for istep = 1:g.Nflow #RK4 integrator -> RK3?
         clear_U!(F0)
-        add_force!(F0, U, B, temps, plaqonly = true)
+        add_force!(F0, U, B, temps, plaqonly=true)
 
         exp_aF_U!(W1, -eps * (1 / 4), F0, U, [temp1, temp2, temp3]) #exp(a*F)*U
 
         #
         clear_U!(F1)
-        add_force!(F1, W1, B, [temp1, temp2, temp3], plaqonly = true)
+        add_force!(F1, W1, B, [temp1, temp2, temp3], plaqonly=true)
         clear_U!(Ftmp)
         add_U!(Ftmp, -(8 / 9 * eps), F1)
         add_U!(Ftmp, (17 / 36 * eps), F0)
         exp_aF_U!(W2, 1, Ftmp, W1, [temp1, temp2, temp3]) #exp(a*F)*U
         #
         clear_U!(F2)
-        add_force!(F2, W2, B, [temp1, temp2, temp3], plaqonly = true)
+        add_force!(F2, W2, B, [temp1, temp2, temp3], plaqonly=true)
         clear_U!(Ftmp)
         add_U!(Ftmp, -(3 / 4 * eps), F2)
         add_U!(Ftmp, (8 / 9 * eps), F1)
         add_U!(Ftmp, -(17 / 36 * eps), F0)
         exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
     end
+    unused!(Utemps, it_W1)
+    unused!(Utemps, it_W2)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_temp3)
 
 end
 
@@ -316,11 +342,16 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
     Ftmp = Ftemps[4]
 
     #Ftmp = similar(U)
-    W1 = Utemps[1]
-    W2 = Utemps[2]
-    temp1 = temps[1]
-    temp2 = temps[2]
-    temp3 = temps[3]
+    W1, it_W1 = get_temp(Utemps)
+    W2, it_W2 = get_temp(Utemps)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    temp3, it_temp3 = get_temp(temps)
+    #W1 = Utemps[1]
+    #W2 = Utemps[2]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    #temp3 = temps[3]
     eps = g.eps
 
     for istep = 1:g.Nflow #RK4 integrator -> RK3?
@@ -369,6 +400,12 @@ function flow!(U, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         #error("U")
     end
 
+    unused!(Utemps, it_W1)
+    unused!(Utemps, it_W2)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_temp3)
+
 
 
 end
@@ -382,11 +419,16 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
     F2 = Ftemps[3]
     Ftmp = Ftemps[4]
 
-    W1 = Utemps[1]
-    W2 = Utemps[2]
-    temp1 = temps[1]
-    temp2 = temps[2]
-    temp3 = temps[3]
+    W1, it_W1 = get_temp(Utemps)
+    W2, it_W2 = get_temp(Utemps)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    temp3, it_temp3 = get_temp(temps)
+    #W1 = Utemps[1]
+    #W2 = Utemps[2]
+    #temp1 = temps[1]
+    #temp2 = temps[2]
+    #temp3 = temps[3]
     eps = g.eps
 
     for istep = 1:g.Nflow
@@ -412,31 +454,46 @@ function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
         add_U!(Ftmp, -(17 / 36 * eps), F0)
         exp_aF_U!(U, 1, Ftmp, W2, [temp1, temp2, temp3]) #exp(a*F)*U  
     end
+
+    unused!(Utemps, it_W1)
+    unused!(Utemps, it_W2)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_temp3)
+
 end
 
 function F_update!(F, U, factor, Dim, gauge_action) # F -> F +factor*U*dSdUμ
     NC = U[1].NC
     temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = similar(U[1])
+    temp1, it_temp1 = get_temp(temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)
+    #dSdUμ = similar(U[1])
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
-        mul!(temps[1], U[μ], dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(F[μ], factor, temps[1])
+        mul!(temp1, U[μ], dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(F[μ], factor, temp1)
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_dSdUμ)
     #error("d")
 
 end
 function F_update!(F, U, B, factor, Dim, gauge_action) # F -> F +factor*U*dSdUμ
     NC = U[1].NC
     temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = similar(U[1])
+    temp1, it_temp1 = get_temp(temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)
+    #dSdUμ = similar(U[1])
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U, B)
-        mul!(temps[1], U[μ], dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(F[μ], factor, temps[1])
+        mul!(temp1, U[μ], dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(F[μ], factor, temp1)
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_dSdUμ)
 end
 
 end
