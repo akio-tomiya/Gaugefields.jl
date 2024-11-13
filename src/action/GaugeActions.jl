@@ -129,6 +129,7 @@ function evaluate_GaugeAction(
 ) where {Dim,NC}
     temp1, it_temp1 = get_temp(S._temp_U)
     #temp1 = S._temp_U[end]
+    display(S._temp_U)
     evaluate_GaugeAction_untraced!(temp1, S, U)
     value = tr(temp1)
     unused!(S._temp_U, it_temp1)
