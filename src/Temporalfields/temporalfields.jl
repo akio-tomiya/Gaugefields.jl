@@ -107,7 +107,7 @@ function get_temp(t::Temporalfields{TG}) where {TG}
     n = length(t._data)
     i = findfirst(x -> x == 0, t._indices)
     display(t)
-    if i > 6
+    if i > 7
         error("$(i)!!")
     end
     println(i)
