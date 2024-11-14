@@ -106,6 +106,7 @@ end
 function get_temp(t::Temporalfields{TG}) where {TG}
     n = length(t._data)
     i = findfirst(x -> x == 0, t._indices)
+    display(t)
     println(i)
     if i == nothing
         @warn "All $n temporal fields are used. New one is created."
