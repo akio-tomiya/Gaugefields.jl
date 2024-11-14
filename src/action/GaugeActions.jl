@@ -110,7 +110,10 @@ function calc_dSdUμ!(
     U::Vector{T},
     B::Array{T,2},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
-    temp = S._temp_U[end-1]
+    temp, it_temp = get_temp(S._temp_U)
+    temps, its_temps = get_temp(S._temp_U, 4)
+
+    #temp = S._temp_U[end-1]
     numterm = length(S.dataset)
 
     clear_U!(dSdUμ)
@@ -118,11 +121,13 @@ function calc_dSdUμ!(
         dataset = S.dataset[i]
         β = dataset.β
         staples_μ = dataset.staples[μ]
-        evaluate_gaugelinks!(temp, staples_μ, U, B, S._temp_U[1:end-2])
+        evaluate_gaugelinks!(temp, staples_μ, U, B, temps)
 
         add_U!(dSdUμ, β, temp)
     end
     set_wing_U!(dSdUμ)
+    unused!(S._temp_U, it_temp)
+    unused!(S._temp_U, its_temps)
 
 end
 
