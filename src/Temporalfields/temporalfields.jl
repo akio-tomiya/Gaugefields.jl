@@ -49,6 +49,8 @@ function Base.lastindex(t::Temporalfields{TG}) where {TG}
 end
 
 function Base.getindex(t::Temporalfields{TG}, i::Int) where {TG}
+    println("getindex")
+    display(t)
     if i > length(t._data)
         @warn "The length of the temporalfields is shorter than the index $i. New temporal fields are created."
         ndiff = i - length(t._data)
