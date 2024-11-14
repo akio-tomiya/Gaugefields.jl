@@ -13,10 +13,22 @@ mutable struct Temporalfields{TG}
         for i = 1:num
             _data[i] = similar(a)
         end
-
         return new{TG}(_data, _flagusing, _indices, Nmax)
     end
+
+    function Temporalfields(_data::Vector{TG}, _flagusing, _indices, Nmax) where {TG}
+        return new{TG}(_data, _flagusing, _indices, Nmax)
+    end
+
 end
+
+function Temporalfields_fromvector(a::Vector{TG}; Nmax=1000) where {TG}
+    num = length(a)
+    _flagusing = zeros(Bool, num)
+    _indices = zeros(Int64, num)
+    return Temporalfields(a, _flagusing, _indices, Nmax)
+end
+export Temporalfields_fromvector
 
 Base.eltype(::Type{Temporalfields{TG}}) where {TG} = TG
 
