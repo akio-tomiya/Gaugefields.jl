@@ -233,7 +233,6 @@ function evaluate_GaugeAction_untraced!(
     B::Array{T,2}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     numterm = length(S.dataset)
-    display(S._temp_U)
     temp, it_temp = get_temp(S._temp_U)
     temps, its_temps = get_temp(S._temp_U, 5)
     #temp = S._temp_U[6]
@@ -264,7 +263,7 @@ function GaugeAction(
     end
     dataset = GaugeAction_dataset{Dim}[]
 
-    num = 12
+    num = 10
     _temp_U = Temporalfields(U[1]; num=num)
     #=
     _temp_U = Array{eltype(U)}(undef, num)
@@ -286,7 +285,7 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 18
+    num = 10
     _temp_U = Temporalfields(U[1]; num=num)
 
     #_temp_U = Array{eltype(U)}(undef, num)
