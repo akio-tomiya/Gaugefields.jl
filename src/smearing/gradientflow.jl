@@ -130,10 +130,11 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
             Ftemps[i] = initialize_TA_Gaugefields(U)
         end
         T = eltype(U)
-        Utemps = Array{Array{T,1},1}(undef, 2)
-        for i = 1:2
-            Utemps[i] = similar(U)
-        end
+        Utemps = Temporalfields(U, num=2)
+        #Utemps = Array{Array{T,1},1}(undef, 2)
+        #for i = 1:2
+        #    Utemps[i] = similar(U)
+        #end
 
         tempG = Array{T,1}(undef, 3)
         for i = 1:3
