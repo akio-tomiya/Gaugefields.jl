@@ -111,6 +111,7 @@ function get_temp(t::Temporalfields{TG}) where {TG}
         error("All $n temporal fields are used. New one is created.")
         i = n + 1
     end
+    println(i)
     return t[i], i
 end
 
