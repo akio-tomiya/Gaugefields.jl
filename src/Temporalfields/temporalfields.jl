@@ -5,30 +5,34 @@ mutable struct Temporalfields{TG}
     _flagusing::Vector{Bool}
     _indices::Vector{Int64}
     Nmax::Int64
+    _reusemode::Bool
 
-    function Temporalfields(a::TG; num=1, Nmax=1000) where {TG}
+    function Temporalfields(a::TG; num=1, Nmax=1000, reusemode=false) where {TG}
         _data = Vector{TG}(undef, num)
         _flagusing = zeros(Bool, num)
         _indices = zeros(Int64, num)
         for i = 1:num
             _data[i] = similar(a)
         end
-        return new{TG}(_data, _flagusing, _indices, Nmax)
+        return new{TG}(_data, _flagusing, _indices, Nmax, reusemode)
     end
 
-    function Temporalfields(_data::Vector{TG}, _flagusing, _indices, Nmax) where {TG}
-        return new{TG}(_data, _flagusing, _indices, Nmax)
+    function Temporalfields(_data::Vector{TG}, _flagusing, _indices, Nmax, _reusemode) where {TG}
+        return new{TG}(_data, _flagusing, _indices, Nmax, _reusemode)
     end
 
 end
 
-function Temporalfields_fromvector(a::Vector{TG}; Nmax=1000) where {TG}
+function Temporalfields_fromvector(a::Vector{TG}; Nmax=1000, reusemode=false) where {TG}
     num = length(a)
     _flagusing = zeros(Bool, num)
     _indices = zeros(Int64, num)
-    return Temporalfields(a, _flagusing, _indices, Nmax)
+    return Temporalfields(a, _flagusing, _indices, Nmax, reusemode)
 end
 export Temporalfields_fromvector
+
+set_reusemode!(t::Temporalfields{TG}, reusemode) where {TG} = t._reusemode = reusemode
+export set_reusemode!
 
 Base.eltype(::Type{Temporalfields{TG}}) where {TG} = TG
 
@@ -60,7 +64,9 @@ function Base.getindex(t::Temporalfields{TG}, i::Int) where {TG}
         t._flagusing[index] = true
         t._indices[i] = index
     else
-        error("This index $i is being using.  You should pay attention")
+        if !t.reusemode
+            error("This index $i is being using.  You should pay attention")
+        end
     end
 
     return t._data[t._indices[i]]

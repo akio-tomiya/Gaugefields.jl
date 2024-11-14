@@ -13,7 +13,7 @@ import Wilsonloop: Wilsonline, make_staple
 using LinearAlgebra
 using InteractiveUtils
 
-import ..Temporalfields_module: Temporalfields, unused!, get_temp
+import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
 
 
 
@@ -51,6 +51,7 @@ end
 function get_temporary_gaugefields(S::GaugeAction)
     #temps, its_temps = get_temp(S._temp_U, 5)
     #return temps
+    set_reusemode!(S._temp_U, true)
     return S._temp_U
 end
 
