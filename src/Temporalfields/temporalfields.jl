@@ -49,7 +49,7 @@ function Base.lastindex(t::Temporalfields{TG}) where {TG}
 end
 
 function Base.getindex(t::Temporalfields{TG}, i::Int) where {TG}
-    display(t)
+    #display(t)
     if i > length(t._data)
         @warn "The length of the temporalfields is shorter than the index $i. New temporal fields are created."
         ndiff = i - length(t._data)
@@ -94,9 +94,6 @@ function Base.display(t::Temporalfields{TG}) where {TG}
     println("The total number of fields: $n")
     numused = sum(t._flagusing)
     println("The total number of fields used: $numused")
-    if numused > 10
-        error("dd")
-    end
     for i = 1:n
         if t._indices[i] != 0
             #println("The adress $i is used as the index $(t._indices[i])")
