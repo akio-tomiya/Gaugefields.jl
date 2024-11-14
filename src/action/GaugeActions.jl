@@ -111,7 +111,7 @@ function calc_dSdUμ!(
     B::Array{T,2},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     temp, it_temp = get_temp(S._temp_U)
-    temps, its_temps = get_temp(S._temp_U, 4)
+    temps, its_temps = get_temp(S._temp_U, 5)
 
     #temp = S._temp_U[end-1]
     numterm = length(S.dataset)
