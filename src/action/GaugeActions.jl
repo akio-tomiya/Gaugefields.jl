@@ -258,7 +258,7 @@ function GaugeAction(
     end
     dataset = GaugeAction_dataset{Dim}[]
 
-    num = 10
+    num = 12
     _temp_U = Temporalfields(U[1]; num=num)
     #=
     _temp_U = Array{eltype(U)}(undef, num)
@@ -280,7 +280,7 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 10
+    num = 12
     _temp_U = Temporalfields(U[1]; num=num)
 
     #_temp_U = Array{eltype(U)}(undef, num)
