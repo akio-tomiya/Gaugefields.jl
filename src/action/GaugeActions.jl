@@ -228,6 +228,7 @@ function evaluate_GaugeAction_untraced!(
     B::Array{T,2}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     numterm = length(S.dataset)
+    display(S._temp_U)
     temp, it_temp = get_temp(S._temp_U)
     temps, its_temps = get_temp(S._temp_U, 5)
     #temp = S._temp_U[6]
