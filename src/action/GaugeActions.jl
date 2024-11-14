@@ -49,9 +49,9 @@ function GaugeAction_dataset(β, closedloops::Vector{Wilsonline{Dim}}) where {Di
 end
 
 function get_temporary_gaugefields(S::GaugeAction)
-    temps, its_temps = get_temp(S._temp_U, 5)
-    return temps
-    #return S._temp_U
+    #temps, its_temps = get_temp(S._temp_U, 5)
+    #return temps
+    return S._temp_U
 end
 
 function calc_dSdUμ(
