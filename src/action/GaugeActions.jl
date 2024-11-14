@@ -179,9 +179,9 @@ function evaluate_staple_eachindex!(
     mat_temps, # length >= 5
     indices...,
 ) where {Dim,NC}
-    temp3, it_temp3 = get_temp(mat_temps)#[5]
-    temps, its_temps = get_temp(mat_temps, 4)
-    #temp3 = mat_temps[5]
+
+    temp3 = mat_temps[5]
+    temps = mat_temps[1:4]
     numterm = length(S.dataset)
     mat_U .= 0
     for i = 1:numterm
@@ -191,8 +191,7 @@ function evaluate_staple_eachindex!(
         evaluate_gaugelinks_eachsite!(temp3, staples_μ, U, temps, indices...) # length >~ 3,4
         mat_U .+= β * temp3
     end
-    unused!(mat_temps, it_temp3)
-    unused!(mat_temps, its_temps)
+
 end
 
 function evaluate_GaugeAction_untraced!(

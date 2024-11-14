@@ -17,18 +17,18 @@ end
 
 @testset "HMC nowing" begin
     println("HMC nowing")
-    #include("HMC_test_nowing.jl")
+    include("HMC_test_nowing.jl")
 end
 
 @testset "HMCstout nowing" begin
     println("HMCstout nowing")
-    #include("HMCstout_test_nowing.jl")
+    include("HMCstout_test_nowing.jl")
 end
 
 
 @testset "gradientflow_general" begin
     println("gradientflow with general action")
-    #include("gradientflow_general.jl")
+    include("gradientflow_general.jl")
 end
 
 @testset "gradientflow nowing" begin
