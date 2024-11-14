@@ -135,11 +135,11 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
         #for i = 1:2
         #    Utemps[i] = similar(U)
         #end
-
-        tempG = Array{T,1}(undef, 3)
-        for i = 1:3
-            tempG[i] = similar(U[1])
-        end
+        tempG = Temporalfields(U[1], num=3)
+        #tempG = Array{T,1}(undef, 3)
+        #for i = 1:3
+        #    tempG[i] = similar(U[1])
+        #end
 
         gaugeaction = GaugeAction(U, B)
         @assert length(links) == length(linkvalues)
