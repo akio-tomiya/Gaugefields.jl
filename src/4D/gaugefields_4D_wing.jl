@@ -2022,7 +2022,7 @@ function partial_tr(a::Gaugefields_4D_wing{NC}, μ) where {NC}
     return s
 end
 
-function add_U!(c::Gaugefields_4D_wing{NC}, a::Gaugefields_4D_wing{NC}) where {NC,T1<:Abstractfields}
+function add_U!(c::Gaugefields_4D_wing{NC}, a::Gaugefields_4D_wing{NC}) where {NC}
     @inbounds for i = 1:length(c.U)
         c.U[i] += a.U[i]
     end
