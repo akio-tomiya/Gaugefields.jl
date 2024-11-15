@@ -2,6 +2,7 @@
 using Random
 using Gaugefields
 using LinearAlgebra
+import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
 
 
 
@@ -13,18 +14,18 @@ function calc_action(gauge_action, U, p)
     return real(S)
 end
 
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
     Δτ = 1 / MDsteps
     gauss_distribution!(p)
     Sold = calc_action(gauge_action, U, p)
     substitute_U!(Uold, U)
 
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action)
+        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temps)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
     end
     Snew = calc_action(gauge_action, U, p)
     println("Sold = $Sold, Snew = $Snew")
@@ -38,12 +39,12 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
     end
 end
 
-function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
+    #temps = get_temporary_gaugefields(gauge_action)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    expU, it_expU = get_temp(temps)
+    W, it_W = get_temp(temps)
 
     for μ = 1:Dim
         exptU!(expU, ϵ * Δτ, p[μ], [temp1, temp2])
@@ -51,19 +52,27 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
         substitute_U!(U[μ], W)
 
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_expU)
+    unused!(temps, it_W)
 end
 
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action) # p -> p +factor*U*dSdUμ
+function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = temps[end]
+    #temps = get_temporary_gaugefields(gauge_action)
+    dSdUμ, it_dSdUμ = get_temp(temps)#temps[end]
+    temp1, it_temp1 = get_temp(temps)
+    #dSdUμ = temps[end]
     factor = -ϵ * Δτ / (NC)
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
-        mul!(temps[1], U[μ], dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ], factor, temps[1])
+        mul!(temp1, U[μ], dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp1)
     end
+    unused!(temps, it_dSdUμ)
+    unused!(temps, it_temp1)
 end
 
 
@@ -86,8 +95,9 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     #"Reproducible"
     println(typeof(U))
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1]; num=10)
+    temp1, it_temp1 = get_temp(temps)#similar(U[1])
+    temp2, it_temp2 = get_temp(temps)
 
     if Dim == 4
         comb = 6 #4*3/2
@@ -119,15 +129,15 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     Uold = similar(U)
     substitute_U!(Uold, U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    #temp1 = similar(U[1])
+    #temp2 = similar(U[1])
     comb = 6
     factor = 1 / (comb * U[1].NV * U[1].NC)
     numaccepted = 0
 
     numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
         numaccepted += ifelse(accepted, 1, 0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -164,8 +174,11 @@ function HMC_test_2D(NX, NT, NC)
     U = Initialize_Gaugefields(NC, Nwing, NX, NT, condition="hot", randomnumber="Reproducible")
 
     println(typeof(U))
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1]; num=10)
+    temp1, it_temp1 = get_temp(temps)#similar(U[1])
+    temp2, it_temp2 = get_temp(temps)
+    #temp1 = similar(U[1])
+    #temp2 = similar(U[1])
 
     if Dim == 4
         comb = 6 #4*3/2
@@ -197,15 +210,15 @@ function HMC_test_2D(NX, NT, NC)
     Uold = similar(U)
     substitute_U!(Uold, U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    #temp1 = similar(U[1])
+    #temp2 = similar(U[1])
     comb = 6
     factor = 1 / (comb * U[1].NV * U[1].NC)
     numaccepted = 0
 
     numtrj = 10
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold)
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
         numaccepted += ifelse(accepted, 1, 0)
 
         #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor

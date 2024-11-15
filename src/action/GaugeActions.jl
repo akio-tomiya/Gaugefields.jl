@@ -13,6 +13,8 @@ import Wilsonloop: Wilsonline, make_staple
 using LinearAlgebra
 using InteractiveUtils
 
+import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
+
 
 
 struct GaugeAction_dataset{Dim}
@@ -26,7 +28,8 @@ struct GaugeAction{Dim,T,Tdata}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
     dataset::Vector{Tdata}
-    _temp_U::Vector{T}
+    #_temp_U::Vector{T}
+    _temp_U::Temporalfields{T}
 end
 
 function GaugeAction_dataset(β, closedloops::Vector{Wilsonline{Dim}}) where {Dim}
@@ -46,6 +49,9 @@ function GaugeAction_dataset(β, closedloops::Vector{Wilsonline{Dim}}) where {Di
 end
 
 function get_temporary_gaugefields(S::GaugeAction)
+    #temps, its_temps = get_temp(S._temp_U, 5)
+    #return temps
+    set_reusemode!(S._temp_U, true)
     return S._temp_U
 end
 
@@ -75,7 +81,9 @@ function calc_dSdUμ!(
     μ,
     U::Vector{T},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
-    temp = S._temp_U[end-1]
+    temp, it_temp = get_temp(S._temp_U)
+    temps, its_temps = get_temp(S._temp_U, 4)
+    #temp = S._temp_U[end-1]
     numterm = length(S.dataset)
 
     clear_U!(dSdUμ)
@@ -83,13 +91,16 @@ function calc_dSdUμ!(
         dataset = S.dataset[i]
         β = dataset.β
         staples_μ = dataset.staples[μ]
-        evaluate_gaugelinks!(temp, staples_μ, U, S._temp_U[1:end-2])
+        #evaluate_gaugelinks!(temp, staples_μ, U, S._temp_U[1:end-2])
+        evaluate_gaugelinks!(temp, staples_μ, U, temps)
 
         #println("temp in dSdUμ! ",getvalue(temp,1,1,1,1,1,1))
         add_U!(dSdUμ, β, temp)
         #println("dSdUμ! ",getvalue(dSdUμ,1,1,1,1,1,1))
     end
     set_wing_U!(dSdUμ)
+    unused!(S._temp_U, it_temp)
+    unused!(S._temp_U, its_temps)
 
 end
 function calc_dSdUμ!(
@@ -99,7 +110,10 @@ function calc_dSdUμ!(
     U::Vector{T},
     B::Array{T,2},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
-    temp = S._temp_U[end-1]
+    temp, it_temp = get_temp(S._temp_U)
+    temps, its_temps = get_temp(S._temp_U, 5)
+
+    #temp = S._temp_U[end-1]
     numterm = length(S.dataset)
 
     clear_U!(dSdUμ)
@@ -107,11 +121,13 @@ function calc_dSdUμ!(
         dataset = S.dataset[i]
         β = dataset.β
         staples_μ = dataset.staples[μ]
-        evaluate_gaugelinks!(temp, staples_μ, U, B, S._temp_U[1:end-2])
+        evaluate_gaugelinks!(temp, staples_μ, U, B, temps)
 
         add_U!(dSdUμ, β, temp)
     end
     set_wing_U!(dSdUμ)
+    unused!(S._temp_U, it_temp)
+    unused!(S._temp_U, its_temps)
 
 end
 
@@ -119,9 +135,11 @@ function evaluate_GaugeAction(
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
-    temp1 = S._temp_U[end]
+    temp1, it_temp1 = get_temp(S._temp_U)
+    #temp1 = S._temp_U[end]
     evaluate_GaugeAction_untraced!(temp1, S, U)
     value = tr(temp1)
+    unused!(S._temp_U, it_temp1)
     return value
 end
 function evaluate_GaugeAction(
@@ -129,9 +147,11 @@ function evaluate_GaugeAction(
     U::Vector{T},
     B::Array{T,2}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
-    temp1 = S._temp_U[end]
+    temp1, it_temp1 = get_temp(S._temp_U)
+    #temp1 = S._temp_U[end]
     evaluate_GaugeAction_untraced!(temp1, S, U, B)
     value = tr(temp1)
+    unused!(S._temp_U, it_temp1)
     return value
 end
 
@@ -167,16 +187,19 @@ function evaluate_staple_eachindex!(
     mat_temps, # length >= 5
     indices...,
 ) where {Dim,NC}
+
     temp3 = mat_temps[5]
+    temps = mat_temps[1:4]
     numterm = length(S.dataset)
     mat_U .= 0
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         staples_μ = dataset.staples[μ]
-        evaluate_gaugelinks_eachsite!(temp3, staples_μ, U, view(mat_temps, 1:4), indices...) # length >~ 3,4
+        evaluate_gaugelinks_eachsite!(temp3, staples_μ, U, temps, indices...) # length >~ 3,4
         mat_U .+= β * temp3
     end
+
 end
 
 function evaluate_GaugeAction_untraced!(
@@ -185,17 +208,21 @@ function evaluate_GaugeAction_untraced!(
     U::Vector{<:AbstractGaugefields{NC,Dim}},
 ) where {Dim,NC}
     numterm = length(S.dataset)
-    temp5 = S._temp_U[5]
+    temp5, it_temp5 = get_temp(S._temp_U)
+    #temp5 = S._temp_U[5]
     clear_U!(uout)
 
+    temps, its_temps = get_temp(S._temp_U, 4)
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         w = dataset.closedloops
-        evaluate_gaugelinks!(temp5, w, U, S._temp_U[1:4])
+        evaluate_gaugelinks!(temp5, w, U, temps)
         add_U!(uout, β, temp5)
     end
     set_wing_U!(uout)
+    unused!(S._temp_U, its_temps)
+    unused!(S._temp_U, it_temp5)
 
     return
 end
@@ -206,17 +233,21 @@ function evaluate_GaugeAction_untraced!(
     B::Array{T,2}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     numterm = length(S.dataset)
-    temp = S._temp_U[6]
+    temp, it_temp = get_temp(S._temp_U)
+    temps, its_temps = get_temp(S._temp_U, 5)
+    #temp = S._temp_U[6]
     clear_U!(uout)
 
     for i = 1:numterm
         dataset = S.dataset[i]
         β = dataset.β
         w = dataset.closedloops
-        evaluate_gaugelinks!(temp, w, U, B, S._temp_U[1:5])
+        evaluate_gaugelinks!(temp, w, U, B, temps)
         add_U!(uout, β, temp)
     end
     set_wing_U!(uout)
+    unused!(S._temp_U, it_temp)
+    unused!(S._temp_U, its_temps)
 
     return
 end
@@ -231,11 +262,15 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 6
+
+    num = 12
+    _temp_U = Temporalfields(U[1]; num=num)
+    #=
     _temp_U = Array{eltype(U)}(undef, num)
     for i = 1:num
         _temp_U[i] = similar(U[1])
     end
+    =#
 
     return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
 end
@@ -250,11 +285,13 @@ function GaugeAction(
         covneuralnet = nothing
     end
     dataset = GaugeAction_dataset{Dim}[]
-    num = 7
-    _temp_U = Array{eltype(U)}(undef, num)
-    for i = 1:num
-        _temp_U[i] = similar(U[1])
-    end
+    num = 12
+    _temp_U = Temporalfields(U[1]; num=num)
+
+    #_temp_U = Array{eltype(U)}(undef, num)
+    #for i = 1:num
+    #    _temp_U[i] = similar(U[1])
+    #end
 
     return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
 end

@@ -14,7 +14,7 @@ import ..Wilsonloops_module:
     get_rightstartposition,
     Wilson_loop,
     calc_loopset_μν_name
-import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag,make_cloverloops
+import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag, make_cloverloops
 using Requires
 using Distributions
 using StableRNGs
@@ -23,6 +23,8 @@ import ..Verboseprint_mpi:
 
 #using MPI
 using InteractiveUtils
+
+import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 
 abstract type Abstractfields end
@@ -223,32 +225,32 @@ function Initialize_4DGaugefields(
     NC,
     NDW,
     NN...;
-    condition = "cold",
-    verbose_level = 2,
-    randomnumber = "Random",
+    condition="cold",
+    verbose_level=2,
+    randomnumber="Random",
 )
     if condition == "cold"
         if NDW == 0
 
-            u1 = IdentityGauges_4D(NC, NN..., verbose_level = verbose_level)
+            u1 = IdentityGauges_4D(NC, NN..., verbose_level=verbose_level)
         else
-            u1 = IdentityGauges_4D(NC, NDW, NN..., verbose_level = verbose_level)
+            u1 = IdentityGauges_4D(NC, NDW, NN..., verbose_level=verbose_level)
         end
     elseif condition == "hot"
         if NDW == 0
             u1 = RandomGauges_4D(
                 NC,
                 NN...,
-                verbose_level = verbose_level,
-                randomnumber = randomnumber,
+                verbose_level=verbose_level,
+                randomnumber=randomnumber,
             )
         else
             u1 = RandomGauges_4D(
                 NC,
                 NDW,
                 NN...,
-                verbose_level = verbose_level,
-                randomnumber = randomnumber,
+                verbose_level=verbose_level,
+                randomnumber=randomnumber,
             )
         end
     else
@@ -263,25 +265,25 @@ function Initialize_4DGaugefields(
     for μ = 2:Dim
         if condition == "cold"
             if NDW == 0
-                U[μ] = IdentityGauges_4D(NC, NN..., verbose_level = verbose_level)
+                U[μ] = IdentityGauges_4D(NC, NN..., verbose_level=verbose_level)
             else
-                U[μ] = IdentityGauges_4D(NC, NDW, NN..., verbose_level = verbose_level)
+                U[μ] = IdentityGauges_4D(NC, NDW, NN..., verbose_level=verbose_level)
             end
         elseif condition == "hot"
             if NDW == 0
                 U[μ] = RandomGauges_4D(
                     NC,
                     NN...,
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
             else
                 U[μ] = RandomGauges_4D(
                     NC,
                     NDW,
                     NN...,
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
             end
         else
@@ -325,12 +327,12 @@ function Initialize_Gaugefields(
     NC,
     NDW,
     NN...;
-    condition = "cold",
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
-    randomnumber = "Random",
+    condition="cold",
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    randomnumber="Random",
 )
 
     Dim = length(NN)
@@ -339,21 +341,21 @@ function Initialize_Gaugefields(
             NC,
             NDW,
             NN...,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
         )
     elseif condition == "hot"
         u1 = RandomGauges(
             NC,
             NDW,
             NN...,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
-            randomnumber = randomnumber,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
+            randomnumber=randomnumber,
         )
     else
         error("not supported")
@@ -368,21 +370,21 @@ function Initialize_Gaugefields(
                 NC,
                 NDW,
                 NN...,
-                mpi = mpi,
-                PEs = PEs,
-                mpiinit = false,
-                verbose_level = verbose_level,
+                mpi=mpi,
+                PEs=PEs,
+                mpiinit=false,
+                verbose_level=verbose_level,
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
                 NC,
                 NDW,
                 NN...,
-                mpi = mpi,
-                PEs = PEs,
-                mpiinit = false,
-                verbose_level = verbose_level,
-                randomnumber = randomnumber,
+                mpi=mpi,
+                PEs=PEs,
+                mpiinit=false,
+                verbose_level=verbose_level,
+                randomnumber=randomnumber,
             )
         else
             error("not supported")
@@ -395,11 +397,11 @@ function RandomGauges(
     NC,
     NDW,
     NN...;
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    randomnumber="Random",
 )
     dim = length(NN)
     if mpi
@@ -415,9 +417,9 @@ function RandomGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        randomnumber = randomnumber,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
                     )
                 else
                     U = randomGaugefields_4D_wing_mpi(
@@ -428,9 +430,9 @@ function RandomGauges(
                         NN[4],
                         NDW,
                         PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        randomnumber = randomnumber,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
                     )
                 end
             else
@@ -447,8 +449,8 @@ function RandomGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
 
             else
@@ -459,8 +461,8 @@ function RandomGauges(
                     NN[3],
                     NN[4],
                     NDW,
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
             end
         elseif dim == 2
@@ -469,8 +471,8 @@ function RandomGauges(
                     NC,
                     NN[1],
                     NN[2],
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
             else
                 U = randomGaugefields_2D_wing(
@@ -478,8 +480,8 @@ function RandomGauges(
                     NN[1],
                     NN[2],
                     NDW,
-                    verbose_level = verbose_level,
-                    randomnumber = randomnumber,
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
                 )
             end
         else
@@ -493,10 +495,10 @@ function IdentityGauges(
     NC,
     NDW,
     NN...;
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
 )
     dim = length(NN)
 
@@ -513,8 +515,8 @@ function IdentityGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 else
                     U = identityGaugefields_4D_wing_mpi(
@@ -525,8 +527,8 @@ function IdentityGauges(
                         NN[4],
                         NDW,
                         PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 end
             elseif dim == 2
@@ -536,8 +538,8 @@ function IdentityGauges(
                         NN[1],
                         NN[2],
                         PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 end
             else
@@ -554,7 +556,7 @@ function IdentityGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    verbose_level = verbose_level,
+                    verbose_level=verbose_level,
                 )
             else
                 U = identityGaugefields_4D_wing(
@@ -564,7 +566,7 @@ function IdentityGauges(
                     NN[3],
                     NN[4],
                     NDW,
-                    verbose_level = verbose_level,
+                    verbose_level=verbose_level,
                 )
             end
         elseif dim == 2
@@ -574,7 +576,7 @@ function IdentityGauges(
                     NC,
                     NN[1],
                     NN[2],
-                    verbose_level = verbose_level,
+                    verbose_level=verbose_level,
                 )
             else
                 U = identityGaugefields_2D_wing(
@@ -582,7 +584,7 @@ function IdentityGauges(
                     NN[1],
                     NN[2],
                     NDW,
-                    verbose_level = verbose_level,
+                    verbose_level=verbose_level,
                 )
             end
         else
@@ -593,7 +595,7 @@ function IdentityGauges(
     return U
 end
 
-function Oneinstanton(NC, NDW, NN...; mpi = false, PEs = nothing, mpiinit = nothing)
+function Oneinstanton(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
         if PEs == nothing || mpiinit == nothing
@@ -609,7 +611,7 @@ function Oneinstanton(NC, NDW, NN...; mpi = false, PEs = nothing, mpiinit = noth
                     NN[4],
                     NDW,
                     PEs,
-                    mpiinit = mpiinit,
+                    mpiinit=mpiinit,
                 )
             else
                 error("not implemented yet!")
@@ -637,7 +639,7 @@ function Oneinstanton(NC, NDW, NN...; mpi = false, PEs = nothing, mpiinit = noth
     return U
 end
 
-function construct_gauges(NC, NDW, NN...; mpi = false, PEs = nothing, mpiinit = nothing)
+function construct_gauges(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
         if PEs == nothing || mpiinit == nothing
@@ -652,7 +654,7 @@ function construct_gauges(NC, NDW, NN...; mpi = false, PEs = nothing, mpiinit = 
                     NN[4],
                     NDW,
                     PEs,
-                    mpiinit = mpiinit,
+                    mpiinit=mpiinit,
                 )
             else
                 error("not implemented yet!")
@@ -685,15 +687,15 @@ function Initialize_Bfields(
     Flux,
     NDW,
     NN...;
-    condition = "tflux",
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
-    randomnumber = "Random",
-    tloop_pos  = [1,1,1,1],
-    tloop_dir  = [1,4],
-    tloop_dis  = 1,
+    condition="tflux",
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    randomnumber="Random",
+    tloop_pos=[1, 1, 1, 1],
+    tloop_dir=[1, 4],
+    tloop_dis=1,
 )
 
     Dim = length(NN)
@@ -705,11 +707,11 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = false,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
+            overallminus=false,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
         )
         u2 = B_TfluxGauges(
             NC,
@@ -717,11 +719,11 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = true,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
+            overallminus=true,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
         )
     elseif condition == "tloop"
         u1 = B_TloopGauges(
@@ -730,14 +732,14 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = false,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
-            tloop_pos  = tloop_pos,
-            tloop_dir  = tloop_dir,
-            tloop_dis  = tloop_dis,
+            overallminus=false,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
+            tloop_pos=tloop_pos,
+            tloop_dir=tloop_dir,
+            tloop_dis=tloop_dis,
         )
         u2 = B_TloopGauges(
             NC,
@@ -745,14 +747,14 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = true,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
-            tloop_pos  = tloop_pos,
-            tloop_dir  = tloop_dir,
-            tloop_dis  = tloop_dis,
+            overallminus=true,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
+            tloop_pos=tloop_pos,
+            tloop_dir=tloop_dir,
+            tloop_dis=tloop_dis,
         )
     elseif condition == "random"
         u1 = B_RandomGauges(
@@ -761,12 +763,12 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = false,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
-            randomnumber = randomnumber,
+            overallminus=false,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
+            randomnumber=randomnumber,
         )
         u2 = B_RandomGauges(
             NC,
@@ -774,117 +776,117 @@ function Initialize_Bfields(
             fluxnum,
             NDW,
             NN...,
-            overallminus = true,
-            mpi = mpi,
-            PEs = PEs,
-            mpiinit = mpiinit,
-            verbose_level = verbose_level,
-            randomnumber = randomnumber,
+            overallminus=true,
+            mpi=mpi,
+            PEs=PEs,
+            mpiinit=mpiinit,
+            verbose_level=verbose_level,
+            randomnumber=randomnumber,
         )
-    # elseif condition == "hot"
-    #     u1 = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
-    # elseif condition == "identity"
-    #     u1 = IdentityGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level)
+        # elseif condition == "hot"
+        #     u1 = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
+        # elseif condition == "identity"
+        #     u1 = IdentityGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level)
     else
         error("not supported")
     end
 
-    U = Array{typeof(u1),2}(undef, Dim,Dim)
+    U = Array{typeof(u1),2}(undef, Dim, Dim)
 
-    U[1,2] = u1
-    U[2,1] = u2
+    U[1, 2] = u1
+    U[2, 1] = u2
 
     for μ = 1:Dim
         for ν = μ+1:Dim
-            if (μ,ν) != (1,2)
+            if (μ, ν) != (1, 2)
                 fluxnum += 1
                 if condition == "tflux"
-                    U[μ,ν] = B_TfluxGauges(
+                    U[μ, ν] = B_TfluxGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = false,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        overallminus=false,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
-                    U[ν,μ] = B_TfluxGauges(
+                    U[ν, μ] = B_TfluxGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = true,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        overallminus=true,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 elseif condition == "tloop"
-                    U[μ,ν] = B_TloopGauges(
+                    U[μ, ν] = B_TloopGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = false,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        tloop_pos  = tloop_pos,
-                        tloop_dir  = tloop_dir,
-                        tloop_dis  = tloop_dis,
+                        overallminus=false,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        tloop_pos=tloop_pos,
+                        tloop_dir=tloop_dir,
+                        tloop_dis=tloop_dis,
                     )
-                    U[ν,μ] = B_TloopGauges(
+                    U[ν, μ] = B_TloopGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = true,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        tloop_pos  = tloop_pos,
-                        tloop_dir  = tloop_dir,
-                        tloop_dis  = tloop_dis,
+                        overallminus=true,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        tloop_pos=tloop_pos,
+                        tloop_dir=tloop_dir,
+                        tloop_dis=tloop_dis,
                     )
                 elseif condition == "random"
-                    U[μ,ν] = B_RandomGauges(
+                    U[μ, ν] = B_RandomGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = false,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        randomnumber = randomnumber,
+                        overallminus=false,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
                     )
-                    U[ν,μ] = B_RandomGauges(
+                    U[ν, μ] = B_RandomGauges(
                         NC,
                         Flux[fluxnum],
                         fluxnum,
                         NDW,
                         NN...,
-                        overallminus = true,
-                        mpi = mpi,
-                        PEs = PEs,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        randomnumber = randomnumber,
+                        overallminus=true,
+                        mpi=mpi,
+                        PEs=PEs,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
                     )
-                # elseif condition == "hot"
-                #     U[μ,ν] = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
-                # elseif condition == "identity"
-                #     U[μ,ν] = IdentityGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level)
+                    # elseif condition == "hot"
+                    #     U[μ,ν] = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
+                    # elseif condition == "identity"
+                    #     U[μ,ν] = IdentityGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level)
                 else
                     error("not supported")
                 end
@@ -900,16 +902,16 @@ function B_RandomGauges(
     FluxNum,
     NDW,
     NN...;
-    overallminus = false,
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
-    randomnumber = "Random",
+    overallminus=false,
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    randomnumber="Random",
 )
     dim = length(NN)
     println("Not implemented yet! In what follows, let us use B_TfluxGauges.")
-    U = B_TfluxGauges(NC,Flux,FluxNum,NDW,NN...,overallminus = overallminus,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level)
+    U = B_TfluxGauges(NC, Flux, FluxNum, NDW, NN..., overallminus=overallminus, mpi=mpi, PEs=PEs, mpiinit=mpiinit, verbose_level=verbose_level)
     return U
 end
 
@@ -919,11 +921,11 @@ function B_TfluxGauges(
     FluxNum,
     NDW,
     NN...;
-    overallminus = false,
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
+    overallminus=false,
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
 )
     dim = length(NN)
     if mpi
@@ -941,9 +943,9 @@ function B_TfluxGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        overallminus = overallminus,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        overallminus=overallminus,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 else
                     U = thooftFlux_4D_B_at_bndry_wing_mpi(
@@ -956,9 +958,9 @@ function B_TfluxGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        overallminus = overallminus,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
+                        overallminus=overallminus,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
                     )
                 end
             else
@@ -976,8 +978,8 @@ function B_TfluxGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    overallminus = overallminus,
-                    verbose_level = 2,
+                    overallminus=overallminus,
+                    verbose_level=2,
                 )
             else
                 U = thooftFlux_4D_B_at_bndry_wing(
@@ -989,8 +991,8 @@ function B_TfluxGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    overallminus = overallminus,
-                    verbose_level = 2,
+                    overallminus=overallminus,
+                    verbose_level=2,
                 )
             end
         else
@@ -1007,14 +1009,14 @@ function B_TloopGauges(
     FluxNum,
     NDW,
     NN...;
-    overallminus = false,
-    mpi = false,
-    PEs = nothing,
-    mpiinit = nothing,
-    verbose_level = 2,
-    tloop_pos  = [1,1,1,1],
-    tloop_dir  = [1,4],
-    tloop_dis  = 1,
+    overallminus=false,
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    tloop_pos=[1, 1, 1, 1],
+    tloop_dir=[1, 4],
+    tloop_dis=1,
 )
     # pos = position of Polyakov loop
     # dir = [1-dir shift of anti-Polyakov loop,temporal 4-dir]
@@ -1054,12 +1056,12 @@ function B_TloopGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        overallminus = overallminus,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        tloop_pos  = tloop_pos,
-                        tloop_dir  = tloop_dir,
-                        tloop_dis  = tloop_dis,
+                        overallminus=overallminus,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        tloop_pos=tloop_pos,
+                        tloop_dir=tloop_dir,
+                        tloop_dis=tloop_dis,
                     )
                 else
                     U = thooftLoop_4D_B_temporal_wing_mpi(
@@ -1072,12 +1074,12 @@ function B_TloopGauges(
                         NN[3],
                         NN[4],
                         PEs,
-                        overallminus = overallminus,
-                        mpiinit = mpiinit,
-                        verbose_level = verbose_level,
-                        tloop_pos  = tloop_pos,
-                        tloop_dir  = tloop_dir,
-                        tloop_dis  = tloop_dis,
+                        overallminus=overallminus,
+                        mpiinit=mpiinit,
+                        verbose_level=verbose_level,
+                        tloop_pos=tloop_pos,
+                        tloop_dir=tloop_dir,
+                        tloop_dis=tloop_dis,
                     )
                 end
             else
@@ -1095,11 +1097,11 @@ function B_TloopGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    overallminus = overallminus,
-                    verbose_level = 2,
-                    tloop_pos  = tloop_pos,
-                    tloop_dir  = tloop_dir,
-                    tloop_dis  = tloop_dis,
+                    overallminus=overallminus,
+                    verbose_level=2,
+                    tloop_pos=tloop_pos,
+                    tloop_dir=tloop_dir,
+                    tloop_dis=tloop_dis,
                 )
             else
                 U = thooftLoop_4D_B_temporal_wing(
@@ -1111,11 +1113,11 @@ function B_TloopGauges(
                     NN[2],
                     NN[3],
                     NN[4],
-                    overallminus = overallminus,
-                    verbose_level = 2,
-                    tloop_pos  = tloop_pos,
-                    tloop_dir  = tloop_dir,
-                    tloop_dis  = tloop_dis,
+                    overallminus=overallminus,
+                    verbose_level=2,
+                    tloop_pos=tloop_pos,
+                    tloop_dir=tloop_dir,
+                    tloop_dis=tloop_dis,
                 )
             end
         else
@@ -1444,14 +1446,14 @@ function evaluate_Bplaquettes!(
     B::Array{T,2},
     temps::Array{T,1},
 ) where {T<:AbstractGaugefields,Dim}
-    multiply_Bplaquettes!(uout,w,B,temps,true)
+    multiply_Bplaquettes!(uout, w, B, temps, true)
 end
 function multiply_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
     B::Array{T,2},
     temps::Array{T,1},
-    unity = false,
+    unity=false,
 ) where {T<:AbstractGaugefields,Dim}
     if unity
         unit_U!(uout)
@@ -1484,7 +1486,7 @@ function sweepaway_4D_Bplaquettes!(
     glinks = w
     origin = get_position(glinks[1])  #Tuple(zeros(Int64, Dim))
     if isdag(glinks[1])
-        origin_shift = [0,0,0,0]
+        origin_shift = [0, 0, 0, 0]
         origin_shift[get_direction(glinks[1])] += 1
         origin = Tuple(origin_shift .+ collect(origin))
     end
@@ -1498,7 +1500,7 @@ function sweepaway_4D_Bplaquettes!(
     direction = get_direction(U1link)
     isU1dag = isdag(U1link)
 
-    coordinate = [0,0,0,0] .+ collect(origin)
+    coordinate = [0, 0, 0, 0] .+ collect(origin)
     for j = 1:(linknum-1)
         Ujlink = glinks[j]
         j_direction = get_direction(Ujlink)
@@ -1514,18 +1516,18 @@ function sweepaway_4D_Bplaquettes!(
         coordinate[direction] += -1
     end
 
-    substitute_U!(Unew,uout)
-    Ushift = shift_U(Unew, (0,0,0,0))
+    substitute_U!(Unew, uout)
+    Ushift = shift_U(Unew, (0, 0, 0, 0))
 
     if direction == 1
         if isU1dag
-            Bshift12 = shift_U(B[1,2], (0,0,0,0))
-            Bshift13 = shift_U(B[1,3], (0,0,0,0))
-            Bshift14 = shift_U(B[1,4], (0,0,0,0))
+            Bshift12 = shift_U(B[1, 2], (0, 0, 0, 0))
+            Bshift13 = shift_U(B[1, 3], (0, 0, 0, 0))
+            Bshift14 = shift_U(B[1, 4], (0, 0, 0, 0))
         else
-            Bshift12 = shift_U(B[1,2], (0,0,0,0))'
-            Bshift13 = shift_U(B[1,3], (0,0,0,0))'
-            Bshift14 = shift_U(B[1,4], (0,0,0,0))'
+            Bshift12 = shift_U(B[1, 2], (0, 0, 0, 0))'
+            Bshift13 = shift_U(B[1, 3], (0, 0, 0, 0))'
+            Bshift14 = shift_U(B[1, 4], (0, 0, 0, 0))'
         end
 
         Bshift12new = temps[2]
@@ -1534,94 +1536,94 @@ function sweepaway_4D_Bplaquettes!(
 
         for ix = 1:abs(coordinate[1])
             if coordinate[1] > 0
-                substitute_U!(Bshift12new,Bshift12)
-                Bshift12 = shift_U(Bshift12new, (1,0,0,0))
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (1,0,0,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (1,0,0,0))
+                substitute_U!(Bshift12new, Bshift12)
+                Bshift12 = shift_U(Bshift12new, (1, 0, 0, 0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (1, 0, 0, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (1, 0, 0, 0))
             else # coordinate[1] < 0
-                substitute_U!(Bshift12new,Bshift12)
-                Bshift12 = shift_U(Bshift12new, (-1,0,0,0))
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (-1,0,0,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (-1,0,0,0))
+                substitute_U!(Bshift12new, Bshift12)
+                Bshift12 = shift_U(Bshift12new, (-1, 0, 0, 0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (-1, 0, 0, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (-1, 0, 0, 0))
             end
         end
-        
+
         for iy = 1:abs(coordinate[2])
             if coordinate[2] > 0
                 multiply_12!(uout, Ushift, Bshift12, 0, false, false)
 
-                substitute_U!(Bshift12new,Bshift12)
-                Bshift12 = shift_U(Bshift12new, (0,1,0,0))
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0,1,0,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,1,0,0))
+                substitute_U!(Bshift12new, Bshift12)
+                Bshift12 = shift_U(Bshift12new, (0, 1, 0, 0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0, 1, 0, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, 1, 0, 0))
             else # coordinate[2] < 0
-                substitute_U!(Bshift12new,Bshift12)
-                Bshift12 = shift_U(Bshift12new, (0,-1,0,0))
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0,-1,0,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,-1,0,0))
+                substitute_U!(Bshift12new, Bshift12)
+                Bshift12 = shift_U(Bshift12new, (0, -1, 0, 0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0, -1, 0, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, -1, 0, 0))
 
                 multiply_12!(uout, Ushift, Bshift12, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
-            
+
         end
-        
+
         for iz = 1:abs(coordinate[3])
             if coordinate[3] > 0
                 multiply_12!(uout, Ushift, Bshift13, 0, false, false)
 
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0,0,1,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,0,1,0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0, 0, 1, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, 0, 1, 0))
             else # coordinate[3] < 0
-                substitute_U!(Bshift13new,Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0,0,-1,0))
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,0,-1,0))
+                substitute_U!(Bshift13new, Bshift13)
+                Bshift13 = shift_U(Bshift13new, (0, 0, -1, 0))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, 0, -1, 0))
 
                 multiply_12!(uout, Ushift, Bshift13, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
-            
+
         end
 
         for it = 1:abs(coordinate[4])
             if coordinate[4] > 0
                 multiply_12!(uout, Ushift, Bshift14, 0, false, false)
 
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,0,0,1))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, 0, 0, 1))
             else # coordinate[4] < 0
-                substitute_U!(Bshift14new,Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0,0,0,-1))
+                substitute_U!(Bshift14new, Bshift14)
+                Bshift14 = shift_U(Bshift14new, (0, 0, 0, -1))
 
                 multiply_12!(uout, Ushift, Bshift14, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
-            
+
         end
     elseif direction == 2
         if isU1dag
-            Bshift23 = shift_U(B[2,3], (0,0,0,0))
-            Bshift24 = shift_U(B[2,4], (0,0,0,0))
+            Bshift23 = shift_U(B[2, 3], (0, 0, 0, 0))
+            Bshift24 = shift_U(B[2, 4], (0, 0, 0, 0))
         else
-            Bshift23 = shift_U(B[2,3], (0,0,0,0))'
-            Bshift24 = shift_U(B[2,4], (0,0,0,0))'
+            Bshift23 = shift_U(B[2, 3], (0, 0, 0, 0))'
+            Bshift24 = shift_U(B[2, 4], (0, 0, 0, 0))'
         end
 
         Bshift23new = temps[2]
@@ -1629,29 +1631,29 @@ function sweepaway_4D_Bplaquettes!(
 
         for ix = 1:abs(coordinate[1])
             if coordinate[1] > 0
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (1,0,0,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (1,0,0,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (1, 0, 0, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (1, 0, 0, 0))
             else # coordinate[1] < 0
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (-1,0,0,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (-1,0,0,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (-1, 0, 0, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (-1, 0, 0, 0))
             end
         end
-        
+
         for iy = 1:abs(coordinate[2])
             if coordinate[2] > 0
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0,1,0,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,1,0,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0, 1, 0, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, 1, 0, 0))
             else # coordinate[2] < 0
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0,-1,0,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,-1,0,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0, -1, 0, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, -1, 0, 0))
             end
         end
 
@@ -1659,95 +1661,95 @@ function sweepaway_4D_Bplaquettes!(
             if coordinate[3] > 0
                 multiply_12!(uout, Ushift, Bshift23, 0, false, false)
 
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0,0,1,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,0,1,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0, 0, 1, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, 0, 1, 0))
             else # coordinate[3] < 0
-                substitute_U!(Bshift23new,Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0,0,-1,0))
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,0,-1,0))
+                substitute_U!(Bshift23new, Bshift23)
+                Bshift23 = shift_U(Bshift23new, (0, 0, -1, 0))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, 0, -1, 0))
 
                 multiply_12!(uout, Ushift, Bshift23, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
-            
+
         end
 
         for it = 1:abs(coordinate[4])
             if coordinate[4] > 0
                 multiply_12!(uout, Ushift, Bshift24, 0, false, false)
 
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,0,0,1))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, 0, 0, 1))
             else # coordinate[4] < 0
-                substitute_U!(Bshift24new,Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0,0,0,-1))
+                substitute_U!(Bshift24new, Bshift24)
+                Bshift24 = shift_U(Bshift24new, (0, 0, 0, -1))
 
                 multiply_12!(uout, Ushift, Bshift24, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
         end
     elseif direction == 3
         if isU1dag
-            Bshift34 = shift_U(B[3,4], (0,0,0,0))
+            Bshift34 = shift_U(B[3, 4], (0, 0, 0, 0))
         else
-            Bshift34 = shift_U(B[3,4], (0,0,0,0))'
+            Bshift34 = shift_U(B[3, 4], (0, 0, 0, 0))'
         end
 
         Bshift34new = temps[2]
 
         for ix = 1:abs(coordinate[1])
             if coordinate[1] > 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (1,0,0,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (1, 0, 0, 0))
             else # coordinate[1] < 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (-1,0,0,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (-1, 0, 0, 0))
             end
         end
-        
+
         for iy = 1:abs(coordinate[2])
             if coordinate[2] > 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,1,0,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, 1, 0, 0))
             else # coordinate[2] < 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,-1,0,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, -1, 0, 0))
             end
         end
-        
+
         for iz = 1:abs(coordinate[3])
             if coordinate[3] > 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,0,1,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, 0, 1, 0))
             else # coordinate[3] < 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,0,-1,0))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, 0, -1, 0))
             end
         end
-        
+
         for it = 1:abs(coordinate[4])
             if coordinate[4] > 0
                 multiply_12!(uout, Ushift, Bshift34, 0, false, false)
 
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,0,0,1))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, 0, 0, 1))
             else # coordinate[4] < 0
-                substitute_U!(Bshift34new,Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0,0,0,-1))
+                substitute_U!(Bshift34new, Bshift34)
+                Bshift34 = shift_U(Bshift34new, (0, 0, 0, -1))
 
                 multiply_12!(uout, Ushift, Bshift34, 0, true, false)
             end
-            
-            substitute_U!(Unew,uout)
+
+            substitute_U!(Unew, uout)
             Ushift = shift_U(Unew, origin)
-            
+
         end
     else
         # direction==4: no multiplications
@@ -1764,7 +1766,7 @@ function isLoopwithB(
         return false
     end
 
-    coordinate = [0,0,0,0]
+    coordinate = [0, 0, 0, 0]
     for j = 1:numlinks
         Ujlink = glinks[j]
         direction = get_direction(Ujlink)
@@ -1776,12 +1778,12 @@ function isLoopwithB(
         end
     end
 
-    if coordinate == [0,0,0,0]
+    if coordinate == [0, 0, 0, 0]
         return true
     else
         return false
     end
-    
+
 end
 
 function isStaplewithB(
@@ -1793,7 +1795,7 @@ function isStaplewithB(
         return false
     end
 
-    coordinate = [0,0,0,0]
+    coordinate = [0, 0, 0, 0]
     for j = 1:numlinks
         Ujlink = glinks[j]
         direction = get_direction(Ujlink)
@@ -1805,12 +1807,12 @@ function isStaplewithB(
         end
     end
 
-    if norm(coordinate,1) == 1.0
+    if norm(coordinate, 1) == 1.0
         return true
     else
         return false
     end
-    
+
 end
 
 function zerocheck(U, U2bare, Uname)
@@ -2658,10 +2660,11 @@ end
 function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
-    temps::Array{<:AbstractGaugefields{NC,Dim},1};
-    plaqonly = false,
-    staplefactors::Union{Array{<:Number,1},Nothing} = nothing,
-    factor = 1,
+    temps::Temporalfields{<:AbstractGaugefields{NC,Dim}};
+    #temps::Array{<:AbstractGaugefields{NC,Dim},1};
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
 ) where {NC,Dim,T1<:AbstractGaugefields,T2<:AbstractGaugefields}
     error("add_force! is not implemented in type $(typeof(F)) ")
 end
@@ -2669,10 +2672,11 @@ function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
     B::Array{T2,2},
-    temps::Array{<:AbstractGaugefields{NC,Dim},1};
-    plaqonly = false,
-    staplefactors::Union{Array{<:Number,1},Nothing} = nothing,
-    factor = 1,
+    temps::Temporalfields{<:AbstractGaugefields{NC,Dim}};
+    #temps::Array{<:AbstractGaugefields{NC,Dim},1};
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
 ) where {NC,Dim,T1<:AbstractGaugefields,T2<:AbstractGaugefields}
     error("add_force! is not implemented in type $(typeof(F)) ")
 end
@@ -2680,29 +2684,34 @@ end
 function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
-    temps::Array{<:AbstractGaugefields{NC,Dim},1};
-    plaqonly = false,
-    staplefactors::Union{Array{<:Number,1},Nothing} = nothing,
-    factor = 1,
+    temps::Temporalfields{<:AbstractGaugefields{NC,Dim}};
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
 ) where {NC,Dim,T1<:TA_Gaugefields,T2<:AbstractGaugefields}
     @assert length(temps) >= 3 "length(temps) should be >= 3. But $(length(temps))"
     #println("add force, plaqonly = $plaqonly")
 
-    V = temps[3]
-    temp1 = temps[1]
-    temp2 = temps[2]
+    V, it_V = get_temp(temps)
+    #V = temps[3]
+    temp1, it_temp1 = get_temp(temps)
+    #temp1 = temps[1]
+    #temp2, it_temp2 = get_temp(temps)
+    temp3, it_temp3 = get_temp(temps)
+    #temp2 = temps[2]
+    temps14, its_temps14 = get_temp(temps, 4)
 
     for μ = 1:Dim
         if plaqonly
 
-            construct_double_staple!(V, U, μ, temps[1:2])
+            construct_double_staple!(V, U, μ, temps14)
 
             mul!(temp1, U[μ], V') #U U*V
         else
             clear_U!(V)
             for i = 1:gparam.numactions
                 loops = gparam.staples[i][μ]
-                evaluate_wilson_loops!(temp3, loops, U, [temp1, temp2])
+                evaluate_wilson_loops!(temp3, loops, U, temps14)
                 add_U!(V, staplefactors[i], temp3)
                 #add_U!(V,gparam.βs[i]/gparam.β,temp3)
             end
@@ -2712,6 +2721,10 @@ function add_force!(
         Traceless_antihermitian_add!(F[μ], factor, temp1)
         #add_U!(F[μ],factor,temp2)
     end
+    unused!(temps, it_V)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp3)
+    unused!(temps, its_temps14)
 
 end
 function add_force!(
@@ -2719,9 +2732,9 @@ function add_force!(
     U::Array{T2,1},
     B::Array{T2,2},
     temps::Array{<:AbstractGaugefields{NC,Dim},1};
-    plaqonly = false,
-    staplefactors::Union{Array{<:Number,1},Nothing} = nothing,
-    factor = 1,
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
 ) where {NC,Dim,T1<:TA_Gaugefields,T2<:AbstractGaugefields}
     @assert length(temps) >= 3 "length(temps) should be >= 3. But $(length(temps))"
 
@@ -2798,12 +2811,16 @@ function exp_aF_U!(
     a::N,
     F::Array{T1,1},
     U::Array{T,1},
-    temps::Array{T,1},
+    #temps::Array{T,1},
+    temps::Temporalfields{T}
 ) where {NC,Dim,N<:Number,T<:AbstractGaugefields,T1<:AbstractGaugefields} #exp(a*F)*U
     @assert a != 0 "Δτ should not be zero in expF_U! function!"
-    expU = temps[1]
-    temp1 = temps[2]
-    temp2 = temps[3]
+    #expU = temps[1]
+    #temp1 = temps[2]
+    #temp2 = temps[3]
+    expU, it_expU = get_temp(temps)#[1]
+    temp1, it_temp1 = get_temp(temps)#temps[2]
+    temp2, it_temp2 = get_temp(temps)#temps[3]
     #clear_U!(temp1)
     #clear_U!(temp2)
     #clear_U!(expU)
@@ -2813,6 +2830,9 @@ function exp_aF_U!(
         exptU!(expU, a, F[μ], [temp1, temp2])
         mul!(W[μ], expU, U[μ])
     end
+    unused!(temps, it_expU)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
 
     set_wing_U!(W)
 end
@@ -2923,9 +2943,9 @@ function construct_staple!(
         U1 = U[ν]
         # mul!(U1, U[ν], B[μ,ν]')
         if μ < ν
-            mul!(U1, U[ν], B[μ,ν]')
+            mul!(U1, U[ν], B[μ, ν]')
         else
-            mul!(U1, U[ν], B[μ,ν])
+            mul!(U1, U[ν], B[μ, ν])
         end
         U2 = shift_U(U[μ], ν)
         mul!(U1U2, U1, U2)
@@ -3002,7 +3022,7 @@ function Traceless_antihermitian!(vout::T, vin::T) where {T<:AbstractGaugefields
     error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
 end
 
-function Antihermitian!(vout::T, vin::T;factor=1) where {T<:AbstractGaugefields} #vout = vin - vin^+
+function Antihermitian!(vout::T, vin::T; factor=1) where {T<:AbstractGaugefields} #vout = vin - vin^+
     error("Antihermitian! is not implemented in type $(typeof(vout)) ")
 end
 
@@ -3497,19 +3517,19 @@ function gramschmidt_special!(v)
     end
 end
 
-function make_cloverloops(;Dim=4)
-    cloverloops = Vector{Vector{Wilsonline{Dim}}}(undef,6)
+function make_cloverloops(; Dim=4)
+    cloverloops = Vector{Vector{Wilsonline{Dim}}}(undef, 6)
     μν = 0
-    for μ=1:3
-        for ν=μ+1:4
+    for μ = 1:3
+        for ν = μ+1:4
             μν += 1
             if μν > 6
                 error("μν > 6 ?")
             end
-            cloverloops[μν] = make_cloverloops(μ,ν,Dim=Dim)
+            cloverloops[μν] = make_cloverloops(μ, ν, Dim=Dim)
         end
     end
-    return cloverloops 
+    return cloverloops
 end
 
 const cloverloops_4D = make_cloverloops()
@@ -3518,29 +3538,29 @@ const cloverloops_4D = make_cloverloops()
     Clover terms.
     If you multiply 0.125*kappa*Clover_coefficients, this becomes the Wilson Clover terms.
 """
-function make_Cloverloopterms(U,temps)
-    CloverFμν = Array{eltype(U)}(undef,6)
-    for μν=1:6
+function make_Cloverloopterms(U, temps)
+    CloverFμν = Array{eltype(U)}(undef, 6)
+    for μν = 1:6
         CloverFμν[μν] = similar(U[1])
     end
-    make_Cloverloopterms!(CloverFμν,U,temps)
+    make_Cloverloopterms!(CloverFμν, U, temps)
     return CloverFμν
 end
 
-function make_Cloverloopterms!(CloverFμν,U,temps)
+function make_Cloverloopterms!(CloverFμν, U, temps)
     #println(length(temps))
     @assert length(temps) > 2 "length of temp Gaugefields should be larger than 1"
     xout = temps[end]
     μν = 0
-    for μ=1:3
-        for ν=μ+1:4
+    for μ = 1:3
+        for ν = μ+1:4
             μν += 1
             if μν > 6
                 error("μν > 6 ?")
             end
             wclover = cloverloops_4D[μν]
-            evaluate_gaugelinks!(xout,wclover,U,temps)
-            Antihermitian!(CloverFμν[μν],xout)
+            evaluate_gaugelinks!(xout, wclover, U, temps)
+            Antihermitian!(CloverFμν[μν], xout)
         end
     end
 end
@@ -3549,7 +3569,7 @@ end
     b = (lambda_k/2)*a
     lambda_k : GellMann matrices. k=1, 8 
 """
-function lambda_k_mul!(a::T1, b::T2,k,generator) where {T1<:Abstractfields,T2<:Abstractfields}
+function lambda_k_mul!(a::T1, b::T2, k, generator) where {T1<:Abstractfields,T2<:Abstractfields}
     error("lambda_k_mul! is not implemented in type $(typeof(a)) and $(typeof(b))")
 end
 

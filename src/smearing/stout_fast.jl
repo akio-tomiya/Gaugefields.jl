@@ -1,6 +1,7 @@
 
 import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, substitute_U!, Gaugefields_4D_wing
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
+import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     ρs::Vector{TN}
@@ -9,7 +10,8 @@ struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     eQs::Vector{T}
     Cs::Vector{T}
     Qs::Vector{T}
-    temps::Vector{T}
+    #temps::Vector{T}
+    temps::Temporalfields{T}
     dSdCs::Vector{T}
     hasdSdCs::Vector{Bool}
     dSdρ::Vector{TN}
@@ -43,10 +45,14 @@ end
 function STOUT_Layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:AbstractGaugefields{NC,Dim}}, ρs=zeros(Float64, length(loopset))) where {NC,Dim}
     T = eltype(U)
     numg = 5 + Dim - 1 + 2
+    temps = Temporalfields(U[1]; num=numg)
+    #=
     temps = Vector{T}(undef, numg)
     for i = 1:numg
         temps[i] = similar(U[1])
     end
+    =#
+
     #num = length(loops_smearing)
     #loopset = make_loopforactions(loops_smearing, L)
     num = length(loopset)
@@ -211,17 +217,23 @@ function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Di
     for i = 1:length(s.ρs)
         s.ρs[i] = deepcopy(ρs[i])
     end
-    temps = s.temps
-    Ω = temps[end]
+    #temps = s.temps
+    #Ω = temps[end]
     for μ = 1:Dim
         calc_C!(s.Cs[μ], μ, ρs, s.dataset, Uin, s.temps)
+        Ω, iΩ = get_temp(s.temps)
+        #Ω = temps[1]
         mul!(Ω, s.Cs[μ], Uin[μ]') #Ω = C*Udag
         Traceless_antihermitian!(s.Qs[μ], Ω)
-        exptU!(s.eQs[μ], 1, s.Qs[μ], temps[1:2])
+        unused!(s.temps, iΩ)
+        temps, it_s = get_temp(s.temps, 2)
+        exptU!(s.eQs[μ], 1, s.Qs[μ], temps)
+        unused!(s.temps, it_s)
         mul!(Uout[μ], s.eQs[μ], Uin[μ])
     end
     set_wing_U!(Uout)
     s.hasdSdCs[1] = false
+    unused!(s.temps)
 end
 export forward!
 
@@ -235,13 +247,15 @@ export backward_dSdU_add!
 
 function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
-    temps = s.temps
-    temp1 = temps[1]
-    dng = 2
-    dSdQ = temps[2+dng]
-    dSdΩ = temps[3+dng]
-    dSdUdag = temps[4+dng]
-    dSdCs = temps[5+dng:5+Dim-1+dng]
+    #temps = s.temps
+    temp1, it_1 = get_temp(s.temps)
+    #temp1 = temps[1]
+    #dng = 2
+    #dSdQ = temps[2+dng]
+    #dSdΩ = temps[3+dng]
+    #dSdUdag = temps[4+dng]
+    #dSdCs = temps[5+dng:5+Dim-1+dng]
+    dSdCs, it_dSdCs = get_temp(s.temps, Dim)
 
     Uin = s.Uin
 
@@ -257,34 +271,52 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
 
+        #dSdQ = temps[2+dng]
+        dSdQ, it_dSdQ = get_temp(s.temps)
+        #dSdΩ = temps[3+dng]
+        dSdΩ, it_dSdΩ = get_temp(s.temps)
+
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uin[μ], temp1)
+        unused!(s.temps, it_1)
         calc_dSdΩ!(dSdΩ, dSdQ)
+        unused!(s.temps, it_dSdQ)
         calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
 
+
+        dSdUdag, it_dSdUdag = get_temp(s.temps)
+        #dSdUdag = temps[4+dng]
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
+        unused!(s.temps, it_dSdΩ)
         add_U!(dSdU[μ], dSdUdag')
+        unused!(s.temps, it_dSdUdag)
 
 
-        Cμi = temps[4+dng] #dSdUdag
+        #Cμi = temps[4+dng] #dSdUdag
+        Cμi, it_Cμi = get_temp(s.temps)
         #dS/dρ
         num = length(s.ρs)
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #Cμi = temps[6]
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:4])
+            temps, its_temps = get_temp(s.temps, 4)
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps)
             #temp1 = temps[1]
             #dSdCs = temps[7:7+Dim-1]
             mul!(temp1, dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
+            unused!(s.temps, its_temps)
         end
-
+        unused!(s.temps, it_Cμi)
     end
+
+
 
     for ν = 1:Dim
         for μ = 1:Dim
-            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, temps)
+            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, s.temps)
         end
     end
+    unused!(s.temps)
 end
 export backward_dSdUαUβρ_add!
 
@@ -292,10 +324,15 @@ export backward_dSdUαUβρ_add!
 
 function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
-    temps = s.temps
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
+    #temps = s.temps
+    #temp1, it_temp1 = get_temp(s.temps)
+    #temp1 = temps[1]
+    #dSdQ = temps[2]
+    #dSdQ, it_dSdQ = get_temp(s.temps)
+    #dSdΩ = temps[3]
+    #dSdΩ, it_dSdΩ = get_temp(s.temps)
+    #Cμi = temps[4] #dSdUdag
+    #Cμi, it_Cμi = get_temp(s.temps)
 
 
     Uin = s.Uin
@@ -304,40 +341,51 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
 
         if s.hasdSdCs[1] == false
             Qμ = s.Qs[μ]
+            temp1, it_temp1 = get_temp(s.temps)
+            dSdQ, it_dSdQ = get_temp(s.temps)
             calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
-
+            unused!(s.temps, it_temp1)
+            dSdΩ, it_dSdΩ = get_temp(s.temps)
             calc_dSdΩ!(dSdΩ, dSdQ)
+            unused!(s.temps, it_dSdQ)
             calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
+            unused!(s.temps, it_dSdQ)
         end
 
-        Cμi = temps[4] #dSdUdag
+
         #dS/dρ
         num = length(s.ρs)
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #println(loops)
-            evaluate_gaugelinks!(Cμi, loops, Uin, temps[1:2])
-
+            temps, its_temps = get_temp(s.temps, 2)
+            Cμi, it_Cμi = get_temp(s.temps)
+            evaluate_gaugelinks!(Cμi, loops, Uin, temps)
+            unused!(s.temps, its_temps)
+            temp1, it_temp1 = get_temp(s.temps)
             mul!(temp1, s.dSdCs[μ], Cμi)
-
             dSdρ[i] += real(tr(temp1)) * 2
+
+            unused(s.temps, it_Cμi)
+            unused!(s.temps, it_temp1)
         end
-
-
     end
     s.hasdSdCs[1] = true
+
+    #unused!(temps)
 end
 export backward_dSdρ_add!
 
 
 
 function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN} # Uout =  exp(Q(Uin,ρs))*Uinα
-    temps = s.temps
-    temps = similar(s.temps)
-    temp1 = temps[1]
-    dSdQ = temps[2]
-    dSdΩ = temps[3]
-    dSdUdag = temps[4]
+    #temps = s.temps
+    #temps = similar(s.temps)
+
+    #temp1 = temps[1]
+    #dSdQ = temps[2]
+    #dSdΩ = temps[3]
+    #dSdUdag = temps[4]
 
     Uin = s.Uin
 
@@ -350,15 +398,20 @@ function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,
 
         Cμ = s.Cs[μ]
         Qμ = s.Qs[μ]
-
+        temp1, it_temps = get_temp(s.temps)
+        dSdQ, it_dSdQ = get_temp(s.temps)
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, Uin[μ], temp1)
-
+        unused!(s.temps, it_temps)
+        dSdΩ, it_dSdΩ = get_temp(s.temps)
         calc_dSdΩ!(dSdΩ, dSdQ)
+        unused!(s.temps, it_dSdQ)
 
         calc_dSdC!(s.dSdCs[μ], dSdΩ, Uin[μ])
-
+        dSdUdag, it_dSdUdag = get_temp(s.temps)
         calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
+        unused!(s.temps, it_dSdΩ)
         add_U!(dSdU[μ], dSdUdag')
+        unused!(s.temps, it_dSdUdag)
     end
 
     for ν = 1:Dim
@@ -372,32 +425,39 @@ export backward_dSdUβ_add!
 
 
 function backward_dSdUα_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,Dim,TN}
-    temps = s.temps
-    temps = similar(s.temps)
-    temp1 = temps[1]
+    #temps = s.temps
+    #temps = similar(s.temps)
+    #temp1 = temps[1]
+    temp1, it_temp1 = get_temp(s.temps)
 
     for μ = 1:Dim
         calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
         add_U!(dSdU[μ], temp1)
     end
+    unused!(temps, it_temp1)
 end
 export backward_dSdUα_add!
 
 function calc_C!(C, μ, ρs::Vector{TN}, dataset::Vector{STOUT_dataset{Dim}}, Uin, temps_g) where {Dim,TN<:Number}
-    temp1 = temps_g[1]
-    temp2 = temps_g[2]
+    #temp1 = temps_g[1]
+    #temp2 = temps_g[2]
     #temp3 = temps_g[3]
-    temp3 = temps_g[5]
+    temp3, it_temp3 = get_temp(temps_g)
+    #temp3 = temps_g[5]
+    #vec_temps = temps_g[1:4]
+    vec_temps, its_vec_temps = get_temp(temps_g, 4)
     num = length(ρs)
     clear_U!(C)
     for i = 1:num
         #println("ρi  = ",ρs[i] )
         loops = dataset[i].Cμ[μ]
-        evaluate_gaugelinks!(temp3, loops, Uin, temps_g[1:4])
+        evaluate_gaugelinks!(temp3, loops, Uin, vec_temps)
         #println("i = $i")
         #println(temp3[1,1,1,1,1,1])
         add_U!(C, ρs[i], temp3)
     end
+    unused!(temps_g, it_temp3)
+    unused!(temps_g, its_vec_temps)
     #println("U ", Uin[1][1,1,1,1,1,1])
 end
 export calc_C!
@@ -438,20 +498,24 @@ export calc_dSdUdag!
 
 
 function LdCdU_i_add!(LdCdU, L, A, B, ρ, temps_g) #dCdU = ρ sum_i A_i otimes B_i , dCdagdU = ρ sum_i Abar_i otimes Bbar_i
-    BL = temps_g[1]
-    BLA = temps_g[2]
+    #BL = temps_g[1]
+    BL, it_BL = get_temp(temps_g)
+    #BLA = temps_g[2]
+    BLA, it_BLA = get_temp(temps_g)
     mul!(BL, B, L)
     mul!(BLA, BL, A)
     add_U!(LdCdU, ρ, BLA)
+    unused!(temps_g, it_BL)
+    unused!(temps_g, it_BLA)
 end
 
 export calc_dSdUν_fromdSCμ_add!
 function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, dSdCμ, ρs, Us, μ, ν, temps_g) where {Dim}  #use pullback for C(U): dS/dCμ star dCμ/dUν
-    temp1 = temps_g[1]
-    temp2 = temps_g[2]
+    #temp1 = temps_g[1]
+    #temp2 = temps_g[2]
     dng = 2
-    temp3 = temps_g[3+dng]
-    temp4 = temps_g[4+dng]
+    #temp3 = temps_g[3+dng]
+    #temp4 = temps_g[4+dng]
 
     numterms = length(ρs)
     for iterm = 1:numterms
@@ -470,12 +534,23 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             leftlinks = get_leftlinks(dCμdUν_j)
             rightlinks = get_rightlinks(dCμdUν_j)
 
-            A = temp3
-            evaluate_gaugelinks!(A, leftlinks, Us, temps_g[1:4])
+            #A = temp3
+            A, it_A = get_temp(temps_g)
+            #A = temps_g[3+dng]
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(A, leftlinks, Us, temps)
+            unused!(temps_g, its_temps)
 
-            B = temp4
-            evaluate_gaugelinks!(B, rightlinks, Us, temps_g[1:4])
+            #B = temp4
+            #B = temps_g[4+dng]
+            B, it_B = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(B, rightlinks, Us, temps)
+            unused!(temps_g, its_temps)
             LdCdU_i_add!(dSdU, dSdCμm, A, B, ρi, temps_g)
+            #unused!(temps_g, its_temps)
+            unused!(temps_g, it_A)
+            unused!(temps_g, it_B)
         end
 
         numdCμdagdUν = length(dCμdagdUν[μ, ν])
@@ -488,11 +563,22 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             leftlinks = get_leftlinks(dCμdagdUν_j)
             rightlinks = get_rightlinks(dCμdagdUν_j)
 
-            barA = temp3
-            evaluate_gaugelinks!(barA, leftlinks, Us, temps_g[1:4])
-            barB = temp4
-            evaluate_gaugelinks!(barB, rightlinks, Us, temps_g[1:4])
+            #barA = temp3
+            #barA = temps_g[3+dng]
+            barA, it_barA = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(barA, leftlinks, Us, temps)
+            unused!(temps_g, its_temps)
+            #barB = temp4
+            #barB = temps_g[4+dng]
+            barB, it_barB = get_temp(temps_g)
+            temps, its_temps = get_temp(temps_g, 4)
+            evaluate_gaugelinks!(barB, rightlinks, Us, temps)
+            unused!(temps_g, its_temps)
             LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
+
+            unused!(temps_g, it_barA)
+            unused!(temps_g, it_barB)
         end
         #end
 
