@@ -1,29 +1,29 @@
 import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
 
-function heatbath_SU2!(U, NC, temps_g, β, Dim=4)
+function heatbath_SU2!(U, Bfield, NC, temps_g, β, Dim=4)
 
     V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
 
-    temps, it_temps = get_temp(temps_g, 5)
+    temps, it_temps = get_temp(temps_g, 7)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
         temps2[i] = zeros(ComplexF64, 2, 2)
     end
 
-    mapfunc!(A, B) = SU2update_KP!(A, B, β, NC, temps2, ITERATION_MAX)
+    mapfunc!(A, B) = SU2update_KP!(A, Bfield, β, NC, temps2, ITERATION_MAX)
 
     for μ = 1:Dim
 
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -31,11 +31,11 @@ function heatbath_SU2!(U, NC, temps_g, β, Dim=4)
     unused!(temps_g, it_temps)
 end
 
-function heatbath_SU3!(U, NC, temps_g, β, Dim=4)
+function heatbath_SU3!(U, Bfield, NC, temps_g, β, Dim=4)
     V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
 
-    temps, it_temps = get_temp(temps_g, 5)
+    temps, it_temps = get_temp(temps_g, 7)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -51,11 +51,11 @@ function heatbath_SU3!(U, NC, temps_g, β, Dim=4)
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
@@ -64,12 +64,12 @@ function heatbath_SU3!(U, NC, temps_g, β, Dim=4)
 end
 
 
-function heatbath_SUN!(U, NC, temps_g, β, Dim=4)
+function heatbath_SUN!(U, Bfield, NC, temps_g, β, Dim=4)
     #Dim = 4
     V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
 
-    temps, it_temps = get_temp(temps_g, 5)
+    temps, it_temps = get_temp(temps_g, 7)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -85,11 +85,11 @@ function heatbath_SUN!(U, NC, temps_g, β, Dim=4)
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, Bfield, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
