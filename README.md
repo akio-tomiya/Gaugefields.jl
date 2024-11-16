@@ -87,14 +87,12 @@ load_gaugefield!(U,i,ildg,L,NC)
 Then, we can calculate the plaquette: 
 
 ```julia
-temp1 = similar(U[1])
-temp2 = similar(U[1])
+temps = Temporalfields(U[1], num=2)
+comb, factor = set_comb(U,Dim)
 
-comb = 6
-factor = 1/(comb*U[1].NV*U[1].NC)
-@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+@time plaq_t = calculate_Plaquette(U,temps)*factor
 println("plaq_t = $plaq_t")
-poly = calculate_Polyakov_loop(U,temp1,temp2) 
+poly = calculate_Polyakov_loop(U,temps) 
 println("polyakov loop = $(real(poly)) $(imag(poly))")
 ```
 
@@ -143,14 +141,12 @@ function savingexample()
     Dim = 4
 
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot")
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
 
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U,Dim)
+
+    @time plaq_t = calculate_Plaquette(U, temps) * factor
     println("plaq_t = $plaq_t")
-
 
     filename = "test.jld2"
     saveU(filename, U)
@@ -160,12 +156,10 @@ function loadingexample()
     filename = "test.jld2"
     U = loadU(filename)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U,Dim)
 
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    @time plaq_t = calculate_Plaquette(U, temps) * factor
     println("plaq_t = $plaq_t")
 end
 
@@ -199,16 +193,18 @@ println("Initial conf of B at [1,2][2,2,:,:,NZ,NT]")
 display(B[1,2][2,2,:,:,NZ,NT])
 ```
 
-## Heatbath updates (even-odd method)
+## Heatbath updates
+### Even-odd method
 
 ```julia
 using Gaugefields
 
-
-function heatbath_SU3!(U,NC,temps,β)
+function heatbath_SU3!(U,NC,temps_g,β)
     Dim = 4
-    V = temps[5]
+    V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
+
+    temps, it_temps = get_temp(temps_g, 5)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
     temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
@@ -225,14 +221,16 @@ function heatbath_SU3!(U,NC,temps,β)
         loops = loops_staple[(Dim,μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps,iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V,loops,U,temps[1:4],iseven)
+        evaluate_gaugelinks_evenodd!(V,loops,U,temps,iseven)
         map_U!(U[μ],mapfunc!,V,iseven) 
     end
-    
+
+    unused!(temps_g, it_V)
+    unused!(temps_g, it_temps)
 end
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
@@ -241,29 +239,23 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
 
-    # for heatbath update
-    temp3 = similar(U[1])
-    temp4 = similar(U[1])
-    temp5 = similar(U[1])
+    temps = Temporalfields(U[1], num=5)
+    comb, factor = set_comb(U,Dim)
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 40
     for itrj = 1:numhb
-        heatbath_SU3!(U,NC,[temp1,temp2,temp3,temp4,temp5],β)
+        heatbath_SU3!(U,NC,temps,β)
 
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -312,14 +304,12 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     show(gauge_action)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=9)
+    comb, factor = set_comb(U,Dim)
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps)
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 1000
@@ -327,8 +317,8 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
         heatbath!(U,hnew)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2) 
+        plaq_t = calculate_Plaquette(U,temps)*factor
+        poly = calculate_Polyakov_loop(U,temps) 
 
         if itrj % 40 == 0
             println("$itrj plaq_t = $plaq_t")
@@ -351,6 +341,89 @@ heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
 In this code, we consider the plaquette and rectangular actions. 
 
+### Heatbath coupled with B fields
+```julia
+using Gaugefields
+
+function heatbath_SU3!(U,B,NC,temps_g,β)
+    Dim = 4
+    V, it_V = get_temp(temps_g)
+    ITERATION_MAX = 10^5
+
+    temps, it_temps = get_temp(temps_g, 5)
+
+    temps2 = Array{Matrix{ComplexF64},1}(undef,5) 
+    temps3 = Array{Matrix{ComplexF64},1}(undef,5) 
+    for i=1:5
+        temps2[i] = zeros(ComplexF64,2,2)
+        temps3[i] = zeros(ComplexF64,NC,NC)
+    end
+
+
+    mapfunc!(A,B) = SU3update_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+
+    for μ=1:Dim
+
+        loops = loops_staple[(Dim,μ)]
+        iseven = true
+
+        evaluate_gaugelinks_evenodd!(V,loops,U,B,temps,iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+
+        iseven = false
+        evaluate_gaugelinks_evenodd!(V,loops,U,B,temps,iseven)
+        map_U!(U[μ],mapfunc!,V,iseven) 
+    end
+
+    unused!(temps_g, it_V)
+    unused!(temps_g, it_temps)
+end
+
+function heatbathtest_4D_b(NX,NY,NZ,NT,β,NC,Flux)
+    Dim = 4
+    Nwing = 1
+
+    flux = Flux
+
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+    B = Initialize_Bfields(NC,flux,Nwing,NX,NY,NZ,NT,condition = "tflux")
+
+    temps = Temporalfields(U[1], num=5)
+    comb, factor = set_comb(U,Dim)
+
+    @time plaq_t = calculate_Plaquette(U,B,temps)*factor
+    println("plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U,temps) 
+    println("polyakov loop = $(real(poly)) $(imag(poly))")
+
+    numhb = 40
+    for itrj = 1:numhb
+        heatbath_SU3!(U,NC,temps,β)
+
+        if itrj % 10 == 0
+            @time plaq_t = calculate_Plaquette(U,B,temps)*factor
+            println("$itrj plaq_t = $plaq_t")
+            poly = calculate_Polyakov_loop(U,temps) 
+            println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
+        end
+    end
+
+    return plaq_t
+
+end
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+Nwing = 1
+
+β = 5.7
+NC = 3
+flux = [1,0,0,0,0,1] # FLUX=[Z12,Z13,Z14,Z23,Z24,Z34]
+@time plaq_t = heatbathtest_4D_b(NX,NY,NZ,NT,β,NC,flux)
+```
+
 ## Gradient flow
 We can use Lüscher's gradient flow.
 
@@ -364,24 +437,21 @@ NC = 3
 
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 
-temp1 = similar(U[1])
-temp2 = similar(U[1])
-temp3 = similar(U[1])
-
-comb = 6
-factor = 1/(comb*U[1].NV*U[1].NC)
+temps = Temporalfields(U[1], num=3)
+comb, factor = set_comb(U,Dim)
 
 g = Gradientflow(U)
 for itrj=1:100
     flow!(U,g)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("$itrj plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
 end
 
 ```
 
+For a theory coupled with B fields,
 ```julia
 NX = 4
 NY = 4
@@ -395,18 +465,16 @@ flux=[1,0,0,0,0,1] # FLUX=[Z12,Z13,Z14,Z23,Z24,Z34]
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
 B = Initialize_Bfields(NC,flux,Nwing,NX,NY,NZ,NY,condition = "tflux")
 
-temp1 = similar(U[1])
-temp2 = similar(U[1])
 
-comb = 6
-factor = 1/(comb*U[1].NV*U[1].NC)
+temps = Temporalfields(U[1], num=3)
+comb, factor = set_comb(U,Dim)
 
 g = Gradientflow(U, B)
 for itrj=1:100
     flow!(U,B,g)
-    @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,B,temps)*factor
     println("$itrj plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
 end
 
@@ -421,98 +489,22 @@ using Random
 using Gaugefields
 using LinearAlgebra
 
-function calc_action(gauge_action,U,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
-
-function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temp1,temp2)
-    Δτ = 1.0/MDsteps
-    gauss_distribution!(p)
-    Sold = calc_action(gauge_action,U,p)
-    substitute_U!(Uold,U)
-
-    for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-
-        P_update!(U,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
-
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-    end
-    Snew = calc_action(gauge_action,U,p)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold))
-    if rand() > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
-
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
-
-    for μ=1:Dim
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        mul!(W,expU,U[μ])
-        substitute_U!(U[μ],W)
-        
-    end
-end
-
-function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,temp1,temp2) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temp = temp1
-    dSdUμ = temp2
-    factor =  -ϵ*Δτ/(NC)
-
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
-        mul!(temp,U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temp)
-    end
-end
-
-
 function HMC_test_4D(NX,NY,NZ,NT,NC,β)
     Dim = 4
     Nwing = 0
 
     Random.seed!(123)
 
-
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
     #"Reproducible"
     println(typeof(U))
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=6)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     gauge_action = GaugeAction(U)
@@ -525,31 +517,26 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
 
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
-    substitute_U!(Uold,U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     numaccepted = 0
 
     numtrj = 10
     for itrj = 1:numtrj
         t = @timed begin
-            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temp1,temp2)
+            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temps)
         end
         if get_myrank(U) == 0
             println("elapsed time for MDsteps: $(t.time) [s]")
         end
         numaccepted += ifelse(accepted,1,0)
 
-        #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        #plaq_t = calculate_Plaquette(U,temps)*factor
         #println("$itrj plaq_t = $plaq_t")
         
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
             println("acceptance ratio ",numaccepted/itrj)
         end
@@ -571,75 +558,13 @@ end
 main()
 ```
 
-## Non-dynamical higher-form gauge fields
+### Non-dynamical higher-form gauge fields
 We can do the HMC simulations with B fields. The example code is as follows.
 ```julia
 
 using Random
 using Gaugefields
 using LinearAlgebra
-
-function calc_action(gauge_action,U,B,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U,B)/NC
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
-
-function MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temp1,temp2)
-    Δτ = 1.0/MDsteps
-    gauss_distribution!(p)
-    Sold = calc_action(gauge_action,U,B,p)
-    substitute_U!(Uold,U)
-
-    for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-
-        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
-
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-    end
-    Snew = calc_action(gauge_action,U,B,p)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold)) # bug is fixed
-    if rand() > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
-
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
-
-    for μ=1:Dim
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        mul!(W,expU,U[μ])
-        substitute_U!(U[μ],W)
-        
-    end
-end
-
-function P_update!(U,B,p,ϵ,Δτ,Dim,gauge_action,temp1,temp2) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temp  = temp1
-    dSdUμ = temp2
-    factor =  -ϵ*Δτ/(NC)
-
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,gauge_action,μ,U,B)
-        mul!(temp,U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temp)
-    end
-end
-
 
 function HMC_test_4D_tHooft(NX,NY,NZ,NT,NC,Flux,β)
     Dim = 4
@@ -654,24 +579,12 @@ function HMC_test_4D_tHooft(NX,NY,NZ,NT,NC,Flux,β)
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold",randomnumber="Reproducible")
     B = Initialize_Bfields(NC,flux,Nwing,NX,NY,NZ,NT,condition = "tflux")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=9)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,B,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     gauge_action = GaugeAction(U,B)
@@ -682,20 +595,15 @@ function HMC_test_4D_tHooft(NX,NY,NZ,NT,NC,Flux,β)
     
     #show(gauge_action)
 
-    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    p = initialize_TA_Gaugefields(U)
     Uold = similar(U)
-    substitute_U!(Uold,U)
     MDsteps = 50
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     numaccepted = 0
 
     numtrj = 100
     for itrj = 1:numtrj
         t = @timed begin
-            accepted = MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temp1,temp2)
+            accepted = MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temps)
         end
         if get_myrank(U) == 0
 #            println("elapsed time for MDsteps: $(t.time) [s]")
@@ -706,9 +614,9 @@ function HMC_test_4D_tHooft(NX,NY,NZ,NT,NC,Flux,β)
         #println("$itrj plaq_t = $plaq_t")
         
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,B,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
             println("acceptance ratio ",numaccepted/itrj)
         end
@@ -733,7 +641,7 @@ end
 main()
 ```
 
-## Dynamical higher-form gauge fields
+### Dynamical higher-form gauge fields
 HMC simulations with dynamical B fields are as follows:
 ```julia
 
@@ -742,40 +650,7 @@ using Gaugefields
 using Wilsonloop
 using LinearAlgebra
 
-function calc_action(gauge_action,U,B,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U,B)/NC
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
-
-function MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold,temp1,temp2)
-    Δτ = 1.0/MDsteps
-    gauss_distribution!(p)
-    Sold = calc_action(gauge_action,U,B,p)
-    substitute_U!(Uold,U)
-
-    for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-
-        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
-
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-    end
-    Snew = calc_action(gauge_action,U,B,p)
-#    println("Sold = $Sold, Snew = $Snew")
-#    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold))
-    if rand() > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
-
-function MDstep!(
+function MDstep_dynB!(
     gauge_action,
     U,
     B,
@@ -786,8 +661,7 @@ function MDstep!(
     Uold,
     Bold,
     flux_old,
-    temp1,
-    temp2
+    temps
 ) # Halfway-updating HMC
     Δτ = 1.0/MDsteps
     gauss_distribution!(p)
@@ -799,11 +673,11 @@ function MDstep!(
     flux_old[:] = flux[:]
 
     for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+        U_update!(U,  p,0.5,Δτ,Dim,gauge_action,temps)
 
-        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
+        P_update!(U,B,p,1.0,Δτ,Dim,gauge_action,temps)
 
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+        U_update!(U,  p,0.5,Δτ,Dim,gauge_action,temps)
 
         if itrj == Int(MDsteps/2)
             Flux_update!(B,flux)
@@ -811,8 +685,6 @@ function MDstep!(
     end
 
     Snew = calc_action(gauge_action,U,B,p)
-#    println("Sold = $Sold, Snew = $Snew")
-#    println("Snew - Sold = $(Snew-Sold)")
     ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         println("rejected! flux = ", flux_old)
@@ -826,7 +698,7 @@ function MDstep!(
     end
 end
 
-function MDstep!(
+function MDstep_dynB!(
     gauge_action,
     U,
     B,
@@ -839,8 +711,7 @@ function MDstep!(
     Uold2,
     Bold,
     flux_old,
-    temp1,
-    temp2
+    temps
 ) # Double-tesing HMC
     p0 = initialize_TA_Gaugefields(U)
     Sold = calc_action(gauge_action,U,B,p0)
@@ -852,12 +723,12 @@ function MDstep!(
     Flux_update!(B,flux)
 
     for ihmc=1:num_HMC
-        MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold2,temp1,temp2)
+        MDstep!(gauge_action,U,B,p,MDsteps,Dim,Uold2,temps)
     end
 
     Snew = calc_action(gauge_action,U,B,p0)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
+    #println("Sold = $Sold, Snew = $Snew")
+    #println("Snew - Sold = $(Snew-Sold)")
     ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         println("rejected! flux = ", flux_old)
@@ -888,35 +759,6 @@ function Flux_update!(B,flux)
 
 end
 
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
-
-    for μ=1:Dim
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        mul!(W,expU,U[μ])
-        substitute_U!(U[μ],W)
-        
-    end
-end
-
-function P_update!(U,B,p,ϵ,Δτ,Dim,gauge_action,temp1,temp2) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temp  = temp1
-    dSdUμ = temp2
-    factor =  -ϵ*Δτ/(NC)
-
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,gauge_action,μ,U,B)
-        mul!(temp,U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temp)
-    end
-end
-
-
 function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
     Dim = 4
     Nwing = 0
@@ -932,24 +774,12 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
     filename = "test/confs/U_beta6.0_L8_F111120_4000.txt"
     load_BridgeText!(filename,U,L,NC)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=9)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,B,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     gauge_action = GaugeAction(U,B)
@@ -960,25 +790,18 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
     
     #show(gauge_action)
 
-    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients.
-
+    p = initialize_TA_Gaugefields(U)
     Uold  = similar(U)
-    substitute_U!(Uold, U)
     Bold = similar(B)
-    substitute_U!(Bold,B)
     flux_old = zeros(Int, 6)
 
     MDsteps = 50 # even integer!!!
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     numaccepted = 0
 
     numtrj = 100
     for itrj = 1:numtrj
         t = @timed begin
-            accepted = MDstep!(
+            accepted = MDstep_dynB!(
                 gauge_action,
                 U,
                 B,
@@ -989,8 +812,7 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
                 Uold,
                 Bold,
                 flux_old,
-                temp1,
-                temp2
+                temps
             )
         end
         if get_myrank(U) == 0
@@ -999,13 +821,13 @@ function HMC_test_4D_dynamicalB(NX,NY,NZ,NT,NC,β)
         end
         numaccepted += ifelse(accepted,1,0)
 
-        #plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+        #plaq_t = calculate_Plaquette(U,B,temps)*factor
         #println("$itrj plaq_t = $plaq_t")
         
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,B,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2)
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
             println("acceptance ratio ",numaccepted/itrj)
         end
@@ -1048,24 +870,12 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     #Plaquette term
@@ -1102,9 +912,9 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     for itrj=1:100
         flow!(U,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -1118,24 +928,12 @@ function gradientflow_test_2D(NX,NT,NC)
     Nwing = 1
     U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     #g = Gradientflow(U,eps = 0.01)
@@ -1176,9 +974,9 @@ function gradientflow_test_2D(NX,NT,NC)
     for itrj=1:100
         flow!(U,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -1285,24 +1083,12 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
     B = Initialize_Bfields(NC,flux,Nwing,NX,NY,NZ,NT,condition = "tflux")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-
-    @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,B,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     #Plaquette term
@@ -1339,9 +1125,9 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     for itrj=1:10
         flow!(U,B,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,B,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,B,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -1427,75 +1213,6 @@ end
 const pes = Tuple(parse.(Int64,ARGS[1:4]))
 const mpi = parse(Bool,ARGS[5])
 
-function calc_action(gauge_action,U,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
-
-function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temp1,temp2)
-    Δτ = 1.0/MDsteps
-    gauss_distribution!(p)
-    Sold = calc_action(gauge_action,U,p)
-    substitute_U!(Uold,U)
-
-    for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-
-        P_update!(U,p,1.0,Δτ,Dim,gauge_action,temp1,temp2)
-
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-    end
-    Snew = calc_action(gauge_action,U,p)
-    if get_myrank(U) == 0
-        println("Sold = $Sold, Snew = $Snew")
-        println("Snew - Sold = $(Snew-Sold)")
-    end
-    ratio = min(1,exp(-Snew+Sold))
-    r = rand()
-    if mpi
-        r = MPI.bcast(r, 0, MPI.COMM_WORLD)
-    end
-    #ratio = min(1,exp(Snew-Sold))
-    if r > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
-
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
-
-    for μ=1:Dim
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        mul!(W,expU,U[μ])
-        substitute_U!(U[μ],W)
-        
-    end
-end
-
-function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,temp1,temp2) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temp = temp1
-    dSdUμ = temp2
-    factor =  -ϵ*Δτ/(NC)
-
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
-        mul!(temp,U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temp)
-    end
-end
-
-
 function HMC_test_4D(NX,NY,NZ,NT,NC,β)
     Dim = 4
     Nwing = 0
@@ -1513,26 +1230,14 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
         println(typeof(U))
     end
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=10)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     if get_myrank(U) == 0
         println("0 plaq_t = $plaq_t")
     end
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     if get_myrank(U) == 0
         println("0 polyakov loop = $(real(poly)) $(imag(poly))")
     end
@@ -1545,20 +1250,15 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
     
     #show(gauge_action)
 
-    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    p = initialize_TA_Gaugefields(U)
     Uold = similar(U)
-    substitute_U!(Uold,U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     numaccepted = 0
 
     numtrj = 100
     for itrj = 1:numtrj
         t = @timed begin
-            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temp1,temp2)
+            accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temps)
         end
         if get_myrank(U) == 0
             println("elapsed time for MDsteps: $(t.time) [s]")
@@ -1757,9 +1457,11 @@ Dim = 4
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 temp1 = similar(U[1])
+temp2 = similar(U[1])
+temp3 = similar(U[1])
 V = similar(U[1])
 
-evaluate_gaugelinks!(V,w,U,[temp1])
+evaluate_gaugelinks!(V,w,U,[temp1,temp2,temp3])
 println(tr(V))
 ```
 
@@ -1830,9 +1532,7 @@ function test(NX,NY,NZ,NT,β,NC)
     L = [NX,NY,NZ,NT]
     load_BridgeText!(filename,U,L,NC) # We load a configuration from a file. 
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
+    temps_g = Temporalfields(U[1], num=5)
 
     println("Make clover operator")
     G = Array{typeof(u1),2}(undef,Dim,Dim)
@@ -1842,19 +1542,20 @@ function test(NX,NY,NZ,NT,β,NC)
         end
     end
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    comb, factor = set_comb(U, Dim)
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("plaq_t = $plaq_t")
+
+    temps, it_temps = get_temp(temps_g, 3)
 
     g = Gradientflow(U,eps = 0.01)
     for itrj=1:100
         flow!(U,g)
 
-        make_clover(G,U,[temp1,temp2,temp3],Dim)
-        E = calc_energydensity(G,U,[temp1,temp2,temp3],Dim)
+        make_clover(G,U,temps,Dim)
+        E = calc_energydensity(G,U,temps,Dim)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_t = calculate_Plaquette(U,temps_g)*factor
         println("$itrj $(itrj*0.01) plaq_t = $plaq_t , E = $E")
     end
 
@@ -1945,233 +1646,36 @@ L"$U_{4}(n)U_{3}(n+e_{4})U^{\dagger}_{4}(n+e_{3})U^{\dagger}_{3}(n)$"
 ```
 
 
-## Fractional topological charge
+## Fractional topological charge and so on
+We can calculate the topological charge and energy density by using gradient flow as
 ```julia
-function calculate_topological_charge_plaq(U::Array{T,1}, B::Array{T,2}, temp_UμνTA, temps) where {T}
-    UμνTA = temp_UμνTA
-    numofloops = calc_UμνTA!(UμνTA, "plaq", U, B, temps)
-    Q = calc_Q(UμνTA, numofloops, U)
-    return Q
-end
+temps = Temporalfields(U[1], num=9)
 
-function calculate_topological_charge_clover(U::Array{T,1}, B::Array{T,2}, temp_UμνTA, temps) where {T}
-    UμνTA = temp_UμνTA
-    numofloops = calc_UμνTA!(UμνTA, "clover", U, B, temps)
-    Q = calc_Q(UμνTA, numofloops, U)
-    return Q
-end
-
-function calculate_topological_charge_improved(
-    U::Array{T,1},
-    B::Array{T,2},
-    temp_UμνTA,
-    Qclover,
-    temps,
-) where {T}
-    UμνTA = temp_UμνTA
-
-    numofloops = calc_UμνTA!(UμνTA, "rect", U, B, temps)
-    Qrect = 2 * calc_Q(UμνTA, numofloops, U)
-    c1 = -1 / 12
-    c0 = 5 / 3
-    Q = c0 * Qclover + c1 * Qrect
-    return Q
-end
-
-function calc_UμνTA!(
-    temp_UμνTA,
-    name::String,
-    U::Array{T,1},
-    B::Array{T,2},
-    temps,
-) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
-    loops_μν, numofloops = calc_loopset_μν_name(name, Dim)
-    calc_UμνTA!(temp_UμνTA, loops_μν, U, B, temps)
-    return numofloops
-end
-
-
-function calc_UμνTA!(
-    temp_UμνTA,
-    loops_μν,
-    U::Array{T,1},
-    B::Array{T,2},
-    temps,
-) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
-    UμνTA = temp_UμνTA
-    for μ = 1:Dim
-        for ν = 1:Dim
-            if ν == μ
-                continue
-            end
-            evaluate_gaugelinks!(temps[1], loops_μν[μ, ν], U, B, temps[2:6])
-            Traceless_antihermitian!(UμνTA[μ, ν], temps[1])
-        end
+U_copy = similar(U)
+B_copy = similar(B)
+temp_UμνTA= Matrix{typeof(U[1])}(undef,Dim,Dim)
+# for calc energy density
+W_temp = Matrix{typeof(U[1])}(undef,Dim,Dim)
+for μ=1:Dim
+    for ν=1:Dim
+        W_temp[μ,ν] = similar(U[1])
     end
-    return
 end
 
-
-#=
-implementation of topological charge is based on
-https://arxiv.org/abs/1509.04259
-=#
-function calc_Q(UμνTA, numofloops, U::Array{<:AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
-    Q = 0.0
-    if Dim == 4
-        ε(μ, ν, ρ, σ) = epsilon_tensor(μ, ν, ρ, σ)
-    else
-        error("Dimension $Dim is not supported")
-    end
-    for μ = 1:Dim
-        for ν = 1:Dim
-            if ν == μ
-                continue
-            end
-            Uμν = UμνTA[μ, ν]
-            for ρ = 1:Dim
-                for σ = 1:Dim
-                    if ρ == σ
-                        continue
-                    end
-                    Uρσ = UμνTA[ρ, σ]
-                    s = tr(Uμν, Uρσ)
-                    Q += ε(μ, ν, ρ, σ) * s / numofloops^2
-                end
-            end
-        end
-    end
-
-    return -Q / (32 * (π^2))
-end
-
-#topological charge
-function epsilon_tensor(mu::Int, nu::Int, rho::Int, sigma::Int)
-    sign = 1 # (3) 1710.09474 extended epsilon tensor
-    if mu < 0
-        sign *= -1
-        mu = -mu
-    end
-    if nu < 0
-        sign *= -1
-        nu = -nu
-    end
-    if rho < 0
-        sign *= -1
-        rh = -rho
-    end
-    if sigma < 0
-        sign *= -1
-        sigma = -sigma
-    end
-    epsilon = zeros(Int, 4, 4, 4, 4)
-    epsilon[1, 2, 3, 4] = 1
-    epsilon[1, 2, 4, 3] = -1
-    epsilon[1, 3, 2, 4] = -1
-    epsilon[1, 3, 4, 2] = 1
-    epsilon[1, 4, 2, 3] = 1
-    epsilon[1, 4, 3, 2] = -1
-    epsilon[2, 1, 3, 4] = -1
-    epsilon[2, 1, 4, 3] = 1
-    epsilon[2, 3, 1, 4] = 1
-    epsilon[2, 3, 4, 1] = -1
-    epsilon[2, 4, 1, 3] = -1
-    epsilon[2, 4, 3, 1] = 1
-    epsilon[3, 1, 2, 4] = 1
-    epsilon[3, 1, 4, 2] = -1
-    epsilon[3, 2, 1, 4] = -1
-    epsilon[3, 2, 4, 1] = 1
-    epsilon[3, 4, 1, 2] = 1
-    epsilon[3, 4, 2, 1] = -1
-    epsilon[4, 1, 2, 3] = -1
-    epsilon[4, 1, 3, 2] = 1
-    epsilon[4, 2, 1, 3] = 1
-    epsilon[4, 2, 3, 1] = -1
-    epsilon[4, 3, 1, 2] = -1
-    epsilon[4, 3, 2, 1] = 1
-    return epsilon[mu, nu, rho, sigma] * sign
-end
-
-
-
-function calc_loopset_μν_name(name, Dim)
-    loops_μν = Array{Vector{Wilsonline{Dim}},2}(undef, Dim, Dim)
-    if name == "plaq"
-        numofloops = 1
-        for μ = 1:Dim
-            for ν = 1:Dim
-                loops_μν[μ, ν] = Wilsonline{Dim}[]
-                if ν == μ
-                    continue
-                end
-                plaq = make_plaq(μ, ν, Dim = Dim)
-                push!(loops_μν[μ, ν], plaq)
-            end
-        end
-    elseif name == "clover"
-        numofloops = 4
-        for μ = 1:Dim
-            for ν = 1:Dim
-                loops_μν[μ, ν] = Wilsonline{Dim}[]
-                if ν == μ
-                    continue
-                end
-                loops_μν[μ, ν] = make_cloverloops_topo(μ, ν, Dim = Dim)
-            end
-        end
-    elseif name == "rect"
-        numofloops = 8
-        for μ = 1:4
-            for ν = 1:4
-                if ν == μ
-                    continue
-                end
-                loops = Wilsonline{Dim}[]
-                loop_righttop = Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)])
-                loop_lefttop = Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)])
-                loop_rightbottom = Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)])
-                loop_leftbottom = Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)])
-                push!(loops, loop_righttop)
-                push!(loops, loop_lefttop)
-                push!(loops, loop_rightbottom)
-                push!(loops, loop_leftbottom)
-
-                loop_righttop = Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)])
-                loop_lefttop = Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)])
-                loop_rightbottom = Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)])
-                loop_leftbottom = Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)])
-                push!(loops, loop_righttop)
-                push!(loops, loop_lefttop)
-                push!(loops, loop_rightbottom)
-                push!(loops, loop_leftbottom)
-
-                loops_μν[μ, ν] = loops
-            end
-        end
-    else
-        error("$name is not supported")
-    end
-    return loops_μν, numofloops
-end
-
-
-function make_cloverloops_topo(μ, ν; Dim = 4)
-    loops = Wilsonline{Dim}[]
-    loop_righttop = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)])
-    loop_lefttop = Wilsonline([(ν, 1), (μ, -1), (ν, -1), (μ, 1)])
-    loop_rightbottom = Wilsonline([(ν, -1), (μ, 1), (ν, 1), (μ, -1)])
-    loop_leftbottom = Wilsonline([(μ, -1), (ν, -1), (μ, 1), (ν, 1)])
-    push!(loops, loop_righttop)
-    push!(loops, loop_lefttop)
-    push!(loops, loop_rightbottom)
-    push!(loops, loop_leftbottom)
-    return loops
-end
+calc_Q_gradflow!(U_copy,U,temp_UμνTA,W_temp,temps,conditions=["Qclover","Qimproved","Eclover","Energydensity"])
 ```
-We can calculate the topological charge as
-```Qplaq = calculate_topological_charge_plaq(U,B,temp_UμνTA,temps[1:6])```,
-```Qclover = calculate_topological_charge_clover(U,B,temp_UμνTA,temps[1:6])```,
-```Qimproved= calculate_topological_charge_improved(U,B,temp_UμνTA,Qclover,temps[1:6])```.
+or
+```julia
+calc_Q_gradflow!(U_copy,B_copy,U,B,temp_UμνTA,W_temp,temps,conditions=["Qclover","Qimproved","Eclover","Energydensity"])
+```
+Then,
+```
+Flowtime 1.0
+Qclover:       0.1591786559310214 - 0.0im
+Qimproved:     0.17536509762551222 + 0.0im
+Eclover:       0.09954804832666195 - 0.0im
+Energydensity: 0.09954804832666195
+```
 
 
 
@@ -2209,20 +1713,17 @@ using LinearAlgebra
 function MDtest!(gauge_action,U,Dim)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
-    substitute_U!(Uold,U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
+    temps = Temporalfields(U[1], num=10)
+    comb, factor = set_comb(U, Dim)
     numaccepted = 0
 
     numtrj = 100
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temps)
         numaccepted += ifelse(accepted,1,0)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_t = calculate_Plaquette(U,temps)*factor
         println("$itrj plaq_t = $plaq_t")
         println("acceptance ratio ",numaccepted/itrj)
     end
@@ -2241,18 +1742,18 @@ function calc_action(gauge_action,U,p)
     return real(S)
 end
 
-function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
+function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,temps)
     Δτ = 1/MDsteps
     gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,p)
     substitute_U!(Uold,U)
 
     for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action,temps)
 
-        P_update!(U,p,1.0,Δτ,Dim,gauge_action)
+        P_update!(U,p,1.0,Δτ,Dim,gauge_action,temps)
 
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+        U_update!(U,p,0.5,Δτ,Dim,gauge_action,temps)
     end
     Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
@@ -2266,32 +1767,36 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     end
 end
 
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+function U_update!(U,p,ϵ,Δτ,Dim,gauge_action,temps)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    expU, it_expU = get_temp(temps)
+    W, it_W = get_temp(temps)
 
     for μ=1:Dim
         exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
         mul!(W,expU,U[μ])
         substitute_U!(U[μ],W)
-        
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_expU)
+    unused!(temps, it_W)
 end
 
-function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
+function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,temps) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = temps[end]
+    temp1, it_temp1 = get_temp(temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
         calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+        mul!(temp1,U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temp1)
     end
+    unused!(temps, it_dSdUμ)
+    unused!(temps, it_temp1)
 end
 ```
 
@@ -2307,7 +1812,7 @@ function test1()
     Dim = 4
     NC = 3
 
-    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
 
     gauge_action = GaugeAction(U)
