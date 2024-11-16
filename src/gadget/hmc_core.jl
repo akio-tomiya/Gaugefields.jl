@@ -25,7 +25,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps;
     end
 end
 function MDstep!(gauge_action, U, B, p, MDsteps, Dim, Uold, temps;
-                 displayon=true, mpi=false)
+                 displayon=false, mpi=false)
     if mpi
         MDstep_core_mpi!(gauge_action, U, B, p, MDsteps, Dim, Uold, temps;
                          displayon=displayon)
