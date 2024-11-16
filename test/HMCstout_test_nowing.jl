@@ -23,86 +23,10 @@ function MDtest!(gauge_action, U, Dim, nn)
         accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
         numaccepted += ifelse(accepted, 1, 0)
 
-        plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+        plaq_t = calculate_Plaquette(U, temps) * factor
         println("$itrj plaq_t = $plaq_t")
         println("acceptance ratio ", numaccepted / itrj)
     end
-end
-
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
-
-
-    Δτ = 1 / MDsteps
-    gauss_distribution!(p)
-
-    Uout, Uout_multi, _ = calc_smearedU(U, nn)
-    Sold = calc_action(gauge_action, Uout, p)
-
-    substitute_U!(Uold, U)
-
-    for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
-
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temps)
-
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
-    end
-
-    Uout, Uout_multi, _ = calc_smearedU(U, nn)
-    Snew = calc_action(gauge_action, Uout, p)
-
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-
-    accept = exp(Sold - Snew) >= rand()
-
-    if accept != true #rand() > ratio
-        substitute_U!(U, Uold)
-        return false
-    else
-        return true
-    end
-
-end
-
-function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    expU, it_expU = get_temp(temps)
-    W, it_W = get_temp(temps)
-
-    for μ = 1:Dim
-        exptU!(expU, ϵ * Δτ, p[μ], [temp1, temp2])
-        mul!(W, expU, U[μ])
-        substitute_U!(U[μ], W)
-
-    end
-
-    unused!(temps, it_temp1)
-    unused!(temps, it_temp2)
-    unused!(temps, it_expU)
-    unused!(temps, it_W)
-end
-
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temps) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    factor = -ϵ * Δτ / (NC)
-    #temps = get_temporary_gaugefields(gauge_action)
-    temp1, it_temp1 = get_temp(temps)
-
-    Uout, Uout_multi, _ = calc_smearedU(U, nn)
-
-    for μ = 1:Dim
-        calc_dSdUμ!(dSdU[μ], gauge_action, μ, Uout)
-    end
-
-    dSdUbare = back_prop(dSdU, nn, Uout_multi, U)
-
-    for μ = 1:Dim
-        mul!(temp1, U[μ], dSdUbare[μ]) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ], factor, temp1)
-    end
-    unused!(temps, it_temp1)
 end
 
 function test1()
