@@ -17,7 +17,8 @@ include("./action/GaugeActions.jl")
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
-
+include("./gadget/obs_measure.jl")
+include("./gadget/hmc_core.jl")
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
@@ -120,7 +121,7 @@ import .Abstractsmearing_module:
     calc_smearedU,
     construct_smearing,
     back_prop,
-    CovNeuralnet#gradientflow!                 
+    CovNeuralnet#gradientflow!
 import .ILDG_format: ILDG, load_gaugefield!, save_binarydata
 import .heatbath_module:
     SU2update_KP!,
@@ -212,8 +213,19 @@ import .GaugeAction_module:
     get_temporary_gaugefields,
     evaluate_GaugeAction
 
-import .Temporalfields_module: Temporalfields, unused!
-export Temporalfields, unused!
+
+import .Obs_measure_module:
+    calculate_topological_charge_plaq,
+    calculate_topological_charge_clover,
+    calculate_topological_charge_improved,
+    calculate_gauge_coupling_plaq,
+    calculate_gauge_coupling_clover,
+    calculate_energy_density,
+    calc_Q_gradflow!
+import .HMC_core_module: MDstep!, MDstep_dynB!, set_comb
+
+import .Temporalfields_module: Temporalfields, unused!, get_temp
+export Temporalfields, unused!, get_temp
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
@@ -254,8 +266,14 @@ export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 export loadU, saveU
 
-
-
+export calculate_topological_charge_plaq,
+    calculate_topological_charge_clover,
+    calculate_topological_charge_improved,
+    calculate_gauge_coupling_plaq,
+    calculate_gauge_coupling_clover,
+    calculate_energy_density,
+    calc_Q_gradflow!
+export MDstep!, MDstep_dynB!, set_comb
 
 
 end

@@ -2962,6 +2962,30 @@ end
 
 function calculate_Plaquette(
     U::Array{T,1},
+    temps::Temporalfields,
+) where {T<:AbstractGaugefields}
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    p = calculate_Plaquette(U, temp1, temp2)
+    unused!(temps,it_temp1)
+    unused!(temps,it_temp2)
+    return p
+end
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    temps::Temporalfields,
+) where {T<:AbstractGaugefields}
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    p = calculate_Plaquette(U, B, temp1, temp2)
+    unused!(temps,it_temp1)
+    unused!(temps,it_temp2)
+    return p
+end
+
+function calculate_Plaquette(
+    U::Array{T,1},
     temps::Array{T1,1},
 ) where {T<:AbstractGaugefields,T1<:AbstractGaugefields}
     return calculate_Plaquette(U, temps[1], temps[2])
@@ -3320,6 +3344,19 @@ end
 
 function Base.size(U::T) where {T<:AbstractGaugefields}
     error("Base.size is not implemented in type $(typeof(U)) ")
+end
+
+
+function calculate_Polyakov_loop(
+    U::Array{T,1},
+    temps::Temporalfields,
+) where {T<:AbstractGaugefields}
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    p = calculate_Polyakov_loop(U, temp1, temp2)
+    unused!(temps,it_temp1)
+    unused!(temps,it_temp2)
+    return p
 end
 
 function calculate_Polyakov_loop(
