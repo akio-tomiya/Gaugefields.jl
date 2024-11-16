@@ -11,12 +11,10 @@ function MDtest!(gauge_action, U, Dim, nn)
 
     substitute_U!(Uold, U)
     MDsteps = 100
-    temps = Temporalfields(U[1]; num=10)
-    temp1 = temps[1]#similar(U[1])
-    temp2 = temps[2] #similar(U[1])
 
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
+    temps = Temporalfields(U[1], num=10)
+    comb, factor = set_comb(U,Dim)
+
     numaccepted = 0
 
 
@@ -30,15 +28,6 @@ function MDtest!(gauge_action, U, Dim, nn)
         println("acceptance ratio ", numaccepted / itrj)
     end
 end
-
-function calc_action(gauge_action, U, p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action, U) / NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_GaugeAction_untraced(gauge_action,U))
-    Sp = p * p / 2
-    S = Sp + Sg
-    return real(S)
-end
-
 
 function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
 
@@ -77,7 +66,6 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
 end
 
 function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
-    #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)
     temp2, it_temp2 = get_temp(temps)
     expU, it_expU = get_temp(temps)
@@ -148,15 +136,14 @@ function test1()
     #st = STOUT_Layer(layername, ρ, L)
     push!(nn, st)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
+
+    plaq_t = calculate_Plaquette(U, temps) * factor
     println("plaq_t $plaq_t")
 
     Uout, Uout_multi, _ = calc_smearedU(U, nn)
-    plaq_t = calculate_Plaquette(Uout, temp1, temp2) * factor
+    plaq_t = calculate_Plaquette(Uout, temps) * factor
     println("plaq_t s $plaq_t")
 
     #return

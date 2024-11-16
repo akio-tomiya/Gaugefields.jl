@@ -18,25 +18,13 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",randomnumber="Reproducible")
     #"Reproducible"
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
 
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps)
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     g = Gradientflow(U,eps = 0.01)
@@ -44,9 +32,9 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
     for itrj=1:100
         flow!(U,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -71,24 +59,12 @@ function gradientflow_test_2D(NX,NT,NC)
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("0 plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps)
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
     g = Gradientflow(U,eps = 0.01)
@@ -96,9 +72,9 @@ function gradientflow_test_2D(NX,NT,NC)
     for itrj=1:100
         flow!(U,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end

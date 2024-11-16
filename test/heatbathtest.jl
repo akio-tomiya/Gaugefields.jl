@@ -1,11 +1,11 @@
 import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
 
-function heatbath_SU2!(U, NC, temps, β, Dim=4)
+function heatbath_SU2!(U, NC, temps_g, β, Dim=4)
 
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
+
+    temps, it_temps = get_temp(temps_g, 5)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -19,21 +19,23 @@ function heatbath_SU2!(U, NC, temps, β, Dim=4)
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
+    unused!(temps_g, it_V)
+    unused!(temps_g, it_temps)
 end
 
 function heatbath_SU3!(U, NC, temps, β, Dim=4)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
+
+    temps, it_temps = get_temp(temps_g, 5)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -49,23 +51,25 @@ function heatbath_SU3!(U, NC, temps, β, Dim=4)
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
+    unused!(temps_g, it_V)
+    unused!(temps_g, it_temps)
 end
 
 
 function heatbath_SUN!(U, NC, temps, β, Dim=4)
     #Dim = 4
-    temp1 = temps[1]
-    temp2 = temps[2]
-    V = temps[3]
+    V, it_V = get_temp(temps_g)
     ITERATION_MAX = 10^5
+
+    temps, it_temps = get_temp(temps_g, 5)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     temps3 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -81,14 +85,16 @@ function heatbath_SUN!(U, NC, temps, β, Dim=4)
         loops = loops_staple[(Dim, μ)]
         iseven = true
 
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
 
         iseven = false
-        evaluate_gaugelinks_evenodd!(V, loops, U, [temp1, temp2], iseven)
+        evaluate_gaugelinks_evenodd!(V, loops, U, temps, iseven)
         map_U!(U[μ], mapfunc!, V, iseven)
     end
 
+    unused!(temps_g, it_V)
+    unused!(temps_g, it_temps)
 end
 
 
@@ -118,15 +124,12 @@ function heatbathtest_4D(NX, NY, NZ, NT, β, NC)
     =#
 
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
+    temps = Temporalfields(U[1], num=3)
+    comb, factor = set_comb(U, Dim)
 
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    @time plaq_t = calculate_Plaquette(U, temps) * factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U, temp1, temp2)
+    poly = calculate_Polyakov_loop(U, temps)
     println("polyakov loop = $(real(poly)) $(imag(poly))")
     #hnew = Heatbath_update(U,gauge_action)
 
@@ -137,14 +140,14 @@ function heatbathtest_4D(NX, NY, NZ, NT, β, NC)
         heatbath!(U, h)
         #=
         if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SU2!(U,NC,temps,β)
         elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SU3!(U,NC,temps,β)
         else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β)
+            heatbath_SUN!(U,NC,temps,β)
         end
         =#
-        plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+        plaq_t = calculate_Plaquette(U, temps) * factor
         plaq_ave += plaq_t
 
         if itrj % 40 == 0
@@ -186,29 +189,11 @@ function heatbathtest_2D(NX, NT, β, NC)
     U = Initialize_Gaugefields(NC, Nwing, NX, NT, condition="hot", randomnumber="Reproducible")
 
     temps = Temporalfields(U[1], num=7)
-    temp1, it_temp1 = get_temp(temps)
-    temp2, it_temp2 = get_temp(temps)
-    #temp3, it_temp3 = get_temp(temps)
-    #temps, its_temps = get_temp(temps_g, 3)
-    #temp1 = similar(U[1])
-    #temp2 = similar(U[1])
-    #temp3 = similar(U[1])
+    comb, factor = set_comb(U, Dim)
 
-    #comb = 6
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    @time plaq_t = calculate_Plaquette(U, temps) * factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U, temp1, temp2)
+    poly = calculate_Polyakov_loop(U, temps)
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     #=
@@ -228,29 +213,29 @@ function heatbathtest_2D(NX, NT, β, NC)
         heatbath!(U, temps, β)
         #=
         if NC == 2
-            heatbath_SU2!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SU2!(U,NC,temps,β,Dim)
         elseif NC == 3
-            heatbath_SU3!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SU3!(U,NC,temps,β,Dim)
         else
-            heatbath_SUN!(U,NC,[temp1,temp2,temp3],β,Dim)
+            heatbath_SUN!(U,NC,temps,β,Dim)
         end
         =#
-        plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+        plaq_t = calculate_Plaquette(U, temps) * factor
         plaq_ave += plaq_t
 
         if itrj % 40 == 0
-            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            #@time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
             #println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U, temp1, temp2)
+            poly = calculate_Polyakov_loop(U, temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
 
         #=
         if itrj % 40 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
         =#
