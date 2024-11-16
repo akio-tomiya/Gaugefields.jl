@@ -4,6 +4,7 @@ using Requires
 
 import ..AbstractGaugefields_module: Initialize_Bfields
 import ..GaugeAction_module
+import ..Abstractsmearing_module: calc_smearedU, back_prop
 import ..Temporalfields_module
 
 include("./hmc_mdstep.jl")
@@ -34,6 +35,66 @@ function MDstep!(gauge_action, U, B, p, MDsteps, Dim, Uold, temps;
                      displayon=displayon)
     end
 end
+
+
+function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps;
+                 displayon=false)
+    Δτ = 1.0 / MDsteps
+    gauss_distribution!(p)
+
+    Uout, Uout_multi, _ = calc_smearedU(U, nn)
+    Sold = calc_action(gauge_action, Uout, p)
+
+    substitute_U!(Uold, U)
+
+    for itrj = 1:MDsteps
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+
+        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temps)
+
+        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+    end
+
+    Uout, Uout_multi, _ = calc_smearedU(U, nn)
+    Snew = calc_action(gauge_action, Uout, p)
+
+    if displayon
+        println("Sold = $Sold, Snew = $Snew")
+        println("Snew - Sold = $(Snew-Sold)")
+    end
+
+    accept = exp(Sold - Snew) >= rand()
+
+    if accept != true #rand() > ratio
+        substitute_U!(U, Uold)
+        return false
+    else
+        return true
+    end
+
+end
+
+function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temps)
+    NC = U[1].NC
+    factor = -ϵ * Δτ / (NC)
+    temp1, it_temp1 = get_temp(temps)
+
+    Uout, Uout_multi, _ = calc_smearedU(U, nn)
+
+    for μ = 1:Dim
+        calc_dSdUμ!(dSdU[μ], gauge_action, μ, Uout)
+    end
+
+    dSdUbare = back_prop(dSdU, nn, Uout_multi, U)
+
+    for μ = 1:Dim
+        mul!(temp1, U[μ], dSdUbare[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp1)
+    end
+    unused!(temps, it_temp1)
+end
+
+
 function MDstep_dynB!(
     gauge_action,
     U,

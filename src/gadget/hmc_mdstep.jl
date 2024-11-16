@@ -80,6 +80,7 @@ function MDstep_core!(gauge_action, U, B, p, MDsteps, Dim, Uold, temps; displayo
     end
 end
 
+
 function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)#[1]
@@ -116,9 +117,8 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps) # p -> p +factor*U*
 end
 function P_update!(U, B, p, ϵ, Δτ, Dim, gauge_action, temps)
     NC = U[1].NC
-    #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)
-    dSdUμ, it_dSdUμ = get_temp(temps)#[end]
+    dSdUμ, it_dSdUμ = get_temp(temps)
     factor = -ϵ * Δτ / (NC)
 
     for μ = 1:Dim
