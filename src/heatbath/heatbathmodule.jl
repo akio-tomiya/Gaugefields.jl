@@ -15,7 +15,6 @@ import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 
 struct Heatbath{T}
-    #_tempotal_gauges::Vector{T}
     _tempotal_gauges::Temporalfields{T}
     β::Float64
     ITERATION_MAX::Int64
@@ -23,17 +22,13 @@ struct Heatbath{T}
 
     function Heatbath(U::Array{T,1}, β; ITERATION_MAX=10^5) where {T<:AbstractGaugefields}
         _tempotal_gauges = Temporalfields(U[1], num=5)
-        #_tempotal_gauges = Array{T,1}(undef, 5) # length >= 5
-        #for i = 1:5
-        #    _tempotal_gauges[i] = similar(U[1])
-        #end
         return new{T}(_tempotal_gauges, β, ITERATION_MAX)
     end
 
 end
 
 struct Heatbath_update{Dim,T}
-    _temporary_gaugefields::Temporalfields{T}# Vector{T}
+    _temporary_gaugefields::Temporalfields{T}
     gauge_action::GaugeAction{Dim,T}
     ITERATION_MAX::Int64
 
@@ -42,11 +37,8 @@ struct Heatbath_update{Dim,T}
         gauge_action;
         ITERATION_MAX=10^5,
     ) where {T<:AbstractGaugefields}
-        _temporary_gaugefields = Temporalfields(U[1], num=5)#Array{T,1}(undef, 5) # length >= 5
+        _temporary_gaugefields = Temporalfields(U[1], num=5) # length >= 5
         Dim = length(U)
-        #for i = 1:5
-        #    _temporary_gaugefields[i] = similar(U[1])
-        #end
         return new{Dim,T}(_temporary_gaugefields, gauge_action, ITERATION_MAX)
     end
 end
@@ -257,9 +249,7 @@ function heatbath!(
     ITERATION_MAX=10^5,
 ) where {Dim}
     NC = 2
-    #temp1 = temps[1]
-    #temp2 = temps[2]
-    V, it_V = get_temp(temps_g)# temps[5]
+    V, it_V = get_temp(temps_g)
     temps, its_temps = get_temp(temps_g, 4)
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
@@ -302,10 +292,7 @@ function heatbath!(
     ITERATION_MAX=10^5,
 ) where {Dim}
     NC = 3
-    #temp1 = temps[1]
-    #temp2 = temps[2]
-    #V = temps[5]
-    V, it_V = get_temp(temps_g)# temps[5]
+    V, it_V = get_temp(temps_g)
     temps, its_temps = get_temp(temps_g, 4)
 
 
@@ -352,12 +339,8 @@ function heatbath!(
     ITERATION_MAX=10^5,
 ) where {Dim} #This function is for debugging
     NC = 3
-    #temp1 = temps[1]
-    #temp2 = temps[2]
-    V, it_V = get_temp(temps_g)# temps[5]
+    V, it_V = get_temp(temps_g)
     temps, its_temps = get_temp(temps_g, 4)
-
-    #V = temps[5]
 
     temps2 = Array{Matrix{ComplexF64},1}(undef, 5)
     for i = 1:5
@@ -402,11 +385,7 @@ function heatbath!(
     β;
     ITERATION_MAX=10^5,
 ) where {Dim,NC}
-
-    #temp1 = temps[1]
-    #temp2 = temps[2]
-    #V = temps[5]
-    V, it_V = get_temp(temps_g)# temps[5]
+    V, it_V = get_temp(temps_g)
     temps, its_temps = get_temp(temps_g, 4)
 
 
@@ -450,11 +429,7 @@ function overrelaxation!(
     β;
     ITERATION_MAX=10^5,
 ) where {Dim,NC}
-
-    #temp1 = temps[1]
-    #temp2 = temps[2]
-    #V = temps[3]
-    V, it_V = get_temp(temps_g)# temps[5]
+    V, it_V = get_temp(temps_g)
     temps, its_temps = get_temp(temps_g, 4)
 
 
@@ -471,7 +446,8 @@ function overrelaxation!(
     #end
 
 
-    mapfunc!(A, B) = SUN_overrelaxation!(A, B, β, NC, temps2, temps3, ITERATION_MAX) #SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
+    mapfunc!(A, B) = SUN_overrelaxation!(A, B, β, NC, temps2, temps3, ITERATION_MAX)
+    #SUNupdate_matrix!(A,B,β,NC,temps2,temps3,ITERATION_MAX)
 
 
     for μ = 1:Dim
