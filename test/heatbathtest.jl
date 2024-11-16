@@ -151,18 +151,18 @@ function heatbathtest_4D(NX, NY, NZ, NT, β, NC)
         plaq_ave += plaq_t
 
         if itrj % 40 == 0
-            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            #@time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
             #println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U, temp1, temp2)
+            poly = calculate_Polyakov_loop(U, temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
         #=
 
         if itrj % 40 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
         =#
