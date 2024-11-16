@@ -276,7 +276,7 @@ NC = 3
 @time plaq_t = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 ```
 
-## Heatbath updates with general actions
+### Heatbath updates with general actions
 We can do heatbath updates with a general action.
 
 ```julia
