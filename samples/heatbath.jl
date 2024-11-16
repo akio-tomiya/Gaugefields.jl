@@ -21,12 +21,9 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     show(gauge_action)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("plaq_t = $plaq_t")
     poly = calculate_Polyakov_loop(U,temp1,temp2)
@@ -37,8 +34,8 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
         heatbath!(U,hnew)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2)
+        plaq_t = calculate_Plaquette(U,temps)*factor
+        poly = calculate_Polyakov_loop(U,temps)
 
         if itrj % 40 == 0
             println("$itrj plaq_t = $plaq_t")

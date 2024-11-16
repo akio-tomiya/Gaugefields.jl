@@ -7,11 +7,10 @@ function stoutsmearing(NX,NY,NZ,NT,NC)
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
     L = [NX,NY,NZ,NT]
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
+
+    plaq_t = calculate_Plaquette(U,temps)*factor
     println(" plaq_t = $plaq_t")
 
 
@@ -25,7 +24,7 @@ function stoutsmearing(NX,NY,NZ,NT,NC)
 
     
     @time Uout,Uout_multi,_ = calc_smearedU(U,nn)
-    plaq_t = calculate_Plaquette(Uout,temp1,temp2)*factor
+    plaq_t = calculate_Plaquette(Uout,temps)*factor
     println("plaq_t = $plaq_t")
 
 

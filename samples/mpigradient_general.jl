@@ -14,15 +14,15 @@ function MDtest!(snet,U,Dim,mpi=false)
     Uold = similar(U)
     substitute_U!(Uold,U)
     MDsteps = 200
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
+
     numaccepted = 0
 
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    plaq_t = calculate_Plaquette(U,temps)*factor
 
-    #poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    #poly = calculate_Polyakov_loop(U,temps)
     if get_myrank(U) == 0
         println("0 plaq_t = $plaq_t")
         #println("polyakov loop = $(real(poly)) $(imag(poly))")
@@ -99,32 +99,38 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
 end
 
 function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporary_gaugefields(snet)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+    temps = get_temp(snet._temp_U)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    expU, it_expU = get_temp(temps)
+    W, it_W = get_temp(temps)
 
     for μ=1:Dim
         exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
         mul!(W,expU,U[μ])
         substitute_U!(U[μ],W)
-        
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_expU)
+    unused!(temps, it_W)
 end
 
 function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
-    dSdUμ = temps[end]
+    temps = get_temp(snet._temp_U)
+    temp1, it_temp1 = get_temp(temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
         calc_dSdUμ!(dSdUμ,snet,μ,U)
         #println("dSdU = ",getvalue(dSdUμ,1,1,1,1,1,1))
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+        mul!(temp1,U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temp1)
     end
+    unused!(temps, it_dSdUμ)
+    unused!(temps, it_temp1)
 end
 
 
@@ -163,20 +169,8 @@ function test1()
 
     MDtest!(snet,U,Dim,mpi)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
 
     listnames = [plaqloop]
     listvalues = [1]
@@ -186,9 +180,9 @@ function test1()
     for itrj=1:100
         flow!(U,g)
         if itrj % 10 == 0
-            @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            @time plaq_t = calculate_Plaquette(U,temps)*factor
             println_verbose_level1(U[1],"$itrj plaq_t = $plaq_t")
-            #poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            #poly = calculate_Polyakov_loop(U,temps) 
             #println_verbose_level1(U[1],"$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
