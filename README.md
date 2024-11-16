@@ -1265,15 +1265,15 @@ function HMC_test_4D(NX,NY,NZ,NT,NC,β)
         end
         numaccepted += ifelse(accepted,1,0)
 
-        #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        #plaq_t = calculate_Plaquette(U,temps)*factor
         #println("$itrj plaq_t = $plaq_t")
         
         if itrj % 10 == 0
-            plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            plaq_t = calculate_Plaquette(U,temps)*factor
             if get_myrank(U) == 0
                 println("$itrj plaq_t = $plaq_t")
             end
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps) 
             if get_myrank(U) == 0
                 println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
                 println("acceptance ratio ",numaccepted/itrj)
