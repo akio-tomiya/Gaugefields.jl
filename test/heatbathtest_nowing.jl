@@ -17,15 +17,13 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
 
     h = Heatbath(U,β)
     
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
 
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    temps = Temporalfields(U[1], num=3)
+    comb, factor = set_comb(U, Dim)
+
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 200
@@ -38,14 +36,14 @@ function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
             overrelaxation!(U,h)
         end
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_t = calculate_Plaquette(U,temps)*factor
         plaq_ave += plaq_t
 
         if itrj % 40 == 0
-            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            #@time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
             #println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
@@ -70,25 +68,12 @@ function heatbathtest_2D(NX,NT,β,NC)
     U = Initialize_Gaugefields(NC,Nwing,NX,NT,condition = "hot",randomnumber="Reproducible")
     h = Heatbath(U,β)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
+    temps = Temporalfields(U[1], num=3)
+    comb, factor = set_comb(U, Dim)
 
-    #comb = 6
-    if Dim == 4
-        comb = 6 #4*3/2
-    elseif Dim == 3
-        comb = 3
-    elseif Dim == 2
-        comb = 1
-    else
-        error("dimension $Dim is not supported")
-    end
-
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
+    poly = calculate_Polyakov_loop(U,temps) 
     println("polyakov loop = $(real(poly)) $(imag(poly))")
 
     numhb = 2000
@@ -96,20 +81,20 @@ function heatbathtest_2D(NX,NT,β,NC)
     plaq_ave = 0.0
     for itrj = 1:numhb
         heatbath!(U,h)
-        #heatbath!(U,[temp1,temp2,temp3],β)
+        #heatbath!(U,temps,β)
         for ior=1:numOR
             overrelaxation!(U,h)
         end
 
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_t = calculate_Plaquette(U,temps)*factor
         plaq_ave += plaq_t
 
         if itrj % 200 == 0
-            #@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            #@time plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t average: $(plaq_ave/itrj)")
             #println("$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            poly = calculate_Polyakov_loop(U,temps)
             println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end

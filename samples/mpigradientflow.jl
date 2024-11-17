@@ -24,16 +24,12 @@ function test()
     end
 
 
+    temps = Temporalfields(U[1], num=3)
+    comb, factor = set_comb(U,Dim)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
     β = 5.7
 
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    @time plaq_t = calculate_Plaquette(U,temps)*factor
     println(" plaq_t = $plaq_t")
 
     g = Gradientflow(U,eps = 0.01,mpi=mpi)
@@ -41,9 +37,9 @@ function test()
     for itrj=1:100
         @time flow!(U,g)
         if itrj % 10 == 0
-            plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+            plaq_t = calculate_Plaquette(U,temps)*factor
             println("$itrj plaq_t = $plaq_t")
-            #poly = calculate_Polyakov_loop(U,temp1,temp2) 
+            #poly = calculate_Polyakov_loop(U,temps)
             #println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
