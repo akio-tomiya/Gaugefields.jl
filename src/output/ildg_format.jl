@@ -52,7 +52,7 @@ function __init__()
                     for iy = 1:NY
                         for ix = 1:NX
                             rank, ix_local, iy_local, iz_local, it_local =
-                                Gaugefields.calc_rank_and_indices(U[1], ix, iy, iz, it)
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
                             #counts[rank+1] += 1
                             counttotal += 1
 
@@ -65,7 +65,7 @@ function __init__()
                                 println("$it $(it_local)")
                             end
                             =#
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                             if U[1].myrank == 0
                                 count = 0
                                 for μ = 1:4
@@ -89,7 +89,7 @@ function __init__()
                                         for ic1 = 1:NC
                                             count += 1
                                             v = recv_mesg[count]
-                                            Gaugefields.setvalue!(
+                                            setvalue!(
                                                 U[μ],
                                                 v,
                                                 ic2,
@@ -103,14 +103,14 @@ function __init__()
                                     end
                                 end
                             end
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                         end
                     end
                 end
             end
             #end
 
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
             #=
 
             N = length(data[:,:,:,:,1])
@@ -195,7 +195,7 @@ function __init__()
                     for iy = 1:NY
                         for ix = 1:NX
                             rank, ix_local, iy_local, iz_local, it_local =
-                                Gaugefields.calc_rank_and_indices(U[1], ix, iy, iz, it)
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
                             #counts[rank+1] += 1
                             counttotal += 1
 
@@ -208,7 +208,7 @@ function __init__()
                                 println("$it $(it_local)")
                             end
                             =#
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                             if U[1].myrank == 0
                                 count = 0
                                 for μ = 1:4
@@ -232,7 +232,7 @@ function __init__()
                                         for ic1 = 1:NC
                                             count += 1
                                             v = recv_mesg[count]
-                                            Gaugefields.setvalue!(
+                                            setvalue!(
                                                 U[μ],
                                                 v,
                                                 ic2,
@@ -246,14 +246,14 @@ function __init__()
                                     end
                                 end
                             end
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                         end
                     end
                 end
             end
             #end
 
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
             update!(U)
 
 
@@ -540,10 +540,10 @@ function load_binarydata!(U, filename)
     ildg = ILDG(filename)
     i = 1
     L = [NX, NY, NZ, NT]
-    load_gaugefield!(U, i, ildg, L, NC, NDW = NDW)
+    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -576,7 +576,7 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
 end
 
 
-function load_gaugefield(i, ildg::ILDG, L, NC; NDW = 1)
+function load_gaugefield(i, ildg::ILDG, L, NC; NDW=1)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -594,12 +594,12 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW = 1)
         U[μ] = GaugeFields(NC, NDW, NX, NY, NZ, NT)
     end
 
-    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
+    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     return U
 
 end
 
-function load_gaugefield(i, ildg::ILDG; NDW = 1)
+function load_gaugefield(i, ildg::ILDG; NDW=1)
     #@assert length(ildg) != 0 "the header file is not found"
     data = ildg[i]
     filename = ildg.filename
@@ -616,7 +616,7 @@ function load_gaugefield(i, ildg::ILDG; NDW = 1)
         error("header file is not found. Please put NC")
         NC = data["NC"]
     end
-    load_gaugefield(i, ildg::ILDG, L, NC; NDW = NDW)
+    load_gaugefield(i, ildg::ILDG, L, NC; NDW=NDW)
 
 
 
