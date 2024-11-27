@@ -233,6 +233,10 @@ function __init__()
                     end
                 end
             end
+            if U[1].myrank == 0
+                close(fp)
+            end
+            barrier(U[1])
 
 
 
