@@ -1,4 +1,6 @@
 module Bridge_format
+using Requires
+
 import ..AbstractGaugefields_module: set_wing_U!
 #=
 Bridge++ Text file format
