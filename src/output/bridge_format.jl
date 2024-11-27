@@ -22,52 +22,216 @@ Im of U(0,0,0,0;mu=1)_00
 
 =#
 
-function save_textdata(U, filename)
 
-    NX = U[1].NX
-    NY = U[1].NY
-    NZ = U[1].NZ
-    NT = U[1].NT
-    NC = U[1].NC
+function __init__()
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        import ..AbstractGaugefields_module:
+            Gaugefields_4D_wing_mpi, Gaugefields_4D_nowing_mpi
+        import ..AbstractGaugefields_module:
+            identityGaugefields_4D_wing_mpi,
+            Gaugefields_4D_wing_mpi,
+            calc_rank_and_indices,
+            barrier,
+            comm,
+            setvalue!,
+            getvalue
 
+        function load_BridgeText!(initial, U::Array{T,1}, L, NC) where {T<:Gaugefields_4D_nowing_mpi}
+            NX = L[1]
+            NY = L[2]
+            NZ = L[3]
+            NT = L[4]
+            @assert U[1].NX == NX "NX mismatch"
+            @assert U[1].NY == NY "NY mismatch"
+            @assert U[1].NZ == NZ "NZ mismatch"
+            @assert U[1].NT == NT "NT mismatch"
+            @assert U[1].NC == NC "NC mismatch"
+            fp = open(initial, "r")
+            numdata = countlines(initial)
+            @assert numdata == 4 * NX * NY * NT * NZ * NC * NC * 2 "data shape is wrong"
 
-    #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
-    #print(li.doc)
-    #write("test.xml", li.doc)
+            data = zeros(ComplexF64, NC, NC, 4, prod(U[1].PN), U[1].nprocs)
+            counts = zeros(Int64, U[1].nprocs)
+            totalnum = NX * NY * NZ * NT * NC * NC * 2 * 4
+            PN = U[1].PN
+            barrier(U[1])
 
+            N = NC * NC * 4
 
-    fp = open(filename, "w")
-    #fp = open("testbin.dat","w")
-    i = 0
-    i = 0
-    #for μ=1:4
-    for it = 1:NT
-        for iz = 1:NZ
-            for iy = 1:NY
-                for ix = 1:NX
-                    for μ = 1:4
-                        for a = 1:NC
-                            for b = 1:NC
-                                i += 1
-                                #rvalue = read(fp, floattype)
-                                rvalue = real(U[μ][a, b, ix, iy, iz, it])
-                                println(fp, rvalue)
-                                ivalue = imag(U[μ][a, b, ix, iy, iz, it])
-                                println(fp, ivalue)
+            send_mesg1 = Array{ComplexF64}(undef, 1)
+            recv_mesg1 = Array{ComplexF64}(undef, 1)
+
+            send_mesg = Array{ComplexF64}(undef, N)
+            recv_mesg = Array{ComplexF64}(undef, N)
+
+            i = 0
+            counttotal = 0
+            for it = 1:NT
+                for iz = 1:NZ
+                    for iy = 1:NY
+                        for ix = 1:NX
+                            rank, ix_local, iy_local, iz_local, it_local =
+                                Gaugefields.calc_rank_and_indices(U[1], ix, iy, iz, it)
+                            #counts[rank+1] += 1
+                            counttotal += 1
+
+                            #=
+                            if U[1].myrank == 0
+                                println("rank = $rank")
+                                println("$ix $(ix_local)")
+                                println("$iy $(iy_local)")
+                                println("$iz $(iz_local)")
+                                println("$it $(it_local)")
                             end
+                            =#
+                            Gaugefields.barrier(U[1])
+                            if U[1].myrank == 0
+                                count = 0
+                                for μ = 1:4
+                                    for a = 1:NC
+                                        for b = 1:NC
+                                            u = split(readline(fp))
+                                            #println(u)
+                                            rvalue = parse(Float64, u[1])
+                                            u = split(readline(fp))
+                                            ivalue = parse(Float64, u[1])
+                                            send_mesg[count] = rvalue + im * ivalue
+                                            #U[μ][b,a,ix,iy,iz,it] = rvalue + im*ivalue
+                                        end
+                                    end
+                                    #u = U[μ][:,:,ix,iy,iz,it] 
+                                    #println(u'*u)
+                                end
+
+                                sreq =
+                                    MPI.Isend(send_mesg, rank, counttotal, Gaugefields.comm)
+                            end
+                            if U[1].myrank == rank
+                                rreq =
+                                    MPI.Irecv!(recv_mesg, 0, counttotal, Gaugefields.comm)
+                                MPI.Wait!(rreq)
+                                count = 0
+                                for μ = 1:4
+                                    for a = 1:NC
+                                        for b = 1:NC
+                                            count += 1
+                                            v = recv_mesg[count]
+                                            #U[μ][a, b, ix, iy, iz, it]
+                                            Gaugefields.setvalue!(
+                                                U[μ],
+                                                v,
+                                                a,
+                                                b,
+                                                ix_local,
+                                                iy_local,
+                                                iz_local,
+                                                it_local,
+                                            )
+                                        end
+                                    end
+                                end
+                            end
+                            Gaugefields.barrier(U[1])
                         end
                     end
                 end
             end
+            #end
+
+            Gaugefields.barrier(U[1])
+            update!(U)
+
         end
-    end
-    close(fp)
+
+        function save_textdata(U::Array{T,1}, filename) where {T<:Gaugefields_4D_nowing_mpi}
+            NX = U[1].NX
+            NY = U[1].NY
+            NZ = U[1].NZ
+            NT = U[1].NT
+            NC = U[1].NC
+
+            barrier(U[1])
+
+            N = NC * NC * 4
+            send_mesg1 = Array{ComplexF64}(undef, 1)
+            recv_mesg1 = Array{ComplexF64}(undef, 1)
+
+            send_mesg = Array{ComplexF64}(undef, N)
+            recv_mesg = Array{ComplexF64}(undef, N)
+        
+        
+            #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
+            #print(li.doc)
+            #write("test.xml", li.doc)
+
+            if U[1].myrank == 0
+                fp = open(filename, "w")
+            end
 
 
+            i = 0
+            counttotal = 0
+            for it = 1:NT
+                for iz = 1:NZ
+                    for iy = 1:NY
+                        for ix = 1:NX
+                            rank, ix_local, iy_local, iz_local, it_local =
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
+                            #counts[rank+1] += 1
+                            counttotal += 1
 
+                            barrier(U[1])
+                            if U[1].myrank == rank
+                                count = 0
+                                for μ = 1:4
+                                    for a = 1:NC
+                                        for b = 1:NC
+                                            count += 1
+                                            send_mesg[count] = getvalue(
+                                                U[μ],
+                                                a,
+                                                b,
+                                                ix_local,
+                                                iy_local,
+                                                iz_local,
+                                                it_local,
+                                            )
+                                            #send_mesg[count] = U[μ][ic2,ic1,ix_local,iy_local,iz_local,it_local]
+                                        end
+                                    end
+                                end
+                                sreq = MPI.Isend(send_mesg, rank, counttotal, U[1].comm)
+                            end
+                            if U[1].myrank == 0
+                                rreq = MPI.Irecv!(recv_mesg, 0, counttotal, U[1].comm)
+                                MPI.Wait!(rreq)
+                                count = 0
+                                for μ = 1:4
+                                    for a = 1:NC
+                                        for b = 1:NC
+                                            count += 1
+                                            v = recv_mesg[count]
+                                            rvalue = real(v)
+                                            println(fp, rvalue)
+                                            ivalue = imag(v)
+                                            println(fp, ivalue)
 
-    return
-
+                                            #write(fp, hton(real(v)))
+                                            #write(fp, hton(imag(v)))
+                                            #Gaugefields.setvalue!(U[μ],v,ic2,ic1,ix_local,iy_local,iz_local,it_local) 
+                                        end
+                                    end
+                                end
+                            end
+                            barrier(U[1])
+                        end
+                    end
+                end
+            end
+        
+        
+            
+        end
 end
 
 function load_BridgeText!(initial, U, L, NC)
@@ -118,4 +282,53 @@ function load_BridgeText!(initial, U, L, NC)
 
 
 end
+
+function save_textdata(U, filename)
+
+    NX = U[1].NX
+    NY = U[1].NY
+    NZ = U[1].NZ
+    NT = U[1].NT
+    NC = U[1].NC
+
+
+    #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
+    #print(li.doc)
+    #write("test.xml", li.doc)
+
+
+    fp = open(filename, "w")
+    #fp = open("testbin.dat","w")
+    i = 0
+    i = 0
+    #for μ=1:4
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    for μ = 1:4
+                        for a = 1:NC
+                            for b = 1:NC
+                                i += 1
+                                #rvalue = read(fp, floattype)
+                                rvalue = real(U[μ][a, b, ix, iy, iz, it])
+                                println(fp, rvalue)
+                                ivalue = imag(U[μ][a, b, ix, iy, iz, it])
+                                println(fp, ivalue)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    close(fp)
+
+
+
+
+    return
+
+end
+
 end
