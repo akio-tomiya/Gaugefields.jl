@@ -1,6 +1,5 @@
 module Bridge_format
 using Requires
-using .Gaugefields
 
 import ..AbstractGaugefields_module: set_wing_U!
 #=
