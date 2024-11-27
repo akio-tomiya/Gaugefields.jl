@@ -23,6 +23,7 @@ Re of U(0,0,0,0;mu=1)_00  # mu=1, site (x,y,z,t)=(0,0,0,0)
 Im of U(0,0,0,0;mu=1)_00
 
 =#
+import ..AbstractGaugefields_module: AbstractGaugefields, set_wing_U!
 update!(U) = set_wing!(U)
 update!(U::Array{T,1}) where {T<:AbstractGaugefields} = set_wing_U!(U)
 
