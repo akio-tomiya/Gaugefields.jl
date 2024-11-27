@@ -23,7 +23,8 @@ Re of U(0,0,0,0;mu=1)_00  # mu=1, site (x,y,z,t)=(0,0,0,0)
 Im of U(0,0,0,0;mu=1)_00
 
 =#
-
+update!(U) = set_wing!(U)
+update!(U::Array{T,1}) where {T<:AbstractGaugefields} = set_wing_U!(U)
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
@@ -36,8 +37,7 @@ function __init__()
             barrier,
             comm,
             setvalue!,
-            getvalue,
-            update!
+            getvalue
 
         function load_BridgeText!(initial, U::Array{T,1}, L, NC) where {T<:Gaugefields_4D_nowing_mpi}
             NX = L[1]
