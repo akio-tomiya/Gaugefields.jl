@@ -36,7 +36,8 @@ function __init__()
             barrier,
             comm,
             setvalue!,
-            getvalue
+            getvalue,
+            update!
 
         function load_BridgeText!(initial, U::Array{T,1}, L, NC) where {T<:Gaugefields_4D_nowing_mpi}
             NX = L[1]
