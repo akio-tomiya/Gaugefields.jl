@@ -77,11 +77,11 @@ function __init__()
                                     end
                                 end
                                 sreq =
-                                    MPI.Isend(send_mesg, rank, counttotal, Gaugefields.comm)
+                                    MPI.Isend(send_mesg, rank, counttotal, comm)
                             end
                             if U[1].myrank == rank
                                 rreq =
-                                    MPI.Irecv!(recv_mesg, 0, counttotal, Gaugefields.comm)
+                                    MPI.Irecv!(recv_mesg, 0, counttotal, comm)
                                 MPI.Wait!(rreq)
                                 count = 0
                                 for μ = 1:4
