@@ -92,6 +92,7 @@ function __init__()
                                 for μ = 1:4
                                     for a = 1:NC
                                         for b = 1:NC
+                                            count += 1
                                             u = split(readline(fp))
                                             #println(u)
                                             rvalue = parse(Float64, u[1])
