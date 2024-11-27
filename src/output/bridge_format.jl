@@ -158,8 +158,8 @@ function __init__()
 
             send_mesg = Array{ComplexF64}(undef, N)
             recv_mesg = Array{ComplexF64}(undef, N)
-        
-        
+
+
             #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
             #print(li.doc)
             #write("test.xml", li.doc)
@@ -228,10 +228,11 @@ function __init__()
                     end
                 end
             end
-        
-        
-            
+
+
+
         end
+    end
 end
 
 function load_BridgeText!(initial, U, L, NC)
