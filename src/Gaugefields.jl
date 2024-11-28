@@ -16,6 +16,7 @@ include("./smearing/Abstractsmearing.jl")
 include("./action/GaugeActions.jl")
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
+include("./hmcmodule/hmcmodule.jl")
 
 
 
@@ -130,6 +131,10 @@ import .heatbath_module:
     Heatbath,
     Heatbath_update,
     overrelaxation!
+
+import .hmc_module: update_U!, update_P!
+export update_U!, update_P!
+
 import .Bridge_format: save_textdata, load_BridgeText!
 import Wilsonloop: loops_staple
 import .Abstractsmearing_module:

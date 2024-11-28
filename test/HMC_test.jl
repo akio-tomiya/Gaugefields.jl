@@ -21,11 +21,11 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
     substitute_U!(Uold, U)
 
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
 
         P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temps)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
     end
     Snew = calc_action(gauge_action, U, p)
     println("Sold = $Sold, Snew = $Snew")
@@ -39,6 +39,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
     end
 end
 
+#=
 function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)#[1]
@@ -56,6 +57,7 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     unused!(temps, it_expU)
     unused!(temps, it_W)
 end
+=#
 
 
 function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps) # p -> p +factor*U*dSdUμ

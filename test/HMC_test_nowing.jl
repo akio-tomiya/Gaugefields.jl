@@ -19,14 +19,21 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
     gauss_distribution!(p)
     Sold = calc_action(gauge_action, U, p)
     substitute_U!(Uold, U)
+    UdSdU, its_UdSdU = get_temp(temps, 4)
 
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        #U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temps)
+        calc_UdSdU!(UdSdU, U, Dim, gauge_action, temps)
+        update_P!(p, U, UdSdU, 1.0, Δτ, Dim)
+        #P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temps)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        #U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
     end
+    unused!(temps, its_UdSdU)
+
     Snew = calc_action(gauge_action, U, p)
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
@@ -39,6 +46,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
     end
 end
 
+#=
 function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)
@@ -57,7 +65,19 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     unused!(temps, it_expU)
     unused!(temps, it_W)
 end
+=#
 
+function calc_UdSdU!(UdSdU, U, Dim, gauge_action, temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)#temps[end]
+    for μ = 1:Dim
+        calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
+        mul!(UdSdU[μ], U[μ], dSdUμ) # U*dSdUμ
+    end
+
+    unused!(temps, it_dSdUμ)
+end
+
+#=
 function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
     #temps = get_temporary_gaugefields(gauge_action)
@@ -74,6 +94,7 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps) # p -> p +factor*U*
     unused!(temps, it_dSdUμ)
     unused!(temps, it_temp1)
 end
+=#
 
 
 function HMC_test_4D(NX, NY, NZ, NT, NC, β)

@@ -2343,12 +2343,15 @@ The network is constructed as follows.
     NY = 4
     NZ = 4
     NT = 4
-    L = [NX,NY,NZ,NT]
+    Nwing = 1
+    Dim = 4
+    NC = 3
+    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
-    st = STOUT_Layer(layername,ρ,L)
+    st = STOUT_Layer(layername, ρ, U)
     push!(nn,st)
 
     show(nn)
@@ -2410,7 +2413,7 @@ function stoutsmearing(NX,NY,NZ,NT,NC)
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
-    st = STOUT_Layer(layername,ρ,L)
+    st = STOUT_Layer(layername, ρ, U)
     push!(nn,st)
 
     show(nn)

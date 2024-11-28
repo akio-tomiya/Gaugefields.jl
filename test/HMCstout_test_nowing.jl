@@ -51,13 +51,18 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
 
     substitute_U!(Uold, U)
 
+    UdSdU, its_UdSdU = get_temp(temps, 4)
+
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temps)
+        calc_UdSdU!(UdSdU, U, Dim, gauge_action, nn, temps)
+        update_P!(p, U, UdSdU, 1.0, Δτ, Dim)
+        #P_update!(U, p, 1.0, Δτ, Dim, gauge_action, dSdU, nn, temps)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
+        update_U!(U, p, 0.5, Δτ, Dim, temps)
     end
+    unused!(temps, its_UdSdU)
 
     Uout, Uout_multi, _ = calc_smearedU(U, nn)
     Snew = calc_action(gauge_action, Uout, p)
@@ -76,6 +81,7 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, nn, dSdU, temps)
 
 end
 
+#=
 function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     #temps = get_temporary_gaugefields(gauge_action)
     temp1, it_temp1 = get_temp(temps)
@@ -95,7 +101,24 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action, temps)
     unused!(temps, it_expU)
     unused!(temps, it_W)
 end
+=#
 
+function calc_UdSdU!(UdSdU, U, Dim, gauge_action, nn, temps)
+    Uout, Uout_multi, _ = calc_smearedU(U, nn)
+    dSdU, its_dSdU = get_temp(temps, Dim)#temps[end]
+
+    for μ = 1:Dim
+        calc_dSdUμ!(dSdU[μ], gauge_action, μ, Uout)
+    end
+    dSdUbare = back_prop(dSdU, nn, Uout_multi, U)
+
+    for μ = 1:Dim
+        mul!(UdSdU[μ], U[μ], dSdUbare[μ]) # U*dSdUμ
+    end
+    unused!(temps, its_dSdU)
+end
+
+#=
 function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temps) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
     factor = -ϵ * Δτ / (NC)
@@ -116,6 +139,7 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, dSdU, nn, temps) # p -> p 
     end
     unused!(temps, it_temp1)
 end
+=#
 
 function test1()
     NX = 4
