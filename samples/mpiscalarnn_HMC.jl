@@ -13,10 +13,10 @@ function MDtest!(snet,U,Dim,mpi=false)
     Uold = similar(U)
     substitute_U!(Uold,U)
     MDsteps = 100
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
+
+    temps = Temporalfields(U[1], num=2)
+    comb, factor = set_comb(U, Dim)
+
     numaccepted = 0
 
     numtrj = 100
@@ -24,7 +24,7 @@ function MDtest!(snet,U,Dim,mpi=false)
         @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
         numaccepted += ifelse(accepted,1,0)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        plaq_t = calculate_Plaquette(U,temps)*factor
         println("$itrj plaq_t = $plaq_t")
         println("acceptance ratio ",numaccepted/itrj)
     end
@@ -65,11 +65,11 @@ function MDstep!(snet,U,p,MDsteps,Dim,Uold)
 end
 
 function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporary_gaugefields(snet)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+    temps = get_temp(snet._temp_U)
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    expU, it_expU = get_temp(temps)
+    W, it_W = get_temp(temps)
 
     for μ=1:Dim
         exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
@@ -77,19 +77,26 @@ function U_update!(U,p,ϵ,Δτ,Dim,snet)
         substitute_U!(U[μ],W)
         
     end
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_expU)
+    unused!(temps, it_W)
 end
 
 function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
-    dSdUμ = temps[end]
+    temps = get_temp(snet._temp_U)
+    temp1, it_temp1 = get_temp(temps)
+    dSdUμ, it_dSdUμ = get_temp(temps)
     factor =  -ϵ*Δτ/(NC)
 
     for μ=1:Dim
         calc_dSdUμ!(dSdUμ,snet,μ,U)
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
+        mul!(temp1,U[μ],dSdUμ) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ],factor,temp1)
     end
+    unused!(temps, it_dSdUμ)
+    unused!(temps, it_temp1)
 end
 
 

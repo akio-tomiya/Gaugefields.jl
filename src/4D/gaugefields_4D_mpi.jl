@@ -2736,78 +2736,79 @@ function thooftFlux_4D_B_at_bndry_wing_mpi(
         else
             v = - exp(-im * (2pi/NC) * FLUX)
         end
+        myrank_xyzt = U.myrank_xyzt
       if FLUXNUM==1
         for it = 1:U.PN[4]
             for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
+                if ( myrank_xyzt[2]==(PEs[2]-1) )
+                    if ( myrank_xyzt[1]==(PEs[1]-1) )
                         @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, NY, iz, it)
+                            setvalue!(U, v, ic, ic, U.PN[1], U.PN[2], iz, it)
                         end
-                    #end
-                #end
+                    end
+                end
             end
         end
       elseif FLUXNUM==2
         for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
+            if ( myrank_xyzt[3]==(PEs[3]-1) )
                 for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
+                    if ( myrank_xyzt[1]==(PEs[1]-1) )
                         @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, iy, NZ, it)
+                            setvalue!(U, v, ic, ic, U.PN[1], iy, U.PN[3], it)
                         end
-                    #end
+                    end
                 end
-            #end
+            end
         end
       elseif FLUXNUM==3
-        #for it = 1:U.PN[4]
+        if ( myrank_xyzt[4]==(PEs[4]-1) )
             for iz = 1:U.PN[3]
                 for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
+                    if ( myrank_xyzt[1]==(PEs[1]-1) )
                         @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, iy, iz, NT)
+                            setvalue!(U, v, ic, ic, U.PN[1], iy, iz, U.PN[4])
                         end
-                    #end
+                    end
                 end
             end
-        #end
+        end
       elseif FLUXNUM==4
         for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
+            if ( myrank_xyzt[3]==(PEs[3]-1) )
+                if ( myrank_xyzt[2]==(PEs[2]-1) )
                     for ix = 1:U.PN[1]
                         @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, NY, NZ, it)
-                        end
-                    end
-                #end
-            #end
-        end
-      elseif FLUXNUM==5
-        #for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                    for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, NY, iz, NT)
-                        end
-                    end
-                #end
-            end
-        #end
-      elseif FLUXNUM==6
-        #for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, iy, NZ, NT)
+                            setvalue!(U, v, ic, ic, ix, U.PN[2], U.PN[3], it)
                         end
                     end
                 end
-            #end
-        #end
+            end
+        end
+      elseif FLUXNUM==5
+        if ( myrank_xyzt[4]==(PEs[4]-1) )
+            for iz = 1:U.PN[3]
+                if ( myrank_xyzt[2]==(PEs[2]-1) )
+                    for ix = 1:U.PN[1]
+                        @simd for ic = 1:NC
+                            setvalue!(U, v, ic, ic, ix, U.PN[2], iz, U.PN[4])
+                        end
+                    end
+                end
+            end
+        end
+      elseif FLUXNUM==6
+        if ( myrank_xyzt[4]==(PEs[4]-1) )
+            if ( myrank_xyzt[3]==(PEs[3]-1) )
+                for iy = 1:U.PN[2]
+                    for ix = 1:U.PN[1]
+                        @simd for ic = 1:NC
+                            setvalue!(U, v, ic, ic, ix, iy, U.PN[3], U.PN[4])
+                        end
+                    end
+                end
+            end
+        end
       end
       set_wing_U!(U)
       return U
