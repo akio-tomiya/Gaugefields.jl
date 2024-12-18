@@ -1185,6 +1185,17 @@ function map_U!(
     return nothing
 end
 
+function map_U!(
+    Uout::AbstractGaugefields{NC,Dim},
+    U::AbstractGaugefields{NC,Dim},
+    f::Function,
+    V::AbstractGaugefields{NC,Dim},
+) where {NC,Dim}
+    error("map_U(Uout,U,f,V)! is not implemented in type Uout:$(typeof(Uout)) U:$(typeof(U)) V:$(typeof(V)) ")
+    return nothing
+end
+
+
 
 function map_U_sequential!(
     U::AbstractGaugefields{NC,Dim},

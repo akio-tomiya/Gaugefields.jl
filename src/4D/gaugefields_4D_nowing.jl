@@ -34,7 +34,7 @@ struct Gaugefields_4D_nowing{NC} <: Gaugefields_4D{NC}
         NY::T,
         NZ::T,
         NT::T;
-        verbose_level = 2,
+        verbose_level=2,
     ) where {T<:Integer}
         NV = NX * NY * NZ * NT
         NDW = 0
@@ -109,7 +109,7 @@ function substitute_U!(
             if μ == ν
                 continue
             end
-            substitute_U!(a[μ,ν], b[μ,ν])
+            substitute_U!(a[μ, ν], b[μ, ν])
         end
     end
 end
@@ -133,7 +133,7 @@ function substitute_U!(
             if μ == ν
                 continue
             end
-            substitute_U!(a[μ,ν], b[μ,ν], iseven)
+            substitute_U!(a[μ, ν], b[μ, ν], iseven)
         end
     end
 end
@@ -145,7 +145,7 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_nowing}
         U.NY,
         U.NZ,
         U.NT,
-        verbose_level = U.verbose_print.level,
+        verbose_level=U.verbose_print.level,
     )
     #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
@@ -165,7 +165,7 @@ function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing}
             if μ == ν
                 continue
             end
-            Uout[μ,ν] = similar(U[μ,ν])
+            Uout[μ, ν] = similar(U[μ, ν])
         end
     end
     return Uout
@@ -282,10 +282,10 @@ function randomGaugefields_4D_nowing(
     NY,
     NZ,
     NT;
-    verbose_level = 2,
-    randomnumber = "Random",
+    verbose_level=2,
+    randomnumber="Random",
 )
-    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
     if randomnumber == "Random"
         rng = MersenneTwister()
         #randomfunc() = rand()
@@ -317,24 +317,24 @@ function randomGaugefields_4D_nowing(
     return U
 end
 
-function RandomGauges_4D(NC, NX, NY, NZ, NT; verbose_level = 2, randomnumber = "Random")
+function RandomGauges_4D(NC, NX, NY, NZ, NT; verbose_level=2, randomnumber="Random")
     return randomGaugefields_4D_nowing(
         NC,
         NX,
         NY,
         NZ,
         NT,
-        verbose_level = verbose_level,
-        randomnumber = randomnumber,
+        verbose_level=verbose_level,
+        randomnumber=randomnumber,
     )
 end
 
-function IdentityGauges_4D(NC, NX, NY, NZ, NT; verbose_level = 2)
-    return identityGaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+function IdentityGauges_4D(NC, NX, NY, NZ, NT; verbose_level=2)
+    return identityGaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
 end
 
-function identityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level = 2)
-    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+function identityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level=2)
+    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
 
     for it = 1:NT
         for iz = 1:NZ
@@ -351,9 +351,9 @@ function identityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level = 2)
     return U
 end
 
-function Oneinstanton_4D_nowing(NC, NX, NY, NZ, NT; verbose_level = 2)
+function Oneinstanton_4D_nowing(NC, NX, NY, NZ, NT; verbose_level=2)
     @assert NC == 2 "NC should be 2"
-    u = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+    u = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
     U = Array{typeof(u),1}(undef, 4)
     U[1] = u
     for μ = 2:4
@@ -700,6 +700,44 @@ function map_U!(
 end
 
 
+function map_U!(
+    Uout::Gaugefields_4D_nowing{NC},
+    U::Gaugefields_4D_nowing{NC},
+    f!::Function,
+    V::Gaugefields_4D_nowing{NC},
+) where {NC}
+    NT = U.NT
+    NZ = U.NZ
+    NY = U.NY
+    NX = U.NX
+    A = zeros(ComplexF64, NC, NC)
+    B = zeros(ComplexF64, NC, NC)
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            A[k1, k2] = V[k1, k2, ix, iy, iz, it]
+                            B[k1, k2] = U[k1, k2, ix, iy, iz, it]
+                        end
+                    end
+                    f!(B, A)
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            Uout[k1, k2, ix, iy, iz, it] = B[k1, k2]
+                        end
+                    end
+
+                end
+            end
+        end
+    end
+    #set_wing_U!(U)
+end
+
+
 
 function map_U_sequential!(U::Gaugefields_4D_nowing{NC}, f!::Function, Uin) where {NC}
     NT = U.NT
@@ -805,6 +843,7 @@ function unit_U!(Uμ::Gaugefields_4D_nowing{NC}) where {NC}
     set_wing_U!(Uμ)
 
 end
+
 
 """
 M = (U*δ_prev) star (dexp(Q)/dQ)
@@ -1476,7 +1515,7 @@ end
 
 function Antihermitian!(
     vout::Gaugefields_4D_nowing{NC},
-    vin::Gaugefields_4D_nowing{NC};factor = 1
+    vin::Gaugefields_4D_nowing{NC}; factor=1
 ) where {NC} #vout = factor*(vin - vin^+)
 
     #NC = vout.NC
@@ -1497,11 +1536,11 @@ function Antihermitian!(
                     for k1 = 1:NC
                         #@simd for k2 = k1+1:NC
                         @simd for k2 = k1:NC
-                            vv =vin[k1, k2, ix, iy, iz, it] -
-                                    conj(vin[k2, k1, ix, iy, iz, it])
-                            vout[k1, k2, ix, iy, iz, it] = vv*factor
+                            vv = vin[k1, k2, ix, iy, iz, it] -
+                                 conj(vin[k2, k1, ix, iy, iz, it])
+                            vout[k1, k2, ix, iy, iz, it] = vv * factor
                             if k1 != k2
-                                vout[k2, k1, ix, iy, iz, it] = -conj(vv)*factor
+                                vout[k2, k1, ix, iy, iz, it] = -conj(vv) * factor
                             end
                         end
                     end
@@ -1515,7 +1554,7 @@ end
 
 function Antihermitian!(
     vout::Gaugefields_4D_nowing{3},
-    vin::Gaugefields_4D_nowing{3};factor = 1
+    vin::Gaugefields_4D_nowing{3}; factor=1
 )# where {NC} #vout = factor*(vin - vin^+)
 
     #NC = vout.NC
@@ -1533,26 +1572,26 @@ function Antihermitian!(
         for iz = 1:NZ
             for iy = 1:NY
                 @simd for ix = 1:NX
-                    z11 = vin[1,1,ix,iy,iz,it] - conj(vin[1,1,ix,iy,iz,it] ) 
-                    z12 = vin[1,2,ix,iy,iz,it] - conj(vin[2,1,ix,iy,iz,it] ) 
-                    z13 = vin[1,3,ix,iy,iz,it] - conj(vin[3,1,ix,iy,iz,it] ) 
+                    z11 = vin[1, 1, ix, iy, iz, it] - conj(vin[1, 1, ix, iy, iz, it])
+                    z12 = vin[1, 2, ix, iy, iz, it] - conj(vin[2, 1, ix, iy, iz, it])
+                    z13 = vin[1, 3, ix, iy, iz, it] - conj(vin[3, 1, ix, iy, iz, it])
 
-                    z22 = vin[2,2,ix,iy,iz,it] - conj(vin[2,2,ix,iy,iz,it] ) 
-                    z23 = vin[2,3,ix,iy,iz,it] - conj(vin[3,2,ix,iy,iz,it] ) 
+                    z22 = vin[2, 2, ix, iy, iz, it] - conj(vin[2, 2, ix, iy, iz, it])
+                    z23 = vin[2, 3, ix, iy, iz, it] - conj(vin[3, 2, ix, iy, iz, it])
 
-                    z33 = vin[3,3,ix,iy,iz,it] - conj(vin[3,3,ix,iy,iz,it] ) 
+                    z33 = vin[3, 3, ix, iy, iz, it] - conj(vin[3, 3, ix, iy, iz, it])
 
-                    vout[1,1,ix,iy,iz,it] = z11*factor
-                    vout[1,2,ix,iy,iz,it] = z12*factor
-                    vout[1,3,ix,iy,iz,it] = z13*factor
-            
-                    vout[2,1,ix,iy,iz,it] = -conj(z12)*factor
-                    vout[2,2,ix,iy,iz,it] = z22*factor
-                    vout[2,3,ix,iy,iz,it] = z23 *factor
-            
-                    vout[3,1,ix,iy,iz,it] = -conj(z13) *factor
-                    vout[3,2,ix,iy,iz,it] = -conj(z23) *factor
-                    vout[3,3,ix,iy,iz,it] = z33*factor
+                    vout[1, 1, ix, iy, iz, it] = z11 * factor
+                    vout[1, 2, ix, iy, iz, it] = z12 * factor
+                    vout[1, 3, ix, iy, iz, it] = z13 * factor
+
+                    vout[2, 1, ix, iy, iz, it] = -conj(z12) * factor
+                    vout[2, 2, ix, iy, iz, it] = z22 * factor
+                    vout[2, 3, ix, iy, iz, it] = z23 * factor
+
+                    vout[3, 1, ix, iy, iz, it] = -conj(z13) * factor
+                    vout[3, 2, ix, iy, iz, it] = -conj(z23) * factor
+                    vout[3, 3, ix, iy, iz, it] = z33 * factor
 
                 end
             end
@@ -1769,7 +1808,7 @@ end
 
 function Base.:+(a::T1, b::T2) where {T1<:Abstractfields,T2<:Abstractfields}
     c = deepcopy(a)
-    add_U!(c,b)
+    add_U!(c, b)
     return c
 end
 
@@ -1927,9 +1966,9 @@ function LinearAlgebra.mul!(
     set_wing_U!(c)
 end
 
-function Base.:*(a::T1,b::T2) where {T1<:Abstractfields,T2<:Abstractfields}
+function Base.:*(a::T1, b::T2) where {T1<:Abstractfields,T2<:Abstractfields}
     c = similar(a)
-    LinearAlgebra.mul!(c,a,b)
+    LinearAlgebra.mul!(c, a, b)
     return c
 end
 
@@ -2536,160 +2575,160 @@ function m3complv!(a::Gaugefields_4D_nowing{3})
 end
 
 const sr3 = sqrt(3)
-const sr3i = 1/sr3
-const sr3ih = 0.5*sr3i
+const sr3i = 1 / sr3
+const sr3ih = 0.5 * sr3i
 const sqr3inv = sr3i
 
 """
     b = (lambda_k/2)*a
     lambda_k : GellMann matrices. k=1, 8 
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing{3}, a::Gaugefields_4D_nowing{3},k,generator)
+function lambda_k_mul!(b::Gaugefields_4D_nowing{3}, a::Gaugefields_4D_nowing{3}, k, generator)
     NX = a.NX
     NY = a.NY
     NZ = a.NZ
     NT = a.NT
 
-    if k==1
+    if k == 1
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = 0.5 * a[2,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = 0.5 * a[2,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = 0.5 * a[2,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0.5 * a[1,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] = 0.5 * a[1,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = 0.5 * a[1,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[2, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[2, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[2, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==2
+    elseif k == 2
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = -0.5*im * a[2,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[2,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = -0.5*im * a[2,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] =  0.5*im * a[1,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] =  0.5*im * a[1,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] =  0.5*im * a[1,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[2, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[2, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = -0.5 * im * a[2, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0.5 * im * a[1, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * im * a[1, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * im * a[1, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==3
+    elseif k == 3
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] =  0.5 * a[1,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] =  0.5 * a[1,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] =  0.5 * a[1,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = -0.5 * a[2,1,ix,iy,iz,it]
-                        b[2,2,ix,iy,iz,it] = -0.5 * a[2,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = -0.5 * a[2,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0
-                        b[3,2,ix,iy,iz,it] = 0
-                        b[3,3,ix,iy,iz,it] = 0
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = -0.5 * a[2, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = -0.5 * a[2, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = -0.5 * a[2, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0
+                        b[3, 2, ix, iy, iz, it] = 0
+                        b[3, 3, ix, iy, iz, it] = 0
                     end
                 end
             end
         end
-    elseif k==4
+    elseif k == 4
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = 0.5 * a[3,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = 0.5 * a[3,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = 0.5 * a[3,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0
-                        b[2,2,ix,iy,iz,it] = 0
-                        b[2,3,ix,iy,iz,it] = 0
-                        b[3,1,ix,iy,iz,it] = 0.5 * a[1,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = 0.5 * a[1,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = 0.5 * a[1,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0.5 * a[3, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = 0.5 * a[3, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = 0.5 * a[3, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0
+                        b[2, 2, ix, iy, iz, it] = 0
+                        b[2, 3, ix, iy, iz, it] = 0
+                        b[3, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * a[1, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==5
+    elseif k == 5
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = -0.5*im * a[3,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[3,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] = -0.5*im * a[3,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] = 0
-                        b[2,2,ix,iy,iz,it] = 0
-                        b[2,3,ix,iy,iz,it] = 0
-                        b[3,1,ix,iy,iz,it] =  0.5*im * a[1,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] =  0.5*im * a[1,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] =  0.5*im * a[1,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[3, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[3, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = -0.5 * im * a[3, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = 0
+                        b[2, 2, ix, iy, iz, it] = 0
+                        b[2, 3, ix, iy, iz, it] = 0
+                        b[3, 1, ix, iy, iz, it] = 0.5 * im * a[1, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * im * a[1, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * im * a[1, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==6
+    elseif k == 6
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = 0
-                        b[1,2,ix,iy,iz,it] = 0
-                        b[1,3,ix,iy,iz,it] = 0
-                        b[2,1,ix,iy,iz,it] = 0.5 * a[3,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] = 0.5 * a[3,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = 0.5 * a[3,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = 0.5 * a[2,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = 0.5 * a[2,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = 0.5 * a[2,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0
+                        b[1, 2, ix, iy, iz, it] = 0
+                        b[1, 3, ix, iy, iz, it] = 0
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[3, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[3, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = 0.5 * a[3, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0.5 * a[2, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * a[2, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * a[2, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==7
+    elseif k == 7
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = 0
-                        b[1,2,ix,iy,iz,it] = 0
-                        b[1,3,ix,iy,iz,it] = 0
-                        b[2,1,ix,iy,iz,it] = -0.5*im * a[3,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] = -0.5*im * a[3,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] = -0.5*im * a[3,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] =  0.5*im * a[2,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] =  0.5*im * a[2,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] =  0.5*im * a[2,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = 0
+                        b[1, 2, ix, iy, iz, it] = 0
+                        b[1, 3, ix, iy, iz, it] = 0
+                        b[2, 1, ix, iy, iz, it] = -0.5 * im * a[3, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = -0.5 * im * a[3, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = -0.5 * im * a[3, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = 0.5 * im * a[2, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = 0.5 * im * a[2, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = 0.5 * im * a[2, 3, ix, iy, iz, it]
                     end
                 end
             end
         end
-    elseif k==8
+    elseif k == 8
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] =  sr3ih * a[1,1,ix,iy,iz,it] 
-                        b[1,2,ix,iy,iz,it] =  sr3ih * a[1,2,ix,iy,iz,it]
-                        b[1,3,ix,iy,iz,it] =  sr3ih * a[1,3,ix,iy,iz,it]
-                        b[2,1,ix,iy,iz,it] =  sr3ih * a[2,1,ix,iy,iz,it] 
-                        b[2,2,ix,iy,iz,it] =  sr3ih * a[2,2,ix,iy,iz,it]
-                        b[2,3,ix,iy,iz,it] =  sr3ih * a[2,3,ix,iy,iz,it]
-                        b[3,1,ix,iy,iz,it] = -sqr3inv * a[3,1,ix,iy,iz,it]
-                        b[3,2,ix,iy,iz,it] = -sqr3inv * a[3,2,ix,iy,iz,it]
-                        b[3,3,ix,iy,iz,it] = -sqr3inv * a[3,3,ix,iy,iz,it]
+                        b[1, 1, ix, iy, iz, it] = sr3ih * a[1, 1, ix, iy, iz, it]
+                        b[1, 2, ix, iy, iz, it] = sr3ih * a[1, 2, ix, iy, iz, it]
+                        b[1, 3, ix, iy, iz, it] = sr3ih * a[1, 3, ix, iy, iz, it]
+                        b[2, 1, ix, iy, iz, it] = sr3ih * a[2, 1, ix, iy, iz, it]
+                        b[2, 2, ix, iy, iz, it] = sr3ih * a[2, 2, ix, iy, iz, it]
+                        b[2, 3, ix, iy, iz, it] = sr3ih * a[2, 3, ix, iy, iz, it]
+                        b[3, 1, ix, iy, iz, it] = -sqr3inv * a[3, 1, ix, iy, iz, it]
+                        b[3, 2, ix, iy, iz, it] = -sqr3inv * a[3, 2, ix, iy, iz, it]
+                        b[3, 3, ix, iy, iz, it] = -sqr3inv * a[3, 3, ix, iy, iz, it]
                     end
                 end
             end
@@ -2704,51 +2743,51 @@ end
     b = (lambda_k/2)*a
     lambda_k : SU2 matrices. k=1, 3
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing{2}, a::Gaugefields_4D_nowing{2},k,generator)
+function lambda_k_mul!(b::Gaugefields_4D_nowing{2}, a::Gaugefields_4D_nowing{2}, k, generator)
     NX = a.NX
     NY = a.NY
     NZ = a.NZ
     NT = a.NT
 
 
-    if k==1
+    if k == 1
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = -0.5*im* a[2,1,ix,iy,iz,it]*im
-                        b[1,2,ix,iy,iz,it] = -0.5*im * a[2,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[2, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[2, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] = -0.5*im * a[1,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] = -0.5*im * a[1,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = -0.5 * im * a[1, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = -0.5 * im * a[1, 2, ix, iy, iz, it] * im
                     end
                 end
             end
         end
-    elseif k==2
+    elseif k == 2
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] = -0.5 * a[2,1,ix,iy,iz,it] *im
-                        b[1,2,ix,iy,iz,it] = -0.5 * a[2,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * a[2, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * a[2, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] =  0.5 * a[1,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] =  0.5 * a[1,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = 0.5 * a[1, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = 0.5 * a[1, 2, ix, iy, iz, it] * im
                     end
                 end
             end
         end
-    elseif k==3
+    elseif k == 3
         for it = 1:NT
             for iz = 1:NZ
                 for iy = 1:NY
                     @inbounds @simd for ix = 1:NX
-                        b[1,1,ix,iy,iz,it] =  -0.5*im * a[1,1,ix,iy,iz,it] *im
-                        b[1,2,ix,iy,iz,it] =  -0.5*im * a[1,2,ix,iy,iz,it]*im
+                        b[1, 1, ix, iy, iz, it] = -0.5 * im * a[1, 1, ix, iy, iz, it] * im
+                        b[1, 2, ix, iy, iz, it] = -0.5 * im * a[1, 2, ix, iy, iz, it] * im
 
-                        b[2,1,ix,iy,iz,it] = 0.5*im * a[2,1,ix,iy,iz,it]*im
-                        b[2,2,ix,iy,iz,it] = 0.5*im * a[2,2,ix,iy,iz,it]*im
+                        b[2, 1, ix, iy, iz, it] = 0.5 * im * a[2, 1, ix, iy, iz, it] * im
+                        b[2, 2, ix, iy, iz, it] = 0.5 * im * a[2, 2, ix, iy, iz, it] * im
                     end
                 end
             end
@@ -2764,7 +2803,7 @@ end
     b = (lambda_k/2)*a
     lambda_k : SUN matrices. k=1, ...
 """
-function lambda_k_mul!(b::Gaugefields_4D_nowing{NC},a::Gaugefields_4D_nowing{NC},k,generator) where NC
+function lambda_k_mul!(b::Gaugefields_4D_nowing{NC}, a::Gaugefields_4D_nowing{NC}, k, generator) where {NC}
     NX = a.NX
     NY = a.NY
     NZ = a.NZ
@@ -2776,11 +2815,11 @@ function lambda_k_mul!(b::Gaugefields_4D_nowing{NC},a::Gaugefields_4D_nowing{NC}
         for iz = 1:NZ
             for iy = 1:NY
                 @inbounds @simd for ix = 1:NX
-                    for k2=1:NC
-                        for k1=1:NC
-                            b[k1,k2,ix,iy,iz,it] = 0
-                            @simd for l=1:NC
-                                b[k1,k2,ix,iy,iz,it] += matrix[k1,l]*a[l,k2,ix,iy,iz,it]/2
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            b[k1, k2, ix, iy, iz, it] = 0
+                            @simd for l = 1:NC
+                                b[k1, k2, ix, iy, iz, it] += matrix[k1, l] * a[l, k2, ix, iy, iz, it] / 2
                             end
                         end
                     end
@@ -2797,8 +2836,8 @@ end
 
 
 
-function minusidentityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level = 2)
-    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level = verbose_level)
+function minusidentityGaugefields_4D_nowing(NC, NX, NY, NZ, NT; verbose_level=2)
+    U = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
 
     for it = 1:NT
         for iz = 1:NZ
@@ -2821,8 +2860,8 @@ function thooftFlux_4D_B_at_bndry(
     FLUX,
     FLUXNUM,
     NN...;
-    overallminus = false,
-    verbose_level = 2,
+    overallminus=false,
+    verbose_level=2,
 )
     dim = length(NN)
     if dim == 4
@@ -2833,7 +2872,7 @@ function thooftFlux_4D_B_at_bndry(
                 NN[2],
                 NN[3],
                 NN[4],
-                verbose_level = verbose_level,
+                verbose_level=verbose_level,
             )
         else
             U = identityGaugefields_4D_nowing(
@@ -2842,86 +2881,86 @@ function thooftFlux_4D_B_at_bndry(
                 NN[2],
                 NN[3],
                 NN[4],
-                verbose_level = verbose_level,
+                verbose_level=verbose_level,
             )
         end
-        
-        v = exp(-im * (2pi/NC) * FLUX)
-      if FLUXNUM==1
-        for it = 1:NN[4]
-            for iz = 1:NN[3]
-                #for iy = 1:NN[2]
+
+        v = exp(-im * (2pi / NC) * FLUX)
+        if FLUXNUM == 1
+            for it = 1:NN[4]
+                for iz = 1:NN[3]
+                    #for iy = 1:NN[2]
                     #for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,NN[1],NN[2],iz,it] *= v
-                        end
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], NN[2], iz, it] *= v
+                    end
                     #end
-                #end
-            end
-        end
-      elseif FLUXNUM==2
-        for it = 1:NN[4]
-            #for iz = 1:NN[3]
-                for iy = 1:NN[2]
-                    #for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,NN[1],iy,NN[3],it] *= v
-                        end
-                    #end
-                end
-            #end
-        end
-      elseif FLUXNUM==3
-        #for it = 1:NN[4]
-            for iz = 1:NN[3]
-                for iy = 1:NN[2]
-                    #for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,NN[1],iy,iz,NN[4]] *= v
-                        end
                     #end
                 end
             end
-        #end
-      elseif FLUXNUM==4
-        for it = 1:NN[4]
-            #for iz = 1:NN[3]
-                #for iy = 1:NN[2]
-                    for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,ix,NN[2],NN[3],it] *= v
-                        end
+        elseif FLUXNUM == 2
+            for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                for iy = 1:NN[2]
+                    #for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], iy, NN[3], it] *= v
                     end
-                #end
-            #end
-        end
-      elseif FLUXNUM==5
-        #for it = 1:NN[4]
-            for iz = 1:NN[3]
-                #for iy = 1:NN[2]
-                    for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,ix,NN[2],iz,NN[4]] *= v
-                        end
-                    end
+                    #end
+                end
                 #end
             end
-        #end
-      elseif FLUXNUM==6
-        #for it = 1:NN[4]
-            #for iz = 1:NN[3]
+        elseif FLUXNUM == 3
+            #for it = 1:NN[4]
+            for iz = 1:NN[3]
                 for iy = 1:NN[2]
-                    for ix = 1:NN[1]
-                        @simd for ic = 1:NC
-                            U[ic,ic,ix,iy,NN[3],NN[4]] *= v
-                        end
+                    #for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, NN[1], iy, iz, NN[4]] *= v
+                    end
+                    #end
+                end
+            end
+            #end
+        elseif FLUXNUM == 4
+            for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                #for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, NN[2], NN[3], it] *= v
                     end
                 end
+                #end
+                #end
+            end
+        elseif FLUXNUM == 5
+            #for it = 1:NN[4]
+            for iz = 1:NN[3]
+                #for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, NN[2], iz, NN[4]] *= v
+                    end
+                end
+                #end
+            end
             #end
-        #end
-      else
-          error("NumofFlux is out")
-      end
+        elseif FLUXNUM == 6
+            #for it = 1:NN[4]
+            #for iz = 1:NN[3]
+            for iy = 1:NN[2]
+                for ix = 1:NN[1]
+                    @simd for ic = 1:NC
+                        U[ic, ic, ix, iy, NN[3], NN[4]] *= v
+                    end
+                end
+            end
+            #end
+            #end
+        else
+            error("NumofFlux is out")
+        end
     end
     set_wing_U!(U)
     return U
@@ -2932,11 +2971,11 @@ function thooftLoop_4D_B_temporal(
     FLUX,
     FLUXNUM,
     NN...;
-    overallminus = false,
-    verbose_level = 2,
-    tloop_pos  = [1,1,1,1],
-    tloop_dir  = [1,4],
-    tloop_dis  = 1,
+    overallminus=false,
+    verbose_level=2,
+    tloop_pos=[1, 1, 1, 1],
+    tloop_dir=[1, 4],
+    tloop_dis=1,
 )
     dim = length(NN)
     if dim == 4
@@ -2947,7 +2986,7 @@ function thooftLoop_4D_B_temporal(
                 NN[2],
                 NN[3],
                 NN[4],
-                verbose_level = verbose_level,
+                verbose_level=verbose_level,
             )
         else
             U = identityGaugefields_4D_nowing(
@@ -2956,184 +2995,184 @@ function thooftLoop_4D_B_temporal(
                 NN[2],
                 NN[3],
                 NN[4],
-                verbose_level = verbose_level,
+                verbose_level=verbose_level,
             )
         end
-        
-        spatial_dir  = tloop_dir[1]
+
+        spatial_dir = tloop_dir[1]
         temporal_dir = tloop_dir[2]
 
         if tloop_dis > 0
             spatial_strpos = tloop_pos[spatial_dir]
             spatial_endpos = spatial_strpos + tloop_dis
-            
-            v = exp(-im * (2pi/NC) * FLUX)
+
+            v = exp(-im * (2pi / NC) * FLUX)
         else
             spatial_endpos = tloop_pos[spatial_dir]
             spatial_strpos = spatial_endpos + tloop_dis
-            
-            v = exp(im * (2pi/NC) * FLUX)
+
+            v = exp(im * (2pi / NC) * FLUX)
         end
 
-      if FLUXNUM==1 && (tloop_dir==[3,4] || tloop_dir==[4,3])
-          if spatial_dir==3
-              for it = 1:NN[4]
-                  for iz = spatial_strpos:spatial_endpos
-                      #for iy = 1:NN[2]
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],tloop_pos[2],iz,it] *= v
-                      end
-                      #end
-                      #end
-                  end
-              end
-          elseif spatial_dir==4
-              for it = spatial_strpos:spatial_endpos
-                  for iz = 1:NN[3]
-                      #for iy = 1:NN[2]
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],tloop_pos[2],iz,it] *= v
-                      end
-                      #end
-                      #end
-                  end
-              end
-          end
-      elseif FLUXNUM==2 && (tloop_dir==[2,4] || tloop_dir==[4,2])
-          if spatial_dir==2
-              for it = 1:NN[4]
-                  #for iz = 1:NN[3]
-                  for iy = spatial_strpos:spatial_endpos
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],iy,tloop_pos[3],it] *= v
-                      end
-                      #end
-                  end
-                  #end
-              end
-          elseif spatial_dir==4
-              for it = spatial_strpos:spatial_endpos
-                  #for iz = 1:NN[3]
-                  for iy = 1:NN[2]
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],iy,tloop_pos[3],it] *= v
-                      end
-                      #end
-                  end
-                  #end
-              end
-          end
-      elseif FLUXNUM==3 && (tloop_dir==[2,3] || tloop_dir==[3,2])
-          if spatial_dir==2
-              #for it = 1:NN[4]
-              for iz = 1:NN[3]
-                  for iy = spatial_strpos:spatial_endpos
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],iy,iz,tloop_pos[4]] *= v
-                      end
-                      #end
-                  end
-              end
-              #end
-          elseif spatial_dir==3
-              #for it = 1:NN[4]
-              for iz = spatial_strpos:spatial_endpos
-                  for iy = 1:NN[2]
-                      #for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,tloop_pos[1],iy,iz,tloop_pos[4]] *= v
-                      end
-                      #end
-                  end
-              end
-              #end
-          end
-      elseif FLUXNUM==4 && (tloop_dir==[1,4] || tloop_dir==[4,1])
-          if spatial_dir==1
-              for it = 1:NN[4]
-                  #for iz = 1:NN[3]
-                  #for iy = 1:NN[2]
-                  for ix = spatial_strpos:spatial_endpos
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,tloop_pos[2],tloop_pos[3],it] *= v
-                      end
-                  end
-                  #end
-                  #end
-              end
-          elseif spatial_dir==4
-              for it = spatial_strpos:spatial_endpos
-                  #for iz = 1:NN[3]
-                  #for iy = 1:NN[2]
-                  for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,tloop_pos[2],tloop_pos[3],it] *= v
-                      end
-                  end
-                  #end
-                  #end
-              end
-          end
-      elseif FLUXNUM==5 && (tloop_dir==[1,3] || tloop_dir==[3,1])
-          if spatial_dir==1
-              #for it = 1:NN[4]
-              for iz = 1:NN[3]
-                  #for iy = 1:NN[2]
-                  for ix = spatial_strpos:spatial_endpos
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,tloop_pos[2],iz,tloop_pos[4]] *= v
-                      end
-                  end
-                  #end
-              end
-              #end
-          elseif spatial_dir==3
-              #for it = 1:NN[4]
-              for iz = spatial_strpos:spatial_endpos
-                  #for iy = 1:NN[2]
-                  for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,tloop_pos[2],iz,tloop_pos[4]] *= v
-                      end
-                  end
-                  #end
-              end
-              #end
-          end
-      elseif FLUXNUM==6 && (tloop_dir==[1,2] || tloop_dir==[2,1])
-          if spatial_dir==1
-              #for it = 1:NN[4]
-              #for iz = 1:NN[3]
-              for iy = 1:NN[2]
-                  for ix = spatial_strpos:spatial_endpos
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,iy,tloop_pos[3],tloop_pos[4]] *= v
-                      end
-                  end
-              end
-              #end
-              #end
-          elseif spatial_dir==2
-              #for it = 1:NN[4]
-              #for iz = 1:NN[3]
-              for iy = spatial_strpos:spatial_endpos
-                  for ix = 1:NN[1]
-                      @simd for ic = 1:NC
-                          U[ic,ic,ix,iy,tloop_pos[3],tloop_pos[4]] *= v
-                      end
-                  end
-              end
-              #end
-              #end
-          end
-      #else
-      #    error("NumofFlux is out")
-      end
+        if FLUXNUM == 1 && (tloop_dir == [3, 4] || tloop_dir == [4, 3])
+            if spatial_dir == 3
+                for it = 1:NN[4]
+                    for iz = spatial_strpos:spatial_endpos
+                        #for iy = 1:NN[2]
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], tloop_pos[2], iz, it] *= v
+                        end
+                        #end
+                        #end
+                    end
+                end
+            elseif spatial_dir == 4
+                for it = spatial_strpos:spatial_endpos
+                    for iz = 1:NN[3]
+                        #for iy = 1:NN[2]
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], tloop_pos[2], iz, it] *= v
+                        end
+                        #end
+                        #end
+                    end
+                end
+            end
+        elseif FLUXNUM == 2 && (tloop_dir == [2, 4] || tloop_dir == [4, 2])
+            if spatial_dir == 2
+                for it = 1:NN[4]
+                    #for iz = 1:NN[3]
+                    for iy = spatial_strpos:spatial_endpos
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], iy, tloop_pos[3], it] *= v
+                        end
+                        #end
+                    end
+                    #end
+                end
+            elseif spatial_dir == 4
+                for it = spatial_strpos:spatial_endpos
+                    #for iz = 1:NN[3]
+                    for iy = 1:NN[2]
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], iy, tloop_pos[3], it] *= v
+                        end
+                        #end
+                    end
+                    #end
+                end
+            end
+        elseif FLUXNUM == 3 && (tloop_dir == [2, 3] || tloop_dir == [3, 2])
+            if spatial_dir == 2
+                #for it = 1:NN[4]
+                for iz = 1:NN[3]
+                    for iy = spatial_strpos:spatial_endpos
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], iy, iz, tloop_pos[4]] *= v
+                        end
+                        #end
+                    end
+                end
+                #end
+            elseif spatial_dir == 3
+                #for it = 1:NN[4]
+                for iz = spatial_strpos:spatial_endpos
+                    for iy = 1:NN[2]
+                        #for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, tloop_pos[1], iy, iz, tloop_pos[4]] *= v
+                        end
+                        #end
+                    end
+                end
+                #end
+            end
+        elseif FLUXNUM == 4 && (tloop_dir == [1, 4] || tloop_dir == [4, 1])
+            if spatial_dir == 1
+                for it = 1:NN[4]
+                    #for iz = 1:NN[3]
+                    #for iy = 1:NN[2]
+                    for ix = spatial_strpos:spatial_endpos
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, tloop_pos[2], tloop_pos[3], it] *= v
+                        end
+                    end
+                    #end
+                    #end
+                end
+            elseif spatial_dir == 4
+                for it = spatial_strpos:spatial_endpos
+                    #for iz = 1:NN[3]
+                    #for iy = 1:NN[2]
+                    for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, tloop_pos[2], tloop_pos[3], it] *= v
+                        end
+                    end
+                    #end
+                    #end
+                end
+            end
+        elseif FLUXNUM == 5 && (tloop_dir == [1, 3] || tloop_dir == [3, 1])
+            if spatial_dir == 1
+                #for it = 1:NN[4]
+                for iz = 1:NN[3]
+                    #for iy = 1:NN[2]
+                    for ix = spatial_strpos:spatial_endpos
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, tloop_pos[2], iz, tloop_pos[4]] *= v
+                        end
+                    end
+                    #end
+                end
+                #end
+            elseif spatial_dir == 3
+                #for it = 1:NN[4]
+                for iz = spatial_strpos:spatial_endpos
+                    #for iy = 1:NN[2]
+                    for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, tloop_pos[2], iz, tloop_pos[4]] *= v
+                        end
+                    end
+                    #end
+                end
+                #end
+            end
+        elseif FLUXNUM == 6 && (tloop_dir == [1, 2] || tloop_dir == [2, 1])
+            if spatial_dir == 1
+                #for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                for iy = 1:NN[2]
+                    for ix = spatial_strpos:spatial_endpos
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, iy, tloop_pos[3], tloop_pos[4]] *= v
+                        end
+                    end
+                end
+                #end
+                #end
+            elseif spatial_dir == 2
+                #for it = 1:NN[4]
+                #for iz = 1:NN[3]
+                for iy = spatial_strpos:spatial_endpos
+                    for ix = 1:NN[1]
+                        @simd for ic = 1:NC
+                            U[ic, ic, ix, iy, tloop_pos[3], tloop_pos[4]] *= v
+                        end
+                    end
+                end
+                #end
+                #end
+            end
+            #else
+            #    error("NumofFlux is out")
+        end
     end
     set_wing_U!(U)
     return U
