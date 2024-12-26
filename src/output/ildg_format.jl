@@ -262,7 +262,7 @@ function __init__()
 
         function save_binarydata(
             U::Array{T,1},
-            filename,
+            filename; tempfile1="testbin.dat", tempfile2="filelist.dat"
         ) where {T<:Gaugefields_4D_nowing_mpi}
 
             NX = U[1].NX
@@ -286,7 +286,8 @@ function __init__()
             #write("test.xml", li.doc)
 
             if U[1].myrank == 0
-                fp = open("testbin.dat", "w")
+                #fp = open("testbin.dat", "w")
+                fp = open(tempfile1, "w")
             end
             i = 0
             i = 0
@@ -358,13 +359,16 @@ function __init__()
             if U[1].myrank == 0
                 close(fp)
 
-                fp = open("filelist.dat", "w")
+                #fp = open("filelist.dat", "w")
+                fp = open(tempfile2, "w")
                 #println(fp,"test.xml ","ildg-format")
-                println(fp, "testbin.dat ", "ildg-binary-data")
+                #println(fp, "testbin.dat ", "ildg-binary-data")
+                println(fp, "$tempfile1 ", "ildg-binary-data")
                 close(fp)
 
                 lime_pack() do exe
-                    run(`$exe filelist.dat $filename`)
+                    run(`$exe $tempfile2 $filename`)
+                    #run(`$exe filelist.dat $filename`)
                 end
 
             end
@@ -417,7 +421,7 @@ function Base.getindex(ildg::ILDG, i)
     return ildg.header[i]
 end
 
-function save_binarydata(U, filename)
+function save_binarydata(U, filename; tempfile1="testbin.dat", tempfile2="filelist.dat")
 
     NX = U[1].NX
     NY = U[1].NY
@@ -431,7 +435,8 @@ function save_binarydata(U, filename)
     #write("test.xml", li.doc)
 
 
-    fp = open("testbin.dat", "w")
+    #fp = open("testbin.dat", "w")
+    fp = open(tempfile1, "w")
     i = 0
     i = 0
     for it = 1:NT
@@ -456,13 +461,16 @@ function save_binarydata(U, filename)
     end
     close(fp)
 
-    fp = open("filelist.dat", "w")
+    #fp = open("filelist.dat", "w")
+    fp = open(tempfile2, "w")
     #println(fp,"test.xml ","ildg-format")
-    println(fp, "testbin.dat ", "ildg-binary-data")
+    #println(fp, "testbin.dat ", "ildg-binary-data")
+    println(fp, "$tempfile1 ", "ildg-binary-data")
     close(fp)
 
     lime_pack() do exe
-        run(`$exe filelist.dat $filename`)
+        #run(`$exe filelist.dat $filename`)
+        run(`$exe $tempfile2 $filename`)
     end
 
 
@@ -540,10 +548,10 @@ function load_binarydata!(U, filename)
     ildg = ILDG(filename)
     i = 1
     L = [NX, NY, NZ, NT]
-    load_gaugefield!(U, i, ildg, L, NC, NDW = NDW)
+    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -576,7 +584,7 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
 end
 
 
-function load_gaugefield(i, ildg::ILDG, L, NC; NDW = 1)
+function load_gaugefield(i, ildg::ILDG, L, NC; NDW=1)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -594,12 +602,12 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW = 1)
         U[μ] = GaugeFields(NC, NDW, NX, NY, NZ, NT)
     end
 
-    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW = 1)
+    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     return U
 
 end
 
-function load_gaugefield(i, ildg::ILDG; NDW = 1)
+function load_gaugefield(i, ildg::ILDG; NDW=1)
     #@assert length(ildg) != 0 "the header file is not found"
     data = ildg[i]
     filename = ildg.filename
@@ -616,7 +624,7 @@ function load_gaugefield(i, ildg::ILDG; NDW = 1)
         error("header file is not found. Please put NC")
         NC = data["NC"]
     end
-    load_gaugefield(i, ildg::ILDG, L, NC; NDW = NDW)
+    load_gaugefield(i, ildg::ILDG, L, NC; NDW=NDW)
 
 
 
