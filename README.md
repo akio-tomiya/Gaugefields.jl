@@ -105,6 +105,13 @@ filename = "hoge.ildg"
 save_binarydata(U,filename)
 ```
 
+We need two temporal files to write ILDG format. 
+If you want to change the temporal files, you can add the names. 
+
+```julia
+save_binarydata(U, filename; tempfile1="temp1.dat", tempfile2="temp2.dat”)
+```
+
 ## Text format for Bridge++
 Gaugefields.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
 
