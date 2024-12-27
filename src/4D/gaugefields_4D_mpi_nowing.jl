@@ -2457,7 +2457,7 @@ const fac13 = 1 / 3
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_nowing_mpi{3},
+    uin::Gaugefields_4D_nowing_mpi{3}, ### HH: change v to uin to avoid overwriting the input
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_nowing_mpi} #uout = exp(t*u)
     ww = temps[1]
@@ -2474,9 +2474,9 @@ function exptU!(
         for iz = 1:v.PN[3]
             for iy = 1:v.PN[2]
                 for ix = 1:v.PN[1]
-                    v11 = getvalue(v, 1, 1, ix, iy, iz, it)
-                    v22 = getvalue(v, 2, 2, ix, iy, iz, it)
-                    v33 = getvalue(v, 3, 3, ix, iy, iz, it)
+                    v11 = getvalue(uin, 1, 1, ix, iy, iz, it)
+                    v22 = getvalue(uin, 2, 2, ix, iy, iz, it)
+                    v33 = getvalue(uin, 3, 3, ix, iy, iz, it)
 
                     tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
 
@@ -2489,12 +2489,12 @@ function exptU!(
                     y22 = (imag(v22) - tri) * im
                     y33 = (imag(v33) - tri) * im
 
-                    v12 = getvalue(v, 1, 2, ix, iy, iz, it)
-                    v13 = getvalue(v, 1, 3, ix, iy, iz, it)
-                    v21 = getvalue(v, 2, 1, ix, iy, iz, it)
-                    v23 = getvalue(v, 2, 3, ix, iy, iz, it)
-                    v31 = getvalue(v, 3, 1, ix, iy, iz, it)
-                    v32 = getvalue(v, 3, 2, ix, iy, iz, it)
+                    v12 = getvalue(uin, 1, 2, ix, iy, iz, it)
+                    v13 = getvalue(uin, 1, 3, ix, iy, iz, it)
+                    v21 = getvalue(uin, 2, 1, ix, iy, iz, it)
+                    v23 = getvalue(uin, 2, 3, ix, iy, iz, it)
+                    v31 = getvalue(uin, 3, 1, ix, iy, iz, it)
+                    v32 = getvalue(uin, 3, 2, ix, iy, iz, it)
 
                     x12 = v12 - conj(v21)
                     x13 = v13 - conj(v31)
@@ -2686,7 +2686,7 @@ function exptU!(
                     ww17 = w17 * c3 - w18 * s3
                     ww18 = w18 * c3 + w17 * s3
 
-                    v = w1 + im * w2
+                    v = w1 + im * w2 ### HH: v is overing the input uin (which was v)
                     setvalue!(w, v, 1, 1, ix, iy, iz, it)
                     v = w3 + im * w4
                     setvalue!(w, v, 1, 2, ix, iy, iz, it)
@@ -4446,3 +4446,86 @@ function thooftLoop_4D_B_temporal_nowing_mpi(
         return U
     end
 end
+
+
+### HH: added for WLB gauge fixing projection
+
+"""
+M = (U*δ_prev) star (dexp(Q)/dQ)
+Λ = TA(M)
+"""
+function construct_Λmatrix_forSTOUT!(
+    Λ,
+    δ_current::Gaugefields_4D_wing_mpi{NC},
+    Q,
+    u::Gaugefields_4D_wing_mpi{NC},
+) where {NC}
+    ### HH: get the position under MPI
+    NT = u.PN[4]
+    NZ = u.PN[3]
+    NY = u.PN[2]
+    NX = u.PN[1]
+    
+    Qn = zeros(ComplexF64, NC, NC)
+    Un = zero(Qn)
+    Mn = zero(Qn)
+    Λn = zero(Qn)
+    δn_current = zero(Qn)
+    temp1 = similar(Qn)
+    temp2 = similar(Qn)
+    temp3 = similar(Qn)
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    for jc = 1:NC
+                        for ic = 1:NC
+                            Un[ic, jc] = getvalue(u, ic, jc, ix, iy, iz, it)
+                            Qn[ic, jc] = getvalue(Q, ic, jc, ix, iy, iz, it)#*im
+                            δn_current[ic, jc] = getvalue(δ_current, ic, jc, ix, iy, iz, it)
+                        end
+                    end
+
+                    calc_Mmatrix!(Mn, δn_current, Qn, Un, u, [temp1, temp2, temp3])
+                    calc_Λmatrix!(Λn, Mn, NC)
+
+                    for jc = 1:NC
+                        for ic = 1:NC
+                           setvalue!(Λ, Λn[ic, jc], ic, jc, ix, iy, iz, it)
+                        end
+                    end
+
+                end
+            end
+        end
+    end
+    set_wing_U!(Λ)
+end
+
+
+function unit_U!(Uμ::Gaugefields_4D_wing_mpi{NC}) where {NC}
+    NT = Uμ.PN[4]
+    NZ = Uμ.PN[3]
+    NY = Uμ.PN[2]
+    NX = Uμ.PN[1]
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+
+                    for k2 = 1:NC
+                        for k1 = 1:NC
+                            @inbounds setvalue!(Uμ, ifelse(k1 == k2, 1, 0), k1, k2, ix, iy, iz, it )
+                        end
+                    end
+                end
+            end
+        end
+    end
+    set_wing_U!(Uμ)
+
+end
+
+### HH ends here
