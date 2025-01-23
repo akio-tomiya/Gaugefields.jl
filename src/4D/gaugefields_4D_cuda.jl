@@ -1065,6 +1065,40 @@ function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC}) where {NC}
     return s
 end
 
+@inline convert_x(x, xd,xd_s) = mod(div(x-1,xd_s),xd)
+@inline convert_br(b,r,blocks,blocks_s,blocknumbers,blocknumbers_s) = 1+ convert_x(b, blocks,blocks_s) +
+                             convert_x(r, blocknumbers,blocknumbers_s)*blocks 
+
+
+
+function fourdim_cordinate(b,r,blockinfo)
+    blocks = blockinfo.blocks[1]
+    blocks_s = blockinfo.blocks_s[1]
+    blocknumbers = blockinfo.blocknumbers[1]
+    blocknumbers_s = blockinfo.blocknumbers_s[1]
+    ix = convert_br(b,r,blocks,blocks_s,blocknumbers,blocknumbers_s)
+
+    blocks = blockinfo.blocks[2]
+    blocks_s = blockinfo.blocks_s[2]
+    blocknumbers = blockinfo.blocknumbers[2]
+    blocknumbers_s = blockinfo.blocknumbers_s[2]
+    iy = convert_br(b,r,blocks,blocks_s,blocknumbers,blocknumbers_s)
+
+    blocks = blockinfo.blocks[3]
+    blocks_s = blockinfo.blocks_s[3]
+    blocknumbers = blockinfo.blocknumbers[3]
+    blocknumbers_s = blockinfo.blocknumbers_s[3]
+    iz = convert_br(b,r,blocks,blocks_s,blocknumbers,blocknumbers_s)
+
+    blocks = blockinfo.blocks[4]
+    blocks_s = blockinfo.blocks_s[4]
+    blocknumbers = blockinfo.blocknumbers[4]
+    blocknumbers_s = blockinfo.blocknumbers_s[4]
+    it = convert_br(b,r,blocks,blocks_s,blocknumbers,blocknumbers_s)
+
+    return ix,iy,iz,it
+end
+
 
 function substitute_U!(A::Gaugefields_4D_cuda{NC}, B::Gaugefields_4D_nowing{NC}) where {NC}
     acpu = Array(A.U)
@@ -1073,6 +1107,7 @@ function substitute_U!(A::Gaugefields_4D_cuda{NC}, B::Gaugefields_4D_nowing{NC})
     for r = 1:blockinfo.rsize
         for b=1:blockinfo.blocksize
             ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
+            #println((ix,iy,iz,it))
             for ic=1:NC
                 for jc=1:NC
                     acpu[jc,ic,b,r] = B[jc,ic,ix,iy,iz,it] 
@@ -1080,7 +1115,41 @@ function substitute_U!(A::Gaugefields_4D_cuda{NC}, B::Gaugefields_4D_nowing{NC})
             end
         end
     end
-    agpu = CuArray(acpu)
+    agpu = CUDA.CuArray(acpu)
     A.U .= agpu
 
+end
+
+function substitute_U!(
+    a::Array{T1,1},
+    b::Array{T2,1}
+) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_cuda}
+    for μ = 1:4
+        substitute_U!(a[μ], b[μ])
+    end
+end
+
+function substitute_U!(
+    a::Array{T1,1},
+    b::Array{T2,1}
+) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_nowing}
+    for μ = 1:4
+        substitute_U!(a[μ], b[μ])
+    end
+end
+
+function substitute_U!(A::Gaugefields_4D_nowing{NC},B::Gaugefields_4D_cuda{NC}) where {NC}
+    bcpu = Array(B.U)
+
+    blockinfo = B.blockinfo
+    for r = 1:blockinfo.rsize
+        for b=1:blockinfo.blocksize
+            ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
+            for ic=1:NC
+                for jc=1:NC
+                    A[jc,ic,ix,iy,iz,it] = bcpu[jc,ic,b,r] 
+                end
+            end
+        end
+    end
 end
