@@ -35,6 +35,8 @@ function __init__()
             comm,
             setvalue!
     end
+
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin end
 end
 
 # Write your package code here.
