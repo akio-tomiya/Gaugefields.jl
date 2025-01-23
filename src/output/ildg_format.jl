@@ -52,7 +52,7 @@ function __init__()
                     for iy = 1:NY
                         for ix = 1:NX
                             rank, ix_local, iy_local, iz_local, it_local =
-                                Gaugefields.calc_rank_and_indices(U[1], ix, iy, iz, it)
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
                             #counts[rank+1] += 1
                             counttotal += 1
 
@@ -65,7 +65,7 @@ function __init__()
                                 println("$it $(it_local)")
                             end
                             =#
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                             if U[1].myrank == 0
                                 count = 0
                                 for μ = 1:4
@@ -110,7 +110,7 @@ function __init__()
             end
             #end
 
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
             #=
 
             N = length(data[:,:,:,:,1])
@@ -195,7 +195,7 @@ function __init__()
                     for iy = 1:NY
                         for ix = 1:NX
                             rank, ix_local, iy_local, iz_local, it_local =
-                                Gaugefields.calc_rank_and_indices(U[1], ix, iy, iz, it)
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
                             #counts[rank+1] += 1
                             counttotal += 1
 
@@ -208,7 +208,7 @@ function __init__()
                                 println("$it $(it_local)")
                             end
                             =#
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                             if U[1].myrank == 0
                                 count = 0
                                 for μ = 1:4
@@ -232,7 +232,7 @@ function __init__()
                                         for ic1 = 1:NC
                                             count += 1
                                             v = recv_mesg[count]
-                                            Gaugefields.setvalue!(
+                                            setvalue!(
                                                 U[μ],
                                                 v,
                                                 ic2,
@@ -246,7 +246,7 @@ function __init__()
                                     end
                                 end
                             end
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                         end
                     end
                 end

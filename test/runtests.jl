@@ -63,6 +63,11 @@ end
     include("heatbathtest_nowing.jl")
 end
 
+@testset "heatbath_bare" begin
+    println("heatbath_bare")
+    include("heatbathtest_bare.jl")
+end
+
 
 @testset "heatbath with plaq and rect actions" begin
     println("heatbath with plaq and rect actions")
