@@ -249,13 +249,22 @@ function overrelaxation!(
     overrelaxation!(U, h._tempotal_gauges, h.β; ITERATION_MAX=h.ITERATION_MAX)
 end
 
-
 function heatbath!(
-    U::Array{<:AbstractGaugefields{2,Dim},1},
+    U::Array{<:AbstractGaugefields{NC,Dim},1},
     temps_g, # length >= 5
     β;
     ITERATION_MAX=10^5,
-) where {Dim}
+) where {Dim,NC}
+    error("now heatbath!(U,temp_g::Temporalfields,β) is supported. Use temp=Temporalfields(U[1]; num=10)")
+end
+
+
+function heatbath!(
+    U::Array{<:AbstractGaugefields{2,Dim},1},
+    temps_g::Temporalfields{TG}, # length >= 5
+    β;
+    ITERATION_MAX=10^5,
+) where {Dim,TG}
     NC = 2
     #temp1 = temps[1]
     #temp2 = temps[2]
@@ -297,10 +306,10 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{3,Dim},1},
-    temps_g, # length >= 5
+    temps_g::Temporalfields{TG}, # length >= 5
     β;
     ITERATION_MAX=10^5,
-) where {Dim}
+) where {Dim,TG}
     NC = 3
     #temp1 = temps[1]
     #temp2 = temps[2]
@@ -346,11 +355,11 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{3,Dim},1},
-    temps_g, # length >= 5
+    temps_g::Temporalfields{TG}, # length >= 5
     β,
     gauge_action;
     ITERATION_MAX=10^5,
-) where {Dim} #This function is for debugging
+) where {Dim,TG} #This function is for debugging
     NC = 3
     #temp1 = temps[1]
     #temp2 = temps[2]
@@ -398,10 +407,10 @@ end
 
 function heatbath!(
     U::Array{<:AbstractGaugefields{NC,Dim},1},
-    temps_g, # length >= 5
+    temps_g::Temporalfields{TG}, # length >= 5
     β;
     ITERATION_MAX=10^5,
-) where {Dim,NC}
+) where {Dim,NC,TG}
 
     #temp1 = temps[1]
     #temp2 = temps[2]
@@ -450,6 +459,15 @@ function overrelaxation!(
     β;
     ITERATION_MAX=10^5,
 ) where {Dim,NC}
+    error("now overrelaxation!(U,temp_g::Temporalfields,β) is supported. Use temp=Temporalfields(U[1]; num=10)")
+end
+
+function overrelaxation!(
+    U::Array{<:AbstractGaugefields{NC,Dim},1},
+    temps_g::Temporalfields{TG}, # length >= 5
+    β;
+    ITERATION_MAX=10^5,
+) where {Dim,NC,TG}
 
     #temp1 = temps[1]
     #temp2 = temps[2]
