@@ -16,9 +16,11 @@ struct Gaugefields_4D_cuda{NC} <: Gaugefields_4D{NC}
     NC::Int64
     mpi::Bool
     verbose_print::Verbose_print
-    Ushifted::CUDA.CuArray{ComplexF64,4}
+    #Ushifted::CUDA.CuArray{ComplexF64,4}
     blocks::NTuple{4,Int64}
+    blocks_s::NTuple{4,Int64}
     blocknumbers::NTuple{4,Int64}
+    blocknumbers_s::NTuple{4,Int64}
     blocksize::Int64 #num. of Threads 
     rsize::Int64 #num. of blocks
 
@@ -39,12 +41,24 @@ struct Gaugefields_4D_cuda{NC} <: Gaugefields_4D{NC}
         NDW = 0
         #blocksizes = prod(blocks)
         blocknumbers = div.(L,blocks)
+
+        dim = 4
+        blocks_s = ones(dim)
+        blocknumbers_s = ones(dim)
+        for i in 2:dim
+            for j in 1:i-1
+                blocknumbers_s[i] = blocknumbers_s[i]*blocknumbers[j]
+                blocks_s[i] = blocks_s[i]*blocks[j]
+            end
+        end
+
+
         blocksize = prod(blocks)
         rsize = prod(blocknumbers)
         U = zeros(ComplexF64, NC, NC,blocksize,rsize) |> CUDA.CuArray
         #println(typeof(U))
         #U = zeros(ComplexF64, NC, NC, NX + 2NDW, NY + 2NDW, NZ + 2NDW, NT + 2NDW)
-        Ushifted =zeros(ComplexF64, NC, NC,blocksize,rsize) |> CUDA.CuArray
+        #Ushifted =zeros(ComplexF64, NC, NC,blocksize,rsize) |> CUDA.CuArray
         mpi = false
         verbose_print = Verbose_print(verbose_level)
         #U = Array{Array{ComplexF64,6}}(undef,4)
@@ -52,9 +66,32 @@ struct Gaugefields_4D_cuda{NC} <: Gaugefields_4D{NC}
         #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
         #end
         
-        return new{NC}(U, NX, NY, NZ, NT, NDW, NV, NC, mpi, verbose_print, Ushifted,
-        Tuple(blocks),Tuple(blocknumbers),blocksize,rsize)
+        return new{NC}(U, NX, NY, NZ, NT, NDW, NV, NC, mpi, verbose_print, 
+        #Ushifted,
+        Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
     end
+end
+
+function Base.similar(U::T) where {T<:Gaugefields_4D_cuda}
+    Uout = Gaugefields_4D_cuda(
+        U.NC,
+        U.NX,
+        U.NY,
+        U.NZ,
+        U.NT,
+        U.blocks,
+        verbose_level=U.verbose_print.level,
+    )
+    #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
+    return Uout
+end
+
+function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_cuda}
+    Uout = Array{T,1}(undef, 4)
+    for μ = 1:4
+        Uout[μ] = similar(U[μ])
+    end
+    return Uout
 end
 
 function cudakernel_identityGaugefields!(U,NC) 
@@ -207,11 +244,6 @@ function normalize_U!(u::Gaugefields_4D_cuda{2})
 end
 
 function normalize_U!(u::Gaugefields_4D_cuda{3})
-    NX = u.NX
-    NY = u.NY
-    NZ = u.NZ
-    NT = u.NT
-
     CUDA.@sync begin
         CUDA.@cuda threads=u.blocksize blocks=u.rsize cudakernel_normalize_U_NC3!(u.U)
     end
@@ -226,4 +258,108 @@ end
 
 function set_wing_U!(u::Gaugefields_4D_cuda{NC}) where {NC} #do nothing
     return
+end
+
+
+function substitute_U!(a::Gaugefields_4D_cuda{NC}, b::Gaugefields_4D_cuda{NC}) where {NC,T2<:Abstractfields}
+    a.U .= b.U
+    set_wing_U!(a)
+end
+
+function substitute_U!(
+    a::Array{T1,1},
+    b::Array{T2,1}
+) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
+    for μ = 1:4
+        substitute_U!(a[μ], b[μ])
+    end
+end
+
+struct Shifted_Gaugefields_4D_cuda{NC} <: Shifted_Gaugefields{NC,4}
+    parent::Gaugefields_4D_cuda{NC}
+    #parent::T
+    shift::NTuple{4,Int8}
+    NX::Int64
+    NY::Int64
+    NZ::Int64
+    NT::Int64
+
+
+    #function Shifted_Gaugefields(U::T,shift,Dim) where {T <: AbstractGaugefields}
+    function Shifted_Gaugefields_4D_cuda(U::Gaugefields_4D_cuda{NC}, shift) where {NC}
+        return new{NC}(U, shift, U.NX, U.NY, U.NZ, U.NT)
+    end
+end
+
+function cudakernel_mul_NC!(C,A,B,NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+
+    @inbounds for k2 = 1:NC
+        for k1 = 1:NC
+            C[k1, k2, b,R] = 0
+
+            for k3 = 1:NC
+                C[k1, k2, b,r] +=
+                    A[k1, k3, b,r] * B[k3, k2, b,r]
+            end
+        end 
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_cuda{NC},
+    a::T1,
+    b::T2) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
+ 
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blocksize blocks=c.rsize  cudakernel_mul_NC!(c.U,a.U,b.U,NC)
+    end
+
+end
+
+function cudakernel_mul_NC3!(C,A,B)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+
+    a11 = A[1, 1,b,r]
+    a21 = A[2, 1,b,r]
+    a31 = A[3, 1,b,r]
+    a12 = A[1, 2,b,r]
+    a22 = A[2, 2,b,r]
+    a32 = A[3, 2,b,r]
+    a13 = A[1, 3,b,r]
+    a23 = A[2, 3,b,r]
+    a33 = A[3, 3,b,r]
+    b11 = B[1, 1,b,r]
+    b21 = B[2, 1,b,r]
+    b31 = B[3, 1,b,r]
+    b12 = B[1, 2,b,r]
+    b22 = B[2, 2,b,r]
+    b32 = B[3, 2,b,r]
+    b13 = B[1, 3,b,r]
+    b23 = B[2, 3,b,r]
+    b33 = B[3, 3,b,r]
+    C[1, 1,b,r] = a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1,b,r] = a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1,b,r] = a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2,b,r] = a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2,b,r] = a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2,b,r] = a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3,b,r] = a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3,b,r] = a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3,b,r] = a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_cuda{3},
+    a::T1,
+    b::T2,
+) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blocksize blocks=c.rsize  cudakernel_mul_NC3!(c.U,a.U,b.U)
+    end
 end
