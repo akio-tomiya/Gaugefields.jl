@@ -56,7 +56,6 @@ function heatbathtest_bare()
     end
 
     println("Total elapsed time $t_tot [s]")
-    println(log_out, "Total elapsed time $t_tot [s]")
 
 end
 
