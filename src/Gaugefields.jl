@@ -36,7 +36,10 @@ function __init__()
             setvalue!
     end
 
-    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin end
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
+        import .AbstractGaugefields_module:
+            Gaugefields_4D_cuda
+    end
 end
 
 # Write your package code here.
