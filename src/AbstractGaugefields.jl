@@ -3121,7 +3121,7 @@ function LinearAlgebra.mul!(
     α::Ta,
     β::Tb,
 ) where {T<:AbstractGaugefields,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
-    error("LinearAlgebra.mul! is not implemented in type $(typeof(c)) ")
+    error("LinearAlgebra.mul! is not implemented in types c: $(typeof(c)) , a: $(typeof(a)), b: $(typeof(b))")
 end
 
 function LinearAlgebra.mul!(
