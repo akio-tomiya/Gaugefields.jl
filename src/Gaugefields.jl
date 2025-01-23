@@ -36,11 +36,15 @@ function __init__()
             setvalue!
     end
 
-    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        import .AbstractGaugefields_module:
-            Gaugefields_4D_cuda
-    end
+    #@require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
+    #    import .AbstractGaugefields_module:
+    ##        Gaugefields_4D_cuda
+    #end
 end
+
+import CUDA
+import .AbstractGaugefields_module:
+            Gaugefields_4D_cuda
 
 # Write your package code here.
 import .Verboseprint_mpi:

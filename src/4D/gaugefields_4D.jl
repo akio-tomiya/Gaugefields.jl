@@ -22,10 +22,12 @@ function __init__()
         include("../2D/TA_gaugefields_2D_mpi.jl")
     end
 
-    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        include("./gaugefields_4D_cuda.jl")
-    end
+    #@require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
+    #    include("./gaugefields_4D_cuda.jl")
+    #end
 end
+
+include("./gaugefields_4D_cuda.jl")
 
 
 

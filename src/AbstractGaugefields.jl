@@ -333,7 +333,8 @@ function Initialize_Gaugefields(
     mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
-    cuda=false
+    cuda=false,
+    blocks=nothing
 )
 
     Dim = length(NN)
@@ -346,7 +347,8 @@ function Initialize_Gaugefields(
             PEs=PEs,
             mpiinit=mpiinit,
             verbose_level=verbose_level,
-            cuda=cuda
+            cuda=cuda,
+            blocks=blocks
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -358,6 +360,8 @@ function Initialize_Gaugefields(
             mpiinit=mpiinit,
             verbose_level=verbose_level,
             randomnumber=randomnumber,
+            cuda=cuda,
+            blocks=blocks
         )
     else
         error("not supported")
@@ -376,6 +380,8 @@ function Initialize_Gaugefields(
                 PEs=PEs,
                 mpiinit=false,
                 verbose_level=verbose_level,
+                cuda=cuda,
+                blocks=blocks
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -387,6 +393,8 @@ function Initialize_Gaugefields(
                 mpiinit=false,
                 verbose_level=verbose_level,
                 randomnumber=randomnumber,
+                cuda=cuda,
+                blocks=blocks
             )
         else
             error("not supported")
@@ -404,6 +412,8 @@ function RandomGauges(
     mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
+    cuda=false,
+    blocks=nothing
 )
     dim = length(NN)
     if mpi
@@ -445,15 +455,28 @@ function RandomGauges(
     else
         if dim == 4
             if NDW == 0
-                U = randomGaugefields_4D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    NN[4],
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
+                if cuda
+                    U = randomGaugefields_4D_cuda(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        blocks,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
+                    )
+                else
+                    U = randomGaugefields_4D_nowing(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
+                    )
+                end
 
             else
                 U = randomGaugefields_4D_wing(
