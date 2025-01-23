@@ -1064,3 +1064,23 @@ function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC}) where {NC}
     #println(3*NT*NZ*NY*NX*NC)
     return s
 end
+
+
+function substitute_U!(A::Gaugefields_4D_cuda{NC}, B::Gaugefields_4D_nowing{NC}) where {NC}
+    acpu = Array(A.U)
+
+    blockinfo = A.blockinfo
+    for r = 1:blockinfo.rsize
+        for b=1:blockinfo.blocksize
+            ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
+            for ic=1:NC
+                for jc=1:NC
+                    acpu[jc,ic,b,r] = B[jc,ic,ix,iy,iz,it] 
+                end
+            end
+        end
+    end
+    agpu = CuArray(acpu)
+    A.U .= agpu
+
+end
