@@ -1200,7 +1200,7 @@ function LinearAlgebra.tr(
     b::Gaugefields_4D_cuda{NC},
 ) where {NC}
 
-    CUDA.@sync begin
+    CUDA.@sync begin 
         CUDA.@cuda threads=a.blockinfo.blocksize blocks=a.blockinfo.rsize cudakernel_tr!(a.temp_volume,a.U,b.U,NC)
     end
 
