@@ -8,7 +8,7 @@ function MDtest!(gauge_action,U,Dim,Ucpu,gauge_actioncpu)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
-    MDsteps = 100
+    MDsteps = 1000
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -76,7 +76,7 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu)
     Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(Snew-Sold))
+    ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         substitute_U!(U,Uold)
         return false
