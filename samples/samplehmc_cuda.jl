@@ -70,6 +70,8 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu)
         P_update!(U,p,1.0,Δτ,Dim,gauge_action)
 
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        #error("1step")
     end
     Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
@@ -139,6 +141,7 @@ function test1()
         condition="hot")
 
 
+        #=
     tempcpu = Temporalfields(Ucpu[1]; num=5)
 
     volume = prod(NN)
@@ -184,6 +187,7 @@ function test1()
 
 
     return
+    =#
 
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")

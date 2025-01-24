@@ -349,12 +349,16 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_4D_cuda,NumofBasis} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
+    #clear_U!(uout)
 
     CUDA.@sync begin
         CUDA.@cuda threads=uout.blockinfo.blocksize blocks=uout.blockinfo.rsize cudakernel_exptU_TAwuww_NC3!(
-            w.U,u.a,ww.U,t)
+            w.U,u.a,ww.U,t) #w,u,ww,t
     end
+
+
     mul!(uout, w', ww)
+
 end
 
 function cudakernel_Traceless_antihermitian_add_TAU_NC3!(
@@ -441,6 +445,7 @@ function Traceless_antihermitian_add!(
     vin::Gaugefields_4D_cuda{3},
 ) where {NumofBasis}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+
 
 
     CUDA.@sync begin

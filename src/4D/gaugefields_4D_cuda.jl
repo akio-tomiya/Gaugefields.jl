@@ -10,26 +10,25 @@ struct Blockindices
     blocksize::Int64 #num. of Threads 
     rsize::Int64 #num. of blocks
 
-end
+    function Blockindices(L,blocks)
+        blocknumbers = div.(L,blocks)
 
-function Blockindices(L,blocks)
-    blocknumbers = div.(L,blocks)
-
-    dim = length(L)
-    blocks_s = ones(dim)
-    blocknumbers_s = ones(dim)
-    for i in 2:dim
-        for j in 1:i-1
-            blocknumbers_s[i] = blocknumbers_s[i]*blocknumbers[j]
-            blocks_s[i] = blocks_s[i]*blocks[j]
+        dim = length(L)
+        blocks_s = ones(dim)
+        blocknumbers_s = ones(dim)
+        for i in 2:dim
+            for j in 1:i-1
+                blocknumbers_s[i] = blocknumbers_s[i]*blocknumbers[j]
+                blocks_s[i] = blocks_s[i]*blocks[j]
+            end
         end
+
+        blocksize = prod(blocks)
+        rsize = prod(blocknumbers)
+
+        return new(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
+        
     end
-
-    blocksize = prod(blocks)
-    rsize = prod(blocknumbers)
-
-    return Blockindices(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
-    
 end
 
 """
@@ -74,7 +73,6 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         L = [NX,NY,NZ,NT]
         NDW = 0
         #blocksizes = prod(blocks)
-        
         #=
         blocknumbers = div.(L,blocks)
 
@@ -90,10 +88,9 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         blocksize = prod(blocks)
         rsize = prod(blocknumbers)
         =#
-        
+
 
         blockinfo = Blockindices(L,blocks)#Blockindices(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
-        #blockinfo = Blockindices(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
@@ -372,7 +369,7 @@ function cudakernel_mul_NC!(C,A,B,NC)
 
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
-            C[k1, k2, b,R] = 0
+            C[k1, k2, b,r] = 0
 
             for k3 = 1:NC
                 C[k1, k2, b,r] +=
@@ -388,7 +385,7 @@ function cudakernel_mul_NC!(C,A,B,α,β,NC)
 
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
-            C[k1, k2, b,R] = β*C[k1, k2, b,R] 
+            C[k1, k2, b,r] = β*C[k1, k2, b,r] 
 
             for k3 = 1:NC
                 C[k1, k2, b,r] +=
@@ -518,7 +515,7 @@ function cudakernel_mul_NC_abdag!(C,A,B,α,β,NC)
 
             for k3 = 1:NC
                 C[k1, k2, b,r] +=
-                    β*A[k1, k3, b,r] * conj(B[k2, k3, b,r])
+                    α*A[k1, k3, b,r] * conj(B[k2, k3, b,r])
             end
         end 
     end
@@ -534,7 +531,7 @@ function cudakernel_mul_NC_adagbdag!(C,A,B,α,β,NC)
 
             for k3 = 1:NC
                 C[k1, k2, b,r] +=
-                    β*conj(A[k3, k1, b,r]) * conj(B[k2, k3, b,r])
+                    α*conj(A[k3, k1, b,r]) * conj(B[k2, k3, b,r])
             end
         end 
     end
@@ -611,7 +608,7 @@ function LinearAlgebra.mul!(
     ) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
  
     CUDA.@sync begin
-        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_adagbdag!(c.U,a.parent.U,b.parent.U,0,1,NC)
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_adagbdag!(c.U,a.parent.U,b.parent.U,1,0,NC)
     end
 
 end
@@ -626,7 +623,7 @@ function cudakernel_mul_NC_adagb!(C,A,B,α,β,NC)
 
             for k3 = 1:NC
                 C[k1, k2, b,r] +=
-                    β*conj(A[k3, k1, b,r]) * B[k3, k2, b,r]
+                    α*conj(A[k3, k1, b,r]) * B[k3, k2, b,r]
             end
         end 
     end
@@ -653,7 +650,7 @@ function LinearAlgebra.mul!(
     ) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
  
     CUDA.@sync begin
-        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_adagb!(c.U,a.parent.U,b.U,0,1,NC)
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_adagb!(c.U,a.parent.U,b.U,1,0,NC)
     end
 end
 
@@ -787,13 +784,11 @@ function LinearAlgebra.mul!(
     β::Tb
     ) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number}
 
-
     CUDA.@sync begin
         CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_abshift!(c.U,a.U,b.parent.U,α,β,
                     b.shift,b.parent.blockinfo,NC)
     end
 end
-
 
 function LinearAlgebra.mul!(
     c::Gaugefields_4D_cuda{NC},
@@ -803,14 +798,11 @@ function LinearAlgebra.mul!(
     β::Tb
     ) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number}
 
-
-
     CUDA.@sync begin
         CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_ashiftb!(c.U,a.parent.U,b.U,α,β,
                     a.shift,a.parent.blockinfo,NC)
     end
 end
-
 
 function cudakernel_mul_NC_ashiftbshift!(C,A,B,α,β,ashift,bshift,blockinfo::Blockindices,NC)
     b = Int64(CUDA.threadIdx().x)
@@ -844,8 +836,6 @@ function LinearAlgebra.mul!(
                     a.shift,b.shift,a.parent.blockinfo,NC)
     end
 end
-
-#=
 
 function cudakernel_mul_NC_ashiftbshiftdag!(C,A,B,α,β,ashift,bshift,blockinfo::Blockindices,NC)
     b = Int64(CUDA.threadIdx().x)
@@ -882,7 +872,6 @@ function LinearAlgebra.mul!(
 end
 
 
-=#
 function cudakernel_mul_NC_adagbshift!(C,A,B,α,β,shift,blockinfo::Blockindices,NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
@@ -1134,7 +1123,8 @@ function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC}) where {NC}
 
     return s
 
-
+    #println(3*NT*NZ*NY*NX*NC)
+    return s
 end
 
 @inline convert_x(x, xd,xd_s) = mod(div(x-1,xd_s),xd)
@@ -1337,9 +1327,9 @@ function LinearAlgebra.mul!(
     c::Gaugefields_4D_cuda{NC},
     a::T1,
     b::T2
-    ) where {NC,T1,T2}
+    ) where {NC,T1,T2}#
 
-    LinearAlgebra.mul!(c,a,b,0,1)
+    LinearAlgebra.mul!(c,a,b,1,0)
 end
 
 function cudakernel_exptU_wvww!(w,v,ww,t,NC)
