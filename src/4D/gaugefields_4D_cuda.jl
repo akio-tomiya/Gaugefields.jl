@@ -1794,7 +1794,7 @@ end
 
 #Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
 #Omega' - Omega = -2i imag(Omega)
-function Traceless_antihermitian!(
+function Traceless_antihermitian!( 
     vout::Gaugefields_4D_cuda{3},
     vin::Gaugefields_4D_cuda{3},
 )
