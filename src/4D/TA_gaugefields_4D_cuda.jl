@@ -453,3 +453,50 @@ function Traceless_antihermitian_add!(
             c.a,vin.U,factor)
     end
 end
+
+function cudakernel_clear_TAU!(c,NumofBasis)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1,b,r] = 0
+    end
+    return
+end
+
+function clear_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_clear_TAU!(c.a,NumofBasis)
+    end
+end
+
+function cudakernel_add_TAU!(c,a,NumofBasis)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1,b,r] += a[k1,b,r]
+    end
+    return
+end
+
+
+function add_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}, a::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_add_TAU!(c.a,a.a,NumofBasis)
+    end
+end
+
+function cudakernel_add_TAU!(c,t::Number,a,NumofBasis)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1,b,r] += t*a[k1,b,r]
+    end
+    return
+end
+
+
+function add_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}, t::Number,    a::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_add_TAU!(c.a,t,a.a,NumofBasis)
+    end
+end

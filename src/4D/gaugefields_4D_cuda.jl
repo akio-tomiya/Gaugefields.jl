@@ -1126,6 +1126,40 @@ function LinearAlgebra.mul!(
     end
 end
 
+function cudakernel_mul_NC_ashiftdagbshift!(C,A,B,α,β,ashift,bshift,blockinfo::Blockindices,NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+
+    bshifted_a,rshifted_a = shiftedindex(b,r,ashift,blockinfo)
+    bshifted_b,rshifted_b = shiftedindex(b,r,bshift,blockinfo)
+
+    @inbounds for k2 = 1:NC
+        for k1 = 1:NC
+            C[k1, k2, b,r] = β*C[k1, k2, b,r] 
+
+            for k3 = 1:NC
+                C[k1, k2, b,r] +=
+                    α*conj(A[k3, k1, bshifted_a,rshifted_a]) * B[k3, k2, bshifted_b,rshifted_b]
+            end
+        end 
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_cuda{NC},
+    a::Adjoint_Gaugefields{T1},
+    b::T2,
+    α::Ta,
+    β::Tb
+    ) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number}
+
+    CUDA.@sync begin
+        CUDA.@cuda threads=c.blockinfo.blocksize blocks=c.blockinfo.rsize  cudakernel_mul_NC_ashiftdagbshift!(c.U,a.parent.parent.U,b.parent.U,α,β,
+                    a.parent.shift,b.shift,a.parent.parent.blockinfo,NC)
+    end
+end
+
+
 function cudakernel_tr!(temp_volume,U,NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
@@ -1141,11 +1175,37 @@ function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC}) where {NC}
         CUDA.@cuda threads=a.blockinfo.blocksize blocks=a.blockinfo.rsize cudakernel_tr!(a.temp_volume,a.U,NC)
     end
 
-    s = CUDA.mapreduce(real, +, a.temp_volume)
+    s = CUDA.reduce(+, a.temp_volume)
 
     return s
 
     #println(3*NT*NZ*NY*NX*NC)
+    return s
+end
+
+function cudakernel_tr!(temp_volume,A,B,NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    temp_volume[b,r] = 0
+    @inbounds for k = 1:NC
+        for k2 = 1:NC
+            temp_volume[b,r]  += A[k, k2,b,r] * B[k2, k, b,r]
+        end
+    end
+    return
+end
+
+function LinearAlgebra.tr(
+    a::Gaugefields_4D_cuda{NC},
+    b::Gaugefields_4D_cuda{NC},
+) where {NC}
+
+    CUDA.@sync begin
+        CUDA.@cuda threads=a.blockinfo.blocksize blocks=a.blockinfo.rsize cudakernel_tr!(a.temp_volume,a.U,b.U,NC)
+    end
+
+    s = CUDA.reduce(+, a.temp_volume)
+
     return s
 end
 
@@ -1646,5 +1706,100 @@ function mul_skiplastindex!(
     #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
 
     mul!(c,a,b)
+
+end
+
+function cudakernel_Traceless_antihermitian_NC3!(vout,vin)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+
+    fac13 = 1 / 3
+
+    v11 = vin[1, 1, b,r]
+    v21 = vin[2, 1, b,r]
+    v31 = vin[3, 1, b,r]
+
+    v12 = vin[1, 2, b,r]
+    v22 = vin[2, 2, b,r]
+    v32 = vin[3, 2, b,r]
+
+    v13 = vin[1, 3, b,r]
+    v23 = vin[2, 3, b,r]
+    v33 = vin[3, 3, b,r]
+
+
+    tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
+
+    #=
+    vout[1,1,ix,iy,iz,it] = (imag(v11)-tri)*im
+    vout[2,2,ix,iy,iz,it] = (imag(v22)-tri)*im
+    vout[3,3,ix,iy,iz,it] = (imag(v33)-tri)*im
+    =#
+    y11 = (imag(v11) - tri) * im
+    y22 = (imag(v22) - tri) * im
+    y33 = (imag(v33) - tri) * im
+
+
+
+    x12 = v12 - conj(v21)
+    x13 = v13 - conj(v31)
+    x23 = v23 - conj(v32)
+
+    x21 = -conj(x12)
+    x31 = -conj(x13)
+    x32 = -conj(x23)
+
+    #=
+    vout[1,2,ix,iy,iz,it] = 0.5  * x12
+    vout[1,3,ix,iy,iz,it] = 0.5  * x13
+    vout[2,1,ix,iy,iz,it] = 0.5  * x21
+    vout[2,3,ix,iy,iz,it] = 0.5  * x23
+    vout[3,1,ix,iy,iz,it] = 0.5  * x31
+    vout[3,2,ix,iy,iz,it] = 0.5  * x32
+    =#
+    y12 = 0.5 * x12
+    y13 = 0.5 * x13
+    y21 = 0.5 * x21
+    y23 = 0.5 * x23
+    y31 = 0.5 * x31
+    y32 = 0.5 * x32
+
+
+    vout[1, 1, b,r] = y11
+    vout[2, 1, b,r] = y21
+    vout[3, 1, b,r] = y31
+
+    vout[1, 2, b,r] = y12
+    vout[2, 2, b,r] = y22
+    vout[3, 2, b,r] = y32
+
+    vout[1, 3, b,r] = y13
+    vout[2, 3, b,r] = y23
+    vout[3, 3, b,r] = y33
+
+    return
+
+end
+
+
+"""
+-----------------------------------------------------c
+     !!!!!   vin and vout should be different vectors
+
+     Projectin of the etraceless antiermite part 
+     vout = x/2 - Tr(x)/6
+     wher   x = vin - Conjg(vin)      
+-----------------------------------------------------c
+    """
+
+#Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
+#Omega' - Omega = -2i imag(Omega)
+function Traceless_antihermitian!(
+    vout::Gaugefields_4D_cuda{3},
+    vin::Gaugefields_4D_cuda{3},
+)
+    CUDA.@sync begin
+        CUDA.@cuda threads=vout.blockinfo.blocksize blocks=vout.blockinfo.rsize  cudakernel_Traceless_antihermitian_NC3!(vout.U,vin.U)
+    end
 
 end
