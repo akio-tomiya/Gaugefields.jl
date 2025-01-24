@@ -8,7 +8,7 @@ function MDtest!(gauge_action,U,Dim,Ucpu,gauge_actioncpu)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
-    MDsteps = 20
+    MDsteps = 100
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -58,20 +58,20 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu,pcpu)
         pwork =CUDA.CuArray(pworkcpu)
 
         substitute_U!(p[μ],pwork)
-        substitute_U!(pcpu[μ],pworkcpu)
+        #substitute_U!(pcpu[μ],pworkcpu)
     end
 
     #gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,p)
-    println("Sold $Sold")
-    substitute_U!(Ucpu,U)
-    Soldcpu = calc_action(gauge_actioncpu,Ucpu,p)
-    println("Soldcpu $Soldcpu")
+    #println("Sold $Sold")
+    #substitute_U!(Ucpu,U)
+    #Soldcpu = calc_action(gauge_actioncpu,Ucpu,p)
+    #println("Soldcpu $Soldcpu")
 
     substitute_U!(Uold,U)
 
     for itrj=1:MDsteps
-        println(itrj,"/$MDsteps")
+        #println(itrj,"/$MDsteps")
         U_update!(U,p,0.5,Δτ,Dim,gauge_action,Ucpu,gauge_actioncpu,pcpu)
 
         P_update!(U,p,1.0,Δτ,Dim,gauge_action,Ucpu,gauge_actioncpu,pcpu)
@@ -105,11 +105,11 @@ function U_update!(U,p,ϵ,Δτ,Dim,gauge_action,Ucpu,gauge_actioncpu,pcpu)
     expU = temps[3]
     W = temps[4]
 
-    tempscpu = get_temporary_gaugefields(gauge_actioncpu)
-    temp1cpu = tempscpu[1]
-    temp2cpu = tempscpu[2]
-    expUcpu = tempscpu[3]
-    Wcpu = tempscpu[4]
+    #tempscpu = get_temporary_gaugefields(gauge_actioncpu)
+    #temp1cpu = tempscpu[1]
+    #temp2cpu = tempscpu[2]
+    #expUcpu = tempscpu[3]
+    #Wcpu = tempscpu[4]
 
     for μ=1:Dim
         #display(p[μ].a[:,1,1])
@@ -148,10 +148,10 @@ function P_update!(U,p,ϵ,Δτ,Dim,gauge_action,Ucpu,gauge_actioncpu,pcpu) # p -
     dSdUμ = temps[end]
     factor =  -ϵ*Δτ/(NC)
 
-    tempscpu = get_temporary_gaugefields(gauge_actioncpu)
-    dSdUμcpu = tempscpu[end]
+    #tempscpu = get_temporary_gaugefields(gauge_actioncpu)
+    #dSdUμcpu = tempscpu[end]
 
-    substitute_U!(Ucpu,U)
+    #substitute_U!(Ucpu,U)
 
     for μ=1:Dim
         calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
