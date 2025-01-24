@@ -27,6 +27,8 @@ function __init__()
     #end
 end
 
+include("./kernelfunctions/gaugefields_4D_kernels.jl")
+
 include("./gaugefields_4D_cuda.jl")
 
 
