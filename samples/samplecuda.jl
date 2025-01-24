@@ -21,11 +21,15 @@ function main()
         cuda=true,
         blocks)
 
+    return
+
     Ucpu  =Initialize_Gaugefields(
         NC,
         Nwing,
         NN...;
         condition="hot")
+
+
 
     tempcpu = Temporalfields(Ucpu[1]; num=5)
 

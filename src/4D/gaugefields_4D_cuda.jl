@@ -94,10 +94,14 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
-        U = zeros(ComplexF64, NC, NC,blocksize,rsize) |> CUDA.CuArray
+        if CUDA.has_cuda()
+            U = zeros(ComplexF64, NC, NC,blocksize,rsize) |> CUDA.CuArray
+            temp_volume = zeros(ComplexF64, blocksize,rsize) |> CUDA.CuArray
+        else
+            U = zeros(ComplexF64, NC, NC,blocksize,rsize)
+            temp_volume = zeros(ComplexF64, blocksize,rsize) |> CUDA.CuArray
+        end
         TU = typeof(U)
-
-        temp_volume = zeros(ComplexF64, blocksize,rsize) |> CUDA.CuArray
         TUv = typeof(temp_volume)
         #println(typeof(U))
         #U = zeros(ComplexF64, NC, NC, NX + 2NDW, NY + 2NDW, NZ + 2NDW, NT + 2NDW)
@@ -149,11 +153,33 @@ end
 function identityGaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level=2)
     U = Gaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level)
 
+    set_identity!(U)
+    return 
+    #=
     CUDA.@sync begin
         CUDA.@cuda threads=U.blockinfo.blocksize blocks=U.blockinfo.rsize cudakernel_identityGaugefields!(U.U,NC)
     end
 
     return U
+    =#
+end
+
+function set_identity!(U::Gaugefields_4D_cuda{NC,TU,TUv} ) where {NC,TU <: CuArray,TUv}
+    CUDA.@sync begin
+        CUDA.@cuda threads=U.blockinfo.blocksize blocks=U.blockinfo.rsize cudakernel_identityGaugefields!(U.U,NC)
+    end
+end
+
+function set_identity!(U::Gaugefields_4D_cuda{NC,TU,TUv} ) where {NC,TU,TUv}
+    for r=1:U.blockinfo.rsize
+        for b=1:U.blockinfo.blocksize
+            @inbounds for ic=1:NC
+                U.U[ic,ic,b,r] = 1
+            end 
+        end
+    end
+        #CUDA.@cuda threads=U.blockinfo.blocksize blocks=U.blockinfo.rsize cudakernel_identityGaugefields!(U.U,NC)
+    #end
 end
 
 function cudakernel_randomGaugefields!(U,NC) 
