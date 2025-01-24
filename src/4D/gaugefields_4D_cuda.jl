@@ -1637,3 +1637,14 @@ function exptU!(
 end
 
 
+
+function mul_skiplastindex!(
+    c::Gaugefields_4D_cuda{NC},
+    a::T1,
+    b::T2,
+) where {NC,T1<:Abstractfields,T2<:Abstractfields}
+    #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+
+    mul!(c,a,b)
+
+end

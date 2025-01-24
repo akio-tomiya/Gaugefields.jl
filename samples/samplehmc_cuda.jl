@@ -8,7 +8,7 @@ function MDtest!(gauge_action,U,Dim,Ucpu,gauge_actioncpu)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
-    MDsteps = 100
+    MDsteps = 10
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -26,13 +26,14 @@ function MDtest!(gauge_action,U,Dim,Ucpu,gauge_actioncpu)
     plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
     println("initial plaq: $plaq_t")
 
-    substitute_U!(Ucpu,U)
-    plaqcpu_t = calculate_Plaquette(Ucpu,tempcpu1,tempcpu2)*factor
-    println("initial plaq in cpu: $plaqcpu_t")
+    #substitute_U!(Ucpu,U)
+    #plaqcpu_t = calculate_Plaquette(Ucpu,tempcpu1,tempcpu2)*factor
+    #println("initial plaq in cpu: $plaqcpu_t")
+    println("MDsteps $MDsteps")
 
-    numtrj = 100
+    numtrj = 50
     for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu,pcpu)
+        @time accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu,pcpu)
         numaccepted += ifelse(accepted,1,0)
 
         plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
@@ -176,6 +177,7 @@ function test1()
     #U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
     NN = [NX,NY,NZ,NT]
     blocks = [4,4,4,4]
+    #blocks = [8,8,8,8]
 
     U  =Initialize_Gaugefields(
         NC,
