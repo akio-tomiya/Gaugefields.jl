@@ -31,6 +31,7 @@ include("./gaugefields_4D_cuda.jl")
 
 
 
+
 function Base.size(U::Gaugefields_4D{NC}) where {NC}
     return NC, NC, U.NX, U.NY, U.NZ, U.NT
 end
