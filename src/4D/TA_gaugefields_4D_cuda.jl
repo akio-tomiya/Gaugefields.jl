@@ -59,7 +59,7 @@ function cudakernel_substitute_TAU!(Uμ,pwork,blockinfo,NumofBasis,NX,NY,NZ,NT)
 
     ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
     @inbounds for k=1:NumofBasis
-        icount = ((((k-1)*NX + ix-1)*NY + iy-1)*NZ+iz-1)*NT + it
+        icount = ((((it-1)*NZ+iz-1)*NY+iy-1)*NX+ix-1)*NumofBasis+k
         Uμ[k, b,r] = pwork[icount]
     end
 

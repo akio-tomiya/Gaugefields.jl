@@ -1,11 +1,12 @@
 using Gaugefields
 using LinearAlgebra
+using Random
 
 function MDtest!(gauge_action,U,Dim)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold,U)
-    MDsteps = 100
+    MDsteps = 20
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -13,6 +14,9 @@ function MDtest!(gauge_action,U,Dim)
     numaccepted = 0
 
     Random.seed!(123)
+
+    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+    println("initial plaq: $plaq_t")
 
     numtrj = 100
     for itrj = 1:numtrj
@@ -46,9 +50,14 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     #gauss_distribution!(p)
     Sold = calc_action(gauge_action,U,p)
     substitute_U!(Uold,U)
+    println(" Sold $Sold")
 
     for itrj=1:MDsteps
+        println(itrj,"/$MDsteps")
         U_update!(U,p,0.5,Δτ,Dim,gauge_action)
+
+        #Si = calc_action(gauge_action,U,p)
+        #println("$itrj Si $Si")
 
         P_update!(U,p,1.0,Δτ,Dim,gauge_action)
 
@@ -57,7 +66,7 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
     Snew = calc_action(gauge_action,U,p)
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(Snew-Sold))
+    ratio = min(1,exp(-Snew+Sold))
     if rand() > ratio
         substitute_U!(U,Uold)
         return false
@@ -74,11 +83,29 @@ function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
     W = temps[4]
 
     for μ=1:Dim
+        #exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+
+        #display(expU.U[:,:,1,1,1,1])
+
+        #mul!(W,expU,U[μ])
+        #substitute_U!(U[μ],W)
+
         exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
+        println("expU")
+        display(expU.U[:,:,1,1,1,1])
+        println("U[μ]")
+        display(U[μ].U[:,:,1,1,1,1])
         mul!(W,expU,U[μ])
+        println("W")
+        display(W.U[:,:,1,1,1,1])
+        println("U")
         substitute_U!(U[μ],W)
+        display(U[μ].U[:,:,1,1,1,1])
+        
+
         
     end
+    error("up")
 end
 
 function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
@@ -95,11 +122,11 @@ function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
 end
 
 function test1()
-    NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
-    Nwing = 1
+    NX = 16
+    NY = 16
+    NZ = 16
+    NT = 16
+    Nwing = 0
     Dim = 4
     NC = 3
 
@@ -109,7 +136,7 @@ function test1()
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
     append!(plaqloop,plaqloop')
-    β = 5.7/2
+    β = 6.0/2
     push!(gauge_action,β,plaqloop)
     
     show(gauge_action)
