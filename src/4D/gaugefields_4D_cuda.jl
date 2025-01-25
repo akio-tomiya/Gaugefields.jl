@@ -144,7 +144,7 @@ end
 function set_identity!(U::Gaugefields_4D_cuda{NC,TU,TUv} ) where {NC,TU,TUv}
     for r=1:U.blockinfo.rsize
         for b=1:U.blockinfo.blocksize
-            kernel_identityGaugefields!(b,r,U, NC)
+            kernel_identityGaugefields!(b,r,U.U, NC)
             #@inbounds for ic=1:NC
             #    U.U[ic,ic,b,r] = 1
             #end 
@@ -157,7 +157,7 @@ end
 function cudakernel_randomGaugefields!(U, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    kernel_randomGaugefields!(b,r,U, NC)
+    kernel_randomGaugefields!(b,r,U.U, NC)
     #=
     @inbounds for ic = 1:NC
         for jc = 1:NC
