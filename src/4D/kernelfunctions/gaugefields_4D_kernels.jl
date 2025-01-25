@@ -145,13 +145,13 @@ end
 
 
 
-function kernel_identityGaugefields!(U, NC,b,r)
+function kernel_identityGaugefields!(b,r,U, NC)
     @inbounds for ic = 1:NC
         U[ic, ic, b, r] = 1
     end
 end
 
-function kernel_randomGaugefields!(U, NC,b,r)
+function kernel_randomGaugefields!(b,r,U, NC)
     @inbounds for ic = 1:NC
         for jc = 1:NC
             U[jc, ic, b, r] = rand() - 0.5 + im * (rand() - 0.5)
@@ -159,7 +159,7 @@ function kernel_randomGaugefields!(U, NC,b,r)
     end
 end
 
-function kernel_normalize_U_NC2!(u,b,r)
+function kernel_normalize_U_NC2!(b,r,u)
     α = u[1, 1, b, r]
     β = u[2, 1, b, r]
     detU = sqrt(abs(α)^2 + abs(β)^2)
@@ -170,7 +170,7 @@ function kernel_normalize_U_NC2!(u,b,r)
     return
 end
 
-function kernel_normalize_U_NC3!(u,b,r)
+function kernel_normalize_U_NC3!(b,r,u)
     #b = Int64(CUDA.threadIdx().x)
     #r = Int64(CUDA.blockIdx().x)
     w1 = 0
@@ -235,7 +235,7 @@ function kernel_normalize_U_NC3!(u,b,r)
 end
 
 
-function kernel_mul_NC!(C, A, B, NC,b,r)
+function kernel_mul_NC!(b,r,C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -247,7 +247,7 @@ function kernel_mul_NC!(C, A, B, NC,b,r)
     end
 end
 
-function kernel_mul_NC!(C, A, B, α, β, NC,b,r)
+function kernel_mul_NC!(b,r,C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -260,7 +260,7 @@ function kernel_mul_NC!(C, A, B, α, β, NC,b,r)
     end
 end
 
-function kernel_mul_NC3!(C, A, B,b,r)
+function kernel_mul_NC3!(b,r,C, A, B)
     a11 = A[1, 1, b, r]
     a21 = A[2, 1, b, r]
     a31 = A[3, 1, b, r]
@@ -293,7 +293,7 @@ function kernel_mul_NC3!(C, A, B,b,r)
 
 end
 
-function kernel_mul_NC3!(C, A, B, α, β,b,r)
+function kernel_mul_NC3!(b,r,C, A, B, α, β)
     a11 = α * A[1, 1, b, r]
     a21 = α * A[2, 1, b, r]
     a31 = α * A[3, 1, b, r]
@@ -327,7 +327,7 @@ function kernel_mul_NC3!(C, A, B, α, β,b,r)
 end
 
 
-function kernel_mul_NC_abdag!(C, A, B, NC,b,r)
+function kernel_mul_NC_abdag!(b,r,C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -340,7 +340,7 @@ function kernel_mul_NC_abdag!(C, A, B, NC,b,r)
     end
 end
 
-function kernel_mul_NC_abdag!(C, A, B, α, β, NC,b,r)
+function kernel_mul_NC_abdag!(b,r,C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -354,7 +354,7 @@ function kernel_mul_NC_abdag!(C, A, B, α, β, NC,b,r)
 end
 
 
-function kernel_mul_NC_adagbdag!(C, A, B, α, β, NC,b,r)
+function kernel_mul_NC_adagbdag!(b,r,C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -367,7 +367,7 @@ function kernel_mul_NC_adagbdag!(C, A, B, α, β, NC,b,r)
     end
 end
 
-function kernel_mul_NC_adagbdag!(C, A, B, NC,b,r)
+function kernel_mul_NC_adagbdag!(b,r,C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -380,7 +380,7 @@ function kernel_mul_NC_adagbdag!(C, A, B, NC,b,r)
     end
 end
 
-function kernel_mul_NC_adagb!(C, A, B, α, β, NC,b,r)
+function kernel_mul_NC_adagb!(b,r,C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -394,7 +394,7 @@ function kernel_mul_NC_adagb!(C, A, B, α, β, NC,b,r)
 end
 
 
-function kernel_mul_NC_abshift!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_abshift!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -410,7 +410,7 @@ function kernel_mul_NC_abshift!(C, A, B, α, β, shift, blockinfo::Blockindices,
 end
 
 
-function kernel_mul_NC_ashiftb!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftb!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -426,7 +426,7 @@ function kernel_mul_NC_ashiftb!(C, A, B, α, β, shift, blockinfo::Blockindices,
 end
 
 
-function kernel_mul_NC_ashiftbshift!(C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftbshift!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -442,7 +442,7 @@ function kernel_mul_NC_ashiftbshift!(C, A, B, α, β, ashift, bshift, blockinfo:
     end
 end
 
-function kernel_mul_NC_ashiftbshiftdag!(C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -458,7 +458,7 @@ function kernel_mul_NC_ashiftbshiftdag!(C, A, B, α, β, ashift, bshift, blockin
     end
 end
 
-function kernel_mul_NC_adagbshift!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_adagbshift!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -473,7 +473,7 @@ function kernel_mul_NC_adagbshift!(C, A, B, α, β, shift, blockinfo::Blockindic
     end
 end
 
-function kernel_mul_NC_adagbshiftdag!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_adagbshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -488,7 +488,7 @@ function kernel_mul_NC_adagbshiftdag!(C, A, B, α, β, shift, blockinfo::Blockin
     end
 end
 
-function kernel_mul_NC_ashiftbdag!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -503,7 +503,7 @@ function kernel_mul_NC_ashiftbdag!(C, A, B, α, β, shift, blockinfo::Blockindic
     end
 end
 
-function kernel_mul_NC_ashiftdagbdag!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftdagbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
 
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
@@ -519,7 +519,7 @@ function kernel_mul_NC_ashiftdagbdag!(C, A, B, α, β, shift, blockinfo::Blockin
     end
 end
 
-function kernel_mul_NC_abshiftdag!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_abshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -534,7 +534,7 @@ function kernel_mul_NC_abshiftdag!(C, A, B, α, β, shift, blockinfo::Blockindic
     end
 end
 
-function kernel_mul_NC_ashiftdagb!(C, A, B, α, β, shift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftdagb!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -549,7 +549,7 @@ function kernel_mul_NC_ashiftdagb!(C, A, B, α, β, shift, blockinfo::Blockindic
     end
 end
 
-function kernel_mul_NC_ashiftdagbshiftdag!(C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftdagbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -565,7 +565,7 @@ function kernel_mul_NC_ashiftdagbshiftdag!(C, A, B, α, β, ashift, bshift, bloc
     end
 end
 
-function kernel_mul_NC_ashiftdagbshift!(C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC,b,r)
+function kernel_mul_NC_ashiftdagbshift!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -581,7 +581,7 @@ function kernel_mul_NC_ashiftdagbshift!(C, A, B, α, β, ashift, bshift, blockin
     end
 end
 
-function kernel_tr!(temp_volume, U, NC,b,r)
+function kernel_tr!(b,r,temp_volume, U, NC)
     temp_volume[b, r] = 0
     @inbounds for k = 1:NC
         temp_volume[b, r] += U[k, k, b, r]
@@ -589,7 +589,7 @@ function kernel_tr!(temp_volume, U, NC,b,r)
     return
 end
 
-function kernel_add_U!(c, a, NC,b,r)
+function kernel_add_U!(b,r,c, a, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += a[k2, k1, b, r]
@@ -598,7 +598,7 @@ function kernel_add_U!(c, a, NC,b,r)
     return
 end
 
-function kernel_add_U_αa!(c, a, α, NC,b,r)
+function kernel_add_U_αa!(b,r,c, a, α, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += α * a[k2, k1, b, r]
@@ -607,7 +607,7 @@ function kernel_add_U_αa!(c, a, α, NC,b,r)
     return
 end
 
-function kernel_add_U_αadag!(c, a, α, NC,b,r)
+function kernel_add_U_αadag!(b,r,c, a, α, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += α * conj(a[k1, k2, b, r])
@@ -616,7 +616,7 @@ function kernel_add_U_αadag!(c, a, α, NC,b,r)
     return
 end
 
-function kernel_clear_U!(c, NC,b,r)
+function kernel_clear_U!(b,r,c, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] = 0
@@ -625,7 +625,7 @@ function kernel_clear_U!(c, NC,b,r)
     return
 end
 
-function kernel_exptU_wvww!(w, v, ww, t, NC,b,r)
+function kernel_exptU_wvww!(b,r,w, v, ww, t, NC)
     v11 = v[1, 1, b, r]
     v22 = v[2, 2, b, r]
     v33 = v[3, 3, b, r]
@@ -938,7 +938,7 @@ function kernel_Traceless_antihermitian_NC3!(vout, vin,b,r)
 
 end
 
-function kernel_tr!(temp_volume, A, B, NC,b,r)
+function kernel_tr!(b,r,temp_volume, A, B, NC)
     temp_volume[b, r] = 0
     @inbounds for k = 1:NC
         for k2 = 1:NC
@@ -948,7 +948,7 @@ function kernel_tr!(temp_volume, A, B, NC,b,r)
     return
 end
 
-function kernel_add_U_αshifta!(c, a, α, shift, blockinfo, NC,b,r)
+function kernel_add_U_αshifta!(b,r,c, a, α, shift, blockinfo, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k1 = 1:NC
