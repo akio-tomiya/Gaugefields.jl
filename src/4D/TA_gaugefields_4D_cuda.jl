@@ -26,11 +26,20 @@ struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
+        if CUDA.has_cuda()
+            a = zeros(Float64, NumofBasis,blocksize,rsize ) |> CUDA.CuArray
+            temp_volume = zeros(Float64, blocksize,rsize) |> CUDA.CuArray
+        else
+            @warn "no cuda devise is found. CPU will be used"
+            a = zeros(Float64, NumofBasis,blocksize,rsize ) 
+            temp_volume = zeros(Float64, blocksize,rsize) 
+        end
 
-        a = zeros(Float64, NumofBasis,blocksize,rsize ) |> CUDA.CuArray
+
+        #a = zeros(Float64, NumofBasis,blocksize,rsize ) |> CUDA.CuArray
         Ta = typeof(a)
 
-        temp_volume = zeros(Float64, blocksize,rsize) |> CUDA.CuArray
+        #temp_volume = zeros(Float64, blocksize,rsize) |> CUDA.CuArray
         TUv = typeof(temp_volume)
 
         return new{NC,NumofBasis,Ta,TUv}(
@@ -56,19 +65,15 @@ end
 function cudakernel_substitute_TAU!(Uμ,pwork,blockinfo,NumofBasis,NX,NY,NZ,NT)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-
-    ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
-    @inbounds for k=1:NumofBasis
-        icount = ((((it-1)*NZ+iz-1)*NY+iy-1)*NX+ix-1)*NumofBasis+k
-        Uμ[k, b,r] = pwork[icount]
-    end
-
+    kernel_substitute_TAU!(b,r,Uμ,pwork,blockinfo,NumofBasis,NX,NY,NZ,NT)
 end
 
+
+
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta},
+    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
     pwork::CUDA.CuArray,
-) where {NC,NumofBasis,Ta}
+) where {NC,NumofBasis,Ta <:CUDA.CuArray,TUv}
 
     NT = Uμ.NT
     NZ = Uμ.NZ 
@@ -83,9 +88,29 @@ function substitute_U!(
 end
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta},
+    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
     pwork,
-) where {NC,NumofBasis,Ta}
+) where {NC,NumofBasis,Ta,TUv}
+
+    NT = Uμ.NT
+    NZ = Uμ.NZ 
+    NY = Uμ.NY
+    NX = Uμ.NX
+
+    for r=1:Uμ.blockinfo.rsize
+        for b=1:Uμ.blockinfo.blocksize
+            kernel_substitute_TAU!(b,r,
+                Uμ.a,pwork,Uμ.blockinfo,NumofBasis,NX,NY,NZ,NT)
+        end
+    end
+
+
+end
+
+function substitute_U!(
+    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    pwork,
+) where {NC,NumofBasis,Ta <:CUDA.CuArray,TUv}
 
     pwork_gpu = pwork |> CUDA.CuArray
     substitute_U!(
@@ -102,23 +127,39 @@ end
 function cudakernel_mult_xTAyTA!(temp,x,y,NumofBasis)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    temp[b,r] = 0
-    @inbounds for k = 1:NumofBasis
-        temp[b,r] += x[k, b,r] * y[k, b,r]
-    end
+    kernel_mult_xTAyTA!(b,r,temp,x,y,NumofBasis)
     return
 end
 
+
+
 function Base.:*(
-    x::TA_Gaugefields_4D_cuda{NC,NumofBasis},
-    y::TA_Gaugefields_4D_cuda{NC,NumofBasis},
-) where {NC,NumofBasis}
+    x::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    y::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+) where {NC,NumofBasis,Ta <: CUDA.CuArray ,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads=x.blockinfo.blocksize blocks=x.blockinfo.rsize cudakernel_mult_xTAyTA!(x.temp_volume,
                 x.a,y.a,NumofBasis)
     end
     s = CUDA.reduce(+, x.temp_volume)
+    return s
+end
+
+function Base.:*(
+    x::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    y::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+) where {NC,NumofBasis,Ta ,TUv}
+
+
+    for r=1:x.blockinfo.rsize
+        for b=1:x.blockinfo.blocksize
+            kernel_mult_xTAyTA!(b,r,x.temp_volume,
+                x.a,y.a,NumofBasis)
+        end
+    end
+
+    s = reduce(+, x.temp_volume)
     return s
 end
 
@@ -145,8 +186,13 @@ end
 function cudakernel_exptU_TAwuww_NC3!(w,u,ww,t)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
+    kernel_exptU_TAwuww_NC3!(b,r,w,u,ww,t)
 
 
+    return
+end
+
+function kernel_exptU_TAwuww_NC3!(b,r,w,u,ww,t)
     c1 = t * u[1,b,r] * 0.5
     c2 = t * u[2,b,r] * 0.5
     c3 = t * u[3,b,r] * 0.5
@@ -365,79 +411,11 @@ function cudakernel_Traceless_antihermitian_add_TAU_NC3!(
     c,vin,factor)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-
-    fac13 = 1 / 3
-
-
-    v11 = vin[1, 1, b,r]
-    v22 = vin[2, 2, b,r]
-    v33 = vin[3, 3, b,r]
-
-    tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
-
-    #=
-    vout[1,1,ix,iy,iz,it] = (imag(v11)-tri)*im
-    vout[2,2,ix,iy,iz,it] = (imag(v22)-tri)*im
-    vout[3,3,ix,iy,iz,it] = (imag(v33)-tri)*im
-    =#
-    y11 = (imag(v11) - tri) * im
-    y22 = (imag(v22) - tri) * im
-    y33 = (imag(v33) - tri) * im
-
-    v12 = vin[1, 2, b,r]
-    v13 = vin[1, 3, b,r]
-    v21 = vin[2, 1, b,r]
-    v23 = vin[2, 3, b,r]
-    v31 = vin[3, 1, b,r]
-    v32 = vin[3, 2, b,r]
-
-    x12 = v12 - conj(v21)
-    x13 = v13 - conj(v31)
-    x23 = v23 - conj(v32)
-
-    x21 = -conj(x12)
-    x31 = -conj(x13)
-    x32 = -conj(x23)
-
-    #=
-    vout[1,2,ix,iy,iz,it] = 0.5  * x12
-    vout[1,3,ix,iy,iz,it] = 0.5  * x13
-    vout[2,1,ix,iy,iz,it] = 0.5  * x21
-    vout[2,3,ix,iy,iz,it] = 0.5  * x23
-    vout[3,1,ix,iy,iz,it] = 0.5  * x31
-    vout[3,2,ix,iy,iz,it] = 0.5  * x32
-    =#
-    y12 = 0.5 * x12
-    y13 = 0.5 * x13
-    y21 = 0.5 * x21
-    y23 = 0.5 * x23
-    y31 = 0.5 * x31
-    y32 = 0.5 * x32
-
-
-    c[1, b,r] =
-        (imag(y12) + imag(y21)) * factor + c[1, b,r]
-    c[2, b,r] =
-        (real(y12) - real(y21)) * factor + c[2, b,r]
-    c[3, b,r] =
-        (imag(y11) - imag(y22)) * factor + c[3, b,r]
-    c[4, b,r] =
-        (imag(y13) + imag(y31)) * factor + c[4, b,r]
-    c[5, b,r] =
-        (real(y13) - real(y31)) * factor + c[5, b,r]
-
-    c[6, b,r] =
-        (imag(y23) + imag(y32)) * factor + c[6, b,r]
-    c[7, b,r] =
-        (real(y23) - real(y32)) * factor + c[7, b,r]
-    c[8, b,r] =
-        sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor +
-        c[8, b,r]
-
+    kernel_Traceless_antihermitian_add_TAU_NC3!(b,r,
+            c,vin,factor)
     return
 
 end
-
 
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_4D_cuda{3,NumofBasis},

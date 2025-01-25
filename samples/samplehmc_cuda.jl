@@ -176,7 +176,7 @@ function test1()
 
     #U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
     NN = [NX,NY,NZ,NT]
-    blocks = [4,4,8,8]
+    blocks = [4,4,4,4]
     #blocks = [8,8,8,8]
 
     U  =Initialize_Gaugefields(
