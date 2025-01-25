@@ -937,3 +937,24 @@ function kernel_Traceless_antihermitian_NC3!(vout, vin,b,r)
     return
 
 end
+
+function kernel_tr!(temp_volume, A, B, NC,b,r)
+    temp_volume[b, r] = 0
+    @inbounds for k = 1:NC
+        for k2 = 1:NC
+            temp_volume[b, r] += A[k, k2, b, r] * B[k2, k, b, r]
+        end
+    end
+    return
+end
+
+function kernel_add_U_αshifta!(c, a, α, shift, blockinfo, NC,b,r)
+    bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
+
+    @inbounds for k1 = 1:NC
+        for k2 = 1:NC
+            c[k2, k1, b, r] += α * a[k2, k1, bshifted, rshifted]
+        end
+    end
+    return
+end
