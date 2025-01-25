@@ -56,7 +56,11 @@ function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold,Ucpu,gauge_actioncpu,pcpu)
     NC,_,NN... = size(U[1])
     for μ=1:Dim
         pworkcpu = gauss_distribution(prod(NN)*(NC^2-1)) 
-        pwork =CUDA.CuArray(pworkcpu)
+        if CUDA.has_cuda()
+            pwork =CUDA.CuArray(pworkcpu)
+        else
+            pwork = pworkcpu
+        end
 
         substitute_U!(p[μ],pwork)
         #substitute_U!(pcpu[μ],pworkcpu)
