@@ -78,6 +78,7 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise} <: Gaugefields_4D{NC}
                 @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
                 U = zeros(ComplexF64, NC, NC, blocksize, rsize)
                 temp_volume = zeros(ComplexF64, blocksize, rsize)
+                accdevise = :threads
                 accdevise = :none
             end
         else
@@ -112,7 +113,7 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_accelerator}
         U.NT,
         U.blockinfo.blocks,
         verbose_level=U.verbose_print.level,
-        accelerator= U.accelerator
+        accelerator=U.accelerator
     )
     #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
@@ -360,7 +361,7 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::T2) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
@@ -369,6 +370,18 @@ function LinearAlgebra.mul!(
         end
     end
 end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::T2) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC!(b, r, c.U, A.U, B.U, NC)
+        end
+    end
+end
+
 
 function cudakernel_mul_NC!(C, A, B, α, β, NC)
     b = Int64(CUDA.threadIdx().x)
@@ -390,7 +403,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::T2,
     α::Ta,
@@ -399,6 +412,21 @@ function LinearAlgebra.mul!(
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            cudakernel_mul_NC!(b, r, c.U, A.U, B.U, α, β, NC)
+        end
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+    α::Ta,
+    β::Tb,
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             cudakernel_mul_NC!(b, r, c.U, A.U, B.U, α, β, NC)
         end
     end
@@ -427,12 +455,24 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv,:none},
     A::T1,
     B::T2,
 ) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC3!(b, r, c.U, A.U, B.U)
+        end
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{3,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC3!(b, r, c.U, A.U, B.U)
         end
     end
@@ -455,7 +495,19 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_abdag!(b, r, c.U, A.U, B.parent.U, NC)
+        end
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
 
@@ -488,7 +540,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv,:none},
     A::T1,
     B::T2,
     α::Ta,
@@ -496,6 +548,20 @@ function LinearAlgebra.mul!(
 ) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC3!(b, r, c.U, A.U, B.U, α, β, NC)
+        end
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{3,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+    α::Ta,
+    β::Tb,
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC3!(b, r, c.U, A.U, B.U, α, β, NC)
         end
     end
@@ -520,7 +586,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
@@ -533,6 +599,19 @@ function LinearAlgebra.mul!(
     end
 end
 
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::Adjoint_Gaugefields{T2},
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_abdag!(b, r, c.U, A.U, B.parent.U, α, β, NC)
+        end
+    end
+end
 
 function cudakernel_mul_NC_adagbdag!(C, A, B, α, β, NC)
     b = Int64(CUDA.threadIdx().x)
@@ -556,7 +635,7 @@ end
 
 #c = A'* B'
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2},
     α::Ta,
@@ -569,6 +648,22 @@ function LinearAlgebra.mul!(
         end
     end
 end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::Adjoint_Gaugefields{T1},
+    B::Adjoint_Gaugefields{T2},
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_adagbdag!(b, r, c.U, A.parent.U, B.parent.U, α, β, NC)
+        end
+    end
+end
+
 
 function cudakernel_mul_NC_adagbdag!(C, A, B, NC)
     b = Int64(CUDA.threadIdx().x)
@@ -590,13 +685,27 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2}
 ) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_adagbdag!(b, r, c.U, A.parent.U, B.parent.U, NC)
+        end
+    end
+
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::Adjoint_Gaugefields{T1},
+    B::Adjoint_Gaugefields{T2}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_adagbdag!(b, r, c.U, A.parent.U, B.parent.U, NC)
         end
     end
@@ -625,7 +734,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
@@ -639,6 +748,23 @@ function LinearAlgebra.mul!(
     end
 
 end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::Adjoint_Gaugefields{T1},
+    B::T2,
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_adagb!(b, r, c.U, A.parent.U, B.U, α, β, NC)
+        end
+    end
+
+end
+
 
 
 
@@ -665,7 +791,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::T2,
     α::Ta,
@@ -678,6 +804,22 @@ function LinearAlgebra.mul!(
         end
     end
 end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_abshift!(b, r, c.U, A.U, B.parent.U, α, β,
+                B.shift, B.parent.blockinfo, NC)
+        end
+    end
+end
+
 
 function cudakernel_mul_NC_ashiftb!(C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     b = Int64(CUDA.threadIdx().x)
@@ -703,7 +845,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::T2,
     α::Ta,
@@ -712,6 +854,23 @@ function LinearAlgebra.mul!(
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_ashiftb!(b, r, c.U, A.parent.U, B.U, α, β,
+                A.shift, B.parent.blockinfo, NC)
+        end
+    end
+
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_ashiftb!(b, r, c.U, A.parent.U, B.U, α, β,
                 A.shift, B.parent.blockinfo, NC)
         end
@@ -741,7 +900,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::T2,
     α::Ta,
@@ -750,6 +909,23 @@ function LinearAlgebra.mul!(
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_ashiftbshift!(b, r, c.U, A.parent.U, B.parent.U, α, β,
+                A.shift, B.shift, B.parent.blockinfo, NC)
+        end
+    end
+
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::T2,
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_ashiftbshift!(b, r, c.U, A.parent.U, B.parent.U, α, β,
                 A.shift, B.shift, B.parent.blockinfo, NC)
         end
@@ -782,7 +958,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
@@ -798,6 +974,25 @@ function LinearAlgebra.mul!(
     end
 
 end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::T1,
+    B::Adjoint_Gaugefields{T2},
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_ashiftbshiftdag!(b, r,
+                c.U, A.parent.U, B.parent.parent.U, α, β,
+                A.shift, B.parent.shift, A.parent.blockinfo, NC)
+        end
+    end
+
+end
+
 
 
 
@@ -824,7 +1019,7 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
@@ -833,6 +1028,22 @@ function LinearAlgebra.mul!(
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
+            kernel_mul_NC_adagbshift!(b, r, c.U, A.parent.U, B.parent.U, α, β,
+                B.shift, B.parent.blockinfo, NC)
+        end
+    end
+end
+
+function LinearAlgebra.mul!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:threads},
+    A::Adjoint_Gaugefields{T1},
+    B::T2,
+    α::Ta,
+    β::Tb
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
+
+    Threads.@threads for r = 1:c.blockinfo.rsize
+        Threads.@threads for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_adagbshift!(b, r, c.U, A.parent.U, B.parent.U, α, β,
                 B.shift, B.parent.blockinfo, NC)
         end
