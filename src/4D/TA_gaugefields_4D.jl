@@ -2,7 +2,7 @@ abstract type TA_Gaugefields_4D{NC} <: TA_Gaugefields{NC,4} end
 
 include("./TA_gaugefields_4D_serial.jl")
 
-include("./TA_Gaugefields_4D_accelerator.jl")
+include("./TA_gaugefields_4D_accelerator.jl")
 
 #=
 function __init__()

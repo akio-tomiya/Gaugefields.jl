@@ -29,7 +29,7 @@ end
 
 include("./kernelfunctions/gaugefields_4D_kernels.jl")
 
-include("./Gaugefields_4D_accelerator.jl")
+include("./gaugefields_4D_accelerator.jl")
 
 
 

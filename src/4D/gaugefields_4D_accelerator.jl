@@ -112,6 +112,7 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_accelerator}
         U.NT,
         U.blockinfo.blocks,
         verbose_level=U.verbose_print.level,
+        accelerator= U.accelerator
     )
     #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
