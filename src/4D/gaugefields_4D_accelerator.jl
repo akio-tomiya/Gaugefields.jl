@@ -4,11 +4,11 @@ import ..AbstractGaugefields_module: Adjoint_Gaugefields
 
 
 """
-`Gaugefields_4D_nowing{NC} <: Gaugefields_4D{NC}``
+`Gaugefields_4D_accelerator{NC} <: Gaugefields_4D{NC}``
 
 SU(N) Gauge fields in four dimensional lattice. 
 """
-struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
+struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise} <: Gaugefields_4D{NC}
     U::TU #CUDA.CuArray{ComplexF64,4}
     NX::Int64
     NY::Int64
@@ -22,6 +22,7 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
     #Ushifted::CUDA.CuArray{ComplexF64,4}
     blockinfo::Blockindices
     temp_volume::TUv
+    accelerator::String
     #blocks::NTuple{4,Int64}
     #blocks_s::NTuple{4,Int64}
     #blocknumbers::NTuple{4,Int64}
@@ -30,7 +31,7 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
     #rsize::Int64 #num. of blocks
 
 
-    function Gaugefields_4D_cuda(
+    function Gaugefields_4D_accelerator(
         NC::T,
         NX::T,
         NY::T,
@@ -38,6 +39,7 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         NT::T,
         blocks;
         verbose_level=2,
+        accelerator="none"
     ) where {T<:Integer}
         @assert blocks != nothing "blocks should be set!"
 
@@ -66,13 +68,22 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
-        if CUDA.has_cuda()
-            U = zeros(ComplexF64, NC, NC, blocksize, rsize) |> CUDA.CuArray
-            temp_volume = zeros(ComplexF64, blocksize, rsize) |> CUDA.CuArray
+
+        if accelerator == "cuda"
+            if CUDA.has_cuda()
+                U = zeros(ComplexF64, NC, NC, blocksize, rsize) |> CUDA.CuArray
+                temp_volume = zeros(ComplexF64, blocksize, rsize) |> CUDA.CuArray
+                accdevise = :cuda
+            else
+                @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                U = zeros(ComplexF64, NC, NC, blocksize, rsize)
+                temp_volume = zeros(ComplexF64, blocksize, rsize)
+                accdevise = :none
+            end
         else
-            @warn "no cuda devise is found. CPU will be used"
             U = zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = zeros(ComplexF64, blocksize, rsize)
+            accdevise = :none
         end
         TU = typeof(U)
         TUv = typeof(temp_volume)
@@ -85,14 +96,15 @@ struct Gaugefields_4D_cuda{NC,TU,TUv} <: Gaugefields_4D{NC}
         #end
 
 
-        return new{NC,TU,TUv}(U, NX, NY, NZ, NT, NDW, NV, NC, mpi, verbose_print,
+
+        return new{NC,TU,TUv,accdevise}(U, NX, NY, NZ, NT, NDW, NV, NC, mpi, verbose_print,
             #Ushifted,
-            blockinfo, temp_volume)
+            blockinfo, temp_volume, accelerator)
     end
 end
 
-function Base.similar(U::T) where {T<:Gaugefields_4D_cuda}
-    Uout = Gaugefields_4D_cuda(
+function Base.similar(U::T) where {T<:Gaugefields_4D_accelerator}
+    Uout = Gaugefields_4D_accelerator(
         U.NC,
         U.NX,
         U.NY,
@@ -105,7 +117,7 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_cuda}
     return Uout
 end
 
-function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_cuda}
+function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_accelerator}
     Uout = Array{T,1}(undef, 4)
     for μ = 1:4
         Uout[μ] = similar(U[μ])
@@ -123,8 +135,8 @@ function cudakernel_identityGaugefields!(U, NC)
 end
 
 
-function identityGaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level=2)
-    U = Gaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level)
+function identityGaugefields_4D_accelerator(NC, NX, NY, NZ, NT, blocks; verbose_level=2, accelerator="none")
+    U = Gaugefields_4D_accelerator(NC, NX, NY, NZ, NT, blocks; verbose_level, accelerator)
 
     set_identity!(U)
     return U
@@ -135,13 +147,13 @@ function identityGaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level=2
     =#
 end
 
-function set_identity!(U::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
+function set_identity!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_identityGaugefields!(U.U, NC)
     end
 end
 
-function set_identity!(U::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU,TUv}
+function set_identity!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_identityGaugefields!(b, r, U.U, NC)
@@ -169,13 +181,13 @@ end
 
 
 
-function randomize_U!(U::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
+function randomize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_randomGaugefields!(U.U, NC)
     end
 end
 
-function randomize_U!(U::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU,TUv}
+function randomize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_randomGaugefields!(b, r, U.U, NC)
@@ -184,7 +196,7 @@ function randomize_U!(U::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU,TUv}
 end
 
 
-function randomGaugefields_4D_cuda(
+function randomGaugefields_4D_accelerator(
     NC,
     NX,
     NY,
@@ -193,13 +205,14 @@ function randomGaugefields_4D_cuda(
     blocks;
     verbose_level=2,
     randomnumber="Random",
+    accelerator="none"
 )
-    U = Gaugefields_4D_cuda(NC, NX, NY, NZ, NT, blocks; verbose_level)
+    U = Gaugefields_4D_accelerator(NC, NX, NY, NZ, NT, blocks; verbose_level, accelerator)
 
     if randomnumber == "Random"
     else
         error(
-            "randomnumber should be \"Random\" in CUDA version. Now randomnumber = $randomnumber",
+            "randomnumber should be \"Random\" in accelerator version. Now randomnumber = $randomnumber",
         )
     end
 
@@ -227,13 +240,13 @@ end
 
 
 
-function normalize_U!(U::Gaugefields_4D_cuda{2,TU,TUv}) where {TU<:CUDA.CuArray,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{2,TU,TUv}) where {TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_normalize_U_NC2!(U.U)
     end
 end
 
-function normalize_U!(U::Gaugefields_4D_cuda{2,TU,TUv}) where {TU,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{2,TU,TUv}) where {TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_normalize_U_NC2!(b, r, U.U)
@@ -241,14 +254,14 @@ function normalize_U!(U::Gaugefields_4D_cuda{2,TU,TUv}) where {TU,TUv}
     end
 end
 
-function normalize_U!(U::Gaugefields_4D_cuda{3,TU,TUv}) where {TU<:CUDA.CuArray,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv}) where {TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_normalize_U_NC3!(U.U)
     end
 end
 
 
-function normalize_U!(U::Gaugefields_4D_cuda{3,TU,TUv}) where {TU,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv}) where {TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_normalize_U_NC3!(b, r, U.U)
@@ -257,16 +270,16 @@ function normalize_U!(U::Gaugefields_4D_cuda{3,TU,TUv}) where {TU,TUv}
 end
 
 
-function set_wing_U!(u::Array{Gaugefields_4D_cuda{NC},1}) where {NC} #do nothing
+function set_wing_U!(u::Array{Gaugefields_4D_accelerator{NC},1}) where {NC} #do nothing
     return
 end
 
-function set_wing_U!(u::Gaugefields_4D_cuda{NC}) where {NC} #do nothing
+function set_wing_U!(u::Gaugefields_4D_accelerator{NC}) where {NC} #do nothing
     return
 end
 
 
-function substitute_U!(a::Gaugefields_4D_cuda{NC}, b::Gaugefields_4D_cuda{NC}) where {NC}
+function substitute_U!(a::Gaugefields_4D_accelerator{NC}, b::Gaugefields_4D_accelerator{NC}) where {NC}
     a.U .= b.U
     set_wing_U!(a)
 end
@@ -274,14 +287,14 @@ end
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator}
     for μ = 1:4
         substitute_U!(a[μ], b[μ])
     end
 end
 
-struct Shifted_Gaugefields_4D_cuda{NC} <: Shifted_Gaugefields{NC,4}
-    parent::Gaugefields_4D_cuda{NC}
+struct Shifted_Gaugefields_4D_accelerator{NC} <: Shifted_Gaugefields{NC,4}
+    parent::Gaugefields_4D_accelerator{NC}
     #parent::T
     shift::NTuple{4,Int8}
     NX::Int64
@@ -291,13 +304,13 @@ struct Shifted_Gaugefields_4D_cuda{NC} <: Shifted_Gaugefields{NC,4}
 
 
     #function Shifted_Gaugefields(U::T,shift,Dim) where {T <: AbstractGaugefields}
-    function Shifted_Gaugefields_4D_cuda(U::Gaugefields_4D_cuda{NC}, shift) where {NC}
+    function Shifted_Gaugefields_4D_accelerator(U::Gaugefields_4D_accelerator{NC}, shift) where {NC}
         return new{NC}(U, shift, U.NX, U.NY, U.NZ, U.NT)
     end
 end
 
 
-function shift_U(U::Gaugefields_4D_cuda{NC}, ν::T) where {T<:Integer,NC}
+function shift_U(U::Gaugefields_4D_accelerator{NC}, ν::T) where {T<:Integer,NC}
     if ν == 1
         shift = (1, 0, 0, 0)
     elseif ν == 2
@@ -316,14 +329,14 @@ function shift_U(U::Gaugefields_4D_cuda{NC}, ν::T) where {T<:Integer,NC}
         shift = (0, 0, 0, -1)
     end
 
-    return Shifted_Gaugefields_4D_cuda(U, shift)
+    return Shifted_Gaugefields_4D_accelerator(U, shift)
 end
 
 function shift_U(
     U::TU,
     shift::NTuple{Dim,T},
-) where {Dim,T<:Integer,TU<:Gaugefields_4D_cuda}
-    return Shifted_Gaugefields_4D_cuda(U, shift)
+) where {Dim,T<:Integer,TU<:Gaugefields_4D_accelerator}
+    return Shifted_Gaugefields_4D_accelerator(U, shift)
 end
 
 
@@ -335,9 +348,9 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
-    b::T2) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv}
+    b::T2) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC!(c.U, a.U, b.U, NC)
@@ -346,9 +359,9 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
-    B::T2) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU,TUv}
+    B::T2) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_mul_NC!(b, r, c.U, A.U, B.U, NC)
@@ -364,24 +377,24 @@ function cudakernel_mul_NC!(C, A, B, α, β, NC)
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC!(c.U, a.U, b.U, α, β, NC)
     end
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::T2,
     α::Ta,
     β::Tb,
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -403,20 +416,20 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv},
     a::T1,
     b::T2,
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC3!(c.U, a.U, b.U)
     end
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv},
     A::T1,
     B::T2,
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU,TUv}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_mul_NC3!(b, r, c.U, A.U, B.U)
@@ -431,9 +444,9 @@ function cudakernel_mul_NC_abdag!(C, A, B, NC)
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
-    B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv}
+    B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_abdag!(c.U, A.U, B.parent.U, NC)
@@ -441,9 +454,9 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
-    B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU,TUv}
+    B::Adjoint_Gaugefields{T2}) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -461,12 +474,12 @@ function cudakernel_mul_NC3!(C, A, B, α, β)
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv},
     a::T1,
     b::T2,
     α::Ta,
     β::Tb,
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC3!(c.U, a.U, b.U, α, β, NC)
@@ -474,12 +487,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{3,TU,TUv},
+    c::Gaugefields_4D_accelerator{3,TU,TUv},
     A::T1,
     B::T2,
     α::Ta,
     β::Tb,
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_mul_NC3!(b, r, c.U, A.U, B.U, α, β, NC)
@@ -494,24 +507,24 @@ function cudakernel_mul_NC_abdag!(C, A, B, α, β, NC)
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_abdag!(c.U, a.U, b.parent.U, α, β, NC)
     end
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_abdag!(b, r, c.U, A.U, B.parent.U, α, β, NC)
@@ -528,12 +541,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_adagbdag!(c.U, a.parent.U, b.parent.U, α, β, NC)
@@ -542,12 +555,12 @@ end
 
 #c = A'* B'
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -564,10 +577,10 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::Adjoint_Gaugefields{T2}
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_adagbdag!(c.U, a.parent.U, b.parent.U, NC)
@@ -576,10 +589,10 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2}
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -597,12 +610,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_adagb!(c.U, a.parent.U, b.U, α, β, NC)
@@ -611,12 +624,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -637,12 +650,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_abshift!(c.U, a.U, b.parent.U, α, β,
@@ -651,12 +664,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_mul_NC_abshift!(b, r, c.U, A.U, B.parent.U, α, β,
@@ -675,12 +688,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftb!(c.U, a.parent.U, b.U, α, β,
@@ -689,12 +702,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -713,12 +726,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftbshift!(c.U, a.parent.U, b.parent.U, α, β,
@@ -727,12 +740,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -753,12 +766,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftbshiftdag!(
@@ -768,12 +781,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -796,12 +809,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_adagbshift!(c.U, a.parent.U, b.parent.U, α, β,
@@ -810,12 +823,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -832,12 +845,12 @@ function cudakernel_mul_NC_adagbshiftdag!(C, A, B, α, β, shift, blockinfo::Blo
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_adagbshiftdag!(
@@ -847,12 +860,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -873,12 +886,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftbdag!(c.U, a.parent.U, b.parent.U, α, β,
@@ -887,12 +900,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -910,12 +923,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftdagbdag!(
@@ -925,12 +938,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -951,12 +964,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_abshiftdag!(c.U, a.U, b.parent.parent.U, α, β,
@@ -965,12 +978,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::T1,
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -991,12 +1004,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftdagb!(c.U, a.parent.parent.U, b.U, α, β,
@@ -1005,12 +1018,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -1030,12 +1043,12 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftdagbshiftdag!(c.U, a.parent.parent.U, b.parent.parent.U, α, β,
@@ -1044,12 +1057,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::Adjoint_Gaugefields{T2},
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -1066,12 +1079,12 @@ function cudakernel_mul_NC_ashiftdagbshift!(C, A, B, α, β, ashift, bshift, blo
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::Adjoint_Gaugefields{T1},
     b::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_mul_NC_ashiftdagbshift!(c.U, a.parent.parent.U, b.parent.U, α, β,
@@ -1080,12 +1093,12 @@ function LinearAlgebra.mul!(
 end
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     A::Adjoint_Gaugefields{T1},
     B::T2,
     α::Ta,
     β::Tb
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,T2<:Shifted_Gaugefields_4D_cuda,Ta<:Number,Tb<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,T2<:Shifted_Gaugefields_4D_accelerator,Ta<:Number,Tb<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -1106,7 +1119,7 @@ end
 
 
 
-function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
+function LinearAlgebra.tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_tr!(a.temp_volume, a.U, NC)
     end
@@ -1116,7 +1129,7 @@ function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU<:CUDA.
 
 end
 
-function LinearAlgebra.tr(a::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU,TUv}
+function LinearAlgebra.tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
     for r = 1:a.blockinfo.rsize
         for b = 1:a.blockinfo.blocksize
             kernel_tr!(b, r, a.temp_volume, a.U, NC)
@@ -1136,8 +1149,8 @@ end
 
 
 function LinearAlgebra.tr(
-    a::Gaugefields_4D_cuda{NC,TU,TUv},
-    b::Gaugefields_4D_cuda{NC,TU,TUv},
+    a::Gaugefields_4D_accelerator{NC,TU,TUv},
+    b::Gaugefields_4D_accelerator{NC,TU,TUv},
 ) where {NC,TU<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
@@ -1150,8 +1163,8 @@ function LinearAlgebra.tr(
 end
 
 function LinearAlgebra.tr(
-    A::Gaugefields_4D_cuda{NC,TU,TUv},
-    B::Gaugefields_4D_cuda{NC,TU,TUv},
+    A::Gaugefields_4D_accelerator{NC,TU,TUv},
+    B::Gaugefields_4D_accelerator{NC,TU,TUv},
 ) where {NC,TU,TUv}
 
     for r = 1:A.blockinfo.rsize
@@ -1166,7 +1179,7 @@ function LinearAlgebra.tr(
 end
 
 
-function substitute_U!(A::Gaugefields_4D_cuda{NC}, B::Gaugefields_4D_nowing{NC}) where {NC}
+function substitute_U!(A::Gaugefields_4D_accelerator{NC}, B::Gaugefields_4D_nowing{NC}) where {NC}
     acpu = Array(A.U)
 
     blockinfo = A.blockinfo
@@ -1189,7 +1202,7 @@ end
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
-) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_cuda}
+) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_accelerator}
     for μ = 1:4
         substitute_U!(a[μ], b[μ])
     end
@@ -1198,13 +1211,13 @@ end
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
-) where {T1<:Gaugefields_4D_cuda,T2<:Gaugefields_4D_nowing}
+) where {T1<:Gaugefields_4D_accelerator,T2<:Gaugefields_4D_nowing}
     for μ = 1:4
         substitute_U!(a[μ], b[μ])
     end
 end
 
-function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_cuda{NC}) where {NC}
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC}) where {NC}
     bcpu = Array(B.U)
 
     blockinfo = B.blockinfo
@@ -1229,13 +1242,13 @@ end
 
 
 
-function add_U!(c::Gaugefields_4D_cuda{NC,TU,TUv}, a::T1) where {NC,T1<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv}
+function add_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}, a::T1) where {NC,T1<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_U!(c.U, a.U, NC)
     end
 end
 
-function add_U!(c::Gaugefields_4D_cuda{NC,TU,TUv}, a::T1) where {NC,T1<:Gaugefields_4D_cuda,TU,TUv}
+function add_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}, a::T1) where {NC,T1<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_U!(b, r, c.U, a.U, NC)
@@ -1253,20 +1266,20 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::T1,
-) where {NC,T1<:Gaugefields_4D_cuda{NC},N<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_U_αa!(c.U, a.U, α, NC)
     end
 end
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::T1,
-) where {NC,T1<:Gaugefields_4D_cuda{NC},N<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_U_αa!(b, r, c.U, a.U, α, NC)
@@ -1285,10 +1298,10 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::T1,
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,N<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,N<:Number,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_U_αshifta!(
             c.U, a.parent.U, α,
@@ -1297,10 +1310,10 @@ function add_U!(
 end
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::T1,
-) where {NC,T1<:Shifted_Gaugefields_4D_cuda,N<:Number,TU,TUv}
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,N<:Number,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_U_αshifta!(b, r,
@@ -1321,20 +1334,20 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::Adjoint_Gaugefields{T1},
-) where {NC,T1<:Gaugefields_4D_cuda{NC},N<:Number,TU<:CUDA.CuArray,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_U_αadag!(c.U, a.U, α, NC)
     end
 end
 
 function add_U!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::Adjoint_Gaugefields{T1},
-) where {NC,T1<:Gaugefields_4D_cuda{NC},N<:Number,TU,TUv}
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
@@ -1352,13 +1365,13 @@ end
 
 
 
-function clear_U!(c::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
+function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_clear_U!(c.U, NC)
     end
 end
 
-function clear_U!(c::Gaugefields_4D_cuda{NC,TU,TUv}) where {NC,TU,TUv}
+function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_clear_U!(b, r, c.U, NC)
@@ -1370,7 +1383,7 @@ end
 
 
 function LinearAlgebra.mul!(
-    c::Gaugefields_4D_cuda{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
     b::T2
 ) where {NC,T1,T2,TU,TUv}#
@@ -1389,27 +1402,27 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_cuda{2},
+    v::Gaugefields_4D_accelerator{2},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator} #uout = exp(t*u)
     error("exptU with NC=2 is not implemented")
 end
 
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_cuda{NC},
+    v::Gaugefields_4D_accelerator{NC},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,NC} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NC} #uout = exp(t*u)
     error("exptU with general NC is not implemented")
 end
 
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_cuda{3,TU,TUv},
+    v::Gaugefields_4D_accelerator{3,TU,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,TU<:CUDA.CuArray,TUv} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv} #uout = exp(t*u)
 
     ww = temps[1]
     w = temps[2]
@@ -1425,9 +1438,9 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_cuda{3,TU,TUv},
+    v::Gaugefields_4D_accelerator{3,TU,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,TU,TUv} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,TU,TUv} #uout = exp(t*u)
 
     ww = temps[1]
     w = temps[2]
@@ -1446,7 +1459,7 @@ end
 
 
 function mul_skiplastindex!(
-    c::Gaugefields_4D_cuda{NC},
+    c::Gaugefields_4D_accelerator{NC},
     a::T1,
     b::T2,
 ) where {NC,T1<:Abstractfields,T2<:Abstractfields}
@@ -1476,8 +1489,8 @@ end
 #Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
 #Omega' - Omega = -2i imag(Omega)
 function Traceless_antihermitian!(
-    vout::Gaugefields_4D_cuda{3},
-    vin::Gaugefields_4D_cuda{3},
+    vout::Gaugefields_4D_accelerator{3},
+    vin::Gaugefields_4D_accelerator{3},
 )
     CUDA.@sync begin
         CUDA.@cuda threads = vout.blockinfo.blocksize blocks = vout.blockinfo.rsize cudakernel_Traceless_antihermitian_NC3!(vout.U, vin.U)

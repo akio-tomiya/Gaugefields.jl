@@ -1,6 +1,6 @@
 import CUDA
 
-struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
+struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gaugefields_4D{NC}
     a::Ta
     NX::Int64
     NY::Int64
@@ -11,9 +11,10 @@ struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
     generators::Union{Nothing,Generator}
     blockinfo::Blockindices
     temp_volume::TUv
+    accelerator::String
 
-    function TA_Gaugefields_4D_cuda(NC, NX, NY, NZ, NT,
-        blocks)
+    function TA_Gaugefields_4D_accelerator(NC, NX, NY, NZ, NT,
+        blocks; accelerator="none")
         NumofBasis = ifelse(NC == 1, 1, NC^2 - 1)
         if NC <= 3
             generators = nothing
@@ -26,13 +27,24 @@ struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
-        if CUDA.has_cuda()
-            a = zeros(Float64, NumofBasis, blocksize, rsize) |> CUDA.CuArray
-            temp_volume = zeros(Float64, blocksize, rsize) |> CUDA.CuArray
+        a0 = zeros(Float64, NumofBasis, blocksize, rsize)
+        temp_volume0 = zeros(Float64, blocksize, rsize)
+
+        if accelerator == "cuda"
+            if CUDA.has_cuda()
+                a = CUDA.CuArray(a0)
+                temp_volume = CUDA.CuArray(temp_volume0)
+                accdevise = :cuda
+            else
+                @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                a = a0
+                temp_volume = temp_volume0
+                accdevise = :none
+            end
         else
-            @warn "no cuda devise is found. CPU will be used"
-            a = zeros(Float64, NumofBasis, blocksize, rsize)
-            temp_volume = zeros(Float64, blocksize, rsize)
+            a = a0
+            temp_volume = temp_volume0
+            accdevise = :none
         end
 
 
@@ -42,7 +54,7 @@ struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
         #temp_volume = zeros(Float64, blocksize,rsize) |> CUDA.CuArray
         TUv = typeof(temp_volume)
 
-        return new{NC,NumofBasis,Ta,TUv}(
+        return new{NC,NumofBasis,Ta,TUv,accdevise}(
             a,
             NX,
             NY,
@@ -52,14 +64,15 @@ struct TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv} <: TA_Gaugefields_4D{NC}
             NumofBasis,
             generators,
             blockinfo,
-            temp_volume
+            temp_volume,
+            accelerator
         )
     end
 end
 
-function initialize_TA_Gaugefields(u::Gaugefields_4D_cuda)
-    return TA_Gaugefields_4D_cuda(u.NC, u.NX, u.NY, u.NZ, u.NT,
-        u.blockinfo.blocks)
+function initialize_TA_Gaugefields(u::Gaugefields_4D_accelerator)
+    return TA_Gaugefields_4D_accelerator(u.NC, u.NX, u.NY, u.NZ, u.NT,
+        u.blockinfo.blocks, accelerator=u.accelerator)
 end
 
 function cudakernel_substitute_TAU!(Uμ, pwork, blockinfo, NumofBasis, NX, NY, NZ, NT)
@@ -71,7 +84,7 @@ end
 
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
     pwork::CUDA.CuArray,
 ) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
 
@@ -88,7 +101,7 @@ function substitute_U!(
 end
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
     pwork,
 ) where {NC,NumofBasis,Ta,TUv}
 
@@ -108,7 +121,7 @@ function substitute_U!(
 end
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
     pwork,
 ) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
 
@@ -118,8 +131,8 @@ function substitute_U!(
         pwork_gpu)
 end
 
-function Base.similar(u::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
-    return TA_Gaugefields_4D_cuda(NC, u.NX, u.NY, u.NZ, u.NT, u.blockinfo.blocks)
+function Base.similar(u::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
+    return TA_Gaugefields_4D_accelerator(NC, u.NX, u.NY, u.NZ, u.NT, u.blockinfo.blocks; accelerator=u.accelerator)
     #error("similar! is not implemented in type $(typeof(U)) ")
 end
 
@@ -134,8 +147,8 @@ end
 
 
 function Base.:*(
-    x::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
-    y::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    x::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    y::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
 ) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
 
     CUDA.@sync begin
@@ -147,8 +160,8 @@ function Base.:*(
 end
 
 function Base.:*(
-    x::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
-    y::TA_Gaugefields_4D_cuda{NC,NumofBasis,Ta,TUv},
+    x::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    y::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
 ) where {NC,NumofBasis,Ta,TUv}
 
 
@@ -168,18 +181,18 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_cuda{2,NumofBasis},
+    v::TA_Gaugefields_4D_accelerator{2,NumofBasis},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,NumofBasis} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis} #uout = exp(t*u)
     error("exptU with 2 for type $(typeof(v)) is not implemented")
 end
 
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_cuda{NC,NumofBasis},
+    v::TA_Gaugefields_4D_accelerator{NC,NumofBasis},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,NumofBasis,NC} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC} #uout = exp(t*u)
     error("exptU with general NC for type $(typeof(v)) is n ot implemented")
 end
 
@@ -196,9 +209,9 @@ end
 function exptU!(
     uout::T,
     t::N,
-    u::TA_Gaugefields_4D_cuda{3,NumofBasis,Ta,TUv},
+    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,NumofBasis,Ta<:CUDA.CuArray,TUv} #uout = exp(t*u)     
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta<:CUDA.CuArray,TUv} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
     #clear_U!(uout)
@@ -214,9 +227,9 @@ end
 function exptU!(
     uout::T,
     t::N,
-    u::TA_Gaugefields_4D_cuda{3,NumofBasis,Ta,TUv},
+    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_cuda,NumofBasis,Ta,TUv} #uout = exp(t*u)     
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
     #clear_U!(uout)
@@ -243,9 +256,9 @@ function cudakernel_Traceless_antihermitian_add_TAU_NC3!(
 end
 
 function Traceless_antihermitian_add!(
-    c::TA_Gaugefields_4D_cuda{3,NumofBasis,Ta,TUv},
+    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
     factor,
-    vin::Gaugefields_4D_cuda{3},
+    vin::Gaugefields_4D_accelerator{3},
 ) where {NumofBasis,Ta<:CUDA.CuArray,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
 
@@ -256,9 +269,9 @@ function Traceless_antihermitian_add!(
 end
 
 function Traceless_antihermitian_add!(
-    c::TA_Gaugefields_4D_cuda{3,NumofBasis,Ta,TUv},
+    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
     factor,
-    vin::Gaugefields_4D_cuda{3},
+    vin::Gaugefields_4D_accelerator{3},
 ) where {NumofBasis,Ta,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
 
@@ -279,7 +292,7 @@ function cudakernel_clear_TAU!(c, NumofBasis)
     return
 end
 
-function clear_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_clear_TAU!(c.a, NumofBasis)
     end
@@ -295,7 +308,7 @@ function cudakernel_add_TAU!(c, a, NumofBasis)
 end
 
 
-function add_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}, a::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_TAU!(c.a, a.a, NumofBasis)
     end
@@ -311,7 +324,7 @@ function cudakernel_add_TAU!(c, t::Number, a, NumofBasis)
 end
 
 
-function add_U!(c::TA_Gaugefields_4D_cuda{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_cuda{NC,NumofBasis}) where {NC,NumofBasis}
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_TAU!(c.a, t, a.a, NumofBasis)
     end

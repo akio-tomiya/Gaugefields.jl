@@ -38,13 +38,13 @@ function __init__()
 
     #@require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
     #    import .AbstractGaugefields_module:
-    ##        Gaugefields_4D_cuda
+    ##        Gaugefields_4D_accelerator
     #end
 end
 
 import CUDA
 import .AbstractGaugefields_module:
-            Gaugefields_4D_cuda
+    Gaugefields_4D_accelerator
 
 # Write your package code here.
 import .Verboseprint_mpi:
