@@ -145,13 +145,13 @@ end
 
 
 
-function kernel_identityGaugefields!(b,r,U, NC)
+function kernel_identityGaugefields!(b, r, U, NC)
     @inbounds for ic = 1:NC
         U[ic, ic, b, r] = 1
     end
 end
 
-function kernel_randomGaugefields!(b,r,U, NC)
+function kernel_randomGaugefields!(b, r, U, NC)
     @inbounds for ic = 1:NC
         for jc = 1:NC
             U[jc, ic, b, r] = rand() - 0.5 + im * (rand() - 0.5)
@@ -159,7 +159,7 @@ function kernel_randomGaugefields!(b,r,U, NC)
     end
 end
 
-function kernel_normalize_U_NC2!(b,r,u)
+function kernel_normalize_U_NC2!(b, r, u)
     α = u[1, 1, b, r]
     β = u[2, 1, b, r]
     detU = sqrt(abs(α)^2 + abs(β)^2)
@@ -170,7 +170,7 @@ function kernel_normalize_U_NC2!(b,r,u)
     return
 end
 
-function kernel_normalize_U_NC3!(b,r,u)
+function kernel_normalize_U_NC3!(b, r, u)
     #b = Int64(CUDA.threadIdx().x)
     #r = Int64(CUDA.blockIdx().x)
     w1 = 0
@@ -235,7 +235,7 @@ function kernel_normalize_U_NC3!(b,r,u)
 end
 
 
-function kernel_mul_NC!(b,r,C, A, B, NC)
+function kernel_mul_NC!(b, r, C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -247,7 +247,7 @@ function kernel_mul_NC!(b,r,C, A, B, NC)
     end
 end
 
-function kernel_mul_NC!(b,r,C, A, B, α, β, NC)
+function kernel_mul_NC!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -260,7 +260,7 @@ function kernel_mul_NC!(b,r,C, A, B, α, β, NC)
     end
 end
 
-function kernel_mul_NC3!(b,r,C, A, B)
+function kernel_mul_NC3!(b, r, C, A, B)
     a11 = A[1, 1, b, r]
     a21 = A[2, 1, b, r]
     a31 = A[3, 1, b, r]
@@ -293,7 +293,7 @@ function kernel_mul_NC3!(b,r,C, A, B)
 
 end
 
-function kernel_mul_NC3!(b,r,C, A, B, α, β)
+function kernel_mul_NC3!(b, r, C, A, B, α, β)
     a11 = α * A[1, 1, b, r]
     a21 = α * A[2, 1, b, r]
     a31 = α * A[3, 1, b, r]
@@ -327,7 +327,7 @@ function kernel_mul_NC3!(b,r,C, A, B, α, β)
 end
 
 
-function kernel_mul_NC_abdag!(b,r,C, A, B, NC)
+function kernel_mul_NC_abdag!(b, r, C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -340,7 +340,7 @@ function kernel_mul_NC_abdag!(b,r,C, A, B, NC)
     end
 end
 
-function kernel_mul_NC_abdag!(b,r,C, A, B, α, β, NC)
+function kernel_mul_NC_abdag!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -354,7 +354,7 @@ function kernel_mul_NC_abdag!(b,r,C, A, B, α, β, NC)
 end
 
 
-function kernel_mul_NC_adagbdag!(b,r,C, A, B, α, β, NC)
+function kernel_mul_NC_adagbdag!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -367,7 +367,7 @@ function kernel_mul_NC_adagbdag!(b,r,C, A, B, α, β, NC)
     end
 end
 
-function kernel_mul_NC_adagbdag!(b,r,C, A, B, NC)
+function kernel_mul_NC_adagbdag!(b, r, C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = 0
@@ -380,7 +380,7 @@ function kernel_mul_NC_adagbdag!(b,r,C, A, B, NC)
     end
 end
 
-function kernel_mul_NC_adagb!(b,r,C, A, B, α, β, NC)
+function kernel_mul_NC_adagb!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
             C[k1, k2, b, r] = β * C[k1, k2, b, r]
@@ -394,7 +394,7 @@ function kernel_mul_NC_adagb!(b,r,C, A, B, α, β, NC)
 end
 
 
-function kernel_mul_NC_abshift!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_abshift!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -410,7 +410,7 @@ function kernel_mul_NC_abshift!(b,r,C, A, B, α, β, shift, blockinfo::Blockindi
 end
 
 
-function kernel_mul_NC_ashiftb!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftb!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -426,7 +426,7 @@ function kernel_mul_NC_ashiftb!(b,r,C, A, B, α, β, shift, blockinfo::Blockindi
 end
 
 
-function kernel_mul_NC_ashiftbshift!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftbshift!(b, r, C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -442,7 +442,7 @@ function kernel_mul_NC_ashiftbshift!(b,r,C, A, B, α, β, ashift, bshift, blocki
     end
 end
 
-function kernel_mul_NC_ashiftbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftbshiftdag!(b, r, C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -458,7 +458,7 @@ function kernel_mul_NC_ashiftbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, blo
     end
 end
 
-function kernel_mul_NC_adagbshift!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_adagbshift!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -473,7 +473,7 @@ function kernel_mul_NC_adagbshift!(b,r,C, A, B, α, β, shift, blockinfo::Blocki
     end
 end
 
-function kernel_mul_NC_adagbshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_adagbshiftdag!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -488,7 +488,7 @@ function kernel_mul_NC_adagbshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blo
     end
 end
 
-function kernel_mul_NC_ashiftbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftbdag!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -503,7 +503,7 @@ function kernel_mul_NC_ashiftbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blocki
     end
 end
 
-function kernel_mul_NC_ashiftdagbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftdagbdag!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
 
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
@@ -519,7 +519,7 @@ function kernel_mul_NC_ashiftdagbdag!(b,r,C, A, B, α, β, shift, blockinfo::Blo
     end
 end
 
-function kernel_mul_NC_abshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_abshiftdag!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -534,7 +534,7 @@ function kernel_mul_NC_abshiftdag!(b,r,C, A, B, α, β, shift, blockinfo::Blocki
     end
 end
 
-function kernel_mul_NC_ashiftdagb!(b,r,C, A, B, α, β, shift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftdagb!(b, r, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k2 = 1:NC
@@ -549,7 +549,7 @@ function kernel_mul_NC_ashiftdagb!(b,r,C, A, B, α, β, shift, blockinfo::Blocki
     end
 end
 
-function kernel_mul_NC_ashiftdagbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftdagbshiftdag!(b, r, C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -565,7 +565,7 @@ function kernel_mul_NC_ashiftdagbshiftdag!(b,r,C, A, B, α, β, ashift, bshift, 
     end
 end
 
-function kernel_mul_NC_ashiftdagbshift!(b,r,C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
+function kernel_mul_NC_ashiftdagbshift!(b, r, C, A, B, α, β, ashift, bshift, blockinfo::Blockindices, NC)
     bshifted_a, rshifted_a = shiftedindex(b, r, ashift, blockinfo)
     bshifted_b, rshifted_b = shiftedindex(b, r, bshift, blockinfo)
 
@@ -581,7 +581,7 @@ function kernel_mul_NC_ashiftdagbshift!(b,r,C, A, B, α, β, ashift, bshift, blo
     end
 end
 
-function kernel_tr!(b,r,temp_volume, U, NC)
+function kernel_tr!(b, r, temp_volume, U, NC)
     temp_volume[b, r] = 0
     @inbounds for k = 1:NC
         temp_volume[b, r] += U[k, k, b, r]
@@ -589,7 +589,7 @@ function kernel_tr!(b,r,temp_volume, U, NC)
     return
 end
 
-function kernel_add_U!(b,r,c, a, NC)
+function kernel_add_U!(b, r, c, a, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += a[k2, k1, b, r]
@@ -598,7 +598,7 @@ function kernel_add_U!(b,r,c, a, NC)
     return
 end
 
-function kernel_add_U_αa!(b,r,c, a, α, NC)
+function kernel_add_U_αa!(b, r, c, a, α, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += α * a[k2, k1, b, r]
@@ -607,7 +607,7 @@ function kernel_add_U_αa!(b,r,c, a, α, NC)
     return
 end
 
-function kernel_add_U_αadag!(b,r,c, a, α, NC)
+function kernel_add_U_αadag!(b, r, c, a, α, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] += α * conj(a[k1, k2, b, r])
@@ -616,7 +616,7 @@ function kernel_add_U_αadag!(b,r,c, a, α, NC)
     return
 end
 
-function kernel_clear_U!(b,r,c, NC)
+function kernel_clear_U!(b, r, c, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
             c[k2, k1, b, r] = 0
@@ -625,36 +625,36 @@ function kernel_clear_U!(b,r,c, NC)
     return
 end
 
-function kernel_exptU_TAwuww_NC3!(b,r,w,u,ww,t)
-    c1 = t * u[1,b,r] * 0.5
-    c2 = t * u[2,b,r] * 0.5
-    c3 = t * u[3,b,r] * 0.5
-    c4 = t * u[4,b,r] * 0.5
-    c5 = t * u[5,b,r] * 0.5
-    c6 = t * u[6,b,r] * 0.5
-    c7 = t * u[7,b,r] * 0.5
-    c8 = t * u[8,b,r] * 0.5
+function kernel_exptU_TAwuww_NC3!(b, r, w, u, ww, t)
+    c1 = t * u[1, b, r] * 0.5
+    c2 = t * u[2, b, r] * 0.5
+    c3 = t * u[3, b, r] * 0.5
+    c4 = t * u[4, b, r] * 0.5
+    c5 = t * u[5, b, r] * 0.5
+    c6 = t * u[6, b, r] * 0.5
+    c7 = t * u[7, b, r] * 0.5
+    c8 = t * u[8, b, r] * 0.5
     csum = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8
     if csum == 0
-        w[1, 1,b,r] = 1
-        w[1, 2,b,r] = 0
-        w[1, 3,b,r] = 0
-        w[2, 1,b,r] = 0
-        w[2, 2,b,r] = 1
-        w[2, 3,b,r] = 0
-        w[3, 1,b,r] = 0
-        w[3, 2,b,r] = 0
-        w[3, 3,b,r] = 1
+        w[1, 1, b, r] = 1
+        w[1, 2, b, r] = 0
+        w[1, 3, b, r] = 0
+        w[2, 1, b, r] = 0
+        w[2, 2, b, r] = 1
+        w[2, 3, b, r] = 0
+        w[3, 1, b, r] = 0
+        w[3, 2, b, r] = 0
+        w[3, 3, b, r] = 1
 
-        ww[1, 1,b,r] = 1
-        ww[1, 2,b,r] = 0
-        ww[1, 3,b,r] = 0
-        ww[2, 1,b,r] = 0
-        ww[2, 2,b,r] = 1
-        ww[2, 3,b,r] = 0
-        ww[3, 1,b,r] = 0
-        ww[3, 2,b,r] = 0
-        ww[3, 3,b,r] = 1
+        ww[1, 1, b, r] = 1
+        ww[1, 2, b, r] = 0
+        ww[1, 3, b, r] = 0
+        ww[2, 1, b, r] = 0
+        ww[2, 2, b, r] = 1
+        ww[2, 3, b, r] = 0
+        ww[3, 1, b, r] = 0
+        ww[3, 2, b, r] = 0
+        ww[3, 3, b, r] = 1
         return
     end
 
@@ -796,30 +796,30 @@ function kernel_exptU_TAwuww_NC3!(b,r,w,u,ww,t)
     ww17 = w17 * c3 - w18 * s3
     ww18 = w18 * c3 + w17 * s3
 
-    w[1, 1,b,r] = w1 + im * w2
-    w[1, 2,b,r] = w3 + im * w4
-    w[1, 3,b,r] = w5 + im * w6
-    w[2, 1,b,r] = w7 + im * w8
-    w[2, 2,b,r] = w9 + im * w10
-    w[2, 3,b,r] = w11 + im * w12
-    w[3, 1,b,r] = w13 + im * w14
-    w[3, 2,b,r] = w15 + im * w16
-    w[3, 3,b,r] = w17 + im * w18
+    w[1, 1, b, r] = w1 + im * w2
+    w[1, 2, b, r] = w3 + im * w4
+    w[1, 3, b, r] = w5 + im * w6
+    w[2, 1, b, r] = w7 + im * w8
+    w[2, 2, b, r] = w9 + im * w10
+    w[2, 3, b, r] = w11 + im * w12
+    w[3, 1, b, r] = w13 + im * w14
+    w[3, 2, b, r] = w15 + im * w16
+    w[3, 3, b, r] = w17 + im * w18
 
-    ww[1, 1,b,r] = ww1 + im * ww2
-    ww[1, 2,b,r] = ww3 + im * ww4
-    ww[1, 3,b,r] = ww5 + im * ww6
-    ww[2, 1,b,r] = ww7 + im * ww8
-    ww[2, 2,b,r] = ww9 + im * ww10
-    ww[2, 3,b,r] = ww11 + im * ww12
-    ww[3, 1,b,r] = ww13 + im * ww14
-    ww[3, 2,b,r] = ww15 + im * ww16
-    ww[3, 3,b,r] = ww17 + im * ww18
+    ww[1, 1, b, r] = ww1 + im * ww2
+    ww[1, 2, b, r] = ww3 + im * ww4
+    ww[1, 3, b, r] = ww5 + im * ww6
+    ww[2, 1, b, r] = ww7 + im * ww8
+    ww[2, 2, b, r] = ww9 + im * ww10
+    ww[2, 3, b, r] = ww11 + im * ww12
+    ww[3, 1, b, r] = ww13 + im * ww14
+    ww[3, 2, b, r] = ww15 + im * ww16
+    ww[3, 3, b, r] = ww17 + im * ww18
 
     return
 end
 
-function kernel_exptU_wvww!(b,r,w, v, ww, t, NC)
+function kernel_exptU_wvww!(b, r, w, v, ww, t, NC)
     v11 = v[1, 1, b, r]
     v22 = v[2, 2, b, r]
     v33 = v[3, 3, b, r]
@@ -1062,7 +1062,7 @@ function kernel_exptU_wvww!(b,r,w, v, ww, t, NC)
 
 end
 
-function kernel_Traceless_antihermitian_NC3!(vout, vin,b,r)
+function kernel_Traceless_antihermitian_NC3!(b, r, vout, vin)
 
     fac13 = 1 / 3
 
@@ -1132,7 +1132,7 @@ function kernel_Traceless_antihermitian_NC3!(vout, vin,b,r)
 
 end
 
-function kernel_tr!(b,r,temp_volume, A, B, NC)
+function kernel_tr!(b, r, temp_volume, A, B, NC)
     temp_volume[b, r] = 0
     @inbounds for k = 1:NC
         for k2 = 1:NC
@@ -1142,7 +1142,7 @@ function kernel_tr!(b,r,temp_volume, A, B, NC)
     return
 end
 
-function kernel_add_U_αshifta!(b,r,c, a, α, shift, blockinfo, NC)
+function kernel_add_U_αshifta!(b, r, c, a, α, shift, blockinfo, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 
     @inbounds for k1 = 1:NC
@@ -1155,19 +1155,19 @@ end
 
 
 
-function kernel_substitute_TAU!(b,r,Uμ,pwork,blockinfo,NumofBasis,NX,NY,NZ,NT)
-    ix,iy,iz,it = fourdim_cordinate(b,r,blockinfo)
-    @inbounds for k=1:NumofBasis
-        icount = ((((it-1)*NZ+iz-1)*NY+iy-1)*NX+ix-1)*NumofBasis+k
-        Uμ[k, b,r] = pwork[icount]
+function kernel_substitute_TAU!(b, r, Uμ, pwork, blockinfo, NumofBasis, NX, NY, NZ, NT)
+    ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+    @inbounds for k = 1:NumofBasis
+        icount = ((((it - 1) * NZ + iz - 1) * NY + iy - 1) * NX + ix - 1) * NumofBasis + k
+        Uμ[k, b, r] = pwork[icount]
     end
 end
 
 
-function kernel_mult_xTAyTA!(b,r,temp,x,y,NumofBasis)
-    temp[b,r] = 0
+function kernel_mult_xTAyTA!(b, r, temp, x, y, NumofBasis)
+    temp[b, r] = 0
     @inbounds for k = 1:NumofBasis
-        temp[b,r] += x[k, b,r] * y[k, b,r]
+        temp[b, r] += x[k, b, r] * y[k, b, r]
     end
     return
 end
@@ -1176,15 +1176,15 @@ end
 
 
 
-function kernel_Traceless_antihermitian_add_TAU_NC3!(b,r,
-    c,vin,factor)
+function kernel_Traceless_antihermitian_add_TAU_NC3!(b, r,
+    c, vin, factor)
 
     fac13 = 1 / 3
 
 
-    v11 = vin[1, 1, b,r]
-    v22 = vin[2, 2, b,r]
-    v33 = vin[3, 3, b,r]
+    v11 = vin[1, 1, b, r]
+    v22 = vin[2, 2, b, r]
+    v33 = vin[3, 3, b, r]
 
     tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
 
@@ -1197,12 +1197,12 @@ function kernel_Traceless_antihermitian_add_TAU_NC3!(b,r,
     y22 = (imag(v22) - tri) * im
     y33 = (imag(v33) - tri) * im
 
-    v12 = vin[1, 2, b,r]
-    v13 = vin[1, 3, b,r]
-    v21 = vin[2, 1, b,r]
-    v23 = vin[2, 3, b,r]
-    v31 = vin[3, 1, b,r]
-    v32 = vin[3, 2, b,r]
+    v12 = vin[1, 2, b, r]
+    v13 = vin[1, 3, b, r]
+    v21 = vin[2, 1, b, r]
+    v23 = vin[2, 3, b, r]
+    v31 = vin[3, 1, b, r]
+    v32 = vin[3, 2, b, r]
 
     x12 = v12 - conj(v21)
     x13 = v13 - conj(v31)
@@ -1228,24 +1228,24 @@ function kernel_Traceless_antihermitian_add_TAU_NC3!(b,r,
     y32 = 0.5 * x32
 
 
-    c[1, b,r] =
-        (imag(y12) + imag(y21)) * factor + c[1, b,r]
-    c[2, b,r] =
-        (real(y12) - real(y21)) * factor + c[2, b,r]
-    c[3, b,r] =
-        (imag(y11) - imag(y22)) * factor + c[3, b,r]
-    c[4, b,r] =
-        (imag(y13) + imag(y31)) * factor + c[4, b,r]
-    c[5, b,r] =
-        (real(y13) - real(y31)) * factor + c[5, b,r]
+    c[1, b, r] =
+        (imag(y12) + imag(y21)) * factor + c[1, b, r]
+    c[2, b, r] =
+        (real(y12) - real(y21)) * factor + c[2, b, r]
+    c[3, b, r] =
+        (imag(y11) - imag(y22)) * factor + c[3, b, r]
+    c[4, b, r] =
+        (imag(y13) + imag(y31)) * factor + c[4, b, r]
+    c[5, b, r] =
+        (real(y13) - real(y31)) * factor + c[5, b, r]
 
-    c[6, b,r] =
-        (imag(y23) + imag(y32)) * factor + c[6, b,r]
-    c[7, b,r] =
-        (real(y23) - real(y32)) * factor + c[7, b,r]
-    c[8, b,r] =
+    c[6, b, r] =
+        (imag(y23) + imag(y32)) * factor + c[6, b, r]
+    c[7, b, r] =
+        (real(y23) - real(y32)) * factor + c[7, b, r]
+    c[8, b, r] =
         sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor +
-        c[8, b,r]
+        c[8, b, r]
 
     return
 

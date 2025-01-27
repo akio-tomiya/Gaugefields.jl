@@ -1391,7 +1391,7 @@ function LinearAlgebra.tr(
 end
 
 
-function substitute_U!(A::Gaugefields_4D_accelerator{NC}, B::Gaugefields_4D_nowing{NC}) where {NC}
+function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv}, B::Gaugefields_4D_nowing{NC}) where {NC,TU<:CUDA.CuArray,TUv}
     acpu = Array(A.U)
 
     blockinfo = A.blockinfo
@@ -1411,10 +1411,31 @@ function substitute_U!(A::Gaugefields_4D_accelerator{NC}, B::Gaugefields_4D_nowi
 
 end
 
+function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv}, B::Gaugefields_4D_nowing{NC}) where {NC,TU,TUv}
+    acpu = Array(A.U)
+
+    blockinfo = A.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+            #println((ix,iy,iz,it))
+            for ic = 1:NC
+                for jc = 1:NC
+                    acpu[jc, ic, b, r] = B[jc, ic, ix, iy, iz, it]
+                end
+            end
+        end
+    end
+    #agpu = CUDA.CuArray(acpu)
+    A.U .= acpu
+
+end
+
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
 ) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_accelerator}
+
     for μ = 1:4
         substitute_U!(a[μ], b[μ])
     end
@@ -1436,6 +1457,7 @@ function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerat
     for r = 1:blockinfo.rsize
         for b = 1:blockinfo.blocksize
             ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+
             for ic = 1:NC
                 for jc = 1:NC
                     A[jc, ic, ix, iy, iz, it] = bcpu[jc, ic, b, r]
@@ -1701,11 +1723,26 @@ end
 #Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
 #Omega' - Omega = -2i imag(Omega)
 function Traceless_antihermitian!(
-    vout::Gaugefields_4D_accelerator{3},
+    vout::Gaugefields_4D_accelerator{3,TU,TUv},
     vin::Gaugefields_4D_accelerator{3},
-)
+) where {TU<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = vout.blockinfo.blocksize blocks = vout.blockinfo.rsize cudakernel_Traceless_antihermitian_NC3!(vout.U, vin.U)
+    end
+
+end
+
+#Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
+#Omega' - Omega = -2i imag(Omega)
+function Traceless_antihermitian!(
+    vout::Gaugefields_4D_accelerator{3,TU,TUv},
+    vin::Gaugefields_4D_accelerator{3},
+) where {TU,TUv}
+
+    for r = 1:vout.blockinfo.rsize
+        for b = 1:vout.blockinfo.blocksize
+            kernel_Traceless_antihermitian_NC3!(b, r, vout.U, vin.U)
+        end
     end
 
 end
