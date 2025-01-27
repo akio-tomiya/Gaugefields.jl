@@ -42,7 +42,6 @@ function __init__()
     #end
 end
 
-import CUDA
 import .AbstractGaugefields_module:
     Gaugefields_4D_accelerator
 
