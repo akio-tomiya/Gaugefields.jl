@@ -70,6 +70,7 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
     end
 end
 
+
 function initialize_TA_Gaugefields(u::Gaugefields_4D_accelerator)
     return TA_Gaugefields_4D_accelerator(u.NC, u.NX, u.NY, u.NZ, u.NT,
         u.blockinfo.blocks, accelerator=u.accelerator)
@@ -286,46 +287,70 @@ end
 function cudakernel_clear_TAU!(c, NumofBasis)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    @inbounds for k1 = 1:NumofBasis
-        c[k1, b, r] = 0
-    end
+    kernel_clear_TAU!(b, r, c, NumofBasis)
     return
 end
 
-function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
+
+
+function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_clear_TAU!(c.a, NumofBasis)
+    end
+end
+
+function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+    for r = 1:c.blockinfo.rsize
+        for b = 1:c.blockinfo.blocksize
+            kernel_clear_TAU!(b, r, c.a, NumofBasis)
+        end
     end
 end
 
 function cudakernel_add_TAU!(c, a, NumofBasis)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    @inbounds for k1 = 1:NumofBasis
-        c[k1, b, r] += a[k1, b, r]
-    end
+    kernel_add_TAU!(b, r, c, a, NumofBasis)
     return
 end
 
 
-function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
+
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_TAU!(c.a, a.a, NumofBasis)
+    end
+end
+
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+    for r = 1:c.blockinfo.rsize
+        for b = 1:c.blockinfo.blocksize
+            kernel_add_TAU!(b, r, c.a, a.a, NumofBasis)
+        end
     end
 end
 
 function cudakernel_add_TAU!(c, t::Number, a, NumofBasis)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    @inbounds for k1 = 1:NumofBasis
-        c[k1, b, r] += t * a[k1, b, r]
-    end
+    kernel_add_TAU!(b, r, c, t, a, NumofBasis)
     return
 end
 
 
-function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
+
+
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_TAU!(c.a, t, a.a, NumofBasis)
     end
+end
+
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+    for r = 1:c.blockinfo.rsize
+        for b = 1:c.blockinfo.blocksize
+            kernel_add_TAU!(b, r, c.a, t, a.a, NumofBasis)
+        end
+    end
+
 end

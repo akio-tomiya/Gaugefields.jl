@@ -1250,3 +1250,25 @@ function kernel_Traceless_antihermitian_add_TAU_NC3!(b, r,
     return
 
 end
+
+function kernel_clear_TAU!(b, r, c, NumofBasis)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1, b, r] = 0
+    end
+    return
+end
+
+function kernel_add_TAU!(b, r, c, a, NumofBasis)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1, b, r] += a[k1, b, r]
+    end
+    return
+end
+
+
+function kernel_add_TAU!(b, r, c, t::Number, a, NumofBasis)
+    @inbounds for k1 = 1:NumofBasis
+        c[k1, b, r] += t * a[k1, b, r]
+    end
+    return
+end

@@ -20,8 +20,10 @@ end
 
 
 function initialize_TA_Gaugefields(U::Array{<:AbstractGaugefields{NC,Dim},1}) where {NC,Dim}
-    F = Array{TA_Gaugefields{NC,Dim},1}(undef, Dim)
-    for μ = 1:Dim
+    F1 = initialize_TA_Gaugefields(U[1])
+    F = Array{typeof(F1),1}(undef, Dim)
+    F[1] = F1
+    for μ = 2:Dim
         F[μ] = initialize_TA_Gaugefields(U[μ])
     end
     return F
@@ -54,14 +56,14 @@ end
 #    error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
 #end
 
-function gauss_distribution!(p::T; σ = 1.0) where {T<:TA_Gaugefields}
+function gauss_distribution!(p::T; σ=1.0) where {T<:TA_Gaugefields}
     error("gauss_distribution!(p) is not implemented in type $(typeof(p)) ")
 end
 
 
-function gauss_distribution!(p::Array{<:TA_Gaugefields{NC,Dim},1}; σ = 1.0) where {NC,Dim}
+function gauss_distribution!(p::Array{<:TA_Gaugefields{NC,Dim},1}; σ=1.0) where {NC,Dim}
     for μ = 1:Dim
-        gauss_distribution!(p[μ], σ = σ)
+        gauss_distribution!(p[μ], σ=σ)
     end
 end
 
