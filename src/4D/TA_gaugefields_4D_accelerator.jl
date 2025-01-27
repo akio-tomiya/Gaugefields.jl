@@ -41,6 +41,10 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
                 temp_volume = temp_volume0
                 accdevise = :none
             end
+        elseif accelerator == "threads"
+            a = a0
+            temp_volume = temp_volume0
+            accdevise = :threads
         else
             a = a0
             temp_volume = temp_volume0

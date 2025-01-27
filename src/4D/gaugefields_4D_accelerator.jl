@@ -81,6 +81,10 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise} <: Gaugefields_4D{NC}
                 accdevise = :threads
                 #accdevise = :none
             end
+        elseif accelerator == "threads"
+            U = zeros(ComplexF64, NC, NC, blocksize, rsize)
+            temp_volume = zeros(ComplexF64, blocksize, rsize)
+            accdevise = :threads
         else
             U = zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = zeros(ComplexF64, blocksize, rsize)
