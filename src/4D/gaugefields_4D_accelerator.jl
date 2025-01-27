@@ -1450,7 +1450,24 @@ function substitute_U!(
     end
 end
 
-function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC}) where {NC}
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+    bcpu = B.U
+
+    blockinfo = B.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+
+            for ic = 1:NC
+                for jc = 1:NC
+                    A[jc, ic, ix, iy, iz, it] = bcpu[jc, ic, b, r]
+                end
+            end
+        end
+    end
+end
+
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
     bcpu = Array(B.U)
 
     blockinfo = B.blockinfo
