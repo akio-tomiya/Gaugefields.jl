@@ -1272,3 +1272,15 @@ function kernel_add_TAU!(b, r, c, t::Number, a, NumofBasis)
     end
     return
 end
+
+
+function kernel_partial_tr!(b, r, temp_volume, U, NC, blockinfo, μ)
+    NN = fourdim_cordinate(b, r, blockinfo)
+    temp_volume[b, r] = 0
+    if NN[μ] == 1
+        @inbounds for k = 1:NC
+            temp_volume[b, r] += U[k, k, b, r]
+        end
+    end
+    return
+end

@@ -697,3 +697,23 @@ function Traceless_antihermitian!(
 
 end
 
+
+
+function cudakernel_partial_tr!(temp_volume, U, NC, blockinfo, μ)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_partial_tr!(b, r, temp_volume, U, NC, blockinfo, μ)
+    return
+end
+
+
+function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}, μ) where {NC,TU<:CUDA.CuArray,TUv}
+    CUDA.@sync begin
+        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_partial_tr!(a.temp_volume, a.U, NC, a.blockinfo, μ)
+    end
+    s = CUDA.reduce(+, a.temp_volume)
+
+    return s
+end
+
+

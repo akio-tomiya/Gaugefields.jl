@@ -156,3 +156,12 @@ function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::T
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_add_TAU!(c.a, t, a.a, NumofBasis)
     end
 end
+
+function gauss_distribution!(
+    p::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv};
+    σ=1.0,
+) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
+    d = Normal(0.0, σ)
+    pwork = rand(d, NumofBasis, p.blockinfo.blocksize, p.blockinfo.rsize)
+    p.a .= CUDA.CuArray(pwork)
+end

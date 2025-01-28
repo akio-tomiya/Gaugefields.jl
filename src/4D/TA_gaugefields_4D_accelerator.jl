@@ -215,3 +215,13 @@ function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::T
     end
 
 end
+
+function gauss_distribution!(
+    p::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv};
+    σ=1.0,
+) where {NC,NumofBasis,Ta,TUv}
+    d = Normal(0.0, σ)
+    pwork = rand(d, NumofBasis, p.blockinfo.blocksize, p.blockinfo.rsize)
+    p.a .= pwork
+end
+

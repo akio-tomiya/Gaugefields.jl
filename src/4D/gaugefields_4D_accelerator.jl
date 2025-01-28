@@ -1011,8 +1011,6 @@ end
 
 
 
-
-
 function LinearAlgebra.tr(a::Gaugefields_4D_accelerator{NC,TU,TUv,:none}) where {NC,TU,TUv}
     for r = 1:a.blockinfo.rsize
         for b = 1:a.blockinfo.blocksize
@@ -1279,3 +1277,17 @@ function Traceless_antihermitian!(
     end
 
 end
+
+
+function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}, μ) where {NC,TU,TUv}
+    for r = 1:a.blockinfo.rsize
+        for b = 1:a.blockinfo.blocksize
+            kernel_partial_tr!(b, r, a.temp_volume, a.U, NC, a.blockinfo, μ)
+            #kernel_clear_U!(b,r,c.U, NC)
+        end
+    end
+    s = reduce(+, a.temp_volume)
+
+    return s
+end
+
