@@ -260,7 +260,7 @@ function kernel_mul_NC!(b, r, C, A, B, α, β, NC)
     end
 end
 
-function kernel_mul_NC3!(b, r, C, A, B)
+@inbounds function kernel_mul_NC3!(b, r, C, A, B)
     a11 = A[1, 1, b, r]
     a21 = A[2, 1, b, r]
     a31 = A[3, 1, b, r]
@@ -293,7 +293,7 @@ function kernel_mul_NC3!(b, r, C, A, B)
 
 end
 
-function kernel_mul_NC3!(b, r, C, A, B, α, β)
+@inbounds function kernel_mul_NC3!(b, r, C, A, B, α, β)
     a11 = α * A[1, 1, b, r]
     a21 = α * A[2, 1, b, r]
     a31 = α * A[3, 1, b, r]
@@ -327,6 +327,73 @@ function kernel_mul_NC3!(b, r, C, A, B, α, β)
 end
 
 
+@inbounds function kernel_mul_NC3_abdag!(b, r, C, A, B, α, β)
+    a11 = α * A[1, 1, b, r]
+    a21 = α * A[2, 1, b, r]
+    a31 = α * A[3, 1, b, r]
+    a12 = α * A[1, 2, b, r]
+    a22 = α * A[2, 2, b, r]
+    a32 = α * A[3, 2, b, r]
+    a13 = α * A[1, 3, b, r]
+    a23 = α * A[2, 3, b, r]
+    a33 = α * A[3, 3, b, r]
+    b11 = conj(B[1, 1, b, r])
+    b21 = conj(B[1, 2, b, r])
+    b31 = conj(B[1, 3, b, r])
+    b12 = conj(B[2, 1, b, r])
+    b22 = conj(B[2, 2, b, r])
+    b32 = conj(B[2, 3, b, r])
+    b13 = conj(B[3, 1, b, r])
+    b23 = conj(B[3, 2, b, r])
+    b33 = conj(B[3, 3, b, r])
+    C[1, 1, b, r] = β * C[1, 1, b, r] + a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = β * C[2, 1, b, r] + a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = β * C[3, 1, b, r] + a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = β * C[1, 2, b, r] + a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = β * C[2, 2, b, r] + a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = β * C[3, 2, b, r] + a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = β * C[1, 3, b, r] + a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = β * C[2, 3, b, r] + a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = β * C[3, 3, b, r] + a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
+function kernel_mul_NC3_abdag!(b, r, C, A, B)
+    a11 = A[1, 1, b, r]
+    a21 = A[2, 1, b, r]
+    a31 = A[3, 1, b, r]
+    a12 = A[1, 2, b, r]
+    a22 = A[2, 2, b, r]
+    a32 = A[3, 2, b, r]
+    a13 = A[1, 3, b, r]
+    a23 = A[2, 3, b, r]
+    a33 = A[3, 3, b, r]
+    b11 = conj(B[1, 1, b, r])
+    b21 = conj(B[1, 2, b, r])
+    b31 = conj(B[1, 3, b, r])
+    b12 = conj(B[2, 1, b, r])
+    b22 = conj(B[2, 2, b, r])
+    b32 = conj(B[2, 3, b, r])
+    b13 = conj(B[3, 1, b, r])
+    b23 = conj(B[3, 2, b, r])
+    b33 = conj(B[3, 3, b, r])
+    C[1, 1, b, r] = a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
+
 function kernel_mul_NC_abdag!(b, r, C, A, B, NC)
     @inbounds for k2 = 1:NC
         for k1 = 1:NC
@@ -353,6 +420,71 @@ function kernel_mul_NC_abdag!(b, r, C, A, B, α, β, NC)
     end
 end
 
+@inbounds function kernel_mul_NC3_adagbdag!(b, r, C, A, B, α, β)
+    a11 = α * conj(A[1, 1, b, r])
+    a21 = α * conj(A[1, 2, b, r])
+    a31 = α * conj(A[1, 3, b, r])
+    a12 = α * conj(A[2, 1, b, r])
+    a22 = α * conj(A[2, 2, b, r])
+    a32 = α * conj(A[2, 3, b, r])
+    a13 = α * conj(A[3, 1, b, r])
+    a23 = α * conj(A[3, 2, b, r])
+    a33 = α * conj(A[3, 3, b, r])
+    b11 = conj(B[1, 1, b, r])
+    b21 = conj(B[1, 2, b, r])
+    b31 = conj(B[1, 3, b, r])
+    b12 = conj(B[2, 1, b, r])
+    b22 = conj(B[2, 2, b, r])
+    b32 = conj(B[2, 3, b, r])
+    b13 = conj(B[3, 1, b, r])
+    b23 = conj(B[3, 2, b, r])
+    b33 = conj(B[3, 3, b, r])
+    C[1, 1, b, r] = β * C[1, 1, b, r] + a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = β * C[2, 1, b, r] + a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = β * C[3, 1, b, r] + a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = β * C[1, 2, b, r] + a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = β * C[2, 2, b, r] + a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = β * C[3, 2, b, r] + a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = β * C[1, 3, b, r] + a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = β * C[2, 3, b, r] + a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = β * C[3, 3, b, r] + a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
+@inbounds function kernel_mul_NC3_adagbdag!(b, r, C, A, B)
+    a11 = conj(A[1, 1, b, r])
+    a21 = conj(A[1, 2, b, r])
+    a31 = conj(A[1, 3, b, r])
+    a12 = conj(A[2, 1, b, r])
+    a22 = conj(A[2, 2, b, r])
+    a32 = conj(A[2, 3, b, r])
+    a13 = conj(A[3, 1, b, r])
+    a23 = conj(A[3, 2, b, r])
+    a33 = conj(A[3, 3, b, r])
+    b11 = conj(B[1, 1, b, r])
+    b21 = conj(B[1, 2, b, r])
+    b31 = conj(B[1, 3, b, r])
+    b12 = conj(B[2, 1, b, r])
+    b22 = conj(B[2, 2, b, r])
+    b32 = conj(B[2, 3, b, r])
+    b13 = conj(B[3, 1, b, r])
+    b23 = conj(B[3, 2, b, r])
+    b33 = conj(B[3, 3, b, r])
+    C[1, 1, b, r] = a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
 
 function kernel_mul_NC_adagbdag!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
@@ -379,6 +511,73 @@ function kernel_mul_NC_adagbdag!(b, r, C, A, B, NC)
         end
     end
 end
+
+@inbounds function kernel_mul_NC3_adagb!(b, r, C, A, B, α, β)
+    a11 = α * conj(A[1, 1, b, r])
+    a21 = α * conj(A[1, 2, b, r])
+    a31 = α * conj(A[1, 3, b, r])
+    a12 = α * conj(A[2, 1, b, r])
+    a22 = α * conj(A[2, 2, b, r])
+    a32 = α * conj(A[2, 3, b, r])
+    a13 = α * conj(A[3, 1, b, r])
+    a23 = α * conj(A[3, 2, b, r])
+    a33 = α * conj(A[3, 3, b, r])
+    b11 = B[1, 1, b, r]
+    b21 = B[2, 1, b, r]
+    b31 = B[3, 1, b, r]
+    b12 = B[1, 2, b, r]
+    b22 = B[2, 2, b, r]
+    b32 = B[3, 2, b, r]
+    b13 = B[1, 3, b, r]
+    b23 = B[2, 3, b, r]
+    b33 = B[3, 3, b, r]
+    C[1, 1, b, r] = β * C[1, 1, b, r] + a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = β * C[2, 1, b, r] + a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = β * C[3, 1, b, r] + a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = β * C[1, 2, b, r] + a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = β * C[2, 2, b, r] + a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = β * C[3, 2, b, r] + a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = β * C[1, 3, b, r] + a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = β * C[2, 3, b, r] + a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = β * C[3, 3, b, r] + a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
+@inbounds function kernel_mul_NC3_adagb!(b, r, C, A, B)
+    a11 = conj(A[1, 1, b, r])
+    a21 = conj(A[1, 2, b, r])
+    a31 = conj(A[1, 3, b, r])
+    a12 = conj(A[2, 1, b, r])
+    a22 = conj(A[2, 2, b, r])
+    a32 = conj(A[2, 3, b, r])
+    a13 = conj(A[3, 1, b, r])
+    a23 = conj(A[3, 2, b, r])
+    a33 = conj(A[3, 3, b, r])
+    b11 = B[1, 1, b, r]
+    b21 = B[2, 1, b, r]
+    b31 = B[3, 1, b, r]
+    b12 = B[1, 2, b, r]
+    b22 = B[2, 2, b, r]
+    b32 = B[3, 2, b, r]
+    b13 = B[1, 3, b, r]
+    b23 = B[2, 3, b, r]
+    b33 = B[3, 3, b, r]
+    C[1, 1, b, r] = a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, b, r] = a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, b, r] = a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, b, r] = a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, b, r] = a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, b, r] = a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, b, r] = a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, b, r] = a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, b, r] = a31 * b13 + a32 * b23 + a33 * b33
+
+    return
+
+end
+
 
 function kernel_mul_NC_adagb!(b, r, C, A, B, α, β, NC)
     @inbounds for k2 = 1:NC
@@ -1140,6 +1339,16 @@ function kernel_tr!(b, r, temp_volume, A, B, NC)
         end
     end
     return
+end
+
+function kernel_NC_shiftedU!(b, r, Ushifted, U,
+    shift, blockinfo, NC)
+    bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
+    @inbounds for k1 = 1:NC
+        for k2 = 1:NC
+            Ushifted[k2, k1, b, r] = U[k2, k1, bshifted, rshifted]
+        end
+    end
 end
 
 function kernel_add_U_αshifta!(b, r, c, a, α, shift, blockinfo, NC)

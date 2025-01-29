@@ -8,7 +8,12 @@ end
 function cudakernel_randomGaugefields!(U, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    kernel_randomGaugefields!(b, r, U.U, NC)
+    @inbounds for ic = 1:NC
+        for jc = 1:NC
+            U[jc, ic, b, r] = CUDA.rand() - 0.5 + im * (CUDA.rand() - 0.5)
+        end
+    end
+    #kernel_randomGaugefields!(b, r, U.U, NC)
 end
 
 
@@ -716,4 +721,36 @@ function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}, μ) where {NC,TU<:
     return s
 end
 
+function cudakernel_NC_shiftedU!(Ushifted, U, shift, blockinfo, NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_NC_shiftedU!(b, r, Ushifted, U, shift, blockinfo, NC)
+    return
+end
 
+
+
+function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU}, shift) where {NC,TU<:CUDA.CuArray,TUv,accdevise,TshifedU<:CUDA.CuArray}
+    CUDA.@sync begin
+        CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_NC_shiftedU!(U.Ushifted, U.U,
+            shift, U.blockinfo, NC)
+    end
+end
+
+
+
+function cudakernel_mul_NC!(C, A, B, α, β, NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_mul_NC!(b, r, C, A, B, α, β, NC)
+    return
+end
+
+function cudakernel_identityGaugefields!(U, NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_identityGaugefields!(b, r, U, NC)
+    #@inbounds for ic = 1:NC
+    #    U[ic, ic, b, r] = 1
+    #end
+end
