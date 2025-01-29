@@ -67,7 +67,28 @@ function cudakernel_exptU_TAwuww_NC3!(w, u, ww, t)
     return
 end
 
+function cudakernel_exptU_TAwuww_NC2!(uout, u,  t)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_exptU_TAwuww_NC2!(b, r, uout, u,  t)
+    return
+end
 
+function exptU!(
+    uout::T,
+    t::N,
+    u::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
+    temps::Array{T,1},
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta<:CUDA.CuArray,TUv} #uout = exp(t*u)     
+ 
+
+    CUDA.@sync begin
+        CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize cudakernel_exptU_TAwuww_NC2!(
+            uout.U, u.a, t) #w,u,ww,t
+    end
+
+
+end
 
 
 function exptU!(
@@ -88,6 +109,16 @@ function exptU!(
 
 end
 
+function cudakernel_Traceless_antihermitian_add_TAU_NC2!(
+    c, vin, factor)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_Traceless_antihermitian_add_TAU_NC2!(b, r,
+        c, vin, factor)
+    return
+
+end
+
 function cudakernel_Traceless_antihermitian_add_TAU_NC3!(
     c, vin, factor)
     b = Int64(CUDA.threadIdx().x)
@@ -96,6 +127,19 @@ function cudakernel_Traceless_antihermitian_add_TAU_NC3!(
         c, vin, factor)
     return
 
+end
+
+function Traceless_antihermitian_add!(
+    c::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
+    factor,
+    vin::Gaugefields_4D_accelerator{2},
+) where {NumofBasis,Ta<:CUDA.CuArray,TUv}
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+
+    CUDA.@sync begin
+        CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize cudakernel_Traceless_antihermitian_add_TAU_NC2!(
+            c.a, vin.U, factor)
+    end
 end
 
 function Traceless_antihermitian_add!(

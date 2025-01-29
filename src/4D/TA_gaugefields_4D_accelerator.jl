@@ -140,10 +140,16 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_accelerator{2,NumofBasis},
+    v::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis} #uout = exp(t*u)
-    error("exptU with 2 for type $(typeof(v)) is not implemented")
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)
+    for r = 1:uout.blockinfo.rsize
+        for b = 1:uout.blockinfo.blocksize
+            kernel_exptU_TAwuww_NC2!(b, r,
+                uout.U, u.a, t) #w,u,ww,t
+        end
+    end
+
 end
 
 function exptU!(

@@ -824,6 +824,24 @@ function kernel_clear_U!(b, r, c, NC)
     return
 end
 
+function kernel_exptU_TAwuww_NC2!(b, r, uout,u, t)
+    u1 = t * u[1, b,r] / 2
+    u2 = t * u[2, b,r] / 2
+    u3 = t * u[3, b,r] / 2
+    R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
+    sR = sin(R) / R
+    #sR = ifelse(R == 0,1,sR)
+    a0 = cos(R)
+    a1 = u1 * sR
+    a2 = u2 * sR
+    a3 = u3 * sR
+
+    uout[1, 1, b,r] = cos(R) + im * a3
+    uout[1, 2, b,r] = im * a1 + a2
+    uout[2, 1, b,r] = im * a1 - a2
+    uout[2, 2, b,r] = cos(R) - im * a3
+end
+
 function kernel_exptU_TAwuww_NC3!(b, r, w, u, ww, t)
     c1 = t * u[1, b, r] * 0.5
     c2 = t * u[2, b, r] * 0.5
@@ -1261,6 +1279,9 @@ function kernel_exptU_wvww!(b, r, w, v, ww, t, NC)
 
 end
 
+
+
+
 function kernel_Traceless_antihermitian_NC3!(b, r, vout, vin)
 
     fac13 = 1 / 3
@@ -1382,7 +1403,36 @@ function kernel_mult_xTAyTA!(b, r, temp, x, y, NumofBasis)
 end
 
 
+function kernel_Traceless_antihermitian_add_TAU_NC2!(b, r,
+    c, vin, factor)
+    v11 = vin[1, 1,b,r]
+    v22 = vin[2, 2,b,r]
 
+    tri = fac12 * (imag(v11) + imag(v22))
+
+    v12 = vin[1, 2,b,r]
+    #v13 = vin[1,3,ix,iy,iz,it]
+    v21 = vin[2, 1,b,r]
+
+    x12 = v12 - conj(v21)
+
+    x21 = -conj(x12)
+
+    y11 = (imag(v11) - tri) * im
+    y12 = 0.5 * x12
+    y21 = 0.5 * x21
+    y22 = (imag(v22) - tri) * im
+
+    c[1,b,r] =
+        (imag(y12) + imag(y21)) * factor + c[1,b,r]
+    c[2,b,r] =
+        (real(y12) - real(y21)) * factor + c[2,b,r]
+    c[3,b,r] =
+        (imag(y11) - imag(y22)) * factor + c[3,b,r]
+
+    return
+
+end
 
 
 function kernel_Traceless_antihermitian_add_TAU_NC3!(b, r,

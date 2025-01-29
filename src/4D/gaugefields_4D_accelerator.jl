@@ -553,9 +553,9 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_accelerator{2},
+    v::Gaugefields_4D_accelerator{2,TU,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_accelerator} #uout = exp(t*u)
+) where {N<:Number,T<:Gaugefields_4D_accelerator,TU,TUv} #uout = exp(t*u)
     error("exptU with NC=2 is not implemented")
 end
 
