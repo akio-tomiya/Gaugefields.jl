@@ -25,6 +25,7 @@ function __init__()
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
         include("./kernelfunctions/gaugefields_4D_cudakernels.jl")
         include("./kernelfunctions/TA_gaugefields_4D_cudakernels.jl")
+        include("./kernelfunctions/linearalgebra_mul_NC_cuda.jl")
         include("./kernelfunctions/linearalgebra_mul_NC3_cuda.jl")
     end
 end

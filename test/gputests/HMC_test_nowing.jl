@@ -190,6 +190,7 @@ println("4D system")
         #@test abs(plaq_t-val)/abs(val) < eps
         @test ratio > 0.5
     end
+    =#
 
     @testset "NC=2" begin
         β = 2.3
@@ -203,7 +204,7 @@ println("4D system")
         @test ratio > 0.5
     end
 
-    =#
+    
     @testset "NC=3" begin
         β = 5.7
         NC = 3
