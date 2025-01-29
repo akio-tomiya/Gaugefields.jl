@@ -1,4 +1,4 @@
-import CUDA
+#import CUDA
 
 struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gaugefields_4D{NC}
     a::Ta
@@ -31,12 +31,20 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
         temp_volume0 = zeros(Float64, blocksize, rsize)
 
         if accelerator == "cuda"
-            if CUDA.has_cuda()
-                a = CUDA.CuArray(a0)
-                temp_volume = CUDA.CuArray(temp_volume0)
-                accdevise = :cuda
+            iscudadefined = @isdefined CUDA 
+            if  iscudadefined
+                if CUDA.has_cuda()
+                    a = CUDA.CuArray(a0)
+                    temp_volume = CUDA.CuArray(temp_volume0)
+                    accdevise = :cuda
+                else
+                    @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                    a = a0
+                    temp_volume = temp_volume0
+                    accdevise = :none
+                end
             else
-                @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                @warn "CUDA is not used. using CUDA if you want to use gpu. CPU will be used"
                 a = a0
                 temp_volume = temp_volume0
                 accdevise = :none

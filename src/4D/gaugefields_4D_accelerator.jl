@@ -1,5 +1,5 @@
 
-import CUDA
+#import CUDA
 import ..AbstractGaugefields_module: Adjoint_Gaugefields
 
 
@@ -73,17 +73,29 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
 
 
         if accelerator == "cuda"
-            if CUDA.has_cuda()
-                U = zeros(ComplexF64, NC, NC, blocksize, rsize) |> CUDA.CuArray
-                temp_volume = zeros(ComplexF64, blocksize, rsize) |> CUDA.CuArray
-                accdevise = :cuda
+            iscudadefined = @isdefined CUDA 
+            #error(iscudadefined)
+            if  iscudadefined
+                if CUDA.has_cuda()
+                    U = zeros(ComplexF64, NC, NC, blocksize, rsize) |> CUDA.CuArray
+                    temp_volume = zeros(ComplexF64, blocksize, rsize) |> CUDA.CuArray
+                    accdevise = :cuda
+                else
+                    @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                    U = zeros(ComplexF64, NC, NC, blocksize, rsize)
+                    temp_volume = zeros(ComplexF64, blocksize, rsize)
+                    #accdevise = :threads
+                    accdevise = :none
+                end
             else
-                @warn "accelerator=\"cuda\" is set but there is no CUDA devise. CPU will be used"
+                @warn "CUDA is not used. using CUDA if you want to use gpu. CPU will be used"
                 U = zeros(ComplexF64, NC, NC, blocksize, rsize)
                 temp_volume = zeros(ComplexF64, blocksize, rsize)
                 #accdevise = :threads
                 accdevise = :none
             end
+
+            
         elseif accelerator == "threads"
             U = zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = zeros(ComplexF64, blocksize, rsize)

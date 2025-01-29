@@ -1,3 +1,5 @@
+import CUDA
+
 function cudakernel_identityGaugefields!(U, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
@@ -48,9 +50,16 @@ end
 
 
 function randomize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU<:CUDA.CuArray,TUv}
-    CUDA.@sync begin
-        CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_randomGaugefields!(U.U, NC)
+    Ucpu = Array(U.U)
+    for r = 1:U.blockinfo.rsize
+        for b = 1:U.blockinfo.blocksize
+            kernel_randomGaugefields!(b, r, Ucpu, NC)
+        end
     end
+    U.U .= CUDA.CuArray(Ucpu)
+    #CUDA.@sync begin
+    #    CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_randomGaugefields!(U.U, NC)
+    #end
 end
 
 

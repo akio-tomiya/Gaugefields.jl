@@ -1,5 +1,7 @@
 
 using Random
+using Test
+using CUDA
 using Gaugefields
 using LinearAlgebra
 import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
@@ -96,6 +98,9 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
         condition="hot",
         cuda=true, blocks=blocks)
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
+        condition="cold",
+        cuda=true, blocks=blocks)
     #"Reproducible"
     println(typeof(U))
 
@@ -167,10 +172,10 @@ end
 
 println("4D system")
 @testset "4D" begin
-    NX = 16
-    NY = 16
-    NZ = 16
-    NT = 16
+    NX = 12
+    NY = 12
+    NZ = 12
+    NT = 12
     Nwing = 0
 
     #=

@@ -1,4 +1,8 @@
+using Test
+using CUDA
 using Gaugefields
+
+
 using LinearAlgebra
 import Gaugefields.Temporalfields_module: Temporalfields, get_temp, unused!
 
