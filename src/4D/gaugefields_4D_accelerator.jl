@@ -384,7 +384,7 @@ end
 
 
 
-function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv}, B::Gaugefields_4D_nowing{NC}) where {NC,TU,TUv}
+function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TS}, B::Gaugefields_4D_nowing{NC}) where {NC,TU,TUv,TS}
     acpu = Array(A.U)
 
     blockinfo = A.blockinfo
@@ -403,6 +403,8 @@ function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv}, B::Gaugefields_
     A.U .= acpu
 
 end
+
+
 
 function substitute_U!(
     a::Array{T1,1},
@@ -423,7 +425,24 @@ function substitute_U!(
     end
 end
 
-function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TS}) where {NC,TU,TUv,TS}
+    bcpu = Array(B.U)
+
+    blockinfo = B.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+
+            for ic = 1:NC
+                for jc = 1:NC
+                    A[jc, ic, ix, iy, iz, it] = bcpu[jc, ic, b, r]
+                end
+            end
+        end
+    end
+end
+
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TS}) where {NC,TU,TUv,TS}
     bcpu = B.U
 
     blockinfo = B.blockinfo
