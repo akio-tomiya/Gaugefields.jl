@@ -1,4 +1,4 @@
-import CUDA
+#import CUDA
 
 function cudakernel_identityGaugefields!(U, NC)
     b = Int64(CUDA.threadIdx().x)

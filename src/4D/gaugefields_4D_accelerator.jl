@@ -185,7 +185,7 @@ end
 
 
 
-function randomize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+function randomize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none}) where {NC,TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_randomGaugefields!(b, r, U.U, NC)
@@ -244,6 +244,15 @@ function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv}) where {TU,TUv}
         end
     end
 end
+
+function normalize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {TU,TUv,NC}
+    for r = 1:U.blockinfo.rsize
+        for b = 1:U.blockinfo.blocksize
+            kernel_normalize_U_NC!(b, r, U.U,NC)
+        end
+    end
+end
+
 
 
 function set_wing_U!(u::Array{Gaugefields_4D_accelerator{NC},1}) where {NC} #do nothing

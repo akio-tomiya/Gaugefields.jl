@@ -59,6 +59,12 @@ function Base.:*(
     return s
 end
 
+function cudakernel_exptU_TAwuww_NC!(uout, u,t,NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_exptU_TAwuww_NC!(b, r, uout,u, t,NC)
+    return
+end
 
 function cudakernel_exptU_TAwuww_NC3!(w, u, ww, t)
     b = Int64(CUDA.threadIdx().x)
@@ -90,6 +96,23 @@ function exptU!(
 
 end
 
+function exptU!(
+    uout::T,
+    t::N,
+    u::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    temps::Array{T,1},
+) where {NC,N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta<:CUDA.CuArray,TUv} #uout = exp(t*u)     
+ 
+    generators = Tuple(u.generators.generator)
+    NG = length(generators)
+
+    CUDA.@sync begin
+        CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize cudakernel_exptU_TAwuww_NC!(
+            uout.U, u.a, t,NC,generators,NG) #w,u,ww,t
+    end
+
+
+end
 
 function exptU!(
     uout::T,

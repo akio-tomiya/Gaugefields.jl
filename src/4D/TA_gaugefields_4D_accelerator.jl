@@ -146,7 +146,7 @@ function exptU!(
     for r = 1:uout.blockinfo.rsize
         for b = 1:uout.blockinfo.blocksize
             kernel_exptU_TAwuww_NC2!(b, r,
-                uout.U, u.a, t) #w,u,ww,t
+                uout.U, v.a, t) #w,u,ww,t
         end
     end
 
@@ -155,10 +155,18 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_accelerator{NC,NumofBasis},
+    v::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
     temps::Array{T,1},
-) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC} #uout = exp(t*u)
-    error("exptU with general NC for type $(typeof(v)) is n ot implemented")
+) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC,Ta,TUv} #uout = exp(t*u)
+    generators = Tuple(v.generators.generator)
+    NG = length(generators)
+
+    for r = 1:uout.blockinfo.rsize
+        for b = 1:uout.blockinfo.blocksize
+            kernel_exptU_TAwuww_NC!(b, r,
+                uout.U, v.a,  t,NC,generators,NG) #w,u,ww,t
+        end
+    end
 end
 
 

@@ -234,6 +234,13 @@ function kernel_normalize_U_NC3!(b, r, u)
 
 end
 
+function kernel_normalize_U_NC!(b, r, u,NC)
+    A = u[:, :, b,r]
+    gramschmidt!(A)
+    u[:, :, b,r] = A[:, :]
+    return
+end
+
 
 function kernel_mul_NC!(b, r, C, A, B, NC)
     @inbounds for k2 = 1:NC
@@ -820,6 +827,25 @@ function kernel_clear_U!(b, r, c, NC)
         for k2 = 1:NC
             c[k2, k1, b, r] = 0
         end
+    end
+    return
+end
+
+function kernel_exptU_TAwuww_NC!(b, r, uout,u, t,NC,generators,NG)
+    for k = 1:length(a)
+        a[k] = u[k, ix, iy, iz, it]
+    end
+
+    lie2matrix_tuple!(u0,  a,generators,NG)
+    uout[:, :, ix, iy, iz, it] = exp(t * (im / 2) * u0)
+
+end
+
+function lie2matrix_tuple!(matrix, a,generators,NG)
+    matrix .= 0
+    for i=1:NG
+    #for (i, genmatrix) in enumerate(g.generator)
+        matrix .+= a[i] * generators[i]
     end
     return
 end
