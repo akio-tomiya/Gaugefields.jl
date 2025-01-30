@@ -5,7 +5,6 @@ version = "0.4.4"
 
 [deps]
 CLIME_jll = "3c6ae550-c37b-5556-a07e-d40b4910cf1c"
-CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -18,7 +17,6 @@ StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Wilsonloop = "f3c8d4fe-2f22-401d-8228-e6a01d7a1d02"
 
 [compat]
-CUDA = "5.6.1"
 Distributions = "0.25"
 EzXML = "1"
 JLD2 = "0.4, 0.5"
