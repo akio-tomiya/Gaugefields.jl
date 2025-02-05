@@ -1,5 +1,3 @@
-include("gaugefields_4D_mpi.jl")
-
 const comm = MPI.COMM_WORLD
 
 function substitute_U!(
