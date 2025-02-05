@@ -510,6 +510,7 @@ function Traceless_antihermitian!(
                         matrix[k, k] = (imag(vin[k, k, ix, iy, iz, it]) - tri) * im
                     end
 
+                    for k1=1:NC
                     @simd for k2 = k1+1:NC
                         vv =
                             0.5 * (
@@ -520,6 +521,7 @@ function Traceless_antihermitian!(
                         #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
                         matrix[k1, k2] = vv
                         matrix[k2, k1] = -conj(vv)
+                    end
                     end
 
                     matrix2lie!(a, g, matrix)
@@ -676,8 +678,8 @@ function exptU!(
                     end
 
                     lie2matrix!(u0, g, a)
+                   
                     uout[:, :, ix, iy, iz, it] = exp(t * (im / 2) * u0)
-
                 end
             end
         end

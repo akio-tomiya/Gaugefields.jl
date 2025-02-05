@@ -66,6 +66,19 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
         rsize = prod(blocknumbers)
         =#
 
+        #=
+        a = rand(ComplexF64,NC,NC)
+        aout = zero(a)
+        aout2 = exp(a)
+        nmax = 15
+
+        @code_warntype matrixexponential!(aout,a,NC,nmax)
+        display(aout)
+        display(aout2)
+        display(aout-aout2)
+        error("d")
+        =#
+
 
         blockinfo = Blockindices(L, blocks)#Blockindices(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
         blocksize = blockinfo.blocksize
@@ -548,7 +561,7 @@ function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
 end
 
 
-
+#=
 function LinearAlgebra.mul!(
     c::Gaugefields_4D_accelerator{NC,TU,TUv},
     a::T1,
@@ -556,6 +569,7 @@ function LinearAlgebra.mul!(
 ) where {NC,T1,T2,TU,TUv}#
     LinearAlgebra.mul!(c, a, b, 1, 0)
 end
+=#
 
 
 

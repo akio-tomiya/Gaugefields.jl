@@ -111,6 +111,23 @@ function substitute_U!(
 end
 
 
+function substitute_U!(A::TA_Gaugefields_4D_serial{NC}, B::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+    bcpu = B.a
+
+    blockinfo = B.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+
+            for ic = 1:NumofBasis
+                A[ic, ix, iy, iz, it] = bcpu[ic, b, r]
+            end
+        end
+    end
+end
+
+
+
 function Base.similar(u::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
     return TA_Gaugefields_4D_accelerator(NC, u.NX, u.NY, u.NZ, u.NT, u.blockinfo.blocks; accelerator=u.accelerator)
     #error("similar! is not implemented in type $(typeof(U)) ")
@@ -160,11 +177,13 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC,Ta,TUv} #uout = exp(t*u)
     generators = Tuple(v.generators.generator)
     NG = length(generators)
+    temp1 = zeros(ComplexF64,NC,NC)
+    temp2 = zeros(ComplexF64,NC,NC)
 
     for r = 1:uout.blockinfo.rsize
         for b = 1:uout.blockinfo.blocksize
             kernel_exptU_TAwuww_NC!(b, r,
-                uout.U, v.a,  t,NC,generators,NG) #w,u,ww,t
+                uout.U, v.a,  t,NC,NG,generators,temp1,temp2) #w,u,ww,t
         end
     end
 end

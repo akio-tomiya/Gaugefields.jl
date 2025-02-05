@@ -831,21 +831,77 @@ function kernel_clear_U!(b, r, c, NC)
     return
 end
 
-function kernel_exptU_TAwuww_NC!(b, r, uout,u, t,NC,generators,NG)
-    for k = 1:length(a)
-        a[k] = u[k, ix, iy, iz, it]
+
+function kernel_exptU_TAwuww_NC!(b, r, uout,u, t,NC,NG,generators,temp1,temp2,temp3)
+    a = view(u,:, b,r)
+    u0 = view(temp2,:,:,b,r)
+    #for k = 1:length(a)
+    #    a[k] = u[k, ix, iy, iz, it]
+    #end
+
+    lie2matrix_tuple!(u0,  a,NG,generators,NC,t)
+    #uout[:, :, b,r] = exp(t * (im / 2) * u0)
+    nmax = 10
+    
+    matrixexponential!(view(uout,:,:,b,r), u0,NC,nmax,view(temp1,:,:,b,r),view(temp3,:,:,b,r))
+end
+
+function matrixexponential!(aout,a,Nc,nmax,temp1,temp2)
+    atemp = temp1
+    atemp2 = temp2
+    
+    for j=1:Nc
+        for i=1:Nc
+            aout[i,j] = 0
+            atemp2[i,j] =0
+            #b[i,j] = 0
+            #btemp[i,j] = 0
+        end
+    end
+    for i=1:Nc
+        aout[i,i] = 1
+        atemp2[i,i] = 1 
     end
 
-    lie2matrix_tuple!(u0,  a,generators,NG)
-    uout[:, :, ix, iy, iz, it] = exp(t * (im / 2) * u0)
+    for k=1:nmax
+        for j=1:Nc
+            for i=1:Nc
+                atemp[i,j] =atemp2[i,j] 
+                atemp2[i,j] = 0
+            end
+        end
+
+        for jc=1:Nc
+            for ic=1:Nc
+                for kc=1:Nc
+                    atemp2[ic,jc] += a[ic,kc]*atemp[kc,jc]/k
+                end
+            end
+        end
+
+        for j=1:Nc
+            for i=1:Nc
+                aout[i,j] += atemp2[i,j] 
+            end
+        end
+
+    end
+
 
 end
 
-function lie2matrix_tuple!(matrix, a,generators,NG)
+
+
+
+function lie2matrix_tuple!(matrix, a,NG,generators,NC,t)
     matrix .= 0
     for i=1:NG
     #for (i, genmatrix) in enumerate(g.generator)
-        matrix .+= a[i] * generators[i]
+        for jc=1:NC
+            for ic=1:NC
+                matrix[ic,jc] += a[i] * generators[i][ic,jc]*t * (im / 2)
+            end
+        end
     end
     return
 end
@@ -1460,6 +1516,60 @@ function kernel_Traceless_antihermitian_add_TAU_NC2!(b, r,
 
 end
 
+function matrix2lie_tuple!(a, NG,generators,NC, A)
+    for i = 1:NG
+        #println("i = $i")
+        #display(g.generator[i]*g.generator[i])
+        #println("\t")
+        #println(tr(g.generator[i]*A)/2)
+        a[i] = 0.0im
+        for ic=1:NC
+            for kc=1:NC
+                a[i] += generators[i][ic,kc]*A[kc,ic]/2
+            end
+        end#  tr(g.generator[i] * A) / 2
+    end
+    return
+end
+
+function kernel_Traceless_antihermitian_add_TAU_NC!(b, r,
+    c, vin, factor,NC,NG,generators,temp,tempa)
+    matrix = temp
+    a = tempa
+
+
+    tri = 0.0
+    for k = 1:NC
+        tri += imag(vin[k, k, b,r])
+    end
+    tri *= 1/NC
+    for k = 1:NC
+        #vout[k,k,ix,iy,iz,it] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
+        matrix[k, k] = (imag(vin[k, k, b,r]) - tri) * im
+    end
+
+    for k1=1:NC
+        for k2=(k1+1):NC
+            vv =
+                0.5 * (
+                    vin[k1, k2, b,r] -
+                    conj(vin[k2, k1, b,r])
+                )
+            #vout[k1,k2,ix,iy,iz,it] = vv
+            #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
+            matrix[k1, k2] = vv
+            matrix[k2, k1] = -conj(vv)
+        end
+    end
+    #display(matrix)
+    matrix2lie_tuple!(a, NG,generators,NC, matrix)
+    #display(a)
+    #error("l")
+    #matrix2lie!(a, g, matrix)
+    for k = 1:NG
+        c[k, b,r] = 2 * imag(a[k])*factor + c[k, b,r]
+    end
+end
 
 function kernel_Traceless_antihermitian_add_TAU_NC3!(b, r,
     c, vin, factor)
