@@ -13,11 +13,8 @@ const eps = 1e-1
 end
 =#
 
-@testset "Accel test" begin
-    include("./gputests/runtests.jl")
-end
 
-return
+
 
 @testset "HMC nowing" begin
     println("HMC nowing")
@@ -99,7 +96,9 @@ end
 end
 
 
-
+#@testset "Accel test" begin
+#    include("./gputests/runtests.jl")
+#end
 
 
 @testset "Gaugefields.jl" begin
