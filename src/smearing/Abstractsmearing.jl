@@ -39,6 +39,16 @@ import ..Verboseprint_mpi:
 import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
 #import ..GaugeAction_module:GaugeAction
 
+using Requires
+
+
+function __init__()
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
+        include("./kernelfunctions/stout_cudakernels.jl")
+    end
+end
+
+
 
 abstract type Abstractsmearing end
 

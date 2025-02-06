@@ -1680,3 +1680,4 @@ function kernel_partial_tr!(b, r, temp_volume, U, NC, blockinfo, μ)
     end
     return
 end
+

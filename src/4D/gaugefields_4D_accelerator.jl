@@ -337,7 +337,7 @@ function substitute_U!(a::Gaugefields_4D_accelerator{NC}, B::Adjoint_Gaugefields
     end
 end
 
-function substitute_U!(a::Gaugefields_4D_accelerator{NC}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Shifted_Gaugefields_4D_accelerator}
+function substitute_U!(a::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TshifedU}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,TU,TUv,TshifedU}
     for r = 1:a.blockinfo.rsize
         for b = 1:a.blockinfo.blocksize
             for ic = 1:NC

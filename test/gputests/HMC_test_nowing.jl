@@ -259,7 +259,7 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β0)
     println(typeof(p))
     Uold = similar(U)
     substitute_U!(Uold, U)
-    MDsteps = 50
+    MDsteps = 100
     #temp1 = similar(U[1])
     #temp2 = similar(U[1])
     comb = 6
