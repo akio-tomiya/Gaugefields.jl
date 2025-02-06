@@ -21,7 +21,20 @@ function __init__()
         include("./TA_gaugefields_4D_mpi.jl")
         include("../2D/TA_gaugefields_2D_mpi.jl")
     end
+
+    @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
+        include("./kernelfunctions/gaugefields_4D_cudakernels.jl")
+        include("./kernelfunctions/TA_gaugefields_4D_cudakernels.jl")
+        include("./kernelfunctions/linearalgebra_mul_NC_cuda.jl")
+        include("./kernelfunctions/linearalgebra_mul_NC3_cuda.jl")
+    end
 end
+
+
+
+include("./kernelfunctions/gaugefields_4D_kernels.jl")
+include("./gaugefields_4D_accelerator.jl")
+
 
 
 

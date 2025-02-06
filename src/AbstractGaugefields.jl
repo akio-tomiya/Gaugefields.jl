@@ -228,21 +228,23 @@ function Initialize_4DGaugefields(
     condition="cold",
     verbose_level=2,
     randomnumber="Random",
+    accelerator="none"
 )
     if condition == "cold"
         if NDW == 0
 
-            u1 = IdentityGauges_4D(NC, NN..., verbose_level=verbose_level)
+            u1 = IdentityGauges_4D(NC, NN...; verbose_level, accelerator)
         else
-            u1 = IdentityGauges_4D(NC, NDW, NN..., verbose_level=verbose_level)
+            u1 = IdentityGauges_4D(NC, NDW, NN...; verbose_level)
         end
     elseif condition == "hot"
         if NDW == 0
             u1 = RandomGauges_4D(
                 NC,
-                NN...,
-                verbose_level=verbose_level,
-                randomnumber=randomnumber,
+                NN...;
+                verbose_level,
+                randomnumber,
+                accelerator
             )
         else
             u1 = RandomGauges_4D(
@@ -265,7 +267,7 @@ function Initialize_4DGaugefields(
     for μ = 2:Dim
         if condition == "cold"
             if NDW == 0
-                U[μ] = IdentityGauges_4D(NC, NN..., verbose_level=verbose_level)
+                U[μ] = IdentityGauges_4D(NC, NN...; verbose_level, accelerator)
             else
                 U[μ] = IdentityGauges_4D(NC, NDW, NN..., verbose_level=verbose_level)
             end
@@ -273,9 +275,10 @@ function Initialize_4DGaugefields(
             if NDW == 0
                 U[μ] = RandomGauges_4D(
                     NC,
-                    NN...,
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
+                    NN...;
+                    verbose_level,
+                    randomnumber,
+                    accelerator
                 )
             else
                 U[μ] = RandomGauges_4D(
@@ -333,29 +336,41 @@ function Initialize_Gaugefields(
     mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
+    cuda=false,
+    blocks=nothing,
+    accelerator="none"
 )
+    if NDW == 1
+        @warn "Now, Nwing=0 is recommended. Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). "
+    end
 
     Dim = length(NN)
     if condition == "cold"
         u1 = IdentityGauges(
             NC,
             NDW,
-            NN...,
-            mpi=mpi,
-            PEs=PEs,
-            mpiinit=mpiinit,
-            verbose_level=verbose_level,
+            NN...;
+            mpi,
+            PEs,
+            mpiinit,
+            verbose_level,
+            cuda,
+            blocks,
+            accelerator
         )
     elseif condition == "hot"
         u1 = RandomGauges(
             NC,
             NDW,
-            NN...,
-            mpi=mpi,
-            PEs=PEs,
-            mpiinit=mpiinit,
-            verbose_level=verbose_level,
-            randomnumber=randomnumber,
+            NN...;
+            mpi,
+            PEs,
+            mpiinit,
+            verbose_level,
+            randomnumber,
+            cuda,
+            blocks,
+            accelerator
         )
     else
         error("not supported")
@@ -374,6 +389,9 @@ function Initialize_Gaugefields(
                 PEs=PEs,
                 mpiinit=false,
                 verbose_level=verbose_level,
+                cuda=cuda,
+                blocks=blocks,
+                accelerator=accelerator
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -385,6 +403,9 @@ function Initialize_Gaugefields(
                 mpiinit=false,
                 verbose_level=verbose_level,
                 randomnumber=randomnumber,
+                cuda=cuda,
+                blocks=blocks,
+                accelerator=accelerator
             )
         else
             error("not supported")
@@ -402,7 +423,11 @@ function RandomGauges(
     mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
+    cuda=false,
+    blocks=nothing,
+    accelerator="none"
 )
+    accelerator_g = accelerator
     dim = length(NN)
     if mpi
         if PEs == nothing || mpiinit == nothing
@@ -443,15 +468,32 @@ function RandomGauges(
     else
         if dim == 4
             if NDW == 0
-                U = randomGaugefields_4D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    NN[4],
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
+                if cuda
+                    accelerator_g = "cuda"
+                end
+                if accelerator_g != "none"
+                    U = randomGaugefields_4D_accelerator(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        blocks,
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
+                        accelerator=accelerator_g
+                    )
+                else
+                    U = randomGaugefields_4D_nowing(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
+                    )
+                end
 
             else
                 U = randomGaugefields_4D_wing(
@@ -499,8 +541,14 @@ function IdentityGauges(
     PEs=nothing,
     mpiinit=nothing,
     verbose_level=2,
+    cuda=false,
+    blocks=nothing,
+    accelerator="none"
 )
+    accelerator_g = accelerator
     dim = length(NN)
+
+    @assert mpi * cuda == 0 "CUDA with mpi is not supported!"
 
     if mpi
         if PEs == nothing || mpiinit == nothing
@@ -550,14 +598,30 @@ function IdentityGauges(
     else
         if dim == 4
             if NDW == 0
-                U = identityGaugefields_4D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    NN[4],
-                    verbose_level=verbose_level,
-                )
+                if cuda
+                    accelerator_g = "cuda"
+                end
+                if accelerator_g != "none"
+                    U = identityGaugefields_4D_accelerator(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        blocks,
+                        verbose_level=verbose_level,
+                        accelerator=accelerator_g
+                    )
+                else
+                    U = identityGaugefields_4D_nowing(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        NN[4],
+                        verbose_level=verbose_level,
+                    )
+                end
             else
                 U = identityGaugefields_4D_wing(
                     NC,
@@ -3080,7 +3144,7 @@ function LinearAlgebra.mul!(
     α::Ta,
     β::Tb,
 ) where {T<:AbstractGaugefields,T1<:Abstractfields,T2<:Abstractfields,Ta<:Number,Tb<:Number}
-    error("LinearAlgebra.mul! is not implemented in type $(typeof(c)) ")
+    error("LinearAlgebra.mul! is not implemented in types c: $(typeof(c)) , a: $(typeof(a)), b: $(typeof(b))")
 end
 
 function LinearAlgebra.mul!(

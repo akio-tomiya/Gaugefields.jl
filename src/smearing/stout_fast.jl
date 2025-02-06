@@ -199,6 +199,7 @@ function layer_pullback!(
 
     #dSdU2 = temps[1:Dim]
     #clear_U!(dSdU2)
+
     backward_dSdUαUβρ_add!(layer, δ_prev, dSdρ, δ_current)
     #add_U!(δ_prev, 1, dSdU2)
 
@@ -229,6 +230,7 @@ function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Di
         temps, it_s = get_temp(s.temps, 2)
         exptU!(s.eQs[μ], 1, s.Qs[μ], temps)
         unused!(s.temps, it_s)
+        #println(((length(Uout), length(s.eQs), length(Uin))))
         mul!(Uout[μ], s.eQs[μ], Uin[μ])
     end
     set_wing_U!(Uout)
@@ -248,7 +250,7 @@ export backward_dSdU_add!
 function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUout) where {T,Dim,TN}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
     #temps = s.temps
-    temp1, it_1 = get_temp(s.temps)
+
     #temp1 = temps[1]
     #dng = 2
     #dSdQ = temps[2+dng]
@@ -264,8 +266,10 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
     for μ = 1:Dim
 
         #dS/dUα
+        temp1, it_1 = get_temp(s.temps)
         calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
         add_U!(dSdU[μ], temp1)
+        unused!(s.temps, it_1)
 
         #dS/dUβ
         Cμ = s.Cs[μ]
@@ -275,12 +279,26 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
         dSdQ, it_dSdQ = get_temp(s.temps)
         #dSdΩ = temps[3+dng]
         dSdΩ, it_dSdΩ = get_temp(s.temps)
-
+        #println("dSdUout[μ]")
+        #display(dSdUout[μ].U[:, :, 1, 1])
+        #println("s.Uin[μ]")
+        #display(s.Uin[μ].U[:, :, 1, 1])
+        #println("Qμ")
+        #display(Qμ.U[:, :, 1, 1])
+        temp1, it_1 = get_temp(s.temps)
         calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uin[μ], temp1)
         unused!(s.temps, it_1)
+
+        #println("dSdQ")
+        #display(dSdQ.U[:, :, 1, 1])
+        #unused!(s.temps, it_1)
         calc_dSdΩ!(dSdΩ, dSdQ)
+        #println("dSdΩ")
+        #display(dSdΩ.U[:, :, 1, 1])
         unused!(s.temps, it_dSdQ)
         calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
+        #println("dSdCs[μ]")
+        #display(dSdCs[μ].U[:, :, 1, 1])
 
 
         dSdUdag, it_dSdUdag = get_temp(s.temps)
@@ -302,8 +320,10 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
             evaluate_gaugelinks!(Cμi, loops, Uin, temps)
             #temp1 = temps[1]
             #dSdCs = temps[7:7+Dim-1]
+            temp1, it_1 = get_temp(s.temps)
             mul!(temp1, dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
+            unused!(s.temps, it_1)
             unused!(s.temps, its_temps)
         end
         unused!(s.temps, it_Cμi)
@@ -469,10 +489,47 @@ function calc_dSdu1!(dSdu1, dSdUbar, expQ) # Ubar = exp(Q)*U
 end
 export calc_dSdu1!
 
+import ..AbstractGaugefields_module: Initialize_Gaugefields
+
 function calc_dSdQ!(dSdQ, dSdUbar, Qμ, Uμ, temp)
     dSdUU = temp
     mul!(dSdUU, Uμ, dSdUbar)
+
+    #=
+    Qμcpu = Initialize_Gaugefields(Qμ.NC, 0, Qμ.NX, Qμ.NY, Qμ.NZ, Qμ.NT, condition="hot")[1]
+    Uμcpu = similar(Qμcpu)
+    dSdUUcpu = similar(Qμcpu)
+    dSdQcpu = similar(Qμcpu)
+
+    substitute_U!(Qμcpu, Qμ)
+    substitute_U!(Uμcpu, Uμ)
+    substitute_U!(dSdUUcpu, dSdUU)
+    substitute_U!(dSdQcpu, dSdQ)
+
+    temptemp = similar(dSdQ)
+    clear_U!(temptemp)
+    temptempcpu = similar(Qμcpu)
+
+    println("Q,UU,Umu,dSdQ")
+    display(Qμ.U[:, :, 1, 1])
+    display(dSdUU.U[:, :, 1, 1])
+    display(Uμ.U[:, :, 1, 1])
+    display(dSdQ.U[:, :, 1, 1])
+    =#
+
     CdexpQdQ!(dSdQ, dSdUU, Qμ)
+    #=
+    CdexpQdQ!(temptemp, dSdUU, Qμ)
+    println("cuda")
+    display(dSdQ.U[:, :, 1, 1])
+    display(temptemp.U[:, :, 1, 1])
+    CdexpQdQ!(dSdQcpu, dSdUUcpu, Qμcpu)
+    CdexpQdQ!(temptempcpu, dSdUUcpu, Qμcpu)
+    println("cpu")
+    display(dSdQcpu[:, :, 1, 1, 1, 1])
+    display(temptempcpu[:, :, 1, 1, 1, 1])
+    #error("d")
+    =#
 end
 export calc_dSdQ!
 
@@ -857,8 +914,15 @@ function construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qn, Cn)
                     trCB2 * Qn[i, k] * Qn[k, j] +
                     f2 * (Qn[i, k] * Cn[k, j] + Cn[i, k] * Qn[k, j])
             end
+            #CdeQdQn[i, j] /= im
         end
     end
-    CdeQdQn ./= im
+
+    for j = 1:3
+        for i = 1:3
+            CdeQdQn[i, j] /= im
+        end
+    end
+    #CdeQdQn ./= im
     return
 end

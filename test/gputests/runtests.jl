@@ -15,7 +15,6 @@ end
 
 
 
-
 @testset "HMC nowing" begin
     println("HMC nowing")
     include("HMC_test_nowing.jl")
@@ -53,52 +52,6 @@ end
 
 
 
-@testset "heatbath" begin
-    println("heatbath")
-    include("heatbathtest.jl")
-end
-
-
-@testset "heatbath nowing" begin
-    println("heatbath nowing")
-    include("heatbathtest_nowing.jl")
-end
-
-@testset "heatbath_bare" begin
-    println("heatbath_bare")
-    include("heatbathtest_bare.jl")
-end
-
-
-@testset "heatbath with plaq and rect actions" begin
-    println("heatbath with plaq and rect actions")
-    include("heatbathtest_general.jl")
-end
-
-
-
-
-
-
-
-
-
-
-
-@testset "ScalarNN" begin
-    println("Scalar neural networks")
-    include("scalarnn.jl")
-end
-
-@testset "Initialization" begin
-    println("Initialization")
-    include("init.jl")
-end
-
-
-#@testset "Accel test" begin
-#    include("./gputests/runtests.jl")
-#end
 
 
 @testset "Gaugefields.jl" begin

@@ -1,7 +1,7 @@
 name = "Gaugefields"
 uuid = "a461e10c-0d91-493e-bc41-027b226eee91"
 authors = ["Akio Tomiya, Yuki Nagai <cometscome@gmail.com> and contributors"]
-version = "0.4.3"
+version = "0.5.0"
 
 [deps]
 CLIME_jll = "3c6ae550-c37b-5556-a07e-d40b4910cf1c"
@@ -19,6 +19,7 @@ Wilsonloop = "f3c8d4fe-2f22-401d-8228-e6a01d7a1d02"
 [compat]
 Distributions = "0.25"
 EzXML = "1"
+InteractiveUtils = "1.11.0"
 JLD2 = "0.4, 0.5"
 NPZ = "0.4"
 Requires = "1"
