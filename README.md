@@ -40,10 +40,10 @@ This package has following functionarities
 - MPI parallel computation (experimental. See documents.)
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
-- GPU parallel computation with CUDA (experimental. See documents.)
+- GPU parallel computation with CUDA (experimental. See [documents](https://github.com/akio-tomiya/Gaugefields.jl?tab=readme-ov-file#gpu-parallel-computation-with-cuda-experimental) .)
     - Only 4D system is supported. 2D one is not supported now. 
     - Gradient flow for SU(Nc)
-    - STOUT smearing for SU(3), A general SU(Nc) case will be added. 
+    - Stout smearing for SU(3), A general SU(Nc) case will be added. 
 
 **The implementation of higher-form gauge fields is based on
 [arXiv:2303.10977 [hep-lat]](https://arxiv.org/abs/2303.10977).**
