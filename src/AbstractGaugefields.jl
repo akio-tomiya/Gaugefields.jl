@@ -340,6 +340,9 @@ function Initialize_Gaugefields(
     blocks=nothing,
     accelerator="none"
 )
+    if NDW == 1
+        @warn "Now, Nwing=0 is recommended. Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). "
+    end
 
     Dim = length(NN)
     if condition == "cold"
