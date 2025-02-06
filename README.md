@@ -80,7 +80,7 @@ NY = 4
 NZ = 4
 NT = 4
 NC = 3
-Nwing = 1
+Nwing = 0
 Dim = 4
 
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
@@ -251,7 +251,7 @@ end
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     Dim = 4
-    Nwing = 1
+    Nwing = 0
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 
@@ -291,7 +291,7 @@ NX = 4
 NY = 4
 NZ = 4
 NT = 4
-Nwing = 1
+Nwing = 0
 
 β = 5.7
 NC = 3
@@ -306,7 +306,7 @@ using Gaugefields
 
 function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
     Dim = 4
-    Nwing = 1
+    Nwing = 0
 
     U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
     println(typeof(U))
@@ -373,7 +373,7 @@ NX = 4
 NY = 4
 NZ = 4
 NT = 4
-Nwing = 1
+Nwing = 0
 NC = 3
 
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
