@@ -338,6 +338,7 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
     δ_prev, its_prev = get_temp(net._temp_U, Dim)
     δ_prev2, its_prev2 = get_temp(net._temp_U, Dim)
     #δ_current, its_current = get_temp(net._temp_U, Dim)
+    clear_U!(δ_prev)
     substitute_U!(δ_prev2, δL)
     #similar(δL)
     #δ_current = deepcopy(δL)
@@ -350,6 +351,9 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
         tempf, its_tempf = get_temp(net._temp_UA, 1)
         #layer_pullback!(δ_prev, δ_current, layer, Uout_multi[i-1], temps, tempf)
         layer_pullback!(δ_prev, δ_prev2, layer, Uout_multi[i-1], temps, tempf)
+        #display(δ_prev[1].U[:, :, 1, 1])
+        #display(δ_prev2[1].U[:, :, 1, 1])
+
         unused!(net._temp_U, its_temps)
         unused!(net._temp_UA, its_tempf)
 
@@ -360,6 +364,9 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
     layer = net.layers[1]
     #layer_pullback!(δ_prev, δ_current, layer, Uin, temps, tempf)
     layer_pullback!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
+    #display(δ_prev[1].U[:, :, 1, 1])
+    #display(δ_prev2[1].U[:, :, 1, 1])
+
     δ_prev2, δ_prev = δ_prev, δ_prev2
     #δ_current, δ_prev = δ_prev, δ_current
 

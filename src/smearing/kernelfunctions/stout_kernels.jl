@@ -17,6 +17,7 @@ function kernel_CdexpQdQ_NC3!(b, r, CdeQdQin, Cin, Qin, temp1, temp2, temp3; eps
         end
     end
 
+    #println("abs(trQ2) $(abs(trQ2))")
     if abs(trQ2) > eps_Q
         for jc = 1:NC
             for ic = 1:NC
@@ -30,19 +31,35 @@ function kernel_CdexpQdQ_NC3!(b, r, CdeQdQin, Cin, Qin, temp1, temp2, temp3; eps
 
         construct_B1B2!(B1, B2, Qnim, b10, b11, b12, b20, b21, b22)
         trCB1, trCB2 = construct_trCB1B2(B1, B2, Cn)
-        CdeQdQn = B1
-        construct_CdeQdQ_3!(CdeQdQn, trCB1, trCB2, f1, f2, Qnim, Cn)
-
-        for jc = 1:NC
-            for ic = 1:NC
-                CdeQdQ[ic, jc] = CdeQdQn[ic, jc]
-            end
+        #CdeQdQn = B1
+        #=
+        if b * r == 1
+            println("before")
+            display(CdeQdQ)
+            println("Qnim")
+            display(Qnim)
+            println("Cn")
+            display(Cn)
         end
+        =#
+        construct_CdeQdQ_3!(CdeQdQ, trCB1, trCB2, f1, f2, Qnim, Cn)
+        #=
+        if b * r == 1
+            println("after")
+            display(CdeQdQ)
+        end
+        =#
+        #for jc = 1:NC
+        #    for ic = 1:NC
+        #        CdeQdQ[ic, jc] = CdeQdQn[ic, jc]
+        #    end
+        #end
     else
-        for jc = 1:NC
-            for ic = 1:NC
-                #CdeQdQ[ic, jc, b,r] = C[ic, jc, b,r]
-            end
-        end
+        #println("abs(trQ2) < eps_Q")
+        #for jc = 1:NC
+        #    for ic = 1:NC
+        #        #CdeQdQ[ic, jc, b,r] = C[ic, jc, b,r]
+        #    end
+        #end
     end
 end
