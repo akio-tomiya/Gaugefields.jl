@@ -35,6 +35,8 @@ import Wilsonloop:
     get_rightlinks
 import ..Verboseprint_mpi:
     Verbose_print, println_verbose_level1, println_verbose_level2, println_verbose_level3
+
+import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
 #import ..GaugeAction_module:GaugeAction
 
 
@@ -44,9 +46,11 @@ struct Nosmearing <: Abstractsmearing end
 
 abstract type CovLayer{Dim} end
 
-struct CovNeuralnet{Dim} <: Abstractsmearing
+struct CovNeuralnet{Dim,T,TA} <: Abstractsmearing
     #numlayers::Int64
     layers::Vector{CovLayer{Dim}}
+    _temp_U::Temporalfields{T}
+    _temp_UA::Temporalfields{TA}
 end
 
 function get_numlayers(c::CovNeuralnet)
@@ -56,9 +60,26 @@ end
 
 
 function CovNeuralnet(; Dim=4)
+    @error "CovNeuralnet() is not supported now. Use CovNeuralnet(U) to determine the type of U."
     layers = CovLayer{Dim}[]
     return CovNeuralnet{Dim}(layers)
 end
+
+function CovNeuralnet(U::Vector{<:AbstractGaugefields{NC}}
+    ; Dim=4) where {NC}
+    return CovNeuralnet(U[1]; Dim)
+end
+
+function CovNeuralnet(U::AbstractGaugefields; Dim=4, numtemps=16)
+    layers = CovLayer{Dim}[]
+    num = numtemps
+    _temp_U = Temporalfields(U; num=num)
+    UTA = initialize_TA_Gaugefields(U)
+    _temp_UA = Temporalfields(UTA; num=1)
+
+    return CovNeuralnet{Dim,typeof(U),typeof(UTA)}(layers, _temp_U, _temp_UA)
+end
+
 
 function Base.push!(c::CovNeuralnet, layer::CovLayer)
     #c.numlayers += 1
@@ -94,6 +115,7 @@ end
 
 include("./stout.jl")
 include("./stout_fast.jl")
+include("./stout_fast_accelerator.jl")
 #include("./stout_b.jl")
 #include("./stout_smearing.jl")
 #include("./gradientflow.jl")
@@ -238,17 +260,29 @@ function apply_smearing_U(
     Uin::Array{T,1},
     smearing::CovNeuralnet{Dim},
 ) where {T<:Abstractfields,Dim}
-    temp1 = similar(Uin[1])
-    temp2 = similar(Uin[1])
-    temp3 = similar(Uin[1])
-    temp4 = similar(Uin[1])
-    F0 = initialize_TA_Gaugefields(Uin[1])
+    unused!(smearing._temp_U)
+
+    temps, its_temp1 = get_temp(smearing._temp_U, 4)
+
+    #temp1 = similar(Uin[1])
+    #temp2 = similar(Uin[1])
+    #temp3 = similar(Uin[1])
+    #temp4 = similar(Uin[1])
+    F0s, its_F0 = get_temp(smearing._temp_UA, 1)
+    #F0 = initialize_TA_Gaugefields(Uin[1])
     numlayers = get_numlayers(smearing)
     Uout_multi = Array{typeof(Uin),1}(undef, numlayers)
+    temps_multi, its_temp_multi = get_temp(smearing._temp_U, numlayers * Dim)
     for i = 1:numlayers
-        Uout_multi[i] = similar(Uin)
+        Uout_multi[i] = temps_multi[(i-1)*Dim+1:(i-1)*Dim+Dim]#similar(Uin)
     end
-    apply_neuralnet!(Uout_multi, smearing, Uin, [temp1, temp2, temp3, temp4], [F0])
+    #apply_neuralnet!(Uout_multi, smearing, Uin, [temp1, temp2, temp3, temp4], [F0])
+    #apply_neuralnet!(Uout_multi, smearing, Uin, temps, [F0])
+    apply_neuralnet!(Uout_multi, smearing, Uin, temps, F0s)
+
+    unused!(smearing._temp_U, its_temp1)
+    unused!(smearing._temp_UA, its_F0)
+
     return Uout_multi
 
     error(
@@ -257,13 +291,23 @@ function apply_smearing_U(
 end
 
 function back_prop(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
+
+    δ_current = deepcopy(δL)
+    back_prop!(δ_current, δL, net, Uout_multi, Uin)
+    return δ_current
+
+    #=
     temps = similar(Uout_multi[1])
     temps_F1 = initialize_TA_Gaugefields(temps[1])
     tempf = [temps_F1]
 
     layer = net.layers[get_numlayers(net)]
-    δ_prev = similar(δL)
+    δ_prev, its_prev = get_temp(net._temp_U, Dim)
     δ_current = deepcopy(δL)
+    #δ_current, its_current = get_temp(net._temp_U, Dim)
+    #substitute_U!(δ_current, δL)
+    #similar(δL)
+    #δ_current = deepcopy(δL)
     set_wing_U!(δ_current)
 
     for i = get_numlayers(net):-1:2
@@ -276,8 +320,59 @@ function back_prop(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
     layer_pullback!(δ_prev, δ_current, layer, Uin, temps, tempf)
     δ_current, δ_prev = δ_prev, δ_current
 
+    unused!(net._temp_U, its_prev)
+
     return δ_current
+    =#
 end
+
+function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
+    #temps = similar(Uout_multi[1])
+    temps, its_temps = get_temp(net._temp_U, Dim)
+    tempf, its_tempf = get_temp(net._temp_UA, 1)
+
+    #temps_F1 = initialize_TA_Gaugefields(temps[1])
+    #tempf = [temps_F1]
+
+    layer = net.layers[get_numlayers(net)]
+    δ_prev, its_prev = get_temp(net._temp_U, Dim)
+    δ_prev2, its_prev2 = get_temp(net._temp_U, Dim)
+    #δ_current, its_current = get_temp(net._temp_U, Dim)
+    substitute_U!(δ_prev2, δL)
+    #similar(δL)
+    #δ_current = deepcopy(δL)
+    set_wing_U!(δ_prev2)
+
+    for i = get_numlayers(net):-1:2
+        layer = net.layers[i]
+
+        temps, its_temps = get_temp(net._temp_U, Dim)
+        tempf, its_tempf = get_temp(net._temp_UA, 1)
+        #layer_pullback!(δ_prev, δ_current, layer, Uout_multi[i-1], temps, tempf)
+        layer_pullback!(δ_prev, δ_prev2, layer, Uout_multi[i-1], temps, tempf)
+        unused!(net._temp_U, its_temps)
+        unused!(net._temp_UA, its_tempf)
+
+        #δ_current, δ_prev = δ_prev, δ_current
+        δ_prev2, δ_prev = δ_prev, δ_prev2
+        #set_wing_U!(δ_current)
+    end
+    layer = net.layers[1]
+    #layer_pullback!(δ_prev, δ_current, layer, Uin, temps, tempf)
+    layer_pullback!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
+    δ_prev2, δ_prev = δ_prev, δ_prev2
+    #δ_current, δ_prev = δ_prev, δ_current
+
+    substitute_U!(δ_current, δ_prev2)
+
+    unused!(net._temp_U, its_prev)
+    unused!(net._temp_U, its_prev2)
+
+    unused!(net._temp_U, its_temps)
+    unused!(net._temp_UA, its_tempf)
+
+end
+
 
 
 

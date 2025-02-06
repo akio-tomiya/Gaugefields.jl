@@ -86,9 +86,9 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
 
 
         if accelerator == "cuda"
-            iscudadefined = @isdefined CUDA 
+            iscudadefined = @isdefined CUDA
             #error(iscudadefined)
-            if  iscudadefined
+            if iscudadefined
                 if CUDA.has_cuda()
                     U = zeros(ComplexF64, NC, NC, blocksize, rsize) |> CUDA.CuArray
                     temp_volume = zeros(ComplexF64, blocksize, rsize) |> CUDA.CuArray
@@ -101,14 +101,15 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
                     accdevise = :none
                 end
             else
-                @warn "CUDA is not used. using CUDA if you want to use gpu. CPU will be used"
+                #@warn "CUDA is not used. using CUDA if you want to use gpu. CPU will be used"
+
                 U = zeros(ComplexF64, NC, NC, blocksize, rsize)
                 temp_volume = zeros(ComplexF64, blocksize, rsize)
                 #accdevise = :threads
                 accdevise = :none
             end
 
-            
+
         elseif accelerator == "threads"
             U = zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = zeros(ComplexF64, blocksize, rsize)
@@ -143,6 +144,12 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
             blockinfo, temp_volume, accelerator,
             Ushifted)
     end
+end
+
+
+
+function get_tempU(U::Gaugefields_4D_accelerator)
+    return U.Ushifted
 end
 
 function Base.similar(U::T) where {T<:Gaugefields_4D_accelerator}
@@ -261,7 +268,7 @@ end
 function normalize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {TU,TUv,NC}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
-            kernel_normalize_U_NC!(b, r, U.U,NC)
+            kernel_normalize_U_NC!(b, r, U.U, NC)
         end
     end
 end
@@ -282,6 +289,7 @@ function substitute_U!(a::Gaugefields_4D_accelerator{NC}, b::Gaugefields_4D_acce
     set_wing_U!(a)
 end
 
+
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
@@ -291,8 +299,8 @@ function substitute_U!(
     end
 end
 
-struct Shifted_Gaugefields_4D_accelerator{NC} <: Shifted_Gaugefields{NC,4}
-    parent::Gaugefields_4D_accelerator{NC}
+struct Shifted_Gaugefields_4D_accelerator{NC,TS<:Gaugefields_4D_accelerator} <: Shifted_Gaugefields{NC,4}
+    parent::TS
     #parent::T
     shift::NTuple{4,Int8}
     NX::Int64
@@ -304,12 +312,41 @@ struct Shifted_Gaugefields_4D_accelerator{NC} <: Shifted_Gaugefields{NC,4}
     #function Shifted_Gaugefields(U::T,shift,Dim) where {T <: AbstractGaugefields}
     function Shifted_Gaugefields_4D_accelerator(U::Gaugefields_4D_accelerator{NC}, shift) where {NC}
         shifted_U!(U, shift)
-        return new{NC}(U, shift, U.NX, U.NY, U.NZ, U.NT)
+        return new{NC,typeof(U)}(U, shift, U.NX, U.NY, U.NZ, U.NT)
     end
 end
 
 function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU}, shift) where {NC,TU,TUv,accdevise,TshifedU<:Nothing}
     return
+end
+
+function substitute_U!(a::Gaugefields_4D_accelerator{NC}, b::Shifted_Gaugefields_4D_accelerator) where {NC}
+    a.U .= b.parent.Ushifted
+    set_wing_U!(a)
+end
+
+function substitute_U!(a::Gaugefields_4D_accelerator{NC}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Gaugefields_4D_accelerator}
+    for r = 1:a.blockinfo.rsize
+        for b = 1:a.blockinfo.blocksize
+            for ic = 1:NC
+                for jc = 1:NC
+                    a.U[jc, ic, b, r] = conj(B.parent.U[ic, jc, b, r])
+                end
+            end
+        end
+    end
+end
+
+function substitute_U!(a::Gaugefields_4D_accelerator{NC}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Shifted_Gaugefields_4D_accelerator}
+    for r = 1:a.blockinfo.rsize
+        for b = 1:a.blockinfo.blocksize
+            for ic = 1:NC
+                for jc = 1:NC
+                    a.U[jc, ic, b, r] = conj(B.parent.parent.Ushifted[ic, jc, b, r])
+                end
+            end
+        end
+    end
 end
 
 
@@ -323,6 +360,17 @@ function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU},
     end
 end
 
+function unit_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TshifedU}) where {NC,TU,TUv,TshifedU}
+    for r = 1:U.blockinfo.rsize
+        for b = 1:U.blockinfo.blocksize
+            for ic = 1:NC
+                for jc = 1:NC
+                    U.U[jc, ic, b, r] = ifelse(ic == jc, 1, 0)
+                end
+            end
+        end
+    end
+end
 
 
 
@@ -509,6 +557,16 @@ end
 
 function add_U!(
     c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    a::Adjoint_Gaugefields{T1},
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},TU,TUv}
+    add_U!(c, 1, a)
+end
+
+
+
+
+function add_U!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv},
     α::N,
     a::T1,
 ) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
@@ -545,7 +603,7 @@ function add_U!(
 
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
-            kernel_add_U_αadag!(b, r, c.U, a.U, α, NC)
+            kernel_add_U_αadag!(b, r, c.U, a.parent.U, α, NC)
         end
     end
 end
@@ -606,7 +664,7 @@ function exptU!(
 
     for r = 1:v.blockinfo.rsize
         for b = 1:v.blockinfo.blocksize
-            kernel_exptU_wvww!(b, r, w.U, v.U, ww.U, t, NC)
+            kernel_exptU_wvww_NC3!(b, r, w.U, v.U, ww.U, t)
             #kernel_clear_U!(b,r,c.U, NC)
         end
     end

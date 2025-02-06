@@ -128,6 +128,7 @@ import .Abstractsmearing_module:
     calc_smearedU,
     construct_smearing,
     back_prop,
+    back_prop!,
     CovNeuralnet#gradientflow!                 
 import .ILDG_format: ILDG, load_gaugefield!, save_binarydata
 import .heatbath_module:
@@ -246,7 +247,7 @@ export exptU!,
     substitute_U!,
     set_wing_U!,
     Traceless_antihermitian!
-export Initialize_Gaugefields, back_prop
+export Initialize_Gaugefields, back_prop, back_prop!
 export Initialize_4DGaugefields
 export Initialize_Bfields
 export set_parameters!, get_parameter_derivatives, apply_smearing_U,

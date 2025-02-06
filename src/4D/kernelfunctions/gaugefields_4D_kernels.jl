@@ -234,10 +234,10 @@ function kernel_normalize_U_NC3!(b, r, u)
 
 end
 
-function kernel_normalize_U_NC!(b, r, u,NC)
-    A = u[:, :, b,r]
+function kernel_normalize_U_NC!(b, r, u, NC)
+    A = u[:, :, b, r]
     gramschmidt!(A)
-    u[:, :, b,r] = A[:, :]
+    u[:, :, b, r] = A[:, :]
     return
 end
 
@@ -804,6 +804,7 @@ function kernel_add_U!(b, r, c, a, NC)
     return
 end
 
+
 function kernel_add_U_αa!(b, r, c, a, α, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
@@ -832,56 +833,56 @@ function kernel_clear_U!(b, r, c, NC)
 end
 
 
-function kernel_exptU_TAwuww_NC!(b, r, uout,u, t,NC,NG,generators,temp1,temp2,temp3)
-    a = view(u,:, b,r)
-    u0 = view(temp2,:,:,b,r)
+function kernel_exptU_TAwuww_NC!(b, r, uout, u, t, NC, NG, generators, temp1, temp2, temp3)
+    a = view(u, :, b, r)
+    u0 = view(temp2, :, :, b, r)
     #for k = 1:length(a)
     #    a[k] = u[k, ix, iy, iz, it]
     #end
 
-    lie2matrix_tuple!(u0,  a,NG,generators,NC,t)
+    lie2matrix_tuple!(u0, a, NG, generators, NC, t)
     #uout[:, :, b,r] = exp(t * (im / 2) * u0)
     nmax = 10
-    
-    matrixexponential!(view(uout,:,:,b,r), u0,NC,nmax,view(temp1,:,:,b,r),view(temp3,:,:,b,r))
+
+    matrixexponential!(view(uout, :, :, b, r), u0, NC, nmax, view(temp1, :, :, b, r), view(temp3, :, :, b, r))
 end
 
-function matrixexponential!(aout,a,Nc,nmax,temp1,temp2)
+function matrixexponential!(aout, a, Nc, nmax, temp1, temp2)
     atemp = temp1
     atemp2 = temp2
-    
-    for j=1:Nc
-        for i=1:Nc
-            aout[i,j] = 0
-            atemp2[i,j] =0
+
+    for j = 1:Nc
+        for i = 1:Nc
+            aout[i, j] = 0
+            atemp2[i, j] = 0
             #b[i,j] = 0
             #btemp[i,j] = 0
         end
     end
-    for i=1:Nc
-        aout[i,i] = 1
-        atemp2[i,i] = 1 
+    for i = 1:Nc
+        aout[i, i] = 1
+        atemp2[i, i] = 1
     end
 
-    for k=1:nmax
-        for j=1:Nc
-            for i=1:Nc
-                atemp[i,j] =atemp2[i,j] 
-                atemp2[i,j] = 0
+    for k = 1:nmax
+        for j = 1:Nc
+            for i = 1:Nc
+                atemp[i, j] = atemp2[i, j]
+                atemp2[i, j] = 0
             end
         end
 
-        for jc=1:Nc
-            for ic=1:Nc
-                for kc=1:Nc
-                    atemp2[ic,jc] += a[ic,kc]*atemp[kc,jc]/k
+        for jc = 1:Nc
+            for ic = 1:Nc
+                for kc = 1:Nc
+                    atemp2[ic, jc] += a[ic, kc] * atemp[kc, jc] / k
                 end
             end
         end
 
-        for j=1:Nc
-            for i=1:Nc
-                aout[i,j] += atemp2[i,j] 
+        for j = 1:Nc
+            for i = 1:Nc
+                aout[i, j] += atemp2[i, j]
             end
         end
 
@@ -893,23 +894,23 @@ end
 
 
 
-function lie2matrix_tuple!(matrix, a,NG,generators,NC,t)
+function lie2matrix_tuple!(matrix, a, NG, generators, NC, t)
     matrix .= 0
-    for i=1:NG
-    #for (i, genmatrix) in enumerate(g.generator)
-        for jc=1:NC
-            for ic=1:NC
-                matrix[ic,jc] += a[i] * generators[i][ic,jc]*t * (im / 2)
+    for i = 1:NG
+        #for (i, genmatrix) in enumerate(g.generator)
+        for jc = 1:NC
+            for ic = 1:NC
+                matrix[ic, jc] += a[i] * generators[i][ic, jc] * t * (im / 2)
             end
         end
     end
     return
 end
 
-function kernel_exptU_TAwuww_NC2!(b, r, uout,u, t)
-    u1 = t * u[1, b,r] / 2
-    u2 = t * u[2, b,r] / 2
-    u3 = t * u[3, b,r] / 2
+function kernel_exptU_TAwuww_NC2!(b, r, uout, u, t)
+    u1 = t * u[1, b, r] / 2
+    u2 = t * u[2, b, r] / 2
+    u3 = t * u[3, b, r] / 2
     R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
     sR = sin(R) / R
     #sR = ifelse(R == 0,1,sR)
@@ -918,10 +919,10 @@ function kernel_exptU_TAwuww_NC2!(b, r, uout,u, t)
     a2 = u2 * sR
     a3 = u3 * sR
 
-    uout[1, 1, b,r] = cos(R) + im * a3
-    uout[1, 2, b,r] = im * a1 + a2
-    uout[2, 1, b,r] = im * a1 - a2
-    uout[2, 2, b,r] = cos(R) - im * a3
+    uout[1, 1, b, r] = cos(R) + im * a3
+    uout[1, 2, b, r] = im * a1 + a2
+    uout[2, 1, b, r] = im * a1 - a2
+    uout[2, 2, b, r] = cos(R) - im * a3
 end
 
 function kernel_exptU_TAwuww_NC3!(b, r, w, u, ww, t)
@@ -1118,7 +1119,7 @@ function kernel_exptU_TAwuww_NC3!(b, r, w, u, ww, t)
     return
 end
 
-function kernel_exptU_wvww!(b, r, w, v, ww, t, NC)
+function kernel_exptU_wvww_NC3!(b, r, w, v, ww, t)
     v11 = v[1, 1, b, r]
     v22 = v[2, 2, b, r]
     v33 = v[3, 3, b, r]
@@ -1487,14 +1488,14 @@ end
 
 function kernel_Traceless_antihermitian_add_TAU_NC2!(b, r,
     c, vin, factor)
-    v11 = vin[1, 1,b,r]
-    v22 = vin[2, 2,b,r]
+    v11 = vin[1, 1, b, r]
+    v22 = vin[2, 2, b, r]
 
     tri = fac12 * (imag(v11) + imag(v22))
 
-    v12 = vin[1, 2,b,r]
+    v12 = vin[1, 2, b, r]
     #v13 = vin[1,3,ix,iy,iz,it]
-    v21 = vin[2, 1,b,r]
+    v21 = vin[2, 1, b, r]
 
     x12 = v12 - conj(v21)
 
@@ -1505,27 +1506,27 @@ function kernel_Traceless_antihermitian_add_TAU_NC2!(b, r,
     y21 = 0.5 * x21
     y22 = (imag(v22) - tri) * im
 
-    c[1,b,r] =
-        (imag(y12) + imag(y21)) * factor + c[1,b,r]
-    c[2,b,r] =
-        (real(y12) - real(y21)) * factor + c[2,b,r]
-    c[3,b,r] =
-        (imag(y11) - imag(y22)) * factor + c[3,b,r]
+    c[1, b, r] =
+        (imag(y12) + imag(y21)) * factor + c[1, b, r]
+    c[2, b, r] =
+        (real(y12) - real(y21)) * factor + c[2, b, r]
+    c[3, b, r] =
+        (imag(y11) - imag(y22)) * factor + c[3, b, r]
 
     return
 
 end
 
-function matrix2lie_tuple!(a, NG,generators,NC, A)
+function matrix2lie_tuple!(a, NG, generators, NC, A)
     for i = 1:NG
         #println("i = $i")
         #display(g.generator[i]*g.generator[i])
         #println("\t")
         #println(tr(g.generator[i]*A)/2)
         a[i] = 0.0im
-        for ic=1:NC
-            for kc=1:NC
-                a[i] += generators[i][ic,kc]*A[kc,ic]/2
+        for ic = 1:NC
+            for kc = 1:NC
+                a[i] += generators[i][ic, kc] * A[kc, ic] / 2
             end
         end#  tr(g.generator[i] * A) / 2
     end
@@ -1533,27 +1534,27 @@ function matrix2lie_tuple!(a, NG,generators,NC, A)
 end
 
 function kernel_Traceless_antihermitian_add_TAU_NC!(b, r,
-    c, vin, factor,NC,NG,generators,temp,tempa)
+    c, vin, factor, NC, NG, generators, temp, tempa)
     matrix = temp
     a = tempa
 
 
     tri = 0.0
     for k = 1:NC
-        tri += imag(vin[k, k, b,r])
+        tri += imag(vin[k, k, b, r])
     end
-    tri *= 1/NC
+    tri *= 1 / NC
     for k = 1:NC
         #vout[k,k,ix,iy,iz,it] = (imag(vin[k,k,ix,iy,iz,it])-tri)*im
-        matrix[k, k] = (imag(vin[k, k, b,r]) - tri) * im
+        matrix[k, k] = (imag(vin[k, k, b, r]) - tri) * im
     end
 
-    for k1=1:NC
-        for k2=(k1+1):NC
+    for k1 = 1:NC
+        for k2 = (k1+1):NC
             vv =
                 0.5 * (
-                    vin[k1, k2, b,r] -
-                    conj(vin[k2, k1, b,r])
+                    vin[k1, k2, b, r] -
+                    conj(vin[k2, k1, b, r])
                 )
             #vout[k1,k2,ix,iy,iz,it] = vv
             #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
@@ -1562,12 +1563,12 @@ function kernel_Traceless_antihermitian_add_TAU_NC!(b, r,
         end
     end
     #display(matrix)
-    matrix2lie_tuple!(a, NG,generators,NC, matrix)
+    matrix2lie_tuple!(a, NG, generators, NC, matrix)
     #display(a)
     #error("l")
     #matrix2lie!(a, g, matrix)
     for k = 1:NG
-        c[k, b,r] = 2 * imag(a[k])*factor + c[k, b,r]
+        c[k, b, r] = 2 * imag(a[k]) * factor + c[k, b, r]
     end
 end
 
