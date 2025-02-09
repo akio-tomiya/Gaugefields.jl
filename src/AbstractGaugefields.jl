@@ -226,10 +226,34 @@ function Initialize_4DGaugefields(
     NDW,
     NN...;
     condition="cold",
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
+    cuda=false,
+    blocks=nothing,
     accelerator="none"
 )
+
+    @assert length(NN) == 4 "Dimension should be 4. "
+
+    U = Initialize_Gaugefields(
+        NC,
+        NDW,
+        NN...;
+        condition,
+        mpi,
+        PEs,
+        mpiinit,
+        verbose_level,
+        randomnumber,
+        cuda,
+        blocks,
+        accelerator
+    )
+    return U
+
     if condition == "cold"
         if NDW == 0
 
