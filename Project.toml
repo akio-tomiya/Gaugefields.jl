@@ -19,7 +19,7 @@ Wilsonloop = "f3c8d4fe-2f22-401d-8228-e6a01d7a1d02"
 [compat]
 Distributions = "0.25"
 EzXML = "1"
-InteractiveUtils = "1.11.0"
+InteractiveUtils = "1"
 JLD2 = "0.4, 0.5"
 NPZ = "0.4"
 Requires = "1"
