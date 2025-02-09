@@ -82,7 +82,7 @@ end
 
 function heatbathtest_2D(NX, NT, β, NC)
     Dim = 2
-    Nwing = 1
+    Nwing = 0
 
     #=
     u1 = RandomGauges(NC,Nwing,NX,NT)
@@ -170,7 +170,7 @@ println("2D system")
     #NY = 4
     #NZ = 4
     NT = 4
-    Nwing = 1
+    Nwing = 0
 
     @testset "NC=2" begin
         β = 2.3

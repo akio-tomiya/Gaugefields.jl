@@ -138,7 +138,7 @@ function test1()
     show(gauge_action)
 
     L = [NX, NY, NZ, NT]
-    nn = CovNeuralnet()
+    nn = CovNeuralnet(U)
     ρ = [0.1] #* 1e-10
     layername = ["plaquette"]
 

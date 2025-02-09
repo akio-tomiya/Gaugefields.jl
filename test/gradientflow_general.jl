@@ -6,7 +6,7 @@ using Wilsonloop
 
 function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     Dim = 4
-    Nwing = 1
+    Nwing = 0
 
     Random.seed!(123)
 
@@ -86,7 +86,7 @@ end
 
 function gradientflow_test_2D(NX, NT, NC)
     Dim = 2
-    Nwing = 1
+    Nwing = 0
 
 
     U = Initialize_Gaugefields(NC, Nwing, NX, NT, condition="hot", randomnumber="Reproducible")
