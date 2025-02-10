@@ -3350,6 +3350,8 @@ function calc_Mmatrix!(
             end
         end
         Mn ./= im
+    else
+        mul!(Mn, Un, δn_prev) # --> f1 = 1, added by HH for WLB gauge fixing project, to have a well-defined point when Q == 0 for θ =0. 
     end
 end
 
