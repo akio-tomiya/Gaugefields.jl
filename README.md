@@ -18,6 +18,10 @@ and a code in a project [JuliaQCD](https://github.com/JuliaQCD/).
 [NOTE: This is an extended version in order to implement higher-form gauge fields
  (i.e., 't Hooft twisted boundary condition/flux).
 See [o-morikawa/Gaugefields.jl](https://github.com/o-morikawa/Gaugefields.jl)]
+
+If you have questions and comments. Please use the issues section of this repository or use [Discussions in JuliaQCD](https://github.com/orgs/JuliaQCD/discussions/4).
+
+[In Japanese] 質問やコメントを日本語でしたい方は[JuliaQCDのディスカッションボード](https://github.com/orgs/JuliaQCD/discussions/3)に書き込みをしてください。
  
 # What this package can do:
 This package has following functionarities
