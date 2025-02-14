@@ -1352,7 +1352,7 @@ function gradientflow_test_4D(NX,NY,NZ,NT,NC)
 
     listloops = [loops_p,loops]
     listvalues = [1+im,0.1]
-    g = Gradientflow_general(U,B,listloops,listvalues,eps = 0.1)
+    g = Gradientflow_general_Bfields(U,B,listloops,listvalues,eps = 0.1)
 
     for itrj=1:10
         flow!(U,B,g)
