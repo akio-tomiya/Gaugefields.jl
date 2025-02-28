@@ -26,6 +26,8 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps,Ucpu,tempscpu,pcp
         substitute_U!(pcpu[i],p[i])
     end
 
+    cpumode = false
+
 
     @time for itrj = 1:MDsteps
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)#,Ucpu,tempscpu,pcpu)
@@ -37,18 +39,24 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps,Ucpu,tempscpu,pcp
     end
     #error("dd")
 
-    
-    @time for itrj = 1:MDsteps
-        U_update!(Ucpu, pcpu, 0.5, Δτ, Dim, gauge_actioncpu ,tempscpu)#,Ucpu,tempscpu,pcpu)
+    if cpumode
+        @time for itrj = 1:MDsteps
+            U_update!(Ucpu, pcpu, 0.5, Δτ, Dim, gauge_actioncpu ,tempscpu)#,Ucpu,tempscpu,pcpu)
 
-        P_update!(Ucpu, pcpu, 1.0, Δτ, Dim, gauge_actioncpu, tempscpu)#,Ucpu,tempscpu,pcpu)
+            P_update!(Ucpu, pcpu, 1.0, Δτ, Dim, gauge_actioncpu, tempscpu)#,Ucpu,tempscpu,pcpu)
 
-        U_update!(Ucpu, pcpu, 0.5, Δτ, Dim, gauge_actioncpu, tempscpu)#,Ucpu,tempscpu,pcpu)
+            U_update!(Ucpu, pcpu, 0.5, Δτ, Dim, gauge_actioncpu, tempscpu)#,Ucpu,tempscpu,pcpu)
+        end
     end
     
     Snew = calc_action(gauge_action, U, p)
-    Snewcpu = calc_action(gauge_actioncpu, Ucpu, pcpu)
-    println("Sold = $Sold, Snew = $Snew Snewcpu = $Snewcpu")
+    if cpumode
+        Snewcpu = calc_action(gauge_actioncpu, Ucpu, pcpu)
+        println("Sold = $Sold, Snew = $Snew Snewcpu = $Snewcpu")
+    else
+        println("Sold = $Sold, Snew = $Snew ")
+    end
+    
     println("Snew - Sold = $(Snew-Sold)")
     ratio = min(1, exp(-Snew + Sold))
     if rand() > ratio
@@ -186,6 +194,10 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β0)
     =#
 
     blocks = [4, 4, 4, 4]
+    L = [NX,NY,NZ,NT]
+
+    println("lattice size $L")
+    println("block size $blocks")
 
     #=
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
@@ -195,11 +207,13 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β0)
 
                 
     Ucpu = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
-    condition="hot")
+    condition="cold")
 
+    singleprecision = true
+    #singleprecision = false
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
         condition="cold",
-        cuda=true, blocks=blocks)
+        cuda=true, blocks=blocks,singleprecision=singleprecision)
     
 
     #"Reproducible"
@@ -299,10 +313,10 @@ end
 
 println("4D system")
 @testset "4D" begin
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
+    NX = 16
+    NY = 16
+    NZ = 16
+    NT = 16
     Nwing = 0
 
     #=
@@ -318,18 +332,19 @@ println("4D system")
         @test ratio > 0.5
     end
     =#
-
-    @testset "NC=4" begin
+    @testset "NC=3" begin
         β = 5.7
-        NC = 4
+        NC = 3
         println("NC = $NC")
-        #val  =0.19127260002797497
-        #val = 0.1904815857904191
-        val = 0.7301232810349298
+        #val = 0.5779454661484242
+        #val  =0.9440125563836135
+        #val = 0.5385142466966718
+        val = 0.8786515255315753
         @time plaq_t, ratio = HMC_test_4D(NX, NY, NZ, NT, NC, β)
         #@test abs(plaq_t-val)/abs(val) < eps
         @test ratio > 0.5
     end
+
 
     @testset "NC=2" begin
         β = 2.3
@@ -344,14 +359,15 @@ println("4D system")
     end
 
     
-    @testset "NC=3" begin
+
+
+    @testset "NC=4" begin
         β = 5.7
-        NC = 3
+        NC = 4
         println("NC = $NC")
-        #val = 0.5779454661484242
-        #val  =0.9440125563836135
-        #val = 0.5385142466966718
-        val = 0.8786515255315753
+        #val  =0.19127260002797497
+        #val = 0.1904815857904191
+        val = 0.7301232810349298
         @time plaq_t, ratio = HMC_test_4D(NX, NY, NZ, NT, NC, β)
         #@test abs(plaq_t-val)/abs(val) < eps
         @test ratio > 0.5
