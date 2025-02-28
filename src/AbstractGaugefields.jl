@@ -1001,36 +1001,21 @@ function evaluate_gaugelinks!(
 
 
 
-
+    #println("1")
     for j = 2:numlinks
         Ujlink = glinks[j]
         isUkdag = isdag(Ujlink)
-        #isUkdag = ifelse(typeof(Ujlink) <: Adjoint_GLink,true,false)
         position = get_position(Ujlink)
         direction = get_direction(Ujlink)
-        #println("j = $j position = $position")
-        #println("a,b, $isUkdag , $isU1dag")
-        Ushift2 = shift_U(U[direction], position)
 
-        #zerocheck(U,Ushift1.parent.Ushifted,"Ushift1")
-        #zerocheck(U,Ushift2.parent.Ushifted,"Ushift2 position $position")
+        Ushift2 = shift_U(U[direction], position)
 
         multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag)
 
-
-        #zerocheck(U,uout.U,"uout")
-
-        #pos = Tuple([ix,iy,iz,it] .+ collect(position))
-        #U2 = U[direction][:,:,pos...]
-        #println("U1U2dag ", U1*U2')
         substitute_U!(Unew, uout)
-
-
-        #println("Unew ", Unew[:,:,ix,iy,iz,it])
-
         Ushift1 = shift_U(Unew, origin)
-        #println("uout ", uout[:,:,ix,iy,iz,it])
     end
+    #println("2end")
 
     #zerocheck(U,uout.U,"uoutfinal")
 

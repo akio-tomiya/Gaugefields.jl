@@ -594,7 +594,17 @@ end
 function cudakernel_substitute_U!(A,B,NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    for ic = 1:NC
+    @inbounds for ic = 1:NC
+        for jc = 1:NC
+            A[jc, ic, b, r] = B[jc, ic, b, r]
+        end
+    end
+end
+
+function cudakernel_substitute_Udag!(A,B,NC)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    @inbounds for ic = 1:NC
         for jc = 1:NC
             A[jc, ic, b, r] = conj(B[ic, jc, b, r])
         end
@@ -603,9 +613,15 @@ end
 
 function substitute_U!(a::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TshifedU}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,TU,TUv,TshifedU}
     CUDA.@sync begin
-        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_substitute_U!(a.U,B.parent.parent.Ushifted,NC)
+        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_substitute_Udag!(a.U,B.parent.parent.Ushifted,NC)
     end
 end
+
+#function substitute_U!(a::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TshifedU}, B::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TshifedU}) where {NC,TU,TUv,TshifedU}
+#    CUDA.@sync begin
+#        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_substitute_U!(a.U,B.U,NC)
+#    end
+#end
 
 function cudakernel_unit_U!(U,NC)
     b = Int64(CUDA.threadIdx().x)

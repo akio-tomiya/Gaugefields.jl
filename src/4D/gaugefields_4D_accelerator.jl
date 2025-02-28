@@ -293,7 +293,8 @@ end
 
 
 function substitute_U!(a::Gaugefields_4D_accelerator{NC}, b::Gaugefields_4D_accelerator{NC}) where {NC}
-    a.U .= b.U
+    copyto!(a.U,b.U)
+    #a.U .= b.U
     set_wing_U!(a)
 end
 
