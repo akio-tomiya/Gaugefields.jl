@@ -573,6 +573,14 @@ function cudakernel_NC_shiftedU!(Ushifted, U, shift, blockinfo, NC)
     return
 end
 
+function cudakernel_NC3_shiftedU!(Ushifted, U, shift, blockinfo)
+    b = Int64(CUDA.threadIdx().x)
+    r = Int64(CUDA.blockIdx().x)
+    kernel_NC3_shiftedU!(b, r, Ushifted, U, shift, blockinfo)
+    return
+end
+
+
 
 
 function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU}, shift) where {NC,TU<:CUDA.CuArray,TUv,accdevise,TshifedU<:CUDA.CuArray}
@@ -581,6 +589,14 @@ function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU},
             shift, U.blockinfo, NC)
     end
 end
+
+function shifted_U!(U::Gaugefields_4D_accelerator{3,TU,TUv,accdevise,TshifedU}, shift) where {TU<:CUDA.CuArray,TUv,accdevise,TshifedU<:CUDA.CuArray}
+    CUDA.@sync begin
+        CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_NC3_shiftedU!(U.Ushifted, U.U,
+            shift, U.blockinfo)
+    end
+end
+
 
 
 

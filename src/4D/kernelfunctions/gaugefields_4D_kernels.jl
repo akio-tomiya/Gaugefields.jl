@@ -1455,6 +1455,17 @@ function kernel_NC_shiftedU!(b, r, Ushifted, U,
     end
 end
 
+function kernel_NC3_shiftedU!(b, r, Ushifted, U,
+    shift, blockinfo)
+    bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
+    @inbounds for k1 = 1:3
+        for k2 = 1:3
+            Ushifted[k2, k1, b, r] = U[k2, k1, bshifted, rshifted]
+        end
+    end
+end
+
+
 function kernel_add_U_αshifta!(b, r, c, a, α, shift, blockinfo, NC)
     bshifted, rshifted = shiftedindex(b, r, shift, blockinfo)
 

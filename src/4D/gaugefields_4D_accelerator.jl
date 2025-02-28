@@ -369,6 +369,15 @@ function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU},
     end
 end
 
+function shifted_U!(U::Gaugefields_4D_accelerator{3,TU,TUv,accdevise,TshifedU}, shift) where {TU,TUv,accdevise,TshifedU}
+    for r = 1:U.blockinfo.rsize
+        for b = 1:U.blockinfo.blocksize
+            kernel_NC3_shiftedU!(b, r, U.Ushifted, U.U,
+                shift, U.blockinfo)
+        end
+    end
+end
+
 function unit_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TshifedU}) where {NC,TU,TUv,TshifedU}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
