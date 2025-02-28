@@ -12,9 +12,10 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
     blockinfo::Blockindices
     temp_volume::TUv
     accelerator::String
+    singleprecision::Bool
 
     function TA_Gaugefields_4D_accelerator(NC, NX, NY, NZ, NT,
-        blocks; accelerator="none")
+        blocks; accelerator="none", singleprecision=false)
         NumofBasis = ifelse(NC == 1, 1, NC^2 - 1)
         if NC <= 3
             generators = nothing
@@ -27,12 +28,13 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
         blocksize = blockinfo.blocksize
         rsize = blockinfo.rsize
 
-        a0 = zeros(Float64, NumofBasis, blocksize, rsize)
-        temp_volume0 = zeros(Float64, blocksize, rsize)
+        dtype = ifelse(singleprecision, Float32, Float64)
+        a0 = zeros(dtype, NumofBasis, blocksize, rsize)
+        temp_volume0 = zeros(dtype, blocksize, rsize)
 
         if accelerator == "cuda"
-            iscudadefined = @isdefined CUDA 
-            if  iscudadefined
+            iscudadefined = @isdefined CUDA
+            if iscudadefined
                 if CUDA.has_cuda()
                     a = CUDA.CuArray(a0)
                     temp_volume = CUDA.CuArray(temp_volume0)
@@ -77,7 +79,8 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
             generators,
             blockinfo,
             temp_volume,
-            accelerator
+            accelerator,
+            singleprecision
         )
     end
 end
@@ -85,7 +88,7 @@ end
 
 function initialize_TA_Gaugefields(u::Gaugefields_4D_accelerator)
     return TA_Gaugefields_4D_accelerator(u.NC, u.NX, u.NY, u.NZ, u.NT,
-        u.blockinfo.blocks, accelerator=u.accelerator)
+        u.blockinfo.blocks, accelerator=u.accelerator, singleprecision=u.singleprecision)
 end
 
 
@@ -129,7 +132,7 @@ end
 
 
 function Base.similar(u::TA_Gaugefields_4D_accelerator{NC,NumofBasis}) where {NC,NumofBasis}
-    return TA_Gaugefields_4D_accelerator(NC, u.NX, u.NY, u.NZ, u.NT, u.blockinfo.blocks; accelerator=u.accelerator)
+    return TA_Gaugefields_4D_accelerator(NC, u.NX, u.NY, u.NZ, u.NT, u.blockinfo.blocks; accelerator=u.accelerator, singleprecision=u.singleprecision)
     #error("similar! is not implemented in type $(typeof(U)) ")
 end
 
@@ -177,13 +180,13 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC,Ta,TUv} #uout = exp(t*u)
     generators = Tuple(v.generators.generator)
     NG = length(generators)
-    temp1 = zeros(ComplexF64,NC,NC)
-    temp2 = zeros(ComplexF64,NC,NC)
+    temp1 = zeros(ComplexF64, NC, NC)
+    temp2 = zeros(ComplexF64, NC, NC)
 
     for r = 1:uout.blockinfo.rsize
         for b = 1:uout.blockinfo.blocksize
             kernel_exptU_TAwuww_NC!(b, r,
-                uout.U, v.a,  t,NC,NG,generators,temp1,temp2) #w,u,ww,t
+                uout.U, v.a, t, NC, NG, generators, temp1, temp2) #w,u,ww,t
         end
     end
 end

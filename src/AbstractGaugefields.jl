@@ -362,7 +362,8 @@ function Initialize_Gaugefields(
     randomnumber="Random",
     cuda=false,
     blocks=nothing,
-    accelerator="none"
+    accelerator="none",
+    singleprecision=false
 )
     if NDW == 1
         @warn "Now, Nwing=0 is recommended. Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). "
@@ -380,7 +381,8 @@ function Initialize_Gaugefields(
             verbose_level,
             cuda,
             blocks,
-            accelerator
+            accelerator,
+            singleprecision
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -394,7 +396,8 @@ function Initialize_Gaugefields(
             randomnumber,
             cuda,
             blocks,
-            accelerator
+            accelerator,
+            singleprecision
         )
     else
         error("not supported")
@@ -415,7 +418,8 @@ function Initialize_Gaugefields(
                 verbose_level=verbose_level,
                 cuda=cuda,
                 blocks=blocks,
-                accelerator=accelerator
+                accelerator=accelerator,
+                singleprecision=singleprecision
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -429,7 +433,8 @@ function Initialize_Gaugefields(
                 randomnumber=randomnumber,
                 cuda=cuda,
                 blocks=blocks,
-                accelerator=accelerator
+                accelerator=accelerator,
+                singleprecision=singleprecision
             )
         else
             error("not supported")
@@ -449,7 +454,8 @@ function RandomGauges(
     randomnumber="Random",
     cuda=false,
     blocks=nothing,
-    accelerator="none"
+    accelerator="none",
+    singleprecision=false
 )
     accelerator_g = accelerator
     dim = length(NN)
@@ -505,7 +511,8 @@ function RandomGauges(
                         blocks,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
-                        accelerator=accelerator_g
+                        accelerator=accelerator_g,
+                        singleprecision=singleprecision
                     )
                 else
                     U = randomGaugefields_4D_nowing(
@@ -567,7 +574,8 @@ function IdentityGauges(
     verbose_level=2,
     cuda=false,
     blocks=nothing,
-    accelerator="none"
+    accelerator="none",
+    singleprecision=false
 )
     accelerator_g = accelerator
     dim = length(NN)
@@ -634,7 +642,8 @@ function IdentityGauges(
                         NN[4],
                         blocks,
                         verbose_level=verbose_level,
-                        accelerator=accelerator_g
+                        accelerator=accelerator_g,
+                        singleprecision=singleprecision
                     )
                 else
                     U = identityGaugefields_4D_nowing(
