@@ -2520,7 +2520,8 @@ The network is constructed as follows.
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
-    st = STOUT_Layer(layername,ρ,L)
+    st = STOUT_Layer(layername, ρ, U)
+    #st = STOUT_Layer(layername,ρ,L)
     push!(nn,st)
 
     show(nn)
@@ -2582,7 +2583,8 @@ function stoutsmearing(NX,NY,NZ,NT,NC)
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
-    st = STOUT_Layer(layername,ρ,L)
+    st = STOUT_Layer(layername, ρ, U)
+    #st = STOUT_Layer(layername,ρ,L)
     push!(nn,st)
 
     show(nn)
@@ -2752,7 +2754,8 @@ function test1()
     nn = CovNeuralnet()
     ρ = [0.1]
     layername = ["plaquette"]
-    st = STOUT_Layer(layername,ρ,L)
+    #st = STOUT_Layer(layername,ρ,L)
+    st = STOUT_Layer(layername, ρ, U) 
     push!(nn,st)
 
     
