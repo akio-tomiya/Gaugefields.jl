@@ -4456,9 +4456,9 @@ M = (U*δ_prev) star (dexp(Q)/dQ)
 """
 function construct_Λmatrix_forSTOUT!(
     Λ,
-    δ_current::Gaugefields_4D_wing_mpi{NC},
+    δ_current::Gaugefields_4D_nowing_mpi{NC},
     Q,
-    u::Gaugefields_4D_wing_mpi{NC},
+    u::Gaugefields_4D_nowing_mpi{NC},
 ) where {NC}
     ### HH: get the position under MPI
     NT = u.PN[4]
@@ -4505,7 +4505,7 @@ function construct_Λmatrix_forSTOUT!(
 end
 
 
-function unit_U!(Uμ::Gaugefields_4D_wing_mpi{NC}) where {NC}
+function unit_U!(Uμ::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     NT = Uμ.PN[4]
     NZ = Uμ.PN[3]
     NY = Uμ.PN[2]
