@@ -181,6 +181,7 @@ import .AbstractGaugefields_module:
     clear_U!,
     add_U!,
     exptU!,
+    normalize_U!,
     Traceless_antihermitian!,
     Traceless_antihermitian,
     Generator,
@@ -221,8 +222,8 @@ import .GaugeAction_module:
     get_temporary_gaugefields,
     evaluate_GaugeAction
 
-import .Temporalfields_module: Temporalfields, unused!
-export Temporalfields, unused!
+import .Temporalfields_module: Temporalfields, unused!, get_temp
+export Temporalfields, unused!, get_tmp
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
