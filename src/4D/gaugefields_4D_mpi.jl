@@ -973,16 +973,16 @@ function exptU!(
     w = temps[2]
 
 
-    NT = v.NT
-    NZ = v.NZ
-    NY = v.NY
-    NX = v.NX
+    NT = uin.NT
+    NZ = uin.NZ
+    NY = uin.NY
+    NX = uin.NX
     #t = 1
 
-    @inbounds for it = 1:v.PN[4]
-        for iz = 1:v.PN[3]
-            for iy = 1:v.PN[2]
-                for ix = 1:v.PN[1]
+    @inbounds for it = 1:uin.PN[4]
+        for iz = 1:uin.PN[3]
+            for iy = 1:uin.PN[2]
+                for ix = 1:uin.PN[1]
                     v11 = getvalue(uin, 1, 1, ix, iy, iz, it)
                     v22 = getvalue(uin, 2, 2, ix, iy, iz, it)
                     v33 = getvalue(uin, 3, 3, ix, iy, iz, it)
