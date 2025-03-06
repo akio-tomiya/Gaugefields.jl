@@ -332,10 +332,10 @@ function __init__()
                                         end
                                     end
                                 end
-                                sreq = MPI.Isend(send_mesg, rank, counttotal, U[1].comm)
+                                sreq = MPI.Isend(send_mesg, 0, counttotal, U[1].comm) ## HH: corrent sending rank
                             end
                             if U[1].myrank == 0
-                                rreq = MPI.Irecv!(recv_mesg, 0, counttotal, U[1].comm)
+                                rreq = MPI.Irecv!(recv_mesg, rank, counttotal, U[1].comm) ## HH: corrent receiving rank
                                 MPI.Wait!(rreq)
                                 count = 0
                                 for μ = 1:4
