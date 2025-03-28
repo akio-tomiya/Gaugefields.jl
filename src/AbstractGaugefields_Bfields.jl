@@ -972,12 +972,12 @@ function evaluate_gaugelinks!(
     temps::Array{T,1}, # length >= 5+3
 ) where {Dim,WL<:Wilsonline{Dim},T<:AbstractGaugefields}
     num = length(w)
-    temp1 = temps[8]
+    temp1 = temps[end]
 
     clear_U!(xout)
     for i = 1:num
         glinks = w[i]
-        evaluate_gaugelinks!(temp1, glinks, U, B, temps[1:7]) # length >= 4+3
+        evaluate_gaugelinks!(temp1, glinks, U, B, temps[1:end-1]) # length >= 4+3
         add_U!(xout, temp1)
     end
 
@@ -992,12 +992,12 @@ function evaluate_gaugelinks!(
     temps::Array{T,1}, # length >= 5+3 + 2
 ) where {Dim,WL<:Wilsonline{Dim},T<:AbstractGaugefields,Pz<:Storedlinkfields}
     num = length(w)
-    temp1 = temps[10]
+    temp1 = temps[end]
 
     clear_U!(xout)
     for i = 1:num
         glinks = w[i]
-        evaluate_gaugelinks!(temp1, glinks, U, B, Bps, temps[1:9]) # length >= 4+3 + 2
+        evaluate_gaugelinks!(temp1, glinks, U, B, Bps, temps[1:end-1]) # length >= 4+3 + 2
         add_U!(xout, temp1)
     end
 
