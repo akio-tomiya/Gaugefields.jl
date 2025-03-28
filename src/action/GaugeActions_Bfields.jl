@@ -154,8 +154,9 @@ function evaluate_GaugeAction_untraced!(
     uout,
     S::GaugeAction, # length(temps) > 9 + 2
     U::Vector{T},
-    B::Array{T,2}
-) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
+    B::Array{T,2},
+    Bps::Pz,
+) where {Dim,NC,T<:AbstractGaugefields{NC,Dim},Pz<:Storedlinkfields}
     numterm = length(S.dataset)
     temp, it_temp = get_temp(S._temp_U)
     temps, its_temps = get_temp(S._temp_U, 10)
