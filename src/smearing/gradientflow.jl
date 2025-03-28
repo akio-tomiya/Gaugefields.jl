@@ -22,6 +22,7 @@ import Wilsonloop: make_loops_fromname, Wilsonline
 using LinearAlgebra
 import Wilsonloop: LinearAlgebra.adjoint
 import ..Temporalfields_module: Temporalfields, unused!, get_temp
+import ..Storedlinkfields_module: Storedlinkfields, is_storedlink, store_link!, get_storedlink
 
 
 struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
