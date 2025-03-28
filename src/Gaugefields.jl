@@ -223,7 +223,9 @@ import .GaugeAction_module:
     evaluate_GaugeAction
 
 import .Temporalfields_module: Temporalfields, unused!
+import .Storedlinkfields_module: Storedlinkfields, is_storedlink, store_link!, get_storedlink
 export Temporalfields, unused!
+export Storedlinkfields, is_storedlink, store_link!, get_storedlink
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
