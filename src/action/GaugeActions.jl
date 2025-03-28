@@ -14,7 +14,7 @@ using LinearAlgebra
 using InteractiveUtils
 
 import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
-
+import ..Storedlinkfields_module: Storedlinkfields, is_storedlink, store_link!, get_storedlink
 
 
 struct GaugeAction_dataset{Dim}
