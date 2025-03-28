@@ -521,6 +521,74 @@ function evaluate_gaugelinks!(
 
 end
 
+function evaluate_gaugelinks!(
+    uout::T,
+    w::Wilsonline{Dim},
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temps::Array{T,1}, # length >= 4+3 + 2
+) where {T<:AbstractGaugefields,Pz<:Storedlinkfields,Dim}
+    Unew = temps[1]
+    origin = Tuple(zeros(Int64, Dim))
+
+    Ushift1 = temps[2]
+    Ushift2 = temps[3]
+
+    glinks = w
+    numlinks = length(glinks)
+    if numlinks == 0
+        unit_U!(uout)
+        return
+    end
+
+    j = 1
+    U1link = glinks[1]
+    direction = get_direction(U1link)
+    position = get_position(U1link)
+    isU1dag = isdag(U1link)
+
+    if numlinks == 1
+        substitute_U!(Unew, U[direction])
+        Ushift1 = shift_U(Unew, position)
+        if isU1dag
+            substitute_U!(uout, Ushift1')
+        else
+            substitute_U!(uout, Ushift1)
+        end
+
+        return
+    end
+
+    substitute_U!(Unew, U[direction])
+    Ushift1 = shift_U(Unew, position)
+
+    for j = 2:numlinks
+        Ujlink = glinks[j]
+        isUkdag = isdag(Ujlink)
+        position = get_position(Ujlink)
+        direction = get_direction(Ujlink)
+        Ushift2 = shift_U(U[direction], position)
+
+        multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag)
+
+        substitute_U!(Unew, uout)
+        Ushift1 = shift_U(Unew, origin)
+    end
+
+    substitute_U!(Unew, uout)
+    if is_storedlink(Bps, w)
+        Bplaq = get_storedlink(Bps, w)
+        multiply_12!(uout, Unew, Bplaq, 0, false, false)
+    else
+        evaluate_Bplaquettes!(Ushift1, w, B, temps[3:end])
+        store_link!(Bps, Ushift1, w)
+        multiply_12!(uout, Unew, Ushift1, 0, false, false)
+    end
+
+end
+
+
 function evaluate_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
@@ -901,15 +969,35 @@ function evaluate_gaugelinks!(
     w::Array{WL,1},
     U::Array{T,1},
     B::Array{T,2},
-    temps::Array{T,1}, # length >= 5
+    temps::Array{T,1}, # length >= 5+3
 ) where {Dim,WL<:Wilsonline{Dim},T<:AbstractGaugefields}
     num = length(w)
-    temp1 = temps[5]
+    temp1 = temps[8]
 
     clear_U!(xout)
     for i = 1:num
         glinks = w[i]
-        evaluate_gaugelinks!(temp1, glinks, U, B, temps[1:4]) # length >= 4
+        evaluate_gaugelinks!(temp1, glinks, U, B, temps[1:7]) # length >= 4+3
+        add_U!(xout, temp1)
+    end
+
+    return
+end
+function evaluate_gaugelinks!(
+    xout::T,
+    w::Array{WL,1},
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temps::Array{T,1}, # length >= 5+3 + 2
+) where {Dim,WL<:Wilsonline{Dim},T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    num = length(w)
+    temp1 = temps[10]
+
+    clear_U!(xout)
+    for i = 1:num
+        glinks = w[i]
+        evaluate_gaugelinks!(temp1, glinks, U, B, Bps, temps[1:9]) # length >= 4+3 + 2
         add_U!(xout, temp1)
     end
 
@@ -955,6 +1043,47 @@ function evaluate_wilson_loops!(
         add_U!(xout, Uold)
     end
 end
+function evaluate_wilson_loops!(
+    xout::T,
+    w::Wilson_loop_set,
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temps::Array{T,1},
+) where {T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    num = length(w)
+    clear_U!(xout)
+    Uold = temps[1]
+    Unew = temps[2]
+
+    for i = 1:num
+        wi = w[i]
+        numloops = length(wi)
+        shifts = calc_shift(wi)
+
+        loopk = wi[1]
+        k = 1
+        substitute_U!(Uold, U[loopk[1]])
+        Ushift1 = shift_U(Uold, shifts[1])
+
+        loopk1_2 = loopk[2]
+        evaluate_wilson_loops_inside!(
+            U,
+            B,
+            Bps,
+            shifts,
+            wi,
+            Ushift1,
+            Uold,
+            Unew,
+            numloops,
+            loopk,
+            loopk1_2,
+            temps,
+        )
+        add_U!(xout, Uold)
+    end
+end
 
 function evaluate_wilson_loops_inside!(
     U,
@@ -980,12 +1109,78 @@ function evaluate_wilson_loops_inside!(
     end
     multiply_Bplaquettes!(Unew, wi, B, temps)
 end
+function evaluate_wilson_loops_inside!(
+    U,
+    B,
+    Bps,
+    shifts,
+    wi,
+    Ushift1,
+    Uold,
+    Unew,
+    numloops,
+    loopk,
+    loopk1_2,
+    temps,
+)
+    for k = 2:numloops
+        loopk = wi[k]
+        Ushift2 = shift_U(U[loopk[1]], shifts[k])
+
+        multiply_12!(Unew, Ushift1, Ushift2, k, loopk, loopk1_2)
+
+        Unew, Uold = Uold, Unew
+        Ushift1 = shift_U(Uold, (0, 0, 0, 0))
+    end
+    substitute_U!(Uold, Unew)
+    if is_storedlink(Bps, wi)
+        Bplaq = get_storedlink(Bps, wi)
+        multiply_12!(Unew, Uold, Bplaq, 0, false, false)
+    else
+        evaluate_Bplaquettes!(Ushift1, wi, B, temps)
+        store_link!(Bps, Ushift1, wi)
+        multiply_12!(Unew, Uold, Ushift1, 0, false, false)
+    end
+end
 
 function calculate_Plaquette(
     U::Array{T,1},
     B::Array{T,2},
 ) where {T<:AbstractGaugefields}
     error("calculate_Plaquette is not implemented in type $(typeof(U)) ")
+end
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+) where {T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    error("calculate_Plaquette is not implemented in type $(typeof(U)) ")
+end
+
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    temps::Temporalfields,
+) where {T<:AbstractGaugefields}
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    p = calculate_Plaquette(U, B, temp1, temp2)
+    unused!(temps,it_temp1)
+    unused!(temps,it_temp2)
+    return p
+end
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temps::Temporalfields,
+) where {T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    temp1, it_temp1 = get_temp(temps)
+    temp2, it_temp2 = get_temp(temps)
+    p = calculate_Plaquette(U, B, Bps, temp1, temp2)
+    unused!(temps,it_temp1)
+    unused!(temps,it_temp2)
+    return p
 end
 
 function calculate_Plaquette(
@@ -994,6 +1189,14 @@ function calculate_Plaquette(
     temps::Array{T1,1},
 ) where {T<:AbstractGaugefields,T1<:AbstractGaugefields}
     return calculate_Plaquette(U, B, temps[1], temps[2])
+end
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temps::Array{T1,1},
+) where {T<:AbstractGaugefields,T1<:AbstractGaugefields,Pz<:Storedlinkfields}
+    return calculate_Plaquette(U, B, Bps, temps[1], temps[2])
 end
 
 function calculate_Plaquette(
@@ -1012,8 +1215,28 @@ function calculate_Plaquette(
     end
     return real(plaq * 0.5)
 end
+function calculate_Plaquette(
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    temp::AbstractGaugefields{NC,Dim},
+    staple::AbstractGaugefields{NC,Dim},
+) where {NC,Dim,T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    plaq = 0
+    V = staple
+    for μ = 1:Dim
+        construct_staple!(V, U, B, Bps, μ, temp)
+        mul!(temp, U[μ], V')
+        plaq += tr(temp)
+
+    end
+    return real(plaq * 0.5)
+end
 
 function construct_staple!(staple::T, U, B, μ) where {T<:AbstractGaugefields}
+    error("construct_staple! is not implemented in type $(typeof(U)) ")
+end
+function construct_staple!(staple::T, U, B, Bps, μ) where {T<:AbstractGaugefields}
     error("construct_staple! is not implemented in type $(typeof(U)) ")
 end
 
@@ -1029,6 +1252,20 @@ function add_force!(
 ) where {NC,Dim,T1<:AbstractGaugefields,T2<:AbstractGaugefields}
     error("add_force! is not implemented in type $(typeof(F)) ")
 end
+function add_force!(
+    F::Array{T1,1},
+    U::Array{T2,1},
+    B::Array{T2,2},
+    Bps::Pz,
+    temps::Temporalfields{<:AbstractGaugefields{NC,Dim}};
+    #temps::Array{<:AbstractGaugefields{NC,Dim},1};
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
+) where {NC,Dim,T1<:AbstractGaugefields,T2<:AbstractGaugefields,Pz<:Storedlinkfields}
+    error("add_force! is not implemented in type $(typeof(F)) ")
+end
+
 function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
@@ -1061,6 +1298,39 @@ function add_force!(
         Traceless_antihermitian_add!(F[μ], factor, temp1)
     end
 end
+function add_force!(
+    F::Array{T1,1},
+    U::Array{T2,1},
+    B::Array{T2,2},
+    Bps::Pz,
+    temps::Array{<:AbstractGaugefields{NC,Dim},1};
+    plaqonly=false,
+    staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
+    factor=1,
+) where {NC,Dim,T1<:TA_Gaugefields,T2<:AbstractGaugefields,Pz<:Storedlinkfields}
+    @assert length(temps) >= 3 "length(temps) should be >= 3. But $(length(temps))"
+
+    V = temps[3]
+    temp1 = temps[1]
+    temp2 = temps[2]
+
+    for μ = 1:Dim
+        if plaqonly
+            construct_double_staple!(V, U, μ, temps[1:2])
+            mul!(temp1, U[μ], V') #U U*V
+        else
+            clear_U!(V)
+            for i = 1:gparam.numactions
+                loops = gparam.staples[i][μ]
+                evaluate_wilson_loops!(temp3, loops, U, B, Bps, [temp1, temp2])
+                add_U!(V, staplefactors[i], temp3)
+            end
+            mul!(temp1, U[μ], V) #U U*V
+        end
+
+        Traceless_antihermitian_add!(F[μ], factor, temp1)
+    end
+end
 
 function construct_double_staple!(
     staple::AbstractGaugefields{NC,Dim},
@@ -1071,6 +1341,17 @@ function construct_double_staple!(
 ) where {NC,Dim,T<:AbstractGaugefields}
     loops = loops_staple_prime[(Dim, μ)]
     evaluate_gaugelinks!(staple, loops, U, B, temps)
+end
+function construct_double_staple!(
+    staple::AbstractGaugefields{NC,Dim},
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    μ,
+    temps::Array{<:AbstractGaugefields{NC,Dim},1},
+) where {NC,Dim,T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    loops = loops_staple_prime[(Dim, μ)]
+    evaluate_gaugelinks!(staple, loops, U, B, Bps, temps)
 end
 
 function construct_staple!(
@@ -1109,4 +1390,40 @@ function construct_staple!(
     end
     set_wing_U!(staple)
 end
+function construct_staple!(
+    staple::AbstractGaugefields{NC,Dim},
+    U::Array{T,1},
+    B::Array{T,2},
+    Bps::Pz,
+    μ,
+    temp::AbstractGaugefields{NC,Dim},
+) where {NC,Dim,T<:AbstractGaugefields,Pz<:Storedlinkfields}
+    U1U2 = temp
+    firstterm = true
 
+    for ν = 1:Dim
+        if ν == μ
+            continue
+        end
+
+        U1 = U[ν]
+        # mul!(U1, U[ν], B[μ,ν]')
+        if μ < ν
+            mul!(U1, U[ν], B[μ, ν]')
+        else
+            mul!(U1, U[ν], B[μ, ν])
+        end
+        U2 = shift_U(U[μ], ν)
+        mul!(U1U2, U1, U2)
+
+        U3 = shift_U(U[ν], μ)
+        if firstterm
+            β = 0
+            firstterm = false
+        else
+            β = 1
+        end
+        mul!(staple, U1U2, U3', 1, β)
+    end
+    set_wing_U!(staple)
+end
