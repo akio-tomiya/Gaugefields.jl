@@ -2591,6 +2591,6 @@ function lambda_k_mul!(a::T1, b::T2, k, generator) where {T1<:Abstractfields,T2<
     error("lambda_k_mul! is not implemented in type $(typeof(a)) and $(typeof(b))")
 end
 
-include("./AbstractGaugefields_Bfields.jl")
+include("Bfields/Bfields.jl")
 
 end

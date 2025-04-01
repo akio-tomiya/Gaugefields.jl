@@ -1,3 +1,15 @@
+struct Bfield{T,Dim}
+    u::Matrix{T}
+end
+
+function substitute_U!(
+    a::Bfield,
+    b::Bfield,
+)
+    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+end
+
+
 function substitute_U!(
     a::Array{<:AbstractGaugefields{NC,Dim},2},
     b::Array{<:AbstractGaugefields{NC,Dim},2},
