@@ -1,13 +1,43 @@
+module Bfield_module
+import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
+    thooftFlux_4D_B_at_bndry,
+    set_wing_U!,
+    calculate_Plaquette,
+    shift_U,
+    substitute_U!,
+    clear_U!,
+    multiply_12!,
+    add_U!
+import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag, make_cloverloops
+import ..Wilsonloops_module: Wilson_loop_set
+import ..Temporalfields_module: Temporalfields, get_temp, unused!
+using LinearAlgebra
+
+
+
+
+export Bfield
+
 struct Bfield{T,Dim}
     u::Matrix{T}
+
+    function Bfield(u::Matrix{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
+        return new{eltype(u),Dim}(u)
+    end
 end
 
-function substitute_U!(
-    a::Bfield,
-    b::Bfield,
-)
-    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+@inline function Base.getindex(B::Bfield, μ, ν)
+    @inbounds return B.u[μ, ν]
 end
+
+Base.similar(B::Bfield) = Bfield(similar(B.u))
+
+function substitute_U!(a::Bfield, b::Bfield)
+    substitute_U!(a.u, b.u)
+end
+
+include("GaugeActions_Bfields.jl")
+
 
 
 function substitute_U!(
@@ -238,7 +268,8 @@ function Initialize_Bfields(
             end
         end
     end
-    return U
+    return Bfield(U)
+    #return U
 end
 
 function B_RandomGauges(
@@ -479,7 +510,7 @@ function evaluate_gaugelinks!(
     uout::T,
     w::Wilsonline{Dim},
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1}, # length >= 3
 ) where {T<:AbstractGaugefields,Dim}
     Unew = temps[1]
@@ -536,7 +567,7 @@ end
 function evaluate_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1},
 ) where {T<:AbstractGaugefields,Dim}
     multiply_Bplaquettes!(uout, w, B, temps, true)
@@ -544,7 +575,7 @@ end
 function multiply_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1},
     unity=false,
 ) where {T<:AbstractGaugefields,Dim}
@@ -571,7 +602,7 @@ end
 function sweepaway_4D_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1}, # length(temps) >= 4
     linknum,
 ) where {T<:AbstractGaugefields,Dim}
@@ -912,7 +943,7 @@ function evaluate_gaugelinks!(
     xout::T,
     w::Array{WL,1},
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1}, # length >= 5
 ) where {Dim,WL<:Wilsonline{Dim},T<:AbstractGaugefields}
     num = length(w)
@@ -932,9 +963,9 @@ function evaluate_wilson_loops!(
     xout::T,
     w::Wilson_loop_set,
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T,1},
-) where {T<:AbstractGaugefields}
+) where {T<:AbstractGaugefields,Dim}
     num = length(w)
     clear_U!(xout)
     Uold = temps[1]
@@ -995,22 +1026,22 @@ end
 
 function calculate_Plaquette(
     U::Array{T,1},
-    B::Array{T,2},
-) where {T<:AbstractGaugefields}
+    B::Bfield{T,Dim},
+) where {T<:AbstractGaugefields,Dim}
     error("calculate_Plaquette is not implemented in type $(typeof(U)) ")
 end
 
 function calculate_Plaquette(
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temps::Array{T1,1},
-) where {T<:AbstractGaugefields,T1<:AbstractGaugefields}
+) where {T<:AbstractGaugefields,T1<:AbstractGaugefields,Dim}
     return calculate_Plaquette(U, B, temps[1], temps[2])
 end
 
 function calculate_Plaquette(
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     temp::AbstractGaugefields{NC,Dim},
     staple::AbstractGaugefields{NC,Dim},
 ) where {NC,Dim,T<:AbstractGaugefields}
@@ -1032,7 +1063,7 @@ end
 function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
-    B::Array{T2,2},
+    B::Bfield{T2,Dim},
     temps::Temporalfields{<:AbstractGaugefields{NC,Dim}};
     #temps::Array{<:AbstractGaugefields{NC,Dim},1};
     plaqonly=false,
@@ -1044,7 +1075,7 @@ end
 function add_force!(
     F::Array{T1,1},
     U::Array{T2,1},
-    B::Array{T2,2},
+    B::Bfield{T2,Dim},
     temps::Array{<:AbstractGaugefields{NC,Dim},1};
     plaqonly=false,
     staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
@@ -1077,7 +1108,7 @@ end
 function construct_double_staple!(
     staple::AbstractGaugefields{NC,Dim},
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     μ,
     temps::Array{<:AbstractGaugefields{NC,Dim},1},
 ) where {NC,Dim,T<:AbstractGaugefields}
@@ -1088,7 +1119,7 @@ end
 function construct_staple!(
     staple::AbstractGaugefields{NC,Dim},
     U::Array{T,1},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
     μ,
     temp::AbstractGaugefields{NC,Dim},
 ) where {NC,Dim,T<:AbstractGaugefields}
@@ -1122,3 +1153,6 @@ function construct_staple!(
     set_wing_U!(staple)
 end
 
+
+
+end

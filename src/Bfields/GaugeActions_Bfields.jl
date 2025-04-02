@@ -1,8 +1,38 @@
+import ..GaugeAction_module: GaugeAction, GaugeAction_dataset, evaluate_GaugeAction, calc_dSdUμ, calc_dSdUμ!,
+    evaluate_GaugeAction_untraced
+
+import ..Temporalfields_module: Temporalfields, get_temp
+
+function GaugeAction(
+    U::Vector{T},
+    B::Bfield{T,Dim};
+    hascovnet=false,
+) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
+    if hascovnet
+        covneuralnet = CovNeuralnet(Dim=Dim)
+    else
+        covneuralnet = nothing
+    end
+    dataset = GaugeAction_dataset{Dim}[]
+    num = 12
+    _temp_U = Temporalfields(U[1]; num=num)
+
+    #_temp_U = Array{eltype(U)}(undef, num)
+    #for i = 1:num
+    #    _temp_U[i] = similar(U[1])
+    #end
+
+    return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
+end
+
+
+
+
 function calc_dSdUμ(
     S::GaugeAction,
     μ,
     U::Vector{T},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     dSdUμ = similar(U[1])
     calc_dSdUμ!(dSdUμ, S, μ, U, B)
@@ -14,7 +44,7 @@ function calc_dSdUμ!(
     S::GaugeAction,
     μ,
     U::Vector{T},
-    B::Array{T,2},
+    B::Bfield{T,Dim},
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     temp, it_temp = get_temp(S._temp_U)
     temps, its_temps = get_temp(S._temp_U, 5)
@@ -40,7 +70,7 @@ end
 function evaluate_GaugeAction(
     S::GaugeAction,
     U::Vector{T},
-    B::Array{T,2}
+    B::Bfield{T,Dim}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     temp1, it_temp1 = get_temp(S._temp_U)
     #temp1 = S._temp_U[end]
@@ -53,7 +83,7 @@ end
 function evaluate_GaugeAction_untraced(
     S::GaugeAction,
     U::Vector{T},
-    B::Array{T,2}
+    B::Bfield{T,Dim}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     uout = similar(U[1])
     clear_U!(uout)
@@ -67,7 +97,7 @@ function evaluate_GaugeAction_untraced!(
     uout,
     S::GaugeAction, # length(temps) > 6
     U::Vector{T},
-    B::Array{T,2}
+    B::Bfield{T,Dim}
 ) where {Dim,NC,T<:AbstractGaugefields{NC,Dim}}
     numterm = length(S.dataset)
     temp, it_temp = get_temp(S._temp_U)
@@ -89,25 +119,4 @@ function evaluate_GaugeAction_untraced!(
     return
 end
 
-function GaugeAction(
-    U::Vector{T},
-    B::Array{T,2};
-    hascovnet=false,
-) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
-    if hascovnet
-        covneuralnet = CovNeuralnet(Dim=Dim)
-    else
-        covneuralnet = nothing
-    end
-    dataset = GaugeAction_dataset{Dim}[]
-    num = 12
-    _temp_U = Temporalfields(U[1]; num=num)
-
-    #_temp_U = Array{eltype(U)}(undef, num)
-    #for i = 1:num
-    #    _temp_U[i] = similar(U[1])
-    #end
-
-    return GaugeAction{Dim,eltype(U),eltype(dataset)}(hascovnet, covneuralnet, dataset, _temp_U)
-end
 

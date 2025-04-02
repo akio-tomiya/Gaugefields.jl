@@ -14,6 +14,9 @@ include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
 
 include("./action/GaugeActions.jl")
+
+include("Bfields/Bfields.jl") #Bfield extention
+
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
@@ -197,14 +200,6 @@ import .AbstractGaugefields_module:
     initialize_TA_Gaugefields,
     gauss_distribution!,
     Initialize_Gaugefields,
-    Initialize_Bfields,
-    B_RandomGauges,
-    B_TfluxGauges,
-    evaluate_Bplaquettes!,
-    multiply_Bplaquettes!,
-    sweepaway_4D_Bplaquettes!,
-    isLoopwithB,
-    isStaplewithB,
     construct_Adjoint_rep_Gaugefields,
     get_myrank,
     getvalue,
@@ -249,7 +244,7 @@ export exptU!,
     Traceless_antihermitian!
 export Initialize_Gaugefields, back_prop, back_prop!
 export Initialize_4DGaugefields
-export Initialize_Bfields
+
 export set_parameters!, get_parameter_derivatives, apply_smearing_U,
     zero_grad!,
     get_parameters
@@ -263,6 +258,18 @@ export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 export loadU, saveU
 
+
+import .Bfield_module: Initialize_Bfields,
+    B_RandomGauges,
+    B_TfluxGauges,
+    evaluate_Bplaquettes!,
+    multiply_Bplaquettes!,
+    sweepaway_4D_Bplaquettes!,
+    isLoopwithB,
+    isStaplewithB
+
+
+export Initialize_Bfields
 
 
 
