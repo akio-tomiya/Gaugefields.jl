@@ -43,7 +43,8 @@ function __init__()
 end
 
 import .AbstractGaugefields_module:
-    Gaugefields_4D_accelerator
+    Gaugefields_4D_accelerator,
+    shiftedindex
 
 # Write your package code here.
 import .Verboseprint_mpi:
@@ -211,7 +212,9 @@ import .AbstractGaugefields_module:
     getvalue,
     get_nprocs,
     write_to_numpyarray,
-    map_U_sequential!
+    map_U_sequential!,
+    fourdim_cordinate
+    
 import Wilsonloop: make_loops_fromname
 import .GaugeAction_module:
     GaugeAction,
