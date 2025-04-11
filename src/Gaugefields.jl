@@ -213,7 +213,8 @@ import .AbstractGaugefields_module:
     get_nprocs,
     write_to_numpyarray,
     map_U_sequential!,
-    fourdim_cordinate
+    fourdim_cordinate,
+    unit_U!
     
 import Wilsonloop: make_loops_fromname
 import .GaugeAction_module:
