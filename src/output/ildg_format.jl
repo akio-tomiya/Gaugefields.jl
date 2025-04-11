@@ -89,7 +89,7 @@ function __init__()
                                         for ic1 = 1:NC
                                             count += 1
                                             v = recv_mesg[count]
-                                            Gaugefields.setvalue!(
+                                            setvalue!(
                                                 U[μ],
                                                 v,
                                                 ic2,
