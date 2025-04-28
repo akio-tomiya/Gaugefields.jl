@@ -11,16 +11,16 @@ abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4} end
 
 
 include("./gaugefields_4D_wing.jl")
-include("./gaugefields_4D_wing_Bfields.jl")
+#include("./gaugefields_4D_wing_Bfields.jl")
 include("./gaugefields_4D_nowing.jl")
-include("./gaugefields_4D_nowing_Bfields.jl")
+#include("./gaugefields_4D_nowing_Bfields.jl")
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
         include("./gaugefields_4D_mpi.jl")
-        include("./gaugefields_4D_mpi_Bfields.jl")
+        #include("./gaugefields_4D_mpi_Bfields.jl")
         include("./gaugefields_4D_mpi_nowing.jl")
-        include("./gaugefields_4D_mpi_nowing_Bfields.jl")
+        #include("./gaugefields_4D_mpi_nowing_Bfields.jl")
         include("../2D/gaugefields_2D_mpi_nowing.jl")
         include("./TA_gaugefields_4D_mpi.jl")
         include("../2D/TA_gaugefields_2D_mpi.jl")

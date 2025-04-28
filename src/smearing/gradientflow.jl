@@ -33,6 +33,15 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
     #_temporal_G_field::Array{T,1}
     _temporal_U_field::Temporalfields{Vector{T}}#Array{Array{T,1},1}
 
+    function Gradientflow_general(Nflow, eps, gaugeaction::GaugeAction{Dim,T},
+        _temporal_TA_field::Array{TA,1},
+        _temporal_G_field,
+        _temporal_U_field) where {Dim,TA,T}
+        return new{Dim,TA,T}(Nflow, eps, gaugeaction,
+            _temporal_TA_field, _temporal_G_field, _temporal_U_field)
+    end
+
+
     function Gradientflow_general(
         U::Array{<:AbstractGaugefields{NC,Dim},1},
         linknames,
@@ -314,6 +323,5 @@ function F_update!(F, U, factor, Dim, gauge_action) # F -> F +factor*U*dSdUμ
 
 end
 
-include("./gradientflow_Bfields.jl")
 
 end

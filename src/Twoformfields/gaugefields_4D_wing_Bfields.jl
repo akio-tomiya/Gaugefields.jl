@@ -1,48 +1,6 @@
-function substitute_U!(
-    a::Array{T1,2},
-    b::Array{T2,2},
-) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_nowing}
-    for μ = 1:4
-        for ν = 1:4
-            if μ == ν
-                continue
-            end
-            substitute_U!(a[μ, ν], b[μ, ν])
-        end
-    end
-end
-
-function substitute_U!(
-    a::Array{T1,2},
-    b::Array{T2,2},
-    iseven,
-) where {T1<:Gaugefields_4D_nowing,T2<:Gaugefields_4D_nowing}
-    for μ = 1:4
-        for ν = 1:4
-            if μ == ν
-                continue
-            end
-            substitute_U!(a[μ, ν], b[μ, ν], iseven)
-        end
-    end
-end
-
-function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing}
-    Uout = Array{T,2}(undef, 4, 4)
-    for μ = 1:4
-        for ν = 1:4
-            if μ == ν
-                continue
-            end
-            Uout[μ, ν] = similar(U[μ, ν])
-        end
-    end
-    return Uout
-end
-
-
-function thooftFlux_4D_B_at_bndry(
+function thooftFlux_4D_B_at_bndry_wing(
     NC,
+    NDW,
     FLUX,
     FLUXNUM,
     NN...;
@@ -52,21 +10,23 @@ function thooftFlux_4D_B_at_bndry(
     dim = length(NN)
     if dim == 4
         if overallminus
-            U = minusidentityGaugefields_4D_nowing(
+            U = minusidentityGaugefields_4D_wing(
                 NC,
                 NN[1],
                 NN[2],
                 NN[3],
                 NN[4],
+                NDW,
                 verbose_level=verbose_level,
             )
         else
-            U = identityGaugefields_4D_nowing(
+            U = identityGaugefields_4D_wing(
                 NC,
                 NN[1],
                 NN[2],
                 NN[3],
                 NN[4],
+                NDW,
                 verbose_level=verbose_level,
             )
         end
@@ -152,8 +112,9 @@ function thooftFlux_4D_B_at_bndry(
     return U
 end
 
-function thooftLoop_4D_B_temporal(
+function thooftLoop_4D_B_temporal_wing(
     NC,
+    NDW,
     FLUX,
     FLUXNUM,
     NN...;
@@ -166,21 +127,23 @@ function thooftLoop_4D_B_temporal(
     dim = length(NN)
     if dim == 4
         if overallminus
-            U = minusidentityGaugefields_4D_nowing(
+            U = minusidentityGaugefields_4D_wing(
                 NC,
                 NN[1],
                 NN[2],
                 NN[3],
                 NN[4],
+                NDW,
                 verbose_level=verbose_level,
             )
         else
-            U = identityGaugefields_4D_nowing(
+            U = identityGaugefields_4D_wing(
                 NC,
                 NN[1],
                 NN[2],
                 NN[3],
                 NN[4],
+                NDW,
                 verbose_level=verbose_level,
             )
         end
@@ -363,4 +326,3 @@ function thooftLoop_4D_B_temporal(
     set_wing_U!(U)
     return U
 end
-

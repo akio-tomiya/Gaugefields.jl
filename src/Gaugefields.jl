@@ -15,7 +15,7 @@ include("./smearing/Abstractsmearing.jl")
 
 include("./action/GaugeActions.jl")
 
-include("Bfields/Bfields.jl") #Bfield extention
+#include("Bfields/Bfields.jl") #Bfield extention
 
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
@@ -29,8 +29,8 @@ function __init__()
             identityGaugefields_4D_nowing_mpi,
             minusidentityGaugefields_4D_wing_mpi,
             minusidentityGaugefields_4D_nowing_mpi,
-            thooftFlux_4D_B_at_bndry_wing_mpi,
-            thooftFlux_4D_B_at_bndry_nowing_mpi,
+            #thooftFlux_4D_B_at_bndry_wing_mpi,
+            #thooftFlux_4D_B_at_bndry_nowing_mpi,
             Gaugefields_4D_wing_mpi,
             Gaugefields_4D_nowing_mpi,
             calc_rank_and_indices,
@@ -178,7 +178,7 @@ import .AbstractGaugefields_module:
     construct_gauges,
     Gaugefields_4D_wing,
     identityGaugefields_4D_wing,
-    thooftFlux_4D_B_at_bndry,
+    #thooftFlux_4D_B_at_bndry,
     add_force!,
     exp_aF_U!,
     clear_U!,
@@ -216,12 +216,13 @@ import .GaugeAction_module:
     get_temporary_gaugefields,
     evaluate_GaugeAction
 
-import .Temporalfields_module: Temporalfields, unused!
-export Temporalfields, unused!
+import .Temporalfields_module: Temporalfields, unused!, get_temp
+
+export Temporalfields, unused!, get_temp
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
-export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
+#export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
 export ILDG, load_gaugefield!, save_binarydata
 export SU2update_KP!, SUNupdate_matrix!, SU3update_matrix!
 export map_U!
@@ -258,7 +259,7 @@ export write_to_numpyarray, map_U_sequential!
 export load_binarydata!
 export loadU, saveU
 
-
+#=
 import .Bfield_module: Initialize_Bfields,
     B_RandomGauges,
     B_TfluxGauges,
@@ -268,9 +269,14 @@ import .Bfield_module: Initialize_Bfields,
     isLoopwithB,
     isStaplewithB
 
+=#
 
-export Initialize_Bfields
+#export Initialize_Bfields
 
+include("./Twoformfields/AbstractTwoformfields.jl")
+using .Twoformfields
+export Bfield, Initialize_Bfields, PrealocatedTwoformfields,
+    add_Wilsonline!, load_Wilsonline
 
 
 

@@ -1,8 +1,6 @@
 import ..GaugeAction_module: GaugeAction, GaugeAction_dataset, evaluate_GaugeAction, calc_dSdUμ, calc_dSdUμ!,
     evaluate_GaugeAction_untraced
 
-import ..Temporalfields_module: Temporalfields, get_temp
-
 function GaugeAction(
     U::Vector{T},
     B::Bfield{T,Dim};

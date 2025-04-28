@@ -1,24 +1,4 @@
-module Bfield_module
-import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
-    thooftFlux_4D_B_at_bndry,
-    set_wing_U!,
-    calculate_Plaquette,
-    shift_U,
-    substitute_U!,
-    clear_U!,
-    multiply_12!,
-    add_U!
-import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag, make_cloverloops
-import ..Wilsonloops_module: Wilson_loop_set
-import ..Temporalfields_module: Temporalfields, get_temp, unused!
-using LinearAlgebra
-
-
-
-
-export Bfield
-
-struct Bfield{T,Dim}
+struct Bfield{T,Dim} <: AbstractTwoformfields
     u::Matrix{T}
 
     function Bfield(u::Matrix{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
@@ -30,31 +10,33 @@ end
     @inbounds return B.u[μ, ν]
 end
 
-Base.similar(B::Bfield) = Bfield(similar(B.u))
-
-function substitute_U!(a::Bfield, b::Bfield)
-    substitute_U!(a.u, b.u)
-end
-
-include("GaugeActions_Bfields.jl")
-
-
-
 function substitute_U!(
-    a::Array{<:AbstractGaugefields{NC,Dim},2},
-    b::Array{<:AbstractGaugefields{NC,Dim},2},
-) where {NC,Dim}
-    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+    a::Bfield{T1,Dim},
+    b::Bfield{T2,Dim},
+) where {T1,T2,Dim}
+    for μ = 1:Dim
+        for ν = 1:Dim
+            if μ == ν
+                continue
+            end
+            substitute_U!(a.u[μ, ν], b.u[μ, ν])
+        end
+    end
 end
 
-function substitute_U!(
-    a::Array{T1,2},
-    b::Array{T2,2},
-    iseven::Bool,
-) where {T1<:AbstractGaugefields,T2<:AbstractGaugefields}
-    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
-end
 
+function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
+    Uout = Array{T,2}(undef, Dim, Dim)
+    for μ = 1:4
+        for ν = 1:4
+            if μ == ν
+                continue
+            end
+            Uout[μ, ν] = similar(B.u[μ, ν])
+        end
+    end
+    return Bfield(Uout)
+end
 
 
 function Initialize_Bfields(
@@ -272,6 +254,7 @@ function Initialize_Bfields(
     #return U
 end
 
+
 function B_RandomGauges(
     NC,
     Flux,
@@ -290,6 +273,7 @@ function B_RandomGauges(
     U = B_TfluxGauges(NC, Flux, FluxNum, NDW, NN..., overallminus=overallminus, mpi=mpi, PEs=PEs, mpiinit=mpiinit, verbose_level=verbose_level)
     return U
 end
+
 
 function B_TfluxGauges(
     NC,
@@ -378,6 +362,7 @@ function B_TfluxGauges(
     set_wing_U!(U)
     return U
 end
+
 
 function B_TloopGauges(
     NC,
@@ -503,7 +488,6 @@ function B_TloopGauges(
     set_wing_U!(U)
     return U
 end
-
 
 
 function evaluate_gaugelinks!(
@@ -1155,4 +1139,20 @@ end
 
 
 
+include("./gaugefields_4D_wing_Bfields.jl")
+include("./gaugefields_4D_nowing_Bfields.jl")
+
+import ..Gradientflow_module: Gradientflow, Gradientflow_general, flow!
+
+
+include("./gradientflow_Bfields.jl")
+
+function __init__()
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        include("./gaugefields_4D_mpi_Bfields.jl")
+        include("./gaugefields_4D_mpi_nowing_Bfields.jl")
+    end
 end
+
+
+include("./GaugeActions_Bfields.jl")
