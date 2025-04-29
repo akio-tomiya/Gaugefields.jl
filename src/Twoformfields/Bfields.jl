@@ -548,6 +548,8 @@ function evaluate_gaugelinks!(
 
 end
 
+
+
 function evaluate_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
@@ -942,6 +944,9 @@ function evaluate_gaugelinks!(
 
     return
 end
+
+
+
 
 function evaluate_wilson_loops!(
     xout::T,

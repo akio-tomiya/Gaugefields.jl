@@ -98,7 +98,7 @@ function flow!(U, B, g::T) where {T<:Gradientflow}
 
 end
 
-function flow!(U, B, g::T) where {T<:Gradientflow_general}
+function flow!(U, B, g::Gradientflow_general{Dim,TA,T}) where {Dim,TA,T}
     Ftemps = g._temporal_TA_field
     Utemps = g._temporal_U_field
     temps = g._temporal_G_field
