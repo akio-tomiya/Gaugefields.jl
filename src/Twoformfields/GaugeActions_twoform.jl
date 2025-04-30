@@ -106,3 +106,37 @@ function Base.push!(
 
     push!(S.storedTwoformfields_forloop, pfields)
 end
+
+function calc_dSdUμ!(
+    dSdUμ::T, # dSdUμ -> S._temp_U[end] or other-temp
+    S::GaugeAction_withTwoform{Dim,T,Tdata,Ttwoform,Tlabel},
+    μ,
+    U::Vector{T},
+) where {Dim,NC,T<:AbstractGaugefields{NC,Dim},Tdata,Ttwoform,Tlabel}
+    temp, it_temp = get_temp(S.gaugeaction._temp_U)
+    temps, its_temps = get_temp(S.gaugeaction._temp_U, 5)
+
+    #temp = S._temp_U[end-1]
+    numterm = length(S.gaugeaction.dataset)
+
+    clear_U!(dSdUμ)
+    for i = 1:numterm
+        dataset = S.gaugeaction.dataset[i]
+        storedTwoformfields_forstaple = S.storedTwoformfields_forstaple[i]
+
+        β = dataset.β
+        staples_μ = dataset.staples[μ]
+        storedTwoformfields_forstaple_μ = storedTwoformfields_forstaple[μ]
+        #println("staples_μ ", staples_μ)
+        #error("staple")
+
+        evaluate_gaugelinks!(temp, staples_μ, U, storedTwoformfields_forstaple_μ, temps)
+        #evaluate_gaugelinks!(temp, staples_μ, U, B, temps)
+
+        add_U!(dSdUμ, β, temp)
+    end
+    set_wing_U!(dSdUμ)
+    unused!(S.gaugeaction._temp_U, it_temp)
+    unused!(S.gaugeaction._temp_U, its_temps)
+
+end
