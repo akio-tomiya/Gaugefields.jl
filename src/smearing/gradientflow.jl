@@ -16,7 +16,7 @@ import ..AbstractGaugefields_module:
     construct_Λmatrix_forSTOUT!,
     Traceless_antihermitian!,
     shift_U
-import ..GaugeAction_module: GaugeAction, get_temporary_gaugefields, calc_dSdUμ!
+import ..GaugeAction_module: GaugeAction, get_temporary_gaugefields, calc_dSdUμ!, AbstractGaugeAction
 import ..Abstractsmearing_module: Abstractsmearing
 import Wilsonloop: make_loops_fromname, Wilsonline
 using LinearAlgebra
@@ -24,20 +24,21 @@ import Wilsonloop: LinearAlgebra.adjoint
 import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 
-struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
+
+struct Gradientflow_general{Dim,TA,T,Tgaugeaction<:AbstractGaugeAction} <: Abstractsmearing
     Nflow::Int64
     eps::Float64
-    gaugeaction::GaugeAction{Dim,T}
+    gaugeaction::Tgaugeaction #GaugeAction{Dim,T}
     _temporal_TA_field::Array{TA,1}
     _temporal_G_field::Temporalfields{T}
     #_temporal_G_field::Array{T,1}
     _temporal_U_field::Temporalfields{Vector{T}}#Array{Array{T,1},1}
 
-    function Gradientflow_general(Nflow, eps, gaugeaction::GaugeAction{Dim,T},
+    function Gradientflow_general(Nflow, eps, gaugeaction::AbstractGaugeAction{Dim,T},
         _temporal_TA_field::Array{TA,1},
         _temporal_G_field,
-        _temporal_U_field) where {Dim,TA,T}
-        return new{Dim,TA,T}(Nflow, eps, gaugeaction,
+        _temporal_U_field) where {TA,Dim,T}
+        return new{Dim,TA,T,typeof(gaugeaction)}(Nflow, eps, gaugeaction,
             _temporal_TA_field, _temporal_G_field, _temporal_U_field)
     end
 
@@ -106,7 +107,7 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
             #push!(gaugeaction,factor,loop)
         end
 
-        return new{Dim,typeof(F0),T}(Nflow, eps, gaugeaction, Ftemps, tempG, Utemps)
+        return new{Dim,typeof(F0),T,typeof(gaugeaction)}(Nflow, eps, gaugeaction, Ftemps, tempG, Utemps)
     end
 end
 

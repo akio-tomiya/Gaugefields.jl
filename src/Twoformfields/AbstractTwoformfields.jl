@@ -19,11 +19,12 @@ import ..Wilsonloops_module: Wilson_loop_set
 using LinearAlgebra
 using PreallocatedArrays
 import ..GaugeAction_module: get_temporary_gaugefields
+import ..GaugeAction_module: GaugeAction, GaugeAction_dataset, evaluate_GaugeAction, calc_dSdUμ, calc_dSdUμ!,
+    evaluate_GaugeAction_untraced, AbstractGaugeAction
 
 abstract type AbstractTwoformfields end
 
-include("Bfields.jl")
-export Bfield, Initialize_Bfields
+
 
 struct PrealocatedTwoformfields{TT<:AbstractTwoformfields,TG,TL}
     twoformfield::TT
@@ -31,7 +32,7 @@ struct PrealocatedTwoformfields{TT<:AbstractTwoformfields,TG,TL}
     tempgaugefields::PreallocatedArray{TG,Union{Nothing,String},false}
 end
 
-include("preallocatedBfields.jl")
+include("GaugeActions_twoform.jl")
 
 function add_Wilsonline!(p::PrealocatedTwoformfields{TT,TG,TL}, w::Wilsonline{Dim}) where {TT,TG,TL,Dim}
     error("add_Wilsonline! not implemented for this type", TT)
@@ -67,6 +68,10 @@ end
 
 export PrealocatedTwoformfields, add_Wilsonline!, load_Wilsonline
 
+include("./Bfields/Bfields.jl")
+export Bfield, Initialize_Bfields
+include("./Bfields/preallocatedBfields.jl")
+include("./Bfields/GaugeActions_Bfields.jl")
 
 
 end

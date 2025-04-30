@@ -277,7 +277,8 @@ include("./Twoformfields/AbstractTwoformfields.jl")
 using .Twoformfields
 export Bfield, Initialize_Bfields, PrealocatedTwoformfields,
     add_Wilsonline!, load_Wilsonline
-
+export update_twoformfield!, GaugeAction_withTwoform
+export GaugeAction_withB
 
 
 end

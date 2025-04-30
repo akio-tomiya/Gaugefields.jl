@@ -15,7 +15,8 @@ using InteractiveUtils
 
 import ..Temporalfields_module: Temporalfields, unused!, get_temp, set_reusemode!
 
-
+abstract type AbstractGaugeAction{Dim,T} end
+export AbstractGaugeAction
 
 struct GaugeAction_dataset{Dim}
     #β::Float64
@@ -24,7 +25,7 @@ struct GaugeAction_dataset{Dim}
     staples::Vector{Vector{Wilsonline{Dim}}}
 end
 
-struct GaugeAction{Dim,T,Tdata}
+struct GaugeAction{Dim,T,Tdata} <: AbstractGaugeAction{Dim,T}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
     dataset::Vector{Tdata}
