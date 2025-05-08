@@ -1433,7 +1433,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     MPI.Win_fence(0, win_i)
     MPI.Win_fence(0, win_c)
 
-    GC.enable(false)
+    #GC.enable(false)
     icount = 0
     for (myrank_send, value) in send_ranks
         count = value.count
@@ -1446,15 +1446,22 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
         end
 
 
-        MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
-        MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
+        #MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
+        #MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
+
+        GC.@preserve value begin
+            buf_pos = view(value.positions, 1:count)
+            buf_data = view(value.data, :, :, 1:count)
+            MPI.Put(buf_pos, myrank_send, disp, win_i)
+            MPI.Put(buf_data, myrank_send, disp * NC * NC, win)
+        end
     end
 
 
     MPI.Win_fence(0, win)
     MPI.Win_fence(0, win_i)
     MPI.Win_fence(0, win_c)
-    GC.enable(true)
+    #GC.enable(true)
 
 
     your_ranks .= -1
@@ -1474,6 +1481,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     end
 
     otherranks .= 0
+    #barrier(U)
 
 end
 
