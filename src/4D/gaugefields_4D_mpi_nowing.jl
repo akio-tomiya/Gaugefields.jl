@@ -1433,6 +1433,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     MPI.Win_fence(0, win_i)
     MPI.Win_fence(0, win_c)
 
+    GC.enable(false)
     icount = 0
     for (myrank_send, value) in send_ranks
         count = value.count
@@ -1453,6 +1454,8 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     MPI.Win_fence(0, win)
     MPI.Win_fence(0, win_i)
     MPI.Win_fence(0, win_c)
+    GC.enable(true)
+
 
     your_ranks .= -1
 
