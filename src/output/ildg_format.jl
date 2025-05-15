@@ -654,7 +654,7 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
         run(`$exe $filename $message_no $reccord_no tempconf.dat`)
     end
 
-    @time load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
+    load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
 
     return
 end
