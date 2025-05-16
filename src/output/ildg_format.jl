@@ -160,7 +160,8 @@ function __init__()
             #close(fp)
         end
 
-        # #=
+
+        #HH: improving the config. reading speed -- version 1.
         function load_binarydata!(
             U::Vector{T},
             NX, NY, NZ, NT,
@@ -171,8 +172,7 @@ function __init__()
 
             myrank = U[1].myrank
             comm = MPI.COMM_WORLD
-            PN = U[1].PN
-            PEs = U[1].PEs
+            PN = U[1].PN            
             nprocs = U[1].nprocs
 
             Nfields = NC * NC * 4
@@ -232,10 +232,10 @@ function __init__()
             MPI.Barrier(comm)
             update!(U)
         end
-        # =#
-
-        #=
-        function load_binarydata!(
+        
+        
+        
+        function load_binarydata_og!(
             U::Array{T,1},
             NX,
             NY,
@@ -334,8 +334,8 @@ function __init__()
 
             #close(fp)
         end
-        =#
 
+        
         function save_binarydata(
             U::Array{T,1},
             filename; tempfile1="testbin.dat", tempfile2="filelist.dat"
