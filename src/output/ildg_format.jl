@@ -538,7 +538,7 @@ function load_binarydata!(U, NX, NY, NZ, NT, NC, filename, precision)
     #close(fp)
 end
 
-function load_binarydata!(U, filename)
+function load_binarydata!(U, filename; tempfile1="tempconf.dat")
     NX = U[1].NX
     NY = U[1].NY
     NZ = U[1].NZ
@@ -548,10 +548,10 @@ function load_binarydata!(U, filename)
     ildg = ILDG(filename)
     i = 1
     L = [NX, NY, NZ, NT]
-    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
+    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW, tempfile1=tempfile1)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1, tempfile1="tempconf.dat")
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -575,10 +575,13 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
 
 
     lime_extract_record() do exe
-        run(`$exe $filename $message_no $reccord_no tempconf.dat`)
+        run(`$exe $filename $message_no $reccord_no $tempfile1`)
+        #run(`$exe $filename $message_no $reccord_no tempconf.dat`)
     end
 
-    load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
+    #load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
+    load_binarydata!(U, NX, NY, NZ, NT, NC, tempfile1, precision)
+
 
     return
 end
