@@ -1,14 +1,14 @@
 struct TA_Gaugefields_3D_serial{NC,NumofBasis} <: TA_Gaugefields_3D{NC}
     a::Array{Float64,3}
     NX::Int64
-    #NY::Int64
+    NY::Int64
     #NZ::Int64
     NT::Int64
     NC::Int64
     NumofBasis::Int64
     generators::Union{Nothing,Generator}
 
-    function TA_Gaugefields_3D_serial(NC, NX, NT)
+    function TA_Gaugefields_3D_serial(NC, NX, NY, NT)
         NumofBasis = ifelse(NC == 1, 1, NC^2 - 1)
         if NC <= 3
             generators = nothing
@@ -17,8 +17,9 @@ struct TA_Gaugefields_3D_serial{NC,NumofBasis} <: TA_Gaugefields_3D{NC}
         end
 
         return new{NC,NumofBasis}(
-            zeros(Float64, NumofBasis, NX, NT),
+            zeros(Float64, NumofBasis, NX, NY, NT),
             NX,
+            NY,
             NT,
             NC,
             NumofBasis,
@@ -37,7 +38,7 @@ end
 
 
 function Base.similar(u::TA_Gaugefields_3D_serial{NC,NumofBasis}) where {NC,NumofBasis}
-    return TA_Gaugefields_3D_serial(NC, u.NX, u.NY, u.NZ, u.NT)
+    return TA_Gaugefields_3D_serial(NC, u.NX, u.NY, u.NT)
     #error("similar! is not implemented in type $(typeof(U)) ")
 end
 
@@ -47,20 +48,20 @@ function substitute_U!(
 ) where {NC,NumofBasis}
     NT = Uμ.NT
     #NZ = Uμ.NZ
-    #NY = Uμ.NY
+    NY = Uμ.NY
     NX = Uμ.NX
     #NumofBasis = Uμ.NumofBasis
     icount = 0
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            for k = 1:NumofBasis
-                icount += 1
-                Uμ[k, ix, it] = pwork[icount]
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:NumofBasis
+                    icount += 1
+                    Uμ[k, ix, iy, it] = pwork[icount]
+                end
             end
         end
-        #end
         #end
     end
 
@@ -78,19 +79,19 @@ function Base.:*(
 ) where {NC,NumofBasis}
     NT = x.NT
     #NZ = x.NZ
-    #NY = x.NY
+    NY = x.NY
     NX = x.NX
     #NumofBasis = Uμ.NumofBasis
     s = 0.0
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            for k = 1:NumofBasis
-                s += x[k, ix, it] * y[k, ix, it]
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:NumofBasis
+                    s += x[k, ix, iy, it] * y[k, ix, iy, it]
+                end
             end
         end
-        #end
         #end
     end
 
@@ -100,18 +101,18 @@ end
 function clear_U!(Uμ::TA_Gaugefields_3D_serial{NC,NumofBasis}) where {NC,NumofBasis}
     NT = Uμ.NT
     #NZ = Uμ.NZ
-    #NY = Uμ.NY
+    NY = Uμ.NY
     NX = Uμ.NX
     #NumofBasis = Uμ.NumofBasis
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            for k = 1:NumofBasis
-                Uμ[k, ix, it] = 0
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:NumofBasis
+                    Uμ[k, ix, iy, it] = 0
+                end
             end
         end
-        #end
         #end
     end
 end
@@ -123,18 +124,18 @@ function add_U!(
 ) where {NC,N<:Number,NumofBasis}
     NT = c.NT
     #NZ = c.NZ
-    #NY = c.NY
+    NY = c.NY
     NX = c.NX
     #NumofBasis = c.NumofBasis
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            for k = 1:NumofBasis
-                c[k, ix, it] = c[k, ix, it] + α * a[k, ix, it]
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:NumofBasis
+                    c[k, ix, iy, it] = c[k, ix, iy, it] + α * a[k, ix, iy, it]
+                end
             end
         end
-        #end
         #end
     end
     #error("add_U! is not implemented in type $(typeof(c)) ")
@@ -154,74 +155,74 @@ function Traceless_antihermitian_add!(
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1 / 3
     NX = vin.NX
-    ##NY = vin.NY
+    NY = vin.NY
     ##NZ = vin.NZ
     NT = vin.NT
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            v11 = vin[1, 1, ix, it]
-            v22 = vin[2, 2, ix, it]
-            v33 = vin[3, 3, ix, it]
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                v11 = vin[1, 1, ix, iy, it]
+                v22 = vin[2, 2, ix, iy, it]
+                v33 = vin[3, 3, ix, iy, it]
 
-            tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
+                tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
 
-            #=
-            vout[1,1,ix,it] = (imag(v11)-tri)*im
-            vout[2,2,ix,it] = (imag(v22)-tri)*im
-            vout[3,3,ix,it] = (imag(v33)-tri)*im
-            =#
-            y11 = (imag(v11) - tri) * im
-            y22 = (imag(v22) - tri) * im
-            y33 = (imag(v33) - tri) * im
+                #=
+                vout[1,1,ix,it] = (imag(v11)-tri)*im
+                vout[2,2,ix,it] = (imag(v22)-tri)*im
+                vout[3,3,ix,it] = (imag(v33)-tri)*im
+                =#
+                y11 = (imag(v11) - tri) * im
+                y22 = (imag(v22) - tri) * im
+                y33 = (imag(v33) - tri) * im
 
-            v12 = vin[1, 2, ix, it]
-            v13 = vin[1, 3, ix, it]
-            v21 = vin[2, 1, ix, it]
-            v23 = vin[2, 3, ix, it]
-            v31 = vin[3, 1, ix, it]
-            v32 = vin[3, 2, ix, it]
+                v12 = vin[1, 2, ix, iy, it]
+                v13 = vin[1, 3, ix, iy, it]
+                v21 = vin[2, 1, ix, iy, it]
+                v23 = vin[2, 3, ix, iy, it]
+                v31 = vin[3, 1, ix, iy, it]
+                v32 = vin[3, 2, ix, iy, it]
 
-            x12 = v12 - conj(v21)
-            x13 = v13 - conj(v31)
-            x23 = v23 - conj(v32)
+                x12 = v12 - conj(v21)
+                x13 = v13 - conj(v31)
+                x23 = v23 - conj(v32)
 
-            x21 = -conj(x12)
-            x31 = -conj(x13)
-            x32 = -conj(x23)
+                x21 = -conj(x12)
+                x31 = -conj(x13)
+                x32 = -conj(x23)
 
-            #=
-            vout[1,2,ix,it] = 0.5  * x12
-            vout[1,3,ix,it] = 0.5  * x13
-            vout[2,1,ix,it] = 0.5  * x21
-            vout[2,3,ix,it] = 0.5  * x23
-            vout[3,1,ix,it] = 0.5  * x31
-            vout[3,2,ix,it] = 0.5  * x32
-            =#
-            y12 = 0.5 * x12
-            y13 = 0.5 * x13
-            y21 = 0.5 * x21
-            y23 = 0.5 * x23
-            y31 = 0.5 * x31
-            y32 = 0.5 * x32
-
-
-            c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
-            c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
-            c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
-            c[4, ix, it] = (imag(y13) + imag(y31)) * factor + c[4, ix, it]
-            c[5, ix, it] = (real(y13) - real(y31)) * factor + c[5, ix, it]
-
-            c[6, ix, it] = (imag(y23) + imag(y32)) * factor + c[6, ix, it]
-            c[7, ix, it] = (real(y23) - real(y32)) * factor + c[7, ix, it]
-            c[8, ix, it] =
-                sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor + c[8, ix, it]
+                #=
+                vout[1,2,ix,it] = 0.5  * x12
+                vout[1,3,ix,it] = 0.5  * x13
+                vout[2,1,ix,it] = 0.5  * x21
+                vout[2,3,ix,it] = 0.5  * x23
+                vout[3,1,ix,it] = 0.5  * x31
+                vout[3,2,ix,it] = 0.5  * x32
+                =#
+                y12 = 0.5 * x12
+                y13 = 0.5 * x13
+                y21 = 0.5 * x21
+                y23 = 0.5 * x23
+                y31 = 0.5 * x31
+                y32 = 0.5 * x32
 
 
+                c[1, ix, iy, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, iy, it]
+                c[2, ix, iy, it] = (real(y12) - real(y21)) * factor + c[2, ix, iy, it]
+                c[3, ix, iy, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, iy, it]
+                c[4, ix, iy, it] = (imag(y13) + imag(y31)) * factor + c[4, ix, iy, it]
+                c[5, ix, iy, it] = (real(y13) - real(y31)) * factor + c[5, ix, iy, it]
+
+                c[6, ix, iy, it] = (imag(y23) + imag(y32)) * factor + c[6, ix, iy, it]
+                c[7, ix, iy, it] = (real(y23) - real(y32)) * factor + c[7, ix, iy, it]
+                c[8, ix, iy, it] =
+                    sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor + c[8, ix, iy, it]
+
+
+            end
         end
-        #end
         #end
     end
 
@@ -236,40 +237,40 @@ function Traceless_antihermitian_add!(
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac12 = 1 / 2
     NX = vin.NX
-    ##NY = vin.NY
+    NY = vin.NY
     ##NZ = vin.NZ
     NT = vin.NT
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            v11 = vin[1, 1, ix, it]
-            v22 = vin[2, 2, ix, it]
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                v11 = vin[1, 1, ix, iy, it]
+                v22 = vin[2, 2, ix, iy, it]
 
-            tri = fac12 * (imag(v11) + imag(v22))
+                tri = fac12 * (imag(v11) + imag(v22))
 
 
 
-            v12 = vin[1, 2, ix, it]
-            #v13 = vin[1,3,ix,it]
-            v21 = vin[2, 1, ix, it]
+                v12 = vin[1, 2, ix, iy, it]
+                #v13 = vin[1,3,ix,it]
+                v21 = vin[2, 1, ix, iy, it]
 
-            x12 = v12 - conj(v21)
+                x12 = v12 - conj(v21)
 
-            x21 = -conj(x12)
+                x21 = -conj(x12)
 
-            y11 = (imag(v11) - tri) * im
-            y12 = 0.5 * x12
-            y21 = 0.5 * x21
-            y22 = (imag(v22) - tri) * im
+                y11 = (imag(v11) - tri) * im
+                y12 = 0.5 * x12
+                y21 = 0.5 * x21
+                y22 = (imag(v22) - tri) * im
 
-            c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
-            c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
-            c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
+                c[1, ix, iy, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, iy, it]
+                c[2, ix, iy, it] = (real(y12) - real(y21)) * factor + c[2, ix, iy, it]
+                c[3, ix, iy, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, iy, it]
 
+            end
         end
-        #end
         #end
     end
 
@@ -284,21 +285,21 @@ function Traceless_antihermitian_add!(
     #error("Traceless_antihermitian! is not implemented in type $(typeof(c)) ")
     fac12 = 1 / 2
     NX = vin.NX
-    ##NY = vin.NY
+    NY = vin.NY
     ##NZ = vin.NZ
     NT = vin.NT
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            v11 = vin[1, 1, ix, it]
-            c[1, ix, it] = 2 * imag(v11) * factor + c[1, ix, it]
-            #c[1,ix,it] += ifelse(c[1,ix,it] > 2π,-2π,0)
-            #c[1,ix,it] += ifelse(c[1,ix,it] < 0,2π,0)
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                v11 = vin[1, 1, ix, iy, it]
+                c[1, ix, iy, it] = 2 * imag(v11) * factor + c[1, ix, iy, it]
+                #c[1,ix,it] += ifelse(c[1,ix,it] > 2π,-2π,0)
+                #c[1,ix,it] += ifelse(c[1,ix,it] < 0,2π,0)
 
+            end
         end
-        #end
         #end
     end
 
@@ -321,71 +322,71 @@ function Traceless_antihermitian!(
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1 / 3
     NX = vin.NX
-    #NY = vin.NY
+    NY = vin.NY
     #NZ = vin.NZ
     NT = vin.NT
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            v11 = vin[1, 1, ix, it]
-            v22 = vin[2, 2, ix, it]
-            v33 = vin[3, 3, ix, it]
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                v11 = vin[1, 1, ix, iy, it]
+                v22 = vin[2, 2, ix, iy, it]
+                v33 = vin[3, 3, ix, iy, it]
 
-            tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
+                tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
 
-            #=
-            vout[1,1,ix,it] = (imag(v11)-tri)*im
-            vout[2,2,ix,it] = (imag(v22)-tri)*im
-            vout[3,3,ix,it] = (imag(v33)-tri)*im
-            =#
-            y11 = (imag(v11) - tri) * im
-            y22 = (imag(v22) - tri) * im
-            y33 = (imag(v33) - tri) * im
+                #=
+                vout[1,1,ix,it] = (imag(v11)-tri)*im
+                vout[2,2,ix,it] = (imag(v22)-tri)*im
+                vout[3,3,ix,it] = (imag(v33)-tri)*im
+                =#
+                y11 = (imag(v11) - tri) * im
+                y22 = (imag(v22) - tri) * im
+                y33 = (imag(v33) - tri) * im
 
-            v12 = vin[1, 2, ix, it]
-            v13 = vin[1, 3, ix, it]
-            v21 = vin[2, 1, ix, it]
-            v23 = vin[2, 3, ix, it]
-            v31 = vin[3, 1, ix, it]
-            v32 = vin[3, 2, ix, it]
+                v12 = vin[1, 2, ix, iy, it]
+                v13 = vin[1, 3, ix, iy, it]
+                v21 = vin[2, 1, ix, iy, it]
+                v23 = vin[2, 3, ix, iy, it]
+                v31 = vin[3, 1, ix, iy, it]
+                v32 = vin[3, 2, ix, iy, it]
 
-            x12 = v12 - conj(v21)
-            x13 = v13 - conj(v31)
-            x23 = v23 - conj(v32)
+                x12 = v12 - conj(v21)
+                x13 = v13 - conj(v31)
+                x23 = v23 - conj(v32)
 
-            x21 = -conj(x12)
-            x31 = -conj(x13)
-            x32 = -conj(x23)
+                x21 = -conj(x12)
+                x31 = -conj(x13)
+                x32 = -conj(x23)
 
-            #=
-            vout[1,2,ix,it] = 0.5  * x12
-            vout[1,3,ix,it] = 0.5  * x13
-            vout[2,1,ix,it] = 0.5  * x21
-            vout[2,3,ix,it] = 0.5  * x23
-            vout[3,1,ix,it] = 0.5  * x31
-            vout[3,2,ix,it] = 0.5  * x32
-            =#
-            y12 = 0.5 * x12
-            y13 = 0.5 * x13
-            y21 = 0.5 * x21
-            y23 = 0.5 * x23
-            y31 = 0.5 * x31
-            y32 = 0.5 * x32
+                #=
+                vout[1,2,ix,it] = 0.5  * x12
+                vout[1,3,ix,it] = 0.5  * x13
+                vout[2,1,ix,it] = 0.5  * x21
+                vout[2,3,ix,it] = 0.5  * x23
+                vout[3,1,ix,it] = 0.5  * x31
+                vout[3,2,ix,it] = 0.5  * x32
+                =#
+                y12 = 0.5 * x12
+                y13 = 0.5 * x13
+                y21 = 0.5 * x21
+                y23 = 0.5 * x23
+                y31 = 0.5 * x31
+                y32 = 0.5 * x32
 
 
-            c[1, ix, it] = (imag(y12) + imag(y21))
-            c[2, ix, it] = (real(y12) - real(y21))
-            c[3, ix, it] = (imag(y11) - imag(y22))
-            c[4, ix, it] = (imag(y13) + imag(y31))
-            c[5, ix, it] = (real(y13) - real(y31))
+                c[1, ix, iy, it] = (imag(y12) + imag(y21))
+                c[2, ix, iy, it] = (real(y12) - real(y21))
+                c[3, ix, iy, it] = (imag(y11) - imag(y22))
+                c[4, ix, iy, it] = (imag(y13) + imag(y31))
+                c[5, ix, iy, it] = (real(y13) - real(y31))
 
-            c[6, ix, it] = (imag(y23) + imag(y32))
-            c[7, ix, it] = (real(y23) - real(y32))
-            c[8, ix, it] = sr3i * (imag(y11) + imag(y22) - 2 * imag(y33))
+                c[6, ix, iy, it] = (imag(y23) + imag(y32))
+                c[7, ix, iy, it] = (real(y23) - real(y32))
+                c[8, ix, iy, it] = sr3i * (imag(y11) + imag(y22) - 2 * imag(y33))
+            end
         end
-        #end
         #end
     end
 
@@ -402,7 +403,7 @@ function Traceless_antihermitian!(
     nv = vin.NV
 
     NX = vin.NX
-    #NY = vin.NY
+    NY = vin.NY
     #NZ = vin.NZ
     NT = vin.NT
     g = c.generators
@@ -411,33 +412,33 @@ function Traceless_antihermitian!(
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            tri = 0.0
-            @simd for k = 1:NC
-                tri += imag(vin[k, k, ix, it])
-            end
-            tri *= fac1N
-            @simd for k = 1:NC
-                #vout[k,k,ix,it] = (imag(vin[k,k,ix,it])-tri)*im
-                matrix[k, k] = (imag(vin[k, k, ix, it]) - tri) * im
-            end
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                tri = 0.0
+                @simd for k = 1:NC
+                    tri += imag(vin[k, k, ix, iy, it])
+                end
+                tri *= fac1N
+                @simd for k = 1:NC
+                    #vout[k,k,ix,it] = (imag(vin[k,k,ix,it])-tri)*im
+                    matrix[k, k] = (imag(vin[k, k, ix, iy, it]) - tri) * im
+                end
 
-            @simd for k2 = k1+1:NC
-                vv = 0.5 * (vin[k1, k2, ix, it] - conj(vin[k2, k1, ix, it]))
-                #vout[k1,k2,ix,it] = vv
-                #vout[k2,k1,ix,it] = -conj(vv)
-                matrix[k1, k2] = vv
-                matrix[k2, k1] = -conj(vv)
-            end
+                @simd for k2 = k1+1:NC
+                    vv = 0.5 * (vin[k1, k2, ix, iy, it] - conj(vin[k2, k1, ix, iy, it]))
+                    #vout[k1,k2,ix,it] = vv
+                    #vout[k2,k1,ix,it] = -conj(vv)
+                    matrix[k1, k2] = vv
+                    matrix[k2, k1] = -conj(vv)
+                end
 
-            matrix2lie!(a, g, matrix)
-            for k = 1:length(g)
-                c[k, ix, it] = 2 * imag(a[k])
-            end
+                matrix2lie!(a, g, matrix)
+                for k = 1:length(g)
+                    c[k, ix, iy, it] = 2 * imag(a[k])
+                end
 
+            end
         end
-        #end
         #end
     end
 
@@ -456,7 +457,7 @@ function Traceless_antihermitian_add!(
     nv = vin.NV
 
     NX = vin.NX
-    #NY = vin.NY
+    NY = vin.NY
     #NZ = vin.NZ
     NT = vin.NT
     g = c.generators
@@ -465,35 +466,35 @@ function Traceless_antihermitian_add!(
 
     for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        @simd for ix = 1:NX
-            tri = 0.0
-            @simd for k = 1:NC
-                tri += imag(vin[k, k, ix, it])
-            end
-            tri *= fac1N
-            @simd for k = 1:NC
-                #vout[k,k,ix,it] = (imag(vin[k,k,ix,it])-tri)*im
-                matrix[k, k] = (imag(vin[k, k, ix, it]) - tri) * im
-            end
-
-            for k1 = 1:NC
-                @simd for k2 = k1+1:NC
-                    vv = 0.5 * (vin[k1, k2, ix, it] - conj(vin[k2, k1, ix, it]))
-                    #vout[k1,k2,ix,it] = vv
-                    #vout[k2,k1,ix,it] = -conj(vv)
-                    matrix[k1, k2] = vv
-                    matrix[k2, k1] = -conj(vv)
+        for iy = 1:NY
+            @simd for ix = 1:NX
+                tri = 0.0
+                @simd for k = 1:NC
+                    tri += imag(vin[k, k, ix, iy, it])
                 end
-            end
+                tri *= fac1N
+                @simd for k = 1:NC
+                    #vout[k,k,ix,it] = (imag(vin[k,k,ix,it])-tri)*im
+                    matrix[k, k] = (imag(vin[k, k, ix, iy, it]) - tri) * im
+                end
 
-            matrix2lie!(a, g, matrix)
-            for k = 1:length(g)
-                c[k, ix, it] = 2 * imag(a[k]) * factor + c[k, ix, it]
-            end
+                for k1 = 1:NC
+                    @simd for k2 = k1+1:NC
+                        vv = 0.5 * (vin[k1, k2, ix, iy, it] - conj(vin[k2, k1, ix, iy, it]))
+                        #vout[k1,k2,ix,it] = vv
+                        #vout[k2,k1,ix,it] = -conj(vv)
+                        matrix[k1, k2] = vv
+                        matrix[k2, k1] = -conj(vv)
+                    end
+                end
 
+                matrix2lie!(a, g, matrix)
+                for k = 1:length(g)
+                    c[k, ix, iy, it] = 2 * imag(a[k]) * factor + c[k, ix, iy, it]
+                end
+
+            end
         end
-        #end
         #end
     end
 
@@ -510,17 +511,17 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_3D,NumofBasis} #uout = exp(t*u)
     NT = u.NT
     #NZ = u.NZ
-    #NY = u.NY
+    NY = u.NY
     NX = u.NX
 
     @inbounds for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            uout[1, 1, ix, it] = exp(t * im * u[1, ix, it])
+        for iy = 1:NY
+            for ix = 1:NX
+                uout[1, 1, ix, iy, it] = exp(t * im * u[1, ix, iy, it])
 
+            end
         end
-        #end
         #end
     end
     #error("exptU! is not implemented in type $(typeof(u)) ")
@@ -537,24 +538,24 @@ function exptU!(
     g = u.generators
     NT = u.NT
     #NZ = u.NZ
-    #NY = u.NY
+    NY = u.NY
     NX = u.NX
 
     u0 = zeros(ComplexF64, NC, NC)
     a = zeros(Float64, length(g))
     @inbounds for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            for k = 1:length(a)
-                a[k] = u[k, ix, it]
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:length(a)
+                    a[k] = u[k, ix, iy, it]
+                end
+
+                lie2matrix!(u0, g, a)
+                uout[:, :, ix, iy, it] = exp(t * (im / 2) * u0)
+
             end
-
-            lie2matrix!(u0, g, a)
-            uout[:, :, ix, it] = exp(t * (im / 2) * u0)
-
         end
-        #end
         #end
     end
     #error("exptU! is not implemented in type $(typeof(u)) ")
@@ -570,206 +571,206 @@ function exptU!(
     w = temps[2]
     NT = u.NT
     #NZ = u.NZ
-    #NY = u.NY
+    NY = u.NY
     NX = u.NX
 
 
 
     @inbounds for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            c1 = t * u[1, ix, it] * 0.5
-            c2 = t * u[2, ix, it] * 0.5
-            c3 = t * u[3, ix, it] * 0.5
-            c4 = t * u[4, ix, it] * 0.5
-            c5 = t * u[5, ix, it] * 0.5
-            c6 = t * u[6, ix, it] * 0.5
-            c7 = t * u[7, ix, it] * 0.5
-            c8 = t * u[8, ix, it] * 0.5
-            csum = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8
-            if csum == 0
-                w[1, 1, ix, it] = 1
-                w[1, 2, ix, it] = 0
-                w[1, 3, ix, it] = 0
-                w[2, 1, ix, it] = 0
-                w[2, 2, ix, it] = 1
-                w[2, 3, ix, it] = 0
-                w[3, 1, ix, it] = 0
-                w[3, 2, ix, it] = 0
-                w[3, 3, ix, it] = 1
+        for iy = 1:NY
+            for ix = 1:NX
+                c1 = t * u[1, ix, iy, it] * 0.5
+                c2 = t * u[2, ix, iy, it] * 0.5
+                c3 = t * u[3, ix, iy, it] * 0.5
+                c4 = t * u[4, ix, iy, it] * 0.5
+                c5 = t * u[5, ix, iy, it] * 0.5
+                c6 = t * u[6, ix, iy, it] * 0.5
+                c7 = t * u[7, ix, iy, it] * 0.5
+                c8 = t * u[8, ix, iy, it] * 0.5
+                csum = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8
+                if csum == 0
+                    w[1, 1, ix, iy, it] = 1
+                    w[1, 2, ix, iy, it] = 0
+                    w[1, 3, ix, iy, it] = 0
+                    w[2, 1, ix, iy, it] = 0
+                    w[2, 2, ix, iy, it] = 1
+                    w[2, 3, ix, iy, it] = 0
+                    w[3, 1, ix, iy, it] = 0
+                    w[3, 2, ix, iy, it] = 0
+                    w[3, 3, ix, iy, it] = 1
 
-                ww[1, 1, ix, it] = 1
-                ww[1, 2, ix, it] = 0
-                ww[1, 3, ix, it] = 0
-                ww[2, 1, ix, it] = 0
-                ww[2, 2, ix, it] = 1
-                ww[2, 3, ix, it] = 0
-                ww[3, 1, ix, it] = 0
-                ww[3, 2, ix, it] = 0
-                ww[3, 3, ix, it] = 1
-                continue
+                    ww[1, 1, ix, iy, it] = 1
+                    ww[1, 2, ix, iy, it] = 0
+                    ww[1, 3, ix, iy, it] = 0
+                    ww[2, 1, ix, iy, it] = 0
+                    ww[2, 2, ix, iy, it] = 1
+                    ww[2, 3, ix, iy, it] = 0
+                    ww[3, 1, ix, iy, it] = 0
+                    ww[3, 2, ix, iy, it] = 0
+                    ww[3, 3, ix, iy, it] = 1
+                    continue
+                end
+
+
+                #x[1,1,icum] =  c3+sr3i*c8 +im*(  0.0 )
+                v1 = c3 + sr3i * c8
+                v2 = 0.0
+                #x[1,2,icum] =  c1         +im*( -c2   )
+                v3 = c1
+                v4 = -c2
+                #x[1,3,icum] =  c4         +im*(-c5   )
+                v5 = c4
+                v6 = -c5
+
+                #x[2,1,icum] =  c1         +im*(  c2   )
+                v7 = c1
+                v8 = c2
+
+                #x[2,2,icum] =  -c3+sr3i*c8+im*(  0.0 )
+                v9 = -c3 + sr3i * c8
+                v10 = 0.0
+
+                #x[2,3,icum] =  c6         +im*( -c7   )
+                v11 = c6
+                v12 = -c7
+
+                #x[3,1,icum] =  c4         +im*(  c5   )
+                v13 = c4
+                v14 = c5
+
+                #x[3,2,icum] =  c6         +im*(  c7   )
+                v15 = c6
+                v16 = c7
+                #x[3,3,icum] =  -sr3i2*c8  +im*(  0.0 )
+                v17 = -sr3i2 * c8
+                v18 = 0.0
+
+
+                #c find eigenvalues of v
+                trv3 = (v1 + v9 + v17) / 3.0
+                cofac =
+                    v1 * v9 - v3^2 - v4^2 + v1 * v17 - v5^2 - v6^2 + v9 * v17 - v11^2 - v12^2
+                det =
+                    v1 * v9 * v17 - v1 * (v11^2 + v12^2) - v9 * (v5^2 + v6^2) -
+                    v17 * (v3^2 + v4^2) +
+                    (v5 * (v3 * v11 - v4 * v12) + v6 * (v3 * v12 + v4 * v11)) * 2.0
+
+                p3 = cofac / 3.0 - trv3^2
+                q = trv3 * cofac - det - 2.0 * trv3^3
+                x = sqrt(-4.0 * p3) + tinyvalue
+
+                arg = q / (x * p3)
+
+                arg = min(1, max(-1, arg))
+                theta = acos(arg) / 3.0
+                e1 = x * cos(theta) + trv3
+                theta = theta + pi23
+                e2 = x * cos(theta) + trv3
+                #       theta = theta + pi23
+                #       e3 = x * cos(theta) + trv3
+                e3 = 3.0 * trv3 - e1 - e2
+
+                # solve for eigenvectors
+
+                w1 = v5 * (v9 - e1) - v3 * v11 + v4 * v12
+                w2 = -v6 * (v9 - e1) + v4 * v11 + v3 * v12
+                w3 = (v1 - e1) * v11 - v3 * v5 - v4 * v6
+                w4 = -(v1 - e1) * v12 - v4 * v5 + v3 * v6
+                w5 = -(v1 - e1) * (v9 - e1) + v3^2 + v4^2
+                w6 = 0.0
+                #println("1c $w1 $w2 $w3 $w4 $w5 $w6 ",)
+                #coeffv = sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
+
+                #coeff = ifelse(coeffv == zero(coeffv),0,coeffv)
+                coeff = 1.0 / sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
+                #println("1 ",coeff)
+
+                w1 = w1 * coeff
+                w2 = w2 * coeff
+                w3 = w3 * coeff
+                w4 = w4 * coeff
+                w5 = w5 * coeff
+
+                w7 = v5 * (v9 - e2) - v3 * v11 + v4 * v12
+                w8 = -v6 * (v9 - e2) + v4 * v11 + v3 * v12
+                w9 = (v1 - e2) * v11 - v3 * v5 - v4 * v6
+                w10 = -(v1 - e2) * v12 - v4 * v5 + v3 * v6
+                w11 = -(v1 - e2) * (v9 - e2) + v3^2 + v4^2
+                w12 = 0.0
+
+                coeff = 1.0 / sqrt(w7^2 + w8^2 + w9^2 + w10^2 + w11^2)
+
+                w7 = w7 * coeff
+                w8 = w8 * coeff
+                w9 = w9 * coeff
+                w10 = w10 * coeff
+                w11 = w11 * coeff
+
+                w13 = v5 * (v9 - e3) - v3 * v11 + v4 * v12
+                w14 = -v6 * (v9 - e3) + v4 * v11 + v3 * v12
+                w15 = (v1 - e3) * v11 - v3 * v5 - v4 * v6
+                w16 = -(v1 - e3) * v12 - v4 * v5 + v3 * v6
+                w17 = -(v1 - e3) * (v9 - e3) + v3^2 + v4^2
+                w18 = 0.0
+
+                coeff = 1.0 / sqrt(w13^2 + w14^2 + w15^2 + w16^2 + w17^2)
+                w13 = w13 * coeff
+                w14 = w14 * coeff
+                w15 = w15 * coeff
+                w16 = w16 * coeff
+                w17 = w17 * coeff
+
+                # construct the projection v
+                c1 = cos(e1)
+                s1 = sin(e1)
+                ww1 = w1 * c1 - w2 * s1
+                ww2 = w2 * c1 + w1 * s1
+                ww3 = w3 * c1 - w4 * s1
+                ww4 = w4 * c1 + w3 * s1
+                ww5 = w5 * c1 - w6 * s1
+                ww6 = w6 * c1 + w5 * s1
+
+                c2 = cos(e2)
+                s2 = sin(e2)
+                ww7 = w7 * c2 - w8 * s2
+                ww8 = w8 * c2 + w7 * s2
+                ww9 = w9 * c2 - w10 * s2
+                ww10 = w10 * c2 + w9 * s2
+                ww11 = w11 * c2 - w12 * s2
+                ww12 = w12 * c2 + w11 * s2
+
+                c3 = cos(e3)
+                s3 = sin(e3)
+                ww13 = w13 * c3 - w14 * s3
+                ww14 = w14 * c3 + w13 * s3
+                ww15 = w15 * c3 - w16 * s3
+                ww16 = w16 * c3 + w15 * s3
+                ww17 = w17 * c3 - w18 * s3
+                ww18 = w18 * c3 + w17 * s3
+
+                w[1, 1, ix, iy, it] = w1 + im * w2
+                w[1, 2, ix, iy, it] = w3 + im * w4
+                w[1, 3, ix, iy, it] = w5 + im * w6
+                w[2, 1, ix, iy, it] = w7 + im * w8
+                w[2, 2, ix, iy, it] = w9 + im * w10
+                w[2, 3, ix, iy, it] = w11 + im * w12
+                w[3, 1, ix, iy, it] = w13 + im * w14
+                w[3, 2, ix, iy, it] = w15 + im * w16
+                w[3, 3, ix, iy, it] = w17 + im * w18
+
+                ww[1, 1, ix, iy, it] = ww1 + im * ww2
+                ww[1, 2, ix, iy, it] = ww3 + im * ww4
+                ww[1, 3, ix, iy, it] = ww5 + im * ww6
+                ww[2, 1, ix, iy, it] = ww7 + im * ww8
+                ww[2, 2, ix, iy, it] = ww9 + im * ww10
+                ww[2, 3, ix, iy, it] = ww11 + im * ww12
+                ww[3, 1, ix, iy, it] = ww13 + im * ww14
+                ww[3, 2, ix, iy, it] = ww15 + im * ww16
+                ww[3, 3, ix, iy, it] = ww17 + im * ww18
+
             end
-
-
-            #x[1,1,icum] =  c3+sr3i*c8 +im*(  0.0 )
-            v1 = c3 + sr3i * c8
-            v2 = 0.0
-            #x[1,2,icum] =  c1         +im*( -c2   )
-            v3 = c1
-            v4 = -c2
-            #x[1,3,icum] =  c4         +im*(-c5   )
-            v5 = c4
-            v6 = -c5
-
-            #x[2,1,icum] =  c1         +im*(  c2   )
-            v7 = c1
-            v8 = c2
-
-            #x[2,2,icum] =  -c3+sr3i*c8+im*(  0.0 )
-            v9 = -c3 + sr3i * c8
-            v10 = 0.0
-
-            #x[2,3,icum] =  c6         +im*( -c7   )
-            v11 = c6
-            v12 = -c7
-
-            #x[3,1,icum] =  c4         +im*(  c5   )
-            v13 = c4
-            v14 = c5
-
-            #x[3,2,icum] =  c6         +im*(  c7   )
-            v15 = c6
-            v16 = c7
-            #x[3,3,icum] =  -sr3i2*c8  +im*(  0.0 )
-            v17 = -sr3i2 * c8
-            v18 = 0.0
-
-
-            #c find eigenvalues of v
-            trv3 = (v1 + v9 + v17) / 3.0
-            cofac =
-                v1 * v9 - v3^2 - v4^2 + v1 * v17 - v5^2 - v6^2 + v9 * v17 - v11^2 - v12^2
-            det =
-                v1 * v9 * v17 - v1 * (v11^2 + v12^2) - v9 * (v5^2 + v6^2) -
-                v17 * (v3^2 + v4^2) +
-                (v5 * (v3 * v11 - v4 * v12) + v6 * (v3 * v12 + v4 * v11)) * 2.0
-
-            p3 = cofac / 3.0 - trv3^2
-            q = trv3 * cofac - det - 2.0 * trv3^3
-            x = sqrt(-4.0 * p3) + tinyvalue
-
-            arg = q / (x * p3)
-
-            arg = min(1, max(-1, arg))
-            theta = acos(arg) / 3.0
-            e1 = x * cos(theta) + trv3
-            theta = theta + pi23
-            e2 = x * cos(theta) + trv3
-            #       theta = theta + pi23
-            #       e3 = x * cos(theta) + trv3
-            e3 = 3.0 * trv3 - e1 - e2
-
-            # solve for eigenvectors
-
-            w1 = v5 * (v9 - e1) - v3 * v11 + v4 * v12
-            w2 = -v6 * (v9 - e1) + v4 * v11 + v3 * v12
-            w3 = (v1 - e1) * v11 - v3 * v5 - v4 * v6
-            w4 = -(v1 - e1) * v12 - v4 * v5 + v3 * v6
-            w5 = -(v1 - e1) * (v9 - e1) + v3^2 + v4^2
-            w6 = 0.0
-            #println("1c $w1 $w2 $w3 $w4 $w5 $w6 ",)
-            #coeffv = sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
-
-            #coeff = ifelse(coeffv == zero(coeffv),0,coeffv)
-            coeff = 1.0 / sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
-            #println("1 ",coeff)
-
-            w1 = w1 * coeff
-            w2 = w2 * coeff
-            w3 = w3 * coeff
-            w4 = w4 * coeff
-            w5 = w5 * coeff
-
-            w7 = v5 * (v9 - e2) - v3 * v11 + v4 * v12
-            w8 = -v6 * (v9 - e2) + v4 * v11 + v3 * v12
-            w9 = (v1 - e2) * v11 - v3 * v5 - v4 * v6
-            w10 = -(v1 - e2) * v12 - v4 * v5 + v3 * v6
-            w11 = -(v1 - e2) * (v9 - e2) + v3^2 + v4^2
-            w12 = 0.0
-
-            coeff = 1.0 / sqrt(w7^2 + w8^2 + w9^2 + w10^2 + w11^2)
-
-            w7 = w7 * coeff
-            w8 = w8 * coeff
-            w9 = w9 * coeff
-            w10 = w10 * coeff
-            w11 = w11 * coeff
-
-            w13 = v5 * (v9 - e3) - v3 * v11 + v4 * v12
-            w14 = -v6 * (v9 - e3) + v4 * v11 + v3 * v12
-            w15 = (v1 - e3) * v11 - v3 * v5 - v4 * v6
-            w16 = -(v1 - e3) * v12 - v4 * v5 + v3 * v6
-            w17 = -(v1 - e3) * (v9 - e3) + v3^2 + v4^2
-            w18 = 0.0
-
-            coeff = 1.0 / sqrt(w13^2 + w14^2 + w15^2 + w16^2 + w17^2)
-            w13 = w13 * coeff
-            w14 = w14 * coeff
-            w15 = w15 * coeff
-            w16 = w16 * coeff
-            w17 = w17 * coeff
-
-            # construct the projection v
-            c1 = cos(e1)
-            s1 = sin(e1)
-            ww1 = w1 * c1 - w2 * s1
-            ww2 = w2 * c1 + w1 * s1
-            ww3 = w3 * c1 - w4 * s1
-            ww4 = w4 * c1 + w3 * s1
-            ww5 = w5 * c1 - w6 * s1
-            ww6 = w6 * c1 + w5 * s1
-
-            c2 = cos(e2)
-            s2 = sin(e2)
-            ww7 = w7 * c2 - w8 * s2
-            ww8 = w8 * c2 + w7 * s2
-            ww9 = w9 * c2 - w10 * s2
-            ww10 = w10 * c2 + w9 * s2
-            ww11 = w11 * c2 - w12 * s2
-            ww12 = w12 * c2 + w11 * s2
-
-            c3 = cos(e3)
-            s3 = sin(e3)
-            ww13 = w13 * c3 - w14 * s3
-            ww14 = w14 * c3 + w13 * s3
-            ww15 = w15 * c3 - w16 * s3
-            ww16 = w16 * c3 + w15 * s3
-            ww17 = w17 * c3 - w18 * s3
-            ww18 = w18 * c3 + w17 * s3
-
-            w[1, 1, ix, it] = w1 + im * w2
-            w[1, 2, ix, it] = w3 + im * w4
-            w[1, 3, ix, it] = w5 + im * w6
-            w[2, 1, ix, it] = w7 + im * w8
-            w[2, 2, ix, it] = w9 + im * w10
-            w[2, 3, ix, it] = w11 + im * w12
-            w[3, 1, ix, it] = w13 + im * w14
-            w[3, 2, ix, it] = w15 + im * w16
-            w[3, 3, ix, it] = w17 + im * w18
-
-            ww[1, 1, ix, it] = ww1 + im * ww2
-            ww[1, 2, ix, it] = ww3 + im * ww4
-            ww[1, 3, ix, it] = ww5 + im * ww6
-            ww[2, 1, ix, it] = ww7 + im * ww8
-            ww[2, 2, ix, it] = ww9 + im * ww10
-            ww[2, 3, ix, it] = ww11 + im * ww12
-            ww[3, 1, ix, it] = ww13 + im * ww14
-            ww[3, 2, ix, it] = ww15 + im * ww16
-            ww[3, 3, ix, it] = ww17 + im * ww18
-
         end
-        #end
         #end
     end
 
@@ -788,33 +789,33 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_3D,NumofBasis} #uout = exp(t*u)     
     NT = u.NT
     #NZ = u.NZ
-    #NY = u.NY
+    NY = u.NY
     NX = u.NX
 
 
     @inbounds for it = 1:NT
         #for iz=1:NZ
-        #for iy=1:NY
-        for ix = 1:NX
-            #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
-            u1 = t * u[1, ix, it] / 2
-            u2 = t * u[2, ix, it] / 2
-            u3 = t * u[3, ix, it] / 2
-            R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
-            sR = sin(R) / R
-            #sR = ifelse(R == 0,1,sR)
-            a0 = cos(R)
-            a1 = u1 * sR
-            a2 = u2 * sR
-            a3 = u3 * sR
+        for iy = 1:NY
+            for ix = 1:NX
+                #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
+                u1 = t * u[1, ix, iy, it] / 2
+                u2 = t * u[2, ix, iy, it] / 2
+                u3 = t * u[3, ix, iy, it] / 2
+                R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
+                sR = sin(R) / R
+                #sR = ifelse(R == 0,1,sR)
+                a0 = cos(R)
+                a1 = u1 * sR
+                a2 = u2 * sR
+                a3 = u3 * sR
 
-            uout[1, 1, ix, it] = cos(R) + im * a3
-            uout[1, 2, ix, it] = im * a1 + a2
-            uout[2, 1, ix, it] = im * a1 - a2
-            uout[2, 2, ix, it] = cos(R) - im * a3
+                uout[1, 1, ix, iy, it] = cos(R) + im * a3
+                uout[1, 2, ix, iy, it] = im * a1 + a2
+                uout[2, 1, ix, iy, it] = im * a1 - a2
+                uout[2, 2, ix, iy, it] = cos(R) - im * a3
 
+            end
         end
-        #end
         #end
     end
 
@@ -831,15 +832,17 @@ function gauss_distribution!(
     d = Normal(0.0, σ)
     NT = p.NT
     NX = p.NX
+    NY = p.NY
     #NumofBasis = Uμ.NumofBasis
     pwork = rand(d, NX * NT * NumofBasis)
     icount = 0
     @inbounds for it = 1:NT
-
-        for ix = 1:NX
-            for k = 1:NumofBasis
-                icount += 1
-                p[k, ix, it] = pwork[icount]
+        for iy = 1:NY
+            for ix = 1:NX
+                for k = 1:NumofBasis
+                    icount += 1
+                    p[k, ix, iy, it] = pwork[icount]
+                end
             end
         end
 
