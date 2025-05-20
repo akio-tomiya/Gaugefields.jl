@@ -1,4 +1,4 @@
-abstract type Gaugefields_3D{NC} <: AbstractGaugefields{NC,2} end
+abstract type Gaugefields_3D{NC} <: AbstractGaugefields{NC,3} end
 
 
 include("./gaugefields_3D_nowing.jl")

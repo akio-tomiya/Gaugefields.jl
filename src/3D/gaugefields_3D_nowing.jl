@@ -1,6 +1,6 @@
 
 struct Gaugefields_3D_nowing{NC} <: Gaugefields_3D{NC}
-    U::Array{ComplexF64,4}
+    U::Array{ComplexF64,5}
     NX::Int64
     NY::Int64
     NT::Int64
@@ -45,7 +45,16 @@ function write_to_numpyarray(U::T, filename) where {T<:Gaugefields_3D_nowing}
     npzwrite(filename, data)
 end
 
-
+@inline function Base.getindex(
+    U::Adjoint_Gaugefields{T},
+    i1,
+    i2,
+    i4,
+    i3,
+    i6,
+) where {T<:Abstractfields} #U'
+    @inbounds return conj(U.parent[i2, i1, i3, i4, i6])
+end
 
 
 function Base.setindex!(x::Gaugefields_3D_nowing, v, i1, i2, i3, i4, i6)

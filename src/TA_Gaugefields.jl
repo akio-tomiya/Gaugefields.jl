@@ -5,6 +5,7 @@ end
 
 include("./4D/TA_gaugefields_4D.jl")
 include("./2D/TA_gaugefields_2D.jl")
+include("./3D/TA_gaugefields_3D.jl")
 
 function Base.:*(
     x::Array{<:TA_Gaugefields{NC,Dim},1},
@@ -38,6 +39,7 @@ function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim
         elseif Dim == 2
             return TA_Gaugefields_2D_mpi(u)
             #error("Dim = $Dim is not supoorted")
+
         else
             error("Dim = $Dim is not supoorted")
         end
@@ -46,6 +48,8 @@ function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim
             return TA_Gaugefields(NC, u.NX, u.NY, u.NZ, u.NT)
         elseif Dim == 2
             return TA_Gaugefields(NC, u.NX, u.NT)
+        elseif Dim == 3
+            return TA_Gaugefields(NC, u.NX, u.NY, u.NT)
         else
             error("Dim = $Dim is not supoorted")
         end

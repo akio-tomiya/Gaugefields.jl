@@ -112,6 +112,8 @@ end
 include("./2D/gaugefields_2D.jl")
 include("./4D/gaugefields_4D.jl")
 
+include("./3D/gaugefields_3D.jl")
+
 include("TA_Gaugefields.jl")
 include("Adjoint_rep_Gaugefields.jl")
 
@@ -557,7 +559,21 @@ function RandomGauges(
                     randomnumber=randomnumber,
                 )
             end
+        elseif dim == 3
+            if NDW == 0
+                U = randomGaugefields_3D_nowing(
+                    NC,
+                    NN[1],
+                    NN[2],
+                    NN[3],
+                    verbose_level=verbose_level,
+                    randomnumber=randomnumber,
+                )
+            else
+                error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
+            end
         else
+
             error("not implemented yet!")
         end
     end
@@ -684,6 +700,20 @@ function IdentityGauges(
                     verbose_level=verbose_level,
                 )
             end
+        elseif dim == 3
+            if NDW == 0
+
+                U = identityGaugefields_3D_nowing(
+                    NC,
+                    NN[1],
+                    NN[2],
+                    NN[3],
+                    verbose_level=verbose_level,
+                )
+            else
+                error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
+            end
+
         else
             error("$dim dimension system is not implemented yet!")
         end

@@ -1,5 +1,5 @@
 struct TA_Gaugefields_3D_serial{NC,NumofBasis} <: TA_Gaugefields_3D{NC}
-    a::Array{Float64,3}
+    a::Array{Float64,4}
     NX::Int64
     NY::Int64
     #NZ::Int64
@@ -143,14 +143,23 @@ end
 
 
 
-const sr3 = sqrt(3)
-const sr3i = 1 / sr3
-const sr3i2 = 2 * sr3i
+
+
+
+"""
+-----------------------------------------------------c
+     !!!!!   vin and vout should be different vectors
+
+     Projectin of the etraceless antiermite part 
+     vout = x/2 - Tr(x)/6
+     wher   x = vin - Conjg(vin)      
+-----------------------------------------------------c
+    """
 
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_3D_serial{3,NumofBasis},
     factor,
-    vin::Union{Gaugefields_3D_wing{3},Gaugefields_3D_nowing{3}},
+    vin::Gaugefields_3D_nowing{3},
 ) where {NumofBasis}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1 / 3
@@ -232,7 +241,7 @@ end
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_3D_serial{2,NumofBasis},
     factor,
-    vin::Union{Gaugefields_3D_wing{2},Gaugefields_3D_nowing{2}},
+    vin::Gaugefields_3D_nowing{2},
 ) where {NumofBasis}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac12 = 1 / 2
@@ -280,7 +289,7 @@ end
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_3D_serial{1,NumofBasis},
     factor,
-    vin::Union{Gaugefields_3D_wing{1},Gaugefields_3D_nowing{1}},
+    vin::Gaugefields_3D_nowing{1},
 ) where {NumofBasis}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(c)) ")
     fac12 = 1 / 2
@@ -317,7 +326,7 @@ end
     """
 function Traceless_antihermitian!(
     c::TA_Gaugefields_3D_serial{3,NumofBasis},
-    vin::Union{Gaugefields_3D_wing{3},Gaugefields_3D_nowing{3}},
+    vin::Gaugefields_3D_nowing{3},
 ) where {NumofBasis}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
     fac13 = 1 / 3
@@ -395,7 +404,7 @@ end
 
 function Traceless_antihermitian!(
     c::TA_Gaugefields_3D_serial{NC,NumofBasis},
-    vin::Union{Gaugefields_3D_wing{NC},Gaugefields_3D_nowing{NC}},
+    vin::Gaugefields_3D_nowing{NC},
 ) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 && NC != 1
     #NC = vout.NC
@@ -449,7 +458,7 @@ end
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_3D_serial{NC,NumofBasis},
     factor,
-    vin::Union{Gaugefields_3D_wing{NC},Gaugefields_3D_nowing{NC}},
+    vin::Gaugefields_3D_nowing{NC},
 ) where {NC,NumofBasis}
     @assert NC != 3 && NC != 2 && NC != 1 "NC should be NC >4! in this function. Now NC = $NC"
     #NC = vout.NC
@@ -501,6 +510,10 @@ function Traceless_antihermitian_add!(
 
 
 end
+
+
+
+
 
 
 function exptU!(
@@ -834,7 +847,7 @@ function gauss_distribution!(
     NX = p.NX
     NY = p.NY
     #NumofBasis = Uμ.NumofBasis
-    pwork = rand(d, NX * NT * NumofBasis)
+    pwork = rand(d, NX * NY * NT * NumofBasis)
     icount = 0
     @inbounds for it = 1:NT
         for iy = 1:NY
