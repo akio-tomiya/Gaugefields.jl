@@ -1,5 +1,6 @@
 module Bridge_format
 import ..AbstractGaugefields_module: set_wing_U!
+using Requires
 #=
 Bridge++ Text file format
 U(x,y,z,t;mu)_{ab} is like 
@@ -21,6 +22,114 @@ Re of U(0,0,0,0;mu=1)_00  # mu=1, site (x,y,z,t)=(0,0,0,0)
 Im of U(0,0,0,0;mu=1)_00
 
 =#
+
+function __init__()
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        function save_binarydata(
+            U::Array{T,1},
+            filename
+        ) where {T<:Gaugefields_4D_nowing_mpi}
+
+            NX = U[1].NX
+            NY = U[1].NY
+            NZ = U[1].NZ
+            NT = U[1].NT
+            NC = U[1].NC
+
+            barrier(U[1])
+
+            N = NC * NC * 4
+
+            send_mesg = Array{ComplexF64}(undef, N)
+            recv_mesg = Array{ComplexF64}(undef, N)
+
+
+            #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
+            #print(li.doc)
+            #write("test.xml", li.doc)
+
+            if U[1].myrank == 0
+                fp = open(filename, "w")
+            end
+            i = 0
+            i = 0
+
+            i = 0
+            counttotal = 0
+            for it = 1:NT
+                for iz = 1:NZ
+                    for iy = 1:NY
+                        for ix = 1:NX
+                            rank, ix_local, iy_local, iz_local, it_local =
+                                calc_rank_and_indices(U[1], ix, iy, iz, it)
+                            #counts[rank+1] += 1
+                            counttotal += 1
+
+                            #=
+                            if U[1].myrank == 0
+                                println("rank = $rank")
+                                println("$ix $(ix_local)")
+                                println("$iy $(iy_local)")
+                                println("$iz $(iz_local)")
+                                println("$it $(it_local)")
+                            end
+                            =#
+                            barrier(U[1])
+                            if U[1].myrank == rank
+                                count = 0
+                                for μ = 1:4
+                                    for ic2 = 1:NC
+                                        for ic1 = 1:NC
+                                            count += 1
+                                            send_mesg[count] = getvalue(
+                                                U[μ],
+                                                ic2,
+                                                ic1,
+                                                ix_local,
+                                                iy_local,
+                                                iz_local,
+                                                it_local,
+                                            )
+                                            #send_mesg[count] = U[μ][ic2,ic1,ix_local,iy_local,iz_local,it_local]
+                                        end
+                                    end
+                                end
+                                sreq = MPI.Isend(send_mesg, 0, counttotal, U[1].comm) ## HH: corrent sending rank
+                            end
+                            if U[1].myrank == 0
+                                rreq = MPI.Irecv!(recv_mesg, rank, counttotal, U[1].comm) ## HH: corrent receiving rank
+                                MPI.Wait!(rreq)
+                                count = 0
+                                for μ = 1:4
+                                    for ic2 = 1:NC
+                                        for ic1 = 1:NC
+                                            count += 1
+                                            v = recv_mesg[count]
+                                            #write(fp, hton(real(v)))
+                                            #write(fp, hton(imag(v)))
+                                            rvalue = hton(real(v))# real(U[μ][a, b, ix, iy, iz, it])
+                                            println(fp, rvalue)
+                                            ivalue = hton(imag(v))#imag(U[μ][a, b, ix, iy, iz, it])
+                                            println(fp, ivalue)
+                                            #Gaugefields.setvalue!(U[μ],v,ic2,ic1,ix_local,iy_local,iz_local,it_local) 
+                                        end
+                                    end
+                                end
+                            end
+                            barrier(U[1])
+                        end
+                    end
+                end
+            end
+
+
+            barrier(U[1])
+
+            return
+
+        end
+    end
+end
 
 function save_textdata(U, filename)
 

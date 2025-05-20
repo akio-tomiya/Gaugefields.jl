@@ -35,7 +35,7 @@ function __init__()
             counts = zeros(Int64, U[1].nprocs)
             totalnum = NX * NY * NZ * NT * NC * NC * 2 * 4
             PN = U[1].PN
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
 
             N = NC * NC * 4
             send_mesg1 = Array{ComplexF64}(undef, 1)
@@ -77,11 +77,11 @@ function __init__()
                                     end
                                 end
                                 sreq =
-                                    MPI.Isend(send_mesg, rank, counttotal, Gaugefields.comm)
+                                    MPI.Isend(send_mesg, rank, counttotal, comm)
                             end
                             if U[1].myrank == rank
                                 rreq =
-                                    MPI.Irecv!(recv_mesg, 0, counttotal, Gaugefields.comm)
+                                    MPI.Irecv!(recv_mesg, 0, counttotal, comm)
                                 MPI.Wait!(rreq)
                                 count = 0
                                 for μ = 1:4
@@ -103,7 +103,7 @@ function __init__()
                                     end
                                 end
                             end
-                            Gaugefields.barrier(U[1])
+                            barrier(U[1])
                         end
                     end
                 end
@@ -117,16 +117,16 @@ function __init__()
             send_mesg1 =  Array{ComplexF64}(undef, N)#data[:,:,:,:,1] #Array{ComplexF64}(undef, N)
             recv_mesg1 = Array{ComplexF64}(undef, N)
             #comm = MPI.MPI_COMM_WORLD
-            #println(typeof(Gaugefields.comm))
+            #println(typeof(comm))
 
 
             for ip=0:U[1].nprocs-1
                 if U[1].myrank == 0
                     send_mesg1[:] = reshape(data[:,:,:,:,ip+1],:) #Array{ComplexF64}(undef, N)
-                    sreq1 = MPI.Isend(send_mesg1, ip, ip+32, Gaugefields.comm) 
+                    sreq1 = MPI.Isend(send_mesg1, ip, ip+32, comm) 
                 end
                 if U[1].myrank == ip
-                    rreq1 = MPI.Irecv!(recv_mesg1, 0, ip+32, Gaugefields.comm)
+                    rreq1 = MPI.Irecv!(recv_mesg1, 0, ip+32, comm)
                     MPI.Wait!(rreq1)
 
                     count = 0
@@ -151,7 +151,7 @@ function __init__()
 
             end
 
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
             =#
 
             update!(U)
@@ -220,11 +220,11 @@ function __init__()
                                     end
                                 end
                                 sreq =
-                                    MPI.Isend(send_mesg, rank, counttotal, Gaugefields.comm)
+                                    MPI.Isend(send_mesg, rank, counttotal, comm)
                             end
                             if U[1].myrank == rank
                                 rreq =
-                                    MPI.Irecv!(recv_mesg, 0, counttotal, Gaugefields.comm)
+                                    MPI.Irecv!(recv_mesg, 0, counttotal, comm)
                                 MPI.Wait!(rreq)
                                 count = 0
                                 for μ = 1:4
@@ -253,7 +253,7 @@ function __init__()
             end
             #end
 
-            Gaugefields.barrier(U[1])
+            barrier(U[1])
             update!(U)
 
 
@@ -332,10 +332,10 @@ function __init__()
                                         end
                                     end
                                 end
-                                sreq = MPI.Isend(send_mesg, rank, counttotal, U[1].comm)
+                                sreq = MPI.Isend(send_mesg, 0, counttotal, U[1].comm) ## HH: corrent sending rank
                             end
                             if U[1].myrank == 0
-                                rreq = MPI.Irecv!(recv_mesg, 0, counttotal, U[1].comm)
+                                rreq = MPI.Irecv!(recv_mesg, rank, counttotal, U[1].comm) ## HH: corrent receiving rank
                                 MPI.Wait!(rreq)
                                 count = 0
                                 for μ = 1:4
@@ -538,7 +538,7 @@ function load_binarydata!(U, NX, NY, NZ, NT, NC, filename, precision)
     #close(fp)
 end
 
-function load_binarydata!(U, filename; tempfile1="tempconf.dat")
+function load_binarydata!(U, filename)
     NX = U[1].NX
     NY = U[1].NY
     NZ = U[1].NZ
@@ -548,10 +548,10 @@ function load_binarydata!(U, filename; tempfile1="tempconf.dat")
     ildg = ILDG(filename)
     i = 1
     L = [NX, NY, NZ, NT]
-    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW, tempfile1=tempfile1)
+    load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1, tempfile1="tempconf.dat")
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -575,13 +575,10 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1, tempfile1="tempconf.da
 
 
     lime_extract_record() do exe
-        run(`$exe $filename $message_no $reccord_no $tempfile1`)
-        #run(`$exe $filename $message_no $reccord_no tempconf.dat`)
+        run(`$exe $filename $message_no $reccord_no tempconf.dat`)
     end
 
-    #load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
-    load_binarydata!(U, NX, NY, NZ, NT, NC, tempfile1, precision)
-
+    load_binarydata!(U, NX, NY, NZ, NT, NC, "tempconf.dat", precision)
 
     return
 end
@@ -685,6 +682,8 @@ function extract_info(contents_data)
                 #println("reccord_no = $reccord_no")
                 #println("datatype  = $datatype ")
                 if datatype == "ildg-format"
+                    ### HH: There is some bug in this part. I will fix it later. 
+                    #=  
                     headerdic = Dict()
                     #println(data[2:end])
                     ist = findfirst('\"', data)
@@ -725,8 +724,8 @@ function extract_info(contents_data)
                     headerdic["NC"] = NC
                     headerdic["precision"] = precision
                     headerdic["headertype"] = "ildg-format"
-
-                    headerfound = true
+                    =#
+                    headerfound = false
 
                 elseif datatype == "scidac-private-file-xml"
                     headerdic = Dict()

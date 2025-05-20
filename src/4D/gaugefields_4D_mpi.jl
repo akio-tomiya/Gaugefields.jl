@@ -43,8 +43,8 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         NZ::T,
         NT::T,
         PEs;
-        mpiinit = true,
-        verbose_level = 2,
+        mpiinit=true,
+        verbose_level=2,
     ) where {T<:Integer}
         NV = NX * NY * NZ * NT
         @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
@@ -65,7 +65,7 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
         myrank = MPI.Comm_rank(comm)
 
-        verbose_print = Verbose_print(verbose_level, myid = myrank)
+        verbose_print = Verbose_print(verbose_level, myid=myrank)
 
         myrank_xyzt = get_myrank_xyzt(myrank, PEs)
 
@@ -311,9 +311,9 @@ function identityGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -323,8 +323,8 @@ function identityGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = 1
 
@@ -353,9 +353,9 @@ function randomGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -365,8 +365,8 @@ function randomGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = 1
 
@@ -787,8 +787,8 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_wing_mpi}
         U.NZ,
         U.NT,
         U.PEs,
-        mpiinit = U.mpiinit,
-        verbose_level = U.verbose_print.level,
+        mpiinit=U.mpiinit,
+        verbose_level=U.verbose_print.level,
     )
     #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
@@ -1402,8 +1402,8 @@ function Traceless_antihermitian!(
                         @simd for k2 = k1+1:NC
                             v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
                             v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
-                            vv = 0.5 * ( v12 - conj(v21) )
-                            setvalue!(vout, vv       , k1, k2, ix, iy, iz, it)
+                            vv = 0.5 * (v12 - conj(v21))
+                            setvalue!(vout, vv, k1, k2, ix, iy, iz, it)
                             setvalue!(vout, -conj(vv), k2, k1, ix, iy, iz, it)
                         end
                     end
@@ -1418,7 +1418,7 @@ end
 
 function Antihermitian!(
     vout::Gaugefields_4D_wing_mpi{NC},
-    vin::Gaugefields_4D_wing_mpi{NC};factor = 1
+    vin::Gaugefields_4D_wing_mpi{NC}; factor=1
 ) where {NC} #vout = factor*(vin - vin^+)
     #NC = vout.NC
 
@@ -1439,9 +1439,9 @@ function Antihermitian!(
                             v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
                             v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
                             vv = v12 - conj(v21)
-                            setvalue!(vout, vv*factor, k1, k2, ix, iy, iz, it)
+                            setvalue!(vout, vv * factor, k1, k2, ix, iy, iz, it)
                             if k1 != k2
-                                setvalue!(vout, -conj(vv)*factor, k2, k1, ix, iy, iz, it)
+                                setvalue!(vout, -conj(vv) * factor, k2, k1, ix, iy, iz, it)
                             end
                         end
                     end
@@ -2611,9 +2611,9 @@ function minusidentityGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -2623,8 +2623,8 @@ function minusidentityGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = -1
 
