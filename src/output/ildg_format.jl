@@ -638,17 +638,183 @@ function read_header(filename)
     lime_contents() do exe
         contents_data = read(`$exe $filename`, String)
         #println(contents_data)
+
+        content_dictdata = split_data(contents_data)
+        #display(content_dictdata)
+        header = extract_info_fromdict(content_dictdata)
+        #error("d")
+        #display(header)
+
+        #=
         contents_data = split(string(contents_data), "\n")
-        #println(contents_data)
+        println("split")
+        println(contents_data)
         header = extract_info(contents_data)
+        =#
 
     end
     #println(header)
     return header
 end
 
+function split_data(contents_data)
+    #println("split data")
+    n = count(==('\n'), contents_data)
+    #println(n)
+    data = Dict()
+    alldata = []
+    firstdata = true
+    for line in eachline(IOBuffer(contents_data))
+        #println("line ", line)
+        nl = length(line)
+        if nl >= 7 && line[1:7] == "Message"
+            if firstdata
+            else
+                push!(alldata, deepcopy(data))
+                data = Dict()
+            end
+            #println(split(line)[2])
+            data["Message"] = parse(Int64, split(line)[2])
+            firstdata = false
+        elseif nl >= 6 && line[1:6] == "Record"
+            #println(split(line)[2])
+            data["Record"] = parse(Int64, split(line)[2])
+        elseif nl >= 5 && line[1:5] == "Type:"
+            #println(split(line)[2])
+            data["Type"] = split(line)[2]
+        elseif nl >= 12 && line[1:12] == "Data Length:"
+            data["Data Length"] = parse(Int64, split(line)[3])
+        elseif nl >= 15 && line[1:15] == "Padding Length:"
+            data["Padding Length"] = parse(Int64, split(line)[3])
+        elseif nl >= 8 && line[1:8] == "MB flag:"
+            data["MB flag"] = parse(Int64, split(line)[3])
+        elseif nl >= 8 && line[1:8] == "ME flag:"
+            data["ME flag"] = parse(Int64, split(line)[3])
+        elseif nl >= 5 && line[1:5] == "Data:"
+            data["Data"] = line[6:end]
+        else
+            if haskey(data, "Data")
+                data["Data"] *= line
+            end
+        end
+    end
+    push!(alldata, deepcopy(data))
+    return alldata
+end
+
+function extract_info_fromdict(contents_data)
+    i = 0
+    message_no = 0
+    reccord_no = 0
+    datatype = ""
+    header = Dict[]
+    NX = 0
+    NY = 0
+    NZ = 0
+    NT = 0
+    NC = 3
+    precision = 32
+    headerfound = false
+    headerdic = Dict()
+    for data_dic in contents_data
+        message_no = data_dic["Message"]
+        reccord_no = data_dic["Record"]
+        datatype = data_dic["Type"]
+        if datatype == "ildg-format"
+            headerdic = Dict()
+            data = data_dic["Data"]
+            ist = findfirst('\"', data)
+            ien = findlast('\"', data)
+            doc = parsexml(data[ist+1:ien-1])
+            ildgFormat = root(doc)
+            for d in eachelement(ildgFormat)
+                if d.name == "lx"
+                    NX = parse(Int64, d.content)
+                elseif d.name == "ly"
+                    NY = parse(Int64, d.content)
+                elseif d.name == "lz"
+                    NZ = parse(Int64, d.content)
+                elseif d.name == "lt"
+                    NT = parse(Int64, d.content)
+                elseif d.name == "field"
+                    gauge = d.content
+                    if findfirst("su3", gauge) != nothing
+                        NC = 3
+                    elseif findfirst("su2", gauge) != nothing
+                        NC = 2
+                    else
+                        error("not supported. gauge is ", gauge)
+                    end
+                elseif d.name == "precision"
+                    precision = parse(Int64, d.content)
+                end
+
+            end
+            headerdic["L"] = (NX, NY, NZ, NT)
+            headerdic["NC"] = NC
+            headerdic["precision"] = precision
+            headerdic["headertype"] = "ildg-format"
+
+            headerfound = false
+        elseif datatype == "scidac-private-file-xml"
+            headerdic = Dict()
+            #println(data[2:end])
+            data = data_dic["Data"]
+            ist = findfirst('\"', data)
+            ien = findlast('\"', data)
+
+
+            doc = parsexml(data[ist+1:ien-1])
+
+            scidacFile = root(doc)
+            #systemdata = elements(ildgFormat)
+            #println(systemdata["version"])
+
+            for d in eachelement(scidacFile)
+                #println(d)
+                if d.name == "dims"
+                    L = parse.(Int64, split(d.content))
+                    NX = L[1]
+                    NY = L[2]
+                    NZ = L[3]
+                    NT = L[4]
+                    #=
+                    elseif d.name == "colors"
+                    NC = parse(Int64,d.content)
+                    println(NC)
+                    elseif d.name == "precision"
+                    if d.content == "F"
+                        precision = 32
+                    elseif d.content == "D"
+                        precision = 64
+                    end
+                    =#
+                end
+
+            end
+            headerdic["L"] = (NX, NY, NZ, NT)
+            headerdic["NC"] = NC
+            headerdic["headertype"] = "scidac-private-file-xml"
+            headerdic["precision"] = precision
+
+            headerfound = true
+        end
+
+        if datatype == "ildg-binary-data" #&& headerfound
+            #println("message_no = $(message_no)")
+            #println("reccord_no = $reccord_no")
+            headerdic["message_no"] = message_no
+            headerdic["reccord_no"] = reccord_no
+            push!(header, headerdic)
+            headerfound = false
+
+        end
+    end
+    return header
+end
+
 function extract_info(contents_data)
-    #println(typeof(contents_data))
+    println(contents_data)
     i = 0
     message_no = 0
     reccord_no = 0
@@ -664,7 +830,9 @@ function extract_info(contents_data)
     headerdic = Dict()
     for data in contents_data
         u = split(data)
-        #println(u)
+        println("----")
+        println(data)
+        println("u = ", u)
         if length(u) ≥ 2
             if u[1] == "Message:"
                 message_no = parse(Int64, u[2])
@@ -681,15 +849,18 @@ function extract_info(contents_data)
                 #println("message_no = $(message_no)")
                 #println("reccord_no = $reccord_no")
                 #println("datatype  = $datatype ")
+                @show datatype
                 if datatype == "ildg-format"
                     ### HH: There is some bug in this part. I will fix it later. 
-                    #=  
+
                     headerdic = Dict()
                     #println(data[2:end])
                     ist = findfirst('\"', data)
                     ien = findlast('\"', data)
 
                     #ien =  findlast(""\",data)
+                    println("data :::", data, " ien ", ien, "ist ", ist)
+                    println(data[ist+1:ien-1])
                     doc = parsexml(data[ist+1:ien-1])
                     #elm_lx = ElementNode("lx")
                     #println("lx = ",elm_lx.content)
@@ -724,7 +895,7 @@ function extract_info(contents_data)
                     headerdic["NC"] = NC
                     headerdic["precision"] = precision
                     headerdic["headertype"] = "ildg-format"
-                    =#
+
                     headerfound = false
 
                 elseif datatype == "scidac-private-file-xml"
