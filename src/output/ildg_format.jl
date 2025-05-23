@@ -551,7 +551,7 @@ function load_binarydata!(U, filename)
     load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -583,8 +583,9 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
     return
 end
 
+import ..AbstractGaugefields_module: Initialize_Gaugefields
 
-function load_gaugefield(i, ildg::ILDG, L, NC; NDW=1)
+function load_gaugefield(i, ildg::ILDG, L, NC; NDW=0)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -592,6 +593,8 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW=1)
     data = ildg[i]
     filename = ildg.filename
 
+    U = Initialize_Gaugefields(NC, NDW, NX, NY, NZ, NT, condition="cold")
+    #=
     if NC == 3
         U = Array{SU3GaugeFields,1}(undef, 4)
     elseif NC == 2
@@ -601,13 +604,14 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW=1)
     for μ = 1:4
         U[μ] = GaugeFields(NC, NDW, NX, NY, NZ, NT)
     end
+    =#
 
-    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=1)
+    load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW)
     return U
 
 end
 
-function load_gaugefield(i, ildg::ILDG; NDW=1)
+function load_gaugefield(i, ildg::ILDG; NDW=0)
     #@assert length(ildg) != 0 "the header file is not found"
     data = ildg[i]
     filename = ildg.filename
@@ -620,9 +624,10 @@ function load_gaugefield(i, ildg::ILDG; NDW=1)
     else
         error("header file is not found. Please put lattice size")
     end
-    if haskey(data, "L")
-        error("header file is not found. Please put NC")
+    if haskey(data, "NC")
         NC = data["NC"]
+    else
+        error("header file is not found. Please put NC")
     end
     load_gaugefield(i, ildg::ILDG, L, NC; NDW=NDW)
 
