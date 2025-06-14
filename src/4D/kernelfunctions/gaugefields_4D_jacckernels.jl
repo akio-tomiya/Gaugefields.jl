@@ -687,7 +687,7 @@ end
 function jacckernel_clear_U!(i, c, NC)
     @inbounds for k1 = 1:NC
         for k2 = 1:NC
-            c[k2, k1, i] = 0
+            c[k2, k1, i] = zero(eltype(c))
         end
     end
     return
@@ -1331,8 +1331,9 @@ end
 
 
 
-function jacckernel_substitute_TAU!(i, Uμ, pwork, blockinfo, NumofBasis, NX, NY, NZ, NT)
-    ix, iy, iz, it = fourdim_cordinate(i, blockinfo)
+function jacckernel_substitute_TAU!(i, Uμ, pwork, NumofBasis, NX, NY, NZ, NT)
+    ix, iy, iz, it = index_to_coords(i, NX, NY, NZ, NT)
+    #    ix, iy, iz, it = fourdim_cordinate(i, blockinfo)
     @inbounds for k = 1:NumofBasis
         icount = ((((it - 1) * NZ + iz - 1) * NY + iy - 1) * NX + ix - 1) * NumofBasis + k
         Uμ[k, i] = pwork[icount]
@@ -1340,12 +1341,12 @@ function jacckernel_substitute_TAU!(i, Uμ, pwork, blockinfo, NumofBasis, NX, NY
 end
 
 
-function jacckernel_mult_xTAyTA!(i, temp, x, y, NumofBasis)
-    temp[i] = 0
+function jacckernel_mult_xTAyTA!(i, x, y, NumofBasis)
+    res = zero(eltype(x))
     @inbounds for k = 1:NumofBasis
-        temp[i] += x[k, i] * y[k, i]
+        res += x[k, i] * y[k, i]
     end
-    return
+    return res
 end
 
 
@@ -1533,14 +1534,4 @@ function jacckernel_add_TAU!(i, c, t::Number, a, NumofBasis)
 end
 
 
-function jacckernel_partial_tr!(i, temp_volume, U, NC, blockinfo, μ)
-    NN = fourdim_cordinate(i, blockinfo)
-    temp_volume[i] = 0
-    if NN[μ] == 1
-        @inbounds for k = 1:NC
-            temp_volume[i] += U[k, k, i]
-        end
-    end
-    return
-end
 

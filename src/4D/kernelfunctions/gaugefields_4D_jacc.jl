@@ -107,6 +107,19 @@ function shiftedU_jacc!(i::Integer, NX, NY, NZ, NT, Ushifted, U, shift, NC)
     end
 end
 
+function jacckernel_partial_tr!(i::Integer, NX, NY, NZ, NT, U, NC, μ)
+    NN = index_to_coords(i, NX, NY, NZ, NT)
+    res = zero(eltype(U))
+    if NN[μ] == 1
+        @inbounds for k = 1:NC
+            res += U[k, k, i]
+        end
+    end
+    return res
+end
+
+
+
 function shifted_U!(M::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TshifedU}, shift) where {NC,TU,TUv,TshifedU}
     N = M.NX * M.NY * M.NZ * M.NT
     JACC.parallel_for(N, shiftedU_jacc!, M.NX, M.NY, M.NZ, M.NT, M.Ushifted, M.U, shift, NC)
@@ -142,5 +155,58 @@ function multiply!(i::Integer, C::T1,
         end
     end
 end
+
+
+function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc}, μ) where {NC,TU,TUv}
+    N = a.NX * a.NY * a.NZ * a.NT
+    s = JACC.parallel_reduce(N, +, jacckernel_partial_tr!, a.NX, a.NY, a.NZ, a.NT, a.U, NC, μ; init=zero(eltype(a.U)))
+    return s
+end
+
+function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_clear_U!, c.U, NC)
+end
+
+function add_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc}, a::T1) where {NC,T1<:Gaugefields_4D_accelerator,TU,TUv}
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_add_U!, c.U, a.U, NC)
+end
+
+function add_U!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc},
+    α::N,
+    a::T1,
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
+    NN = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(NN, jacckernel_add_U_αa!, c.U, a.U, α, NC)
+
+end
+
+
+
+function add_U!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc},
+    α::N,
+    a::T1,
+) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,N<:Number,TU,TUv}
+    NN = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(NN, jacckernel_add_U_αshifta!,
+        c.U, a.parent.U, α,
+        a.shift, a.parent.blockinfo, NC)
+end
+
+
+
+function add_U!(
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc},
+    α::N,
+    a::Adjoint_Gaugefields{T1},
+) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
+    NN = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(NN, jacckernel_add_U_αadag!, c.U, a.parent.U, α, NC)
+end
+
+
 
 #import CUDA

@@ -277,7 +277,7 @@ end
 
 
 
-function normalize_U!(U::Gaugefields_4D_accelerator{2,TU,TUv}) where {TU,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{2,TU,TUv,:none}) where {TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_normalize_U_NC2!(b, r, U.U)
@@ -287,7 +287,7 @@ end
 
 
 
-function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv}) where {TU,TUv}
+function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv,:none}) where {TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_normalize_U_NC3!(b, r, U.U)
@@ -295,7 +295,7 @@ function normalize_U!(U::Gaugefields_4D_accelerator{3,TU,TUv}) where {TU,TUv}
     end
 end
 
-function normalize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {TU,TUv,NC}
+function normalize_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none}) where {TU,TUv,NC}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_normalize_U_NC!(b, r, U.U, NC)
@@ -355,7 +355,7 @@ function substitute_U!(a::Gaugefields_4D_accelerator{NC}, b::Shifted_Gaugefields
     set_wing_U!(a)
 end
 
-function substitute_U!(a::Gaugefields_4D_accelerator{NC}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Gaugefields_4D_accelerator}
+function substitute_U!(a::Gaugefields_4D_accelerator{NC,TU,TUv,:none}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:a.blockinfo.rsize
         for b = 1:a.blockinfo.blocksize
             for ic = 1:NC
@@ -516,30 +516,6 @@ function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TS}, B::Gau
 
 end
 
-function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}, B::Gaugefields_4D_nowing{NC}) where {NC,TU,TUv,TS}
-    error("jacc is being implemented")
-
-
-    acpu = Array(A.U)
-
-    blockinfo = A.blockinfo
-    for r = 1:blockinfo.rsize
-        for b = 1:blockinfo.blocksize
-            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
-            #println((ix,iy,iz,it))
-            for ic = 1:NC
-                for jc = 1:NC
-                    acpu[jc, ic, b, r] = B[jc, ic, ix, iy, iz, it]
-                end
-            end
-        end
-    end
-    #agpu = CUDA.CuArray(acpu)
-    A.U .= acpu
-
-end
-
-
 
 function substitute_U!(
     a::Array{T1,1},
@@ -595,37 +571,20 @@ function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerat
 end
 
 
-function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
-
-    error("jacc")
-    bcpu = B.U
-
-    blockinfo = B.blockinfo
-    for r = 1:blockinfo.rsize
-        for b = 1:blockinfo.blocksize
-            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
-
-            for ic = 1:NC
-                for jc = 1:NC
-                    A[jc, ic, ix, iy, iz, it] = bcpu[jc, ic, b, r]
-                end
-            end
-        end
-    end
-end
 
 
 
 
 
-
-function add_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}, a::T1) where {NC,T1<:Gaugefields_4D_accelerator,TU,TUv}
+function add_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:none}, a::T1) where {NC,T1<:Gaugefields_4D_accelerator,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_U!(b, r, c.U, a.U, NC)
         end
     end
 end
+
+
 
 
 
@@ -640,7 +599,7 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     α::N,
     a::T1,
 ) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
@@ -654,7 +613,7 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     α::N,
     a::T1,
 ) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,N<:Number,TU,TUv}
@@ -670,7 +629,7 @@ end
 
 
 function add_U!(
-    c::Gaugefields_4D_accelerator{NC,TU,TUv},
+    c::Gaugefields_4D_accelerator{NC,TU,TUv,:none},
     α::N,
     a::Adjoint_Gaugefields{T1},
 ) where {NC,T1<:Gaugefields_4D_accelerator{NC},N<:Number,TU,TUv}
@@ -683,7 +642,7 @@ function add_U!(
 end
 
 
-function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+function clear_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:none}) where {NC,TU,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_clear_U!(b, r, c.U, NC)
@@ -729,7 +688,7 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::Gaugefields_4D_accelerator{3,TU,TUv},
+    v::Gaugefields_4D_accelerator{3,TU,TUv,:none},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,TU,TUv} #uout = exp(t*u)
 
@@ -765,7 +724,7 @@ end
 #Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
 #Omega' - Omega = -2i imag(Omega)
 function Traceless_antihermitian!(
-    vout::Gaugefields_4D_accelerator{3,TU,TUv},
+    vout::Gaugefields_4D_accelerator{3,TU,TUv,:none},
     vin::Gaugefields_4D_accelerator{3},
 ) where {TU,TUv}
 
@@ -778,7 +737,7 @@ function Traceless_antihermitian!(
 end
 
 
-function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv}, μ) where {NC,TU,TUv}
+function partial_tr(a::Gaugefields_4D_accelerator{NC,TU,TUv,:none}, μ) where {NC,TU,TUv}
     for r = 1:a.blockinfo.rsize
         for b = 1:a.blockinfo.blocksize
             kernel_partial_tr!(b, r, a.temp_volume, a.U, NC, a.blockinfo, μ)
