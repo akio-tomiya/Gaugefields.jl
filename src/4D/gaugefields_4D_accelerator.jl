@@ -38,12 +38,12 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
         NY::T,
         NZ::T,
         NT::T,
-        blocks;
+        blocks_in;
         verbose_level=2,
         accelerator="none",
         singleprecision=false
     ) where {T<:Integer}
-        @assert blocks != nothing "blocks should be set!"
+
 
         useshiftedU = true
         #useshiftedU = false
@@ -80,7 +80,12 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
         display(aout-aout2)
         error("d")
         =#
-
+        #@assert blocks != nothing "blocks should be set!"
+        if blocks_in != nothing
+            blocks = blocks_in
+        else
+            blocks = (1, 1, 1, 1)
+        end
 
         blockinfo = Blockindices(L, blocks)#Blockindices(Tuple(blocks),Tuple(blocks_s),Tuple(blocknumbers),Tuple(blocknumbers_s),blocksize,rsize)
         blocksize = blockinfo.blocksize
@@ -120,6 +125,23 @@ struct Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU} <: Gaugefields_4
             U = Ucpu#zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = temp_volume_cpu#zeros(ComplexF64, blocksize, rsize)
             accdevise = :threads
+        elseif accelerator == "JACC"
+            #println("JACC is used")
+            isjaccdefined = @isdefined JACC
+            #println("isjaccdefined = $isjaccdefined")
+            if isjaccdefined
+                Ucpu = zeros(dtype, NC, NC, NV)
+                temp_volume_cpu = zeros(dtype, NV)
+
+                U = JACC.array(Ucpu)
+                temp_volume = JACC.array(temp_volume_cpu)
+                accdevise = :jacc
+                #println(typeof(U))
+            else
+                U = Ucpu#zeros(ComplexF64, NC, NC, blocksize, rsize)
+                temp_volume = temp_volume_cpu #zeros(ComplexF64, blocksize, rsize)
+                accdevise = :none
+            end
         else
             U = Ucpu#zeros(ComplexF64, NC, NC, blocksize, rsize)
             temp_volume = temp_volume_cpu#zeros(ComplexF64, blocksize, rsize)
@@ -197,7 +219,7 @@ function identityGaugefields_4D_accelerator(NC, NX, NY, NZ, NT, blocks; verbose_
 end
 
 
-function set_identity!(U::Gaugefields_4D_accelerator{NC,TU,TUv}) where {NC,TU,TUv}
+function set_identity!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none}) where {NC,TU,TUv}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_identityGaugefields!(b, r, U.U, NC)
@@ -359,7 +381,7 @@ end
 
 
 
-function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,accdevise,TshifedU}, shift) where {NC,TU,TUv,accdevise,TshifedU}
+function shifted_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TshifedU}, shift) where {NC,TU,TUv,TshifedU}
     for r = 1:U.blockinfo.rsize
         for b = 1:U.blockinfo.blocksize
             kernel_NC_shiftedU!(b, r, U.Ushifted, U.U,
@@ -494,6 +516,29 @@ function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv,:none,TS}, B::Gau
 
 end
 
+function substitute_U!(A::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}, B::Gaugefields_4D_nowing{NC}) where {NC,TU,TUv,TS}
+    error("jacc is being implemented")
+
+
+    acpu = Array(A.U)
+
+    blockinfo = A.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+            #println((ix,iy,iz,it))
+            for ic = 1:NC
+                for jc = 1:NC
+                    acpu[jc, ic, b, r] = B[jc, ic, ix, iy, iz, it]
+                end
+            end
+        end
+    end
+    #agpu = CUDA.CuArray(acpu)
+    A.U .= acpu
+
+end
+
 
 
 function substitute_U!(
@@ -548,6 +593,27 @@ function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerat
         end
     end
 end
+
+
+function substitute_U!(A::Gaugefields_4D_nowing{NC}, B::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
+
+    error("jacc")
+    bcpu = B.U
+
+    blockinfo = B.blockinfo
+    for r = 1:blockinfo.rsize
+        for b = 1:blockinfo.blocksize
+            ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
+
+            for ic = 1:NC
+                for jc = 1:NC
+                    A[jc, ic, ix, iy, iz, it] = bcpu[jc, ic, b, r]
+                end
+            end
+        end
+    end
+end
+
 
 
 
