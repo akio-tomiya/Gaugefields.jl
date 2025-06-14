@@ -454,6 +454,19 @@ function jacckernel_mul_NC_adagb!(i, C, A, B, α, β, NC)
     end
 end
 
+function jacckernel_mul_NC_adagb!(i, C, A, B, NC)
+    @inbounds for k2 = 1:NC
+        for k1 = 1:NC
+            C[k1, k2, i] = zero(eltype(C))
+
+            for k3 = 1:NC
+                C[k1, k2, i] +=
+                    conj(A[k3, k1, i]) * B[k3, k2, i]
+            end
+        end
+    end
+end
+
 
 function jacckernel_mul_NC_abshift!(i, C, A, B, α, β, shift, blockinfo::Blockindices, NC)
     bshifted, rshifted = shiftedindex(i, shift, blockinfo)

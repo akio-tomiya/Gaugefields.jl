@@ -1,12 +1,4 @@
 
-function jacckernel_substitute_TAU!(Uμ, pwork, blockinfo, NumofBasis, NX, NY, NZ, NT)
-    b = Int64(CUDA.threadIdx().x)
-    r = Int64(CUDA.blockIdx().x)
-    kernel_substitute_TAU!(b, r, Uμ, pwork, blockinfo, NumofBasis, NX, NY, NZ, NT)
-end
-
-
-
 function substitute_U!(
     Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc},
     pwork,
@@ -34,15 +26,9 @@ function Base.:*(
     x::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc},
     y::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc},
 ) where {NC,NumofBasis,Ta,TUv}
-
-    JACC.parallel_reduce(N, +, jacckernel_mult_xTAyTA!,
+    N = x.NX * x.NY * x.NZ * x.NT
+    s = JACC.parallel_reduce(N, +, jacckernel_mult_xTAyTA!,
         x.a, y.a, NumofBasis; init=zero(eltype(x.a)))
-
-    #CUDA.@sync begin
-    #    CUDA.@cuda threads = x.blockinfo.blocksize blocks = x.blockinfo.rsize jacckernel_mult_xTAyTA!(x.temp_volume,
-    #        x.a, y.a, NumofBasis)
-    #end
-    #s = CUDA.reduce(+, x.temp_volume)
     return s
 end
 
@@ -107,14 +93,18 @@ end
 function exptU!(
     uout::T,
     t::N,
-    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
+    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv,:jacc},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
     ww = temps[1]
     w = temps[2]
     #clear_U!(uout)
 
-    error("not implemented")
+    NN = u.NX * u.NY * u.NZ * u.NT
+    JACC.parallel_for(NN, jacckernel_exptU_TAwuww_NC3!,
+        w.U, u.a, ww.U, t) #w,u,ww,t)
+    mul!(uout, w', ww)
+
     #CUDA.@sync begin
     #    CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize jacckernel_exptU_TAwuww_NC3!(
     ##        w.U, u.a, ww.U, t) #w,u,ww,t
@@ -126,11 +116,16 @@ end
 
 
 function Traceless_antihermitian_add!(
-    c::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
+    c::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv,:jacc},
     factor,
     vin::Gaugefields_4D_accelerator{2},
 ) where {NumofBasis,Ta,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_Traceless_antihermitian_add_TAU_NC2!,
+        c.a, vin.U, factor)
+
 
     error("not implemented")
     #CUDA.@sync begin
@@ -140,13 +135,16 @@ function Traceless_antihermitian_add!(
 end
 
 function Traceless_antihermitian_add!(
-    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
+    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv,:jacc},
     factor,
     vin::Gaugefields_4D_accelerator{3},
 ) where {NumofBasis,Ta,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_Traceless_antihermitian_add_TAU_NC3!,
+        c.a, vin.U, factor)
 
-    error("not implemented")
+    #error("not implemented")
     #=
     CUDA.@sync begin
         CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_Traceless_antihermitian_add_TAU_NC3!(
@@ -161,6 +159,7 @@ function Traceless_antihermitian_add!(
     vin::Gaugefields_4D_accelerator{NC},
 ) where {NC,NumofBasis,Ta,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+    error("not implemented for NC > 3 case")
 
     generators = Tuple(CUDA.CuArray.(c.generators.generator))
     NG = length(generators)
@@ -169,7 +168,7 @@ function Traceless_antihermitian_add!(
     temp1 = deepcopy(vin.U)
     tempa = CUDA.CuArray{ComplexF64}(undef, NumofBasis, c.blockinfo.blocksize, c.blockinfo.rsize)
 
-    error("not implemented")
+
     #=
         CUDA.@sync begin
             CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_Traceless_antihermitian_add_TAU_NC!(
@@ -219,9 +218,12 @@ function gauss_distribution!(
     σ=1.0,
 ) where {NC,NumofBasis,Ta,TUv}
     d = Normal(0.0, σ)
-    pwork = rand(d, NumofBasis, p.blockinfo.blocksize, p.blockinfo.rsize)
-    error("not implemented")
-    p.a .= CUDA.CuArray(pwork)
+    NN = p.NX * p.NY * p.NZ * p.NT
+    pwork = rand(d, NumofBasis, NN)
+    p.a .= JACC.array(pwork)
+    #pwork = rand(d, NumofBasis, p.blockinfo.blocksize, p.blockinfo.rsize)
+    #error("not implemented")
+    #p.a .= CUDA.CuArray(pwork)
 end
 
 function substitute_U!(A::TA_Gaugefields_4D_serial{NC}, B::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}) where {NC,NumofBasis,Ta,TUv}

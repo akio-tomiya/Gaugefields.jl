@@ -157,8 +157,85 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
 
 end
 
+function HMC_test_3D(NX, NY, NT, NC, β)
+    Dim = 3
+    Nwing = 0
 
-function HMC_test_2D(NX, NT, NC)
+    #=
+    u1 = RandomGauges(NC,Nwing,NX,NT)
+    U = Array{typeof(u1),1}(undef,Dim)
+    U[1] = u1
+    for μ=2:Dim
+        U[μ] = RandomGauges(NC,Nwing,NX,NT)
+    end
+    =#
+
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NT, condition="hot", randomnumber="Reproducible")
+
+    println(typeof(U))
+    temps = Temporalfields(U[1]; num=10)
+    temp1, it_temp1 = get_temp(temps)#similar(U[1])
+    temp2, it_temp2 = get_temp(temps)
+    #temp1 = similar(U[1])
+    #temp2 = similar(U[1])
+
+    if Dim == 4
+        comb = 6 #4*3/2
+    elseif Dim == 3
+        comb = 3
+    elseif Dim == 2
+        comb = 1
+    else
+        error("dimension $Dim is not supported")
+    end
+
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("0 plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U, temp1, temp2)
+    println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+
+
+    gauge_action = GaugeAction(U)
+    plaqloop = make_loops_fromname("plaquette", Dim=Dim)
+    append!(plaqloop, plaqloop')
+    #β = 5.7 * (NC / 3) / 2
+    push!(gauge_action, β, plaqloop)
+
+    show(gauge_action)
+
+    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
+    Uold = similar(U)
+    substitute_U!(Uold, U)
+    MDsteps = 100
+    #temp1 = similar(U[1])
+    #temp2 = similar(U[1])
+    comb = 6
+    factor = 1 / (comb * U[1].NV * U[1].NC)
+    numaccepted = 0
+
+    numtrj = 10
+    for itrj = 1:numtrj
+        accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, temps)
+        numaccepted += ifelse(accepted, 1, 0)
+
+        #plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+        #println("$itrj plaq_t = $plaq_t")
+
+        if itrj % 10 == 0
+            @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+            println("$itrj plaq_t = $plaq_t")
+            poly = calculate_Polyakov_loop(U, temp1, temp2)
+            println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
+            println("acceptance ratio ", numaccepted / itrj)
+        end
+    end
+    return plaq_t, numaccepted / numtrj
+
+end
+
+function HMC_test_2D(NX, NT, NC, β)
     Dim = 2
     Nwing = 0
 
@@ -201,7 +278,7 @@ function HMC_test_2D(NX, NT, NC)
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette", Dim=Dim)
     append!(plaqloop, plaqloop')
-    β = 5.7 * (NC / 3) / 2
+    #β = 5.7 * (NC / 3) / 2
     push!(gauge_action, β, plaqloop)
 
     #show(gauge_action)
@@ -236,7 +313,59 @@ function HMC_test_2D(NX, NT, NC)
 
 end
 
+#=
+println("3D system")
+@testset "3D" begin
+    NX = 4
+    NY = 4
+    NT = 4
+    NC = 3
+    @testset "NC=1" begin
+        β = 2.3
+        NC = 1
+        println("NC = $NC")
+        #val =0.6414596466929057
+        val = 0.9768786716327604
+        @time plaq_t, ratio = HMC_test_3D(NX, NY, NT, NC, β)
+        @test ratio > 0.5
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
 
+    @testset "NC=2" begin
+        β = 2.3
+        NC = 2
+        println("NC = $NC")
+        #val =0.6414596466929057
+        val = 0.9768786716327604
+        @time plaq_t, ratio = HMC_test_3D(NX, NY, NT, NC, β)
+        @test ratio > 0.5
+        #@test abs(plaq_t-val)/abs(val) < eps
+    end
+
+    @testset "NC=3" begin
+        β = 5.7
+        NC = 3
+        println("NC = $NC")
+        #val = 0.5779454661484242
+        val = 0.9656356864814539
+        @time plaq_t, ratio = HMC_test_3D(NX, NY, NT, NC, β)
+        #@test abs(plaq_t-val)/abs(val) < eps
+        @test ratio > 0.5
+    end
+
+    @testset "NC=4" begin
+        β = 5.7
+        NC = 4
+        println("NC = $NC")
+        #val  =0.19127260002797497
+        val = 0.8138836242603148
+        @time plaq_t, ratio = HMC_test_3D(NX, NY, NT, NC, β)
+        #@test abs(plaq_t-val)/abs(val) < eps
+        @test ratio > 0.5
+    end
+
+end
+=#
 
 println("2D system")
 @testset "2D" begin
@@ -253,7 +382,7 @@ println("2D system")
         println("NC = $NC")
         #val =0.6414596466929057
         val = 0.9768786716327604
-        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC)
+        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC, β)
         @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
@@ -264,7 +393,7 @@ println("2D system")
         println("NC = $NC")
         #val =0.6414596466929057
         val = 0.9768786716327604
-        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC)
+        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC, β)
         @test ratio > 0.5
         #@test abs(plaq_t-val)/abs(val) < eps
     end
@@ -275,7 +404,7 @@ println("2D system")
         println("NC = $NC")
         #val = 0.5779454661484242
         val = 0.9656356864814539
-        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC)
+        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC, β)
         #@test abs(plaq_t-val)/abs(val) < eps
         @test ratio > 0.5
     end
@@ -286,7 +415,7 @@ println("2D system")
         println("NC = $NC")
         #val  =0.19127260002797497
         val = 0.8138836242603148
-        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC)
+        @time plaq_t, ratio = HMC_test_2D(NX, NT, NC, β)
         #@test abs(plaq_t-val)/abs(val) < eps
         @test ratio > 0.5
     end
