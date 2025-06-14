@@ -55,6 +55,26 @@ struct TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,accdevise} <: TA_Gauge
             a = a0
             temp_volume = temp_volume0
             accdevise = :threads
+        elseif accelerator == "JACC"
+            #println("JACC is used")
+            isjaccdefined = @isdefined JACC
+
+            #println("isjaccdefined = $isjaccdefined")
+            if isjaccdefined
+                NV = NX * NY * NZ * NT
+                a0 = zeros(dtype, NumofBasis, NV)
+                temp_volume0 = zeros(dtype, NV)
+
+                a = JACC.array(a0)
+                temp_volume = JACC.array(temp_volume0)
+                accdevise = :jacc
+                #println(typeof(U))
+            else
+                a = a0
+                temp_volume = temp_volume0
+                accdevise = :none
+            end
+
         else
             a = a0
             temp_volume = temp_volume0
@@ -160,7 +180,7 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
+    v::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv,:none},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)
     for r = 1:uout.blockinfo.rsize
@@ -175,7 +195,7 @@ end
 function exptU!(
     uout::T,
     t::N,
-    v::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    v::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:none},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,NC,Ta,TUv} #uout = exp(t*u)
     generators = Tuple(v.generators.generator)
@@ -196,7 +216,7 @@ end
 function exptU!(
     uout::T,
     t::N,
-    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
+    u::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv,:none},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
     ww = temps[1]
@@ -217,7 +237,7 @@ end
 
 
 function Traceless_antihermitian_add!(
-    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv},
+    c::TA_Gaugefields_4D_accelerator{3,NumofBasis,Ta,TUv,:none},
     factor,
     vin::Gaugefields_4D_accelerator{3},
 ) where {NumofBasis,Ta,TUv}
@@ -232,7 +252,7 @@ function Traceless_antihermitian_add!(
 end
 
 
-function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:none}) where {NC,NumofBasis,Ta,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_clear_TAU!(b, r, c.a, NumofBasis)
@@ -241,7 +261,7 @@ function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where 
 end
 
 
-function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:none}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_TAU!(b, r, c.a, a.a, NumofBasis)
@@ -251,7 +271,7 @@ end
 
 
 
-function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
+function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,:none}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv}) where {NC,NumofBasis,Ta,TUv}
     for r = 1:c.blockinfo.rsize
         for b = 1:c.blockinfo.blocksize
             kernel_add_TAU!(b, r, c.a, t, a.a, NumofBasis)
@@ -261,7 +281,7 @@ function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::T
 end
 
 function gauss_distribution!(
-    p::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv};
+    p::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:none};
     σ=1.0,
 ) where {NC,NumofBasis,Ta,TUv}
     d = Normal(0.0, σ)

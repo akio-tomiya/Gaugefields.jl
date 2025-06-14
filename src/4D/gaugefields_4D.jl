@@ -32,6 +32,13 @@ function __init__()
         include("./kernelfunctions/linearalgebra_mul_NC_cuda.jl")
         include("./kernelfunctions/linearalgebra_mul_NC3_cuda.jl")
     end
+
+    @require JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea" begin
+        include("./kernelfunctions/gaugefields_4D_jacc.jl")
+        include("./kernelfunctions/linearalgebra_mul_NC_jacc.jl")
+        include("./kernelfunctions/TA_gaugefields_4D_jacckernels.jl")
+        include("./kernelfunctions/gaugefields_4D_jacckernels.jl")
+    end
 end
 
 
