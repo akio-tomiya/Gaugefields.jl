@@ -40,7 +40,11 @@ function exptU!(
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
 
-    error("not implemented")
+    NN = u.NX * u.NY * u.NZ * u.NT
+    JACC.parallel_for(NN, jacckernel_exptU_TAwuww_NC2!,
+        uout.U, u.a, t) #w,u,ww,t
+
+    #error("not implemented")
     #CUDA.@sync begin
     #    CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize jacckernel_exptU_TAwuww_NC2!(
     #        uout.U, u.a, t) #w,u,ww,t
@@ -58,12 +62,16 @@ function exptU!(
     temps::Array{T,1},
 ) where {NC,N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
 
-    generators = Tuple(CUDA.CuArray.(u.generators.generator))
+    generators = Tuple(JACC.Array.(u.generators.generator))
     NG = length(generators)
 
     temp1 = temps[1]
     temp2 = temps[2]
     temp3 = temps[3]
+
+    NN = u.NX * u.NY * u.NZ * u.NT
+    JACC.parallel_for(NN, jacckernel_exptU_TAwuww_NC!,
+        uout.U, u.a, t, NC, NG, generators, temp1.U, temp2.U, temp3.U)
 
     #=
     uoutcpu = Array(uout.U)
@@ -81,7 +89,7 @@ function exptU!(
     error("dd")
     =#
 
-    error("not implemented")
+    #error("not implemented")
     #CUDA.@sync begin
     #    CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize jacckernel_exptU_TAwuww_NC!(
     #        uout.U, u.a, t, NC, NG, generators, temp1.U, temp2.U, temp3.U) #w,u,ww,t
@@ -105,11 +113,7 @@ function exptU!(
         w.U, u.a, ww.U, t) #w,u,ww,t)
     mul!(uout, w', ww)
 
-    #CUDA.@sync begin
-    #    CUDA.@cuda threads = uout.blockinfo.blocksize blocks = uout.blockinfo.rsize jacckernel_exptU_TAwuww_NC3!(
-    ##        w.U, u.a, ww.U, t) #w,u,ww,t
-    #end
-    #mul!(uout, w', ww)
+
 
 end
 
@@ -126,12 +130,6 @@ function Traceless_antihermitian_add!(
     JACC.parallel_for(N, jacckernel_Traceless_antihermitian_add_TAU_NC2!,
         c.a, vin.U, factor)
 
-
-    error("not implemented")
-    #CUDA.@sync begin
-    #    CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_Traceless_antihermitian_add_TAU_NC2!(
-    #        c.a, vin.U, factor)
-    #end
 end
 
 function Traceless_antihermitian_add!(
@@ -144,13 +142,7 @@ function Traceless_antihermitian_add!(
     JACC.parallel_for(N, jacckernel_Traceless_antihermitian_add_TAU_NC3!,
         c.a, vin.U, factor)
 
-    #error("not implemented")
-    #=
-    CUDA.@sync begin
-        CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_Traceless_antihermitian_add_TAU_NC3!(
-            c.a, vin.U, factor)
-    end
-    =#
+
 end
 
 function Traceless_antihermitian_add!(
@@ -183,34 +175,25 @@ end
 
 
 function clear_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}) where {NC,NumofBasis,Ta,TUv}
-    error("not implemented")
-    #=
-    CUDA.@sync begin
-        CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_clear_TAU!(c.a, NumofBasis)
-    end
-    =#
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_clear_TAU!, c.a, NumofBasis)
+
 end
 
 
 
 function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}) where {NC,NumofBasis,Ta,TUv}
-    error("not implemented")
-    #=
-    CUDA.@sync begin
-        CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_add_TAU!(c.a, a.a, NumofBasis)
-    end
-    =#
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_add_TAU!, c.a, a.a, NumofBasis)
+
 end
 
 
 
 function add_U!(c::TA_Gaugefields_4D_accelerator{NC,NumofBasis}, t::Number, a::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}) where {NC,NumofBasis,Ta,TUv}
-    error("not implemented")
-    #=
-    CUDA.@sync begin
-        CUDA.@cuda threads = c.blockinfo.blocksize blocks = c.blockinfo.rsize jacckernel_add_TAU!(c.a, t, a.a, NumofBasis)
-    end
-    =#
+    N = c.NX * c.NY * c.NZ * c.NT
+    JACC.parallel_for(N, jacckernel_add_TAU!, c.a, t, a.a, NumofBasis)
+
 end
 
 function gauss_distribution!(
@@ -221,45 +204,35 @@ function gauss_distribution!(
     NN = p.NX * p.NY * p.NZ * p.NT
     pwork = rand(d, NumofBasis, NN)
     p.a .= JACC.array(pwork)
-    #pwork = rand(d, NumofBasis, p.blockinfo.blocksize, p.blockinfo.rsize)
-    #error("not implemented")
-    #p.a .= CUDA.CuArray(pwork)
 end
 
 function substitute_U!(A::TA_Gaugefields_4D_serial{NC}, B::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}) where {NC,NumofBasis,Ta,TUv}
     bcpu = Array(B.a)
-    error("not implemented")
-    #=
-        blockinfo = B.blockinfo
-        for r = 1:blockinfo.rsize
-            for b = 1:blockinfo.blocksize
-                ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
 
-                for ic = 1:NumofBasis
-                    A[ic, ix, iy, iz, it] = bcpu[ic, b, r]
-                end
-            end
+    NV = A.NX * A.NY * A.NZ * A.NT
+
+    for i = 1:NV
+        ix, iy, iz, it = index_to_coords(i, A.NX, A.NY, A.NZ, A.NT)
+        for ic = 1:NumofBasis
+            A[ic, ix, iy, iz, it] = bcpu[ic, i]
         end
-        =#
+    end
 end
 
 
 
 function substitute_U!(B::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:jacc}, A::TA_Gaugefields_4D_serial{NC}) where {NC,NumofBasis,Ta,TUv}
     bcpu = Array(B.a)
-    error("not implemented")
-    #=
-        blockinfo = B.blockinfo
-        for r = 1:blockinfo.rsize
-            for b = 1:blockinfo.blocksize
-                ix, iy, iz, it = fourdim_cordinate(b, r, blockinfo)
 
-                for ic = 1:NumofBasis
-                    bcpu[ic, b, r] = A[ic, ix, iy, iz, it]
+    NV = A.NX * A.NY * A.NZ * A.NT
 
-                end
-            end
+    for i = 1:NV
+        ix, iy, iz, it = index_to_coords(i, A.NX, A.NY, A.NZ, A.NT)
+        for ic = 1:NumofBasis
+            bcpu[ic, i] = A[ic, ix, iy, iz, it]
         end
-        B.a .= CUDA.CuArray(bcpu)
-        =#
+    end
+
+    B.a .= JACC.Array(bcpu)
+
 end
