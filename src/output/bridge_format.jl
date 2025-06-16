@@ -25,6 +25,7 @@ Im of U(0,0,0,0;mu=1)_00
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        import ..AbstractGaugefields_module:Gaugefields_4D_nowing_mpi
         function save_binarydata(
             U::Array{T,1},
             filename
