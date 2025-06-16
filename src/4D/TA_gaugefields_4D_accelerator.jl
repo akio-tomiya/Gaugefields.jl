@@ -114,7 +114,7 @@ end
 
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:none},
     pwork,
 ) where {NC,NumofBasis,Ta,TUv}
 

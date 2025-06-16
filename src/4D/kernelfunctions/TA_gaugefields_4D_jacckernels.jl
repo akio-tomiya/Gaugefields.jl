@@ -10,7 +10,7 @@ function substitute_U!(
     NX = Uμ.NX
 
     N = NX * NY * NZ * NT
-    JACC.parallel_for(N, jacckernel_substitute_TAU!, Uμ.a, pwork, NumofBasis, NX, NY, NZ, NT)
+    JACC.parallel_for(N, jacckernel_substitute_TAU!, Uμ.a, JACC.array(pwork), NumofBasis, NX, NY, NZ, NT)
 
     #CUDA.@sync begin
     #    CUDA.@cuda threads = Uμ.blockinfo.blocksize blocks = Uμ.blockinfo.rsize jacckernel_substitute_TAU!(
