@@ -19,7 +19,7 @@ end
 
 
 function substitute_U!(
-    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv},
+    Uμ::TA_Gaugefields_4D_accelerator{NC,NumofBasis,Ta,TUv,:cuda},
     pwork::CUDA.CuArray,
 ) where {NC,NumofBasis,Ta<:CUDA.CuArray,TUv}
 
