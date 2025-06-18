@@ -211,8 +211,12 @@ end
 
 function randomize_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
     N = c.NX * c.NY * c.NZ * c.NT
+    ccpu = Gaugefields_4D_nowing(c.NX, c.NY, c.NZ, c.NT)
+    #substitute_U!(ccpu, c)
+    randomize_U!(ccpu)
+    subsitute_U!(c, ccpu)
     #jacckernel_randomGaugefields!(i, U, NC)
-    JACC.parallel_for(N, jacckernel_randomGaugefields!, c.U, NC)
+    #JACC.parallel_for(N, jacckernel_randomGaugefields!, c.U, NC)
 end
 
 
