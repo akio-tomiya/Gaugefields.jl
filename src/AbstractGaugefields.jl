@@ -1916,18 +1916,20 @@ function exp_aF_U!(
     expU, it_expU = get_temp(temps)#[1]
     temp1, it_temp1 = get_temp(temps)#temps[2]
     temp2, it_temp2 = get_temp(temps)#temps[3]
+    temp3, it_temp3 = get_temp(temps)#temps[3]
     #clear_U!(temp1)
     #clear_U!(temp2)
     #clear_U!(expU)
     #clear_U!(W)
 
     for μ = 1:Dim
-        exptU!(expU, a, F[μ], [temp1, temp2])
+        exptU!(expU, a, F[μ], [temp1, temp2, temp3])
         mul!(W[μ], expU, U[μ])
     end
     unused!(temps, it_expU)
     unused!(temps, it_temp1)
     unused!(temps, it_temp2)
+    unused!(temps, it_temp3)
 
     set_wing_U!(W)
 end

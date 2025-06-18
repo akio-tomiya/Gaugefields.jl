@@ -151,6 +151,18 @@ function Traceless_antihermitian_add!(
     vin::Gaugefields_4D_accelerator{NC},
 ) where {NC,NumofBasis,Ta,TUv}
     #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) ")
+    generators = Tuple(JACC.array.(c.generators.generator))
+    NG = length(generators)
+    temp1 = deepcopy(vin.U)
+    N = c.NX * c.NY * c.NZ * c.NT
+    tempa = JACC.array(zeros(eltype(vin.U), NumofBasis, N))
+
+    JACC.parallel_for(N, jacckernel_Traceless_antihermitian_add_TAU_NC!,
+        c.a, vin.U, factor, NC, NG, generators, temp1, tempa)
+
+    return
+
+
     error("not implemented for NC > 3 case")
 
     generators = Tuple(CUDA.CuArray.(c.generators.generator))

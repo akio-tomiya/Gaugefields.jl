@@ -76,7 +76,7 @@ function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     listvalues = [1 + im, 0.1]
     g = Gradientflow_general(U, listloops, listvalues, eps=0.01)
 
-    for itrj = 1:100
+    @time for itrj = 1:100
         flow!(U, g)
         if itrj % 10 == 0
             @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
@@ -98,8 +98,6 @@ println("4D system")
     NZ = 8
     NT = 8
     Nwing = 0
-
-
 
     @testset "NC=2" begin
         β = 2.3
@@ -134,6 +132,10 @@ println("4D system")
         @time plaq_t = gradientflow_test_4D(NX, NY, NZ, NT, NC)
         #@test abs(plaq_t-val)/abs(val) < eps
     end
+
+
+
+
 
 
 end

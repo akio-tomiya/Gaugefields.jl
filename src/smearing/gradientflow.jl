@@ -72,7 +72,7 @@ struct Gradientflow_general{Dim,TA,T} <: Abstractsmearing
         #    Utemps[i] = similar(U)
         #end
 
-        tempG = Temporalfields(U[1], num=3)#Array{T,1}(undef, 3)
+        tempG = Temporalfields(U[1], num=4)#Array{T,1}(undef, 3)
         #for i = 1:3
         #    tempG[i] = similar(U[1])
         #end

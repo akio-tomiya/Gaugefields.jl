@@ -710,8 +710,8 @@ end
 
 
 function jacckernel_exptU_TAwuww_NC!(i, uout, u, t, NC, NG, generators, temp1, temp2, temp3)
-    a = view(u, :, b, r)
-    u0 = view(temp2, :, :, b, r)
+    a = view(u, :, i)
+    u0 = view(temp2, :, :, i)
     #for k = 1:length(a)
     #    a[k] = u[k, ix, iy, iz, it]
     #end
@@ -720,7 +720,7 @@ function jacckernel_exptU_TAwuww_NC!(i, uout, u, t, NC, NG, generators, temp1, t
     #uout[:, :, b,r] = exp(t * (im / 2) * u0)
     nmax = 10
 
-    matrixexponential!(view(uout, :, :, b, r), u0, NC, nmax, view(temp1, :, :, b, r), view(temp3, :, :, b, r))
+    matrixexponential!(view(uout, :, :, i), u0, NC, nmax, view(temp1, :, :, i), view(temp3, :, :, i))
 end
 
 function matrixexponential!(aout, a, Nc, nmax, temp1, temp2)
@@ -1412,7 +1412,7 @@ end
 
 function jacckernel_Traceless_antihermitian_add_TAU_NC!(i,
     c, vin, factor, NC, NG, generators, temp, tempa)
-    matrix = temp
+    matrix = view(temp, :, :, i)
     a = tempa
 
 
