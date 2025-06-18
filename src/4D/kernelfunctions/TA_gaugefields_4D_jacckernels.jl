@@ -62,7 +62,7 @@ function exptU!(
     temps::Array{T,1},
 ) where {NC,N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
 
-    generators = Tuple(JACC.Array.(u.generators.generator))
+    generators = Tuple(JACC.array.(u.generators.generator))
     NG = length(generators)
 
     temp1 = temps[1]
