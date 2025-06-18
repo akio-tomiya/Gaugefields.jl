@@ -1,0 +1,6 @@
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Gaugefields = "a461e10c-0d91-493e-bc41-027b226eee91"
+JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Wilsonloop = "f3c8d4fe-2f22-401d-8228-e6a01d7a1d02"

@@ -1,4 +1,3 @@
-import JACC
 
 function LinearAlgebra.tr(a::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc}) where {NC,TU,TUv}
     N = a.NX * a.NY * a.NZ * a.NT
