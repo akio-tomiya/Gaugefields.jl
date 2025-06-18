@@ -2543,7 +2543,10 @@ function gramschmidt!(v)
     n = size(v)[1]
     for i = 1:n
         for j = 1:i-1
-            v[:, i] = v[:, i] - v[:, j]' * v[:, i] * v[:, j]
+            for k = 1:n
+                v[k, i] = v[k, i] - v[k, j]' * v[k, i] * v[k, j]
+            end
+            #v[:, i] = v[:, i] - v[:, j]' * v[:, i] * v[:, j]
         end
         vnorm = zero(eltype(v))
         for j = 1:n
