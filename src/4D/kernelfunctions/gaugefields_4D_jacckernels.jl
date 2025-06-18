@@ -28,9 +28,12 @@ end
 function jacckernel_normalize_U_NC3!(i, u)
     #b = Int64(CUDA.threadIdx().x)
     #r = Int64(CUDA.blockIdx().x)
-    w1 = zero(eltype(u))
-    w2 = zero(eltype(u))
-    @inbounds for ic = 1:3
+    #w1 = zero(eltype(u))
+    #w2 = zero(eltype(u))
+    ic = 1
+    w1 = u[2, ic, i] * conj(u[1, ic, i])
+    w2 = u[1, ic, i] * conj(u[1, ic, i])
+    @inbounds for ic = 2:3
         w1 += u[2, ic, i] * conj(u[1, ic, i])
         w2 += u[1, ic, i] * conj(u[1, ic, i])
     end
