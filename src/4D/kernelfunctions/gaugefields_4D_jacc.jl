@@ -63,6 +63,7 @@ function substitute_each!(i::TN, ix::TN, iy::TN, iz::TN, it::TN, M::Array{T,3},
 end
 
 
+
 function substitute_each!(i::TN, ix::TN,
     iy::TN, iz::TN, it::TN, M::Gaugefields_4D_nowing{NC},
     A::Array{T,3}) where {NC,T,TN<:Integer}
@@ -206,6 +207,36 @@ function add_U!(
     NN = c.NX * c.NY * c.NZ * c.NT
     JACC.parallel_for(NN, jacckernel_add_U_αadag!, c.U, a.parent.U, α, NC)
 end
+
+
+function randomize_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
+    N = c.NX * c.NY * c.NZ * c.NT
+    #jacckernel_randomGaugefields!(i, U, NC)
+    JACC.parallel_for(N, jacckernel_randomGaugefields!, c.U, NC)
+end
+
+
+
+function normalize_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
+    N = c.NX * c.NY * c.NZ * c.NT
+    #jacckernel_randomGaugefields!(i, U, NC)
+    JACC.parallel_for(N, jacckernel_normalize_U_NC!, c.U, NC)
+end
+
+
+function normalize_U!(c::Gaugefields_4D_accelerator{3,TU,TUv,:jacc,TS}) where {TU,TUv,TS}
+    N = c.NX * c.NY * c.NZ * c.NT
+    #jacckernel_randomGaugefields!(i, U, NC)
+    JACC.parallel_for(N, jacckernel_normalize_U_NC3!, c.U)
+end
+
+function normalize_U!(c::Gaugefields_4D_accelerator{2,TU,TUv,:jacc,TS}) where {TU,TUv,TS}
+    N = c.NX * c.NY * c.NZ * c.NT
+    #jacckernel_randomGaugefields!(i, U, NC)
+    JACC.parallel_for(N, jacckernel_normalize_U_NC2!, c.U)
+end
+
+
 
 
 

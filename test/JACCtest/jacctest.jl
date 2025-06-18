@@ -10,7 +10,7 @@ using Wilsonloop
 
 function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     Dim = 4
-    Nwing = 1
+    Nwing = 0
 
     Random.seed!(123)
 

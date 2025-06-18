@@ -36,7 +36,7 @@ end
 function exptU!(
     uout::T,
     t::N,
-    u::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv},
+    u::TA_Gaugefields_4D_accelerator{2,NumofBasis,Ta,TUv,:jacc},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,NumofBasis,Ta,TUv} #uout = exp(t*u)     
 
