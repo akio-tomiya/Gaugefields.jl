@@ -25,31 +25,14 @@ function jacckernel_normalize_U_NC2!(i, u)
     return
 end
 
-@inline function myconj(z::ComplexF32)
-    ComplexF32(real(z), -imag(z))
-end
-
-@inline function myreal(z::ComplexF32)
-    reinterpret(Float32, z)[1]
-end
-
-@inline function myimag(z::ComplexF32)
-    reinterpret(Float32, z)[2]
-end
-
-const imf32 = ComplexF32(0.0f0, 1.0f0)
-
 function jacckernel_normalize_U_NC3!(i, u)
     #b = Int64(CUDA.threadIdx().x)
     #r = Int64(CUDA.blockIdx().x)
-    #w1 = zero(eltype(u))
-    #w2 = zero(eltype(u))
-    ic = 1
-    w1 = u[2, ic, i] * myconj(u[1, ic, i])
-    w2 = u[1, ic, i] * myconj(u[1, ic, i])
-    @inbounds for ic = 2:3
-        w1 += u[2, ic, i] * myconj(u[1, ic, i])
-        w2 += u[1, ic, i] * myconj(u[1, ic, i])
+    w1 = zero(eltype(u))
+    w2 = zero(eltype(u))
+    @inbounds for ic = 1:3
+        w1 += u[2, ic, i] * conj(u[1, ic, i])
+        w2 += u[1, ic, i] * conj(u[1, ic, i])
     end
     zerock2 = w2
     w1 = -w1 / w2
@@ -58,7 +41,7 @@ function jacckernel_normalize_U_NC3!(i, u)
     x5 = (u[2, 2, i]) + w1 * u[1, 2, i]
     x6 = (u[2, 3, i]) + w1 * u[1, 3, i]
 
-    w3 = x4 * myconj(x4) + x5 * myconj(x5) + x6 * myconj(x6)
+    w3 = x4 * conj(x4) + x5 * conj(x5) + x6 * conj(x6)
 
     zerock3 = w3
 
@@ -76,18 +59,18 @@ function jacckernel_normalize_U_NC3!(i, u)
     u[2, 2, i] = u[2, 2, i] * w3
     u[2, 3, i] = u[2, 3, i] * w3
 
-    aa1 = myreal(u[1, 1, i])
-    aa2 = myimag(u[1, 1, i])
-    aa3 = myreal(u[1, 2, i])
-    aa4 = myimag(u[1, 2, i])
-    aa5 = myreal(u[1, 3, i])
-    aa6 = myimag(u[1, 3, i])
-    aa7 = myreal(u[2, 1, i])
-    aa8 = myimag(u[2, 1, i])
-    aa9 = myreal(u[2, 2, i])
-    aa10 = myimag(u[2, 2, i])
-    aa11 = myreal(u[2, 3, i])
-    aa12 = myimag(u[2, 3, i])
+    aa1 = real(u[1, 1, i])
+    aa2 = imag(u[1, 1, i])
+    aa3 = real(u[1, 2, i])
+    aa4 = imag(u[1, 2, i])
+    aa5 = real(u[1, 3, i])
+    aa6 = imag(u[1, 3, i])
+    aa7 = real(u[2, 1, i])
+    aa8 = imag(u[2, 1, i])
+    aa9 = real(u[2, 2, i])
+    aa10 = imag(u[2, 2, i])
+    aa11 = real(u[2, 3, i])
+    aa12 = imag(u[2, 3, i])
 
     aa13 =
         aa3 * aa11 - aa4 * aa12 - aa5 * aa9 + aa6 * aa10
@@ -108,6 +91,11 @@ end
 
 function jacckernel_normalize_U_NC!(i, u, A, NC)
     #aa = view(A, :, :, i)
+    for ic = 1:NC
+        for jc = 1:NC
+            A[jc, ic, i] = u[jc, ic, i]#A[:, :]
+        end
+    end
     gramschmidt_jacc!(i, NC, A)
     for ic = 1:NC
         for jc = 1:NC
@@ -123,7 +111,7 @@ function gramschmidt_jacc!(ii, n, v)
     for i = 1:n
         for j = 1:i-1
             for k = 1:n
-                v[k, i, ii] = v[k, i, ii] - v[k, j, ii]' * v[k, i, ii] * v[k, j, ii]
+                v[k, i, ii] = v[k, i, ii] - conj(v[k, j, ii]) * v[k, i, ii] * v[k, j, ii]
             end
             #v[:, i] = v[:, i] - v[:, j]' * v[:, i] * v[:, j]
         end
