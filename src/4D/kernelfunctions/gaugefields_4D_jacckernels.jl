@@ -90,10 +90,35 @@ function jacckernel_normalize_U_NC3!(i, u)
 end
 
 function jacckernel_normalize_U_NC!(i, u, A, NC)
-    aa = view(A, :, :, i)
-    gramschmidt!(aa)
-    u[:, :, i] .= aa#A[:, :]
+    #aa = view(A, :, :, i)
+    gramschmidt_jacc!(i, NC, A)
+    for ic = 1:NC
+        for jc = 1:NC
+            u[jc, ic, i] .= A[jc, ic, i]#A[:, :]
+        end
+    end
+
     return
+end
+
+function gramschmidt_jacc!(ii, n, v)
+    #n = size(v)[1]
+    for i = 1:n
+        for j = 1:i-1
+            for k = 1:n
+                v[k, i, ii] = v[k, i, ii] - v[k, j, ii]' * v[k, i, ii] * v[k, j, ii]
+            end
+            #v[:, i] = v[:, i] - v[:, j]' * v[:, i] * v[:, j]
+        end
+        vnorm = zero(eltype(v))
+        for j = 1:n
+            vnorm += v[j, i, ii]^2
+        end
+        for k = 1:n
+            v[k, i, ii] = v[k, i, ii] / sqrt(vnorm)
+        end
+        #v[:, i] = v[:, i] / norm(v[:, i])
+    end
 end
 
 
