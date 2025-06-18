@@ -229,8 +229,9 @@ end
 
 function normalize_U!(c::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS}) where {NC,TU,TUv,TS}
     N = c.NX * c.NY * c.NZ * c.NT
+    A = JACC.array(zeros(eltype(c.U), NC, NC, N))
     #jacckernel_randomGaugefields!(i, U, NC)
-    JACC.parallel_for(N, jacckernel_normalize_U_NC!, c.U, NC)
+    JACC.parallel_for(N, jacckernel_normalize_U_NC!, c.U, A, NC)
 end
 
 

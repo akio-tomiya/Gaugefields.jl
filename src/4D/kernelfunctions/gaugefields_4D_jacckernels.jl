@@ -89,10 +89,10 @@ function jacckernel_normalize_U_NC3!(i, u)
 
 end
 
-function jacckernel_normalize_U_NC!(i, u, NC)
-    A = u[:, :, i]
-    gramschmidt!(A)
-    u[:, :, i] = A[:, :]
+function jacckernel_normalize_U_NC!(i, u, A, NC)
+    aa = view(A, :, :, i)
+    gramschmidt!(aa)
+    u[:, :, i] .= aa#A[:, :]
     return
 end
 
