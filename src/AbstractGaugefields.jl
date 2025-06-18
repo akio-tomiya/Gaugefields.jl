@@ -2545,7 +2545,12 @@ function gramschmidt!(v)
         for j = 1:i-1
             v[:, i] = v[:, i] - v[:, j]' * v[:, i] * v[:, j]
         end
-        v[:, i] = v[:, i] / norm(v[:, i])
+        vnorm = zero(eltype(v))
+        for j = 1:n
+            vnorm += v[j, i]^2
+        end
+        v[:, i] = v[:, i] / sqrt(vnorm)
+        #v[:, i] = v[:, i] / norm(v[:, i])
     end
 end
 
