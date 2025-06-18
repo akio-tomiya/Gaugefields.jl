@@ -94,7 +94,7 @@ function jacckernel_normalize_U_NC!(i, u, A, NC)
     gramschmidt_jacc!(i, NC, A)
     for ic = 1:NC
         for jc = 1:NC
-            u[jc, ic, i] .= A[jc, ic, i]#A[:, :]
+            u[jc, ic, i] = A[jc, ic, i]#A[:, :]
         end
     end
 
