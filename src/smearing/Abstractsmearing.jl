@@ -338,8 +338,8 @@ end
 
 function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
     #temps = similar(Uout_multi[1])
-    temps, its_temps = get_temp(net._temp_U, Dim)
-    tempf, its_tempf = get_temp(net._temp_UA, 1)
+    #temps, its_temps = get_temp(net._temp_U, Dim)
+    #tempf, its_tempf = get_temp(net._temp_UA, 1)
 
     #temps_F1 = initialize_TA_Gaugefields(temps[1])
     #tempf = [temps_F1]
@@ -353,6 +353,10 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
     #similar(δL)
     #δ_current = deepcopy(δL)
     set_wing_U!(δ_prev2)
+
+    #unused!(net._temp_U, its_temps)
+    #unused!(net._temp_UA, its_tempf)
+
 
     for i = get_numlayers(net):-1:2
         layer = net.layers[i]
@@ -372,6 +376,9 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
         #set_wing_U!(δ_current)
     end
     layer = net.layers[1]
+
+    temps, its_temps = get_temp(net._temp_U, Dim)
+    tempf, its_tempf = get_temp(net._temp_UA, 1)
     #layer_pullback!(δ_prev, δ_current, layer, Uin, temps, tempf)
     layer_pullback!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
     #display(δ_prev[1].U[:, :, 1, 1])
