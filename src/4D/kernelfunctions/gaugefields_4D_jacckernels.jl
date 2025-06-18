@@ -117,7 +117,7 @@ function gramschmidt_jacc!(ii, n, v)
         end
         vnorm = zero(eltype(v))
         for j = 1:n
-            vnorm += v[j, i, ii]^2
+            vnorm += abs(v[j, i, ii])^2
         end
         for k = 1:n
             v[k, i, ii] = v[k, i, ii] / sqrt(vnorm)
