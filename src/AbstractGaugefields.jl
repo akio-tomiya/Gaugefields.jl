@@ -2552,7 +2552,9 @@ function gramschmidt!(v)
         for j = 1:n
             vnorm += v[j, i]^2
         end
-        v[:, i] = v[:, i] / sqrt(vnorm)
+        for k = 1:n
+            v[k, i] = v[k, i] / sqrt(vnorm)
+        end
         #v[:, i] = v[:, i] / norm(v[:, i])
     end
 end
