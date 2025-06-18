@@ -15,12 +15,9 @@ function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     Random.seed!(123)
 
     #U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
-    Ucpu = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot", randomnumber="Reproducible")
-    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="cold", accelerator="JACC")
-    substitute_U!(U, Ucpu)
-
+    #U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot", randomnumber="Reproducible")
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="hot", accelerator="JACC",singleprecision=true)
     println(typeof(U))
-
 
     temps = Temporalfields(U[1]; num=10)
     temp1 = temps[1]#similar(U[1])
