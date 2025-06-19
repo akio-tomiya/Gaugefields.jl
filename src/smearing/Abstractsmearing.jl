@@ -293,6 +293,8 @@ function apply_smearing_U(
     unused!(smearing._temp_U, its_temp1)
     unused!(smearing._temp_UA, its_F0)
 
+    unused!(smearing._temp_U, its_temp_multi)
+
     return Uout_multi
 
     error(
