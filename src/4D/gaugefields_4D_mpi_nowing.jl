@@ -40,12 +40,12 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
     tempmatrix::Array{ComplexF64,3}
     positions::Vector{Int64}
     send_ranks::Dict{Int64,Data_sent{NC}}
-    win::MPI.Win
-    win_i::MPI.Win
-    win_1i::MPI.Win
+    #win::MPI.Win
+    #win_i::MPI.Win
+    #win_1i::MPI.Win
     countvec::Vector{Int64}
     otherranks::Vector{Int64}
-    win_other::MPI.Win
+    #win_other::MPI.Win
     your_ranks::Matrix{Int64}
     comm::MPI.Comm
 
@@ -105,14 +105,14 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
         positions = zeros(Int64, prod(PN))
         send_ranks = Dict{Int64,Data_sent{NC}}()
         mpi = true
-        win = MPI.Win_create(tempmatrix, comm)
-        win_i = MPI.Win_create(positions, comm)
+        #win = MPI.Win_create(tempmatrix, comm)
+        #win_i = MPI.Win_create(positions, comm)
         countvec = zeros(Int64, 1)
-        win_1i = MPI.Win_create(countvec, comm)
+        #win_1i = MPI.Win_create(countvec, comm)
 
         otherranks = zeros(Int64, nprocs)
         otherranks .= 0
-        win_other = MPI.Win_create(otherranks, comm)
+        #win_other = MPI.Win_create(otherranks, comm)
         your_ranks = zeros(Int64, nprocs, nprocs)
 
 
@@ -137,12 +137,12 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
             tempmatrix,
             positions,
             send_ranks,
-            win,
-            win_i,
-            win_1i,
+            #win,
+            #win_i,
+            #win_1i,
             countvec,
             otherranks,
-            win_other,
+            #win_other,
             your_ranks,
             comm,
         )
@@ -1308,8 +1308,8 @@ function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) wher
         #tempmatrix = zeros(ComplexF64,NC,NC,N)
         positions = U.positions
 
-        win = U.win
-        #@time win = MPI.Win_create(tempmatrix,comm)
+        #win = U.win
+        win = MPI.Win_create(tempmatrix, U.comm)
         #println(typeof(win))
         #Isend Irecv
         MPI.Win_fence(0, win)
@@ -1320,9 +1320,10 @@ function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) wher
         end
 
         MPI.Win_fence(0, win)
-        #MPI.free(win)
+        MPI.free(win)
 
-        win_i = U.win_i#MPI.Win_create(positions,comm)
+        #win_i = U.win_i#MPI.Win_create(positions,comm)
+        win_i = MPI.Win_create(positions, U.comm)
         MPI.Win_fence(0, win_i)
 
         for (myrank_send, value) in send_ranks
@@ -1331,11 +1332,11 @@ function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) wher
         end
 
         MPI.Win_fence(0, win_i)
-        #MPI.free(win_i)
+        MPI.free(win_i)
 
         countvec = U.countvec#zeros(Int64,1)
-        win_c = U.win_1i
-        #win_c = MPI.Win_create(countvec,comm)
+        #win_c = U.win_1i
+        win_c = MPI.Win_create(countvec, U.comm)
         MPI.Win_fence(0, win_c)
 
         for (myrank_send, value) in send_ranks
@@ -1344,7 +1345,7 @@ function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) wher
         end
 
         MPI.Win_fence(0, win_c)
-        #MPI.free(win_c)
+        MPI.free(win_c)
 
         count = countvec[1]
 
@@ -1386,7 +1387,10 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
 
 
     otherranks = U.otherranks
-    win_other = U.win_other
+
+
+    #win_other = U.win_other
+    win_other = MPI.Win_create(otherranks, U.comm)
 
     MPI.Win_fence(0, win_other)
     myrank = get_myrank(U)
@@ -1396,24 +1400,25 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
         MPI.Put(Int64[count], myrank_send, myrank, win_other)
     end
     MPI.Win_fence(0, win_other)
+    MPI.free(win_other)
 
 
     tempmatrix = U.tempmatrix #zeros(ComplexF64,NC,NC,N)
     #tempmatrix = zeros(ComplexF64,NC,NC,N)
     positions = U.positions
 
-    win = U.win
-    #@time win = MPI.Win_create(tempmatrix,comm)
+    #win = U.win
+    win = MPI.Win_create(tempmatrix, U.comm)
     #println(typeof(win))
     #Isend Irecv
 
     win_i = U.win_i#MPI.Win_create(positions,comm)
+    win_i = MPI.Win_create(positions, U.comm)
 
-    win_c = U.win_1i
-    #win_c = MPI.Win_create(countvec,comm)
-
+    #win_c = U.win_1i
 
     countvec = U.countvec#zeros(Int64,1)
+    win_c = MPI.Win_create(countvec, U.comm)
 
     your_ranks = U.your_ranks #zeros(Int64,nprocs,nprocs)
     your_ranks .= -1
@@ -1426,12 +1431,17 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     end
     MPI.Win_fence(0, win_other)
 
-
+    MPI.free(win_other)
 
 
     MPI.Win_fence(0, win)
+
     MPI.Win_fence(0, win_i)
+
     MPI.Win_fence(0, win_c)
+
+
+
     #GC.enable(false)
 
     icount = 0
@@ -1446,21 +1456,24 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
         end
 
 
-        #MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
-        #MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
+        MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
+        MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
 
-        GC.@preserve value begin
-            buf_pos = view(value.positions, 1:count)
-            buf_data = view(value.data, :, :, 1:count)
-            MPI.Put(buf_pos, myrank_send, disp, win_i)
-            MPI.Put(buf_data, myrank_send, disp * NC * NC, win)
-        end
+        #GC.@preserve value begin
+        #    buf_pos = view(value.positions, 1:count)
+        #    buf_data = view(value.data, :, :, 1:count)
+        #    MPI.Put(buf_pos, myrank_send, disp, win_i)
+        #    MPI.Put(buf_data, myrank_send, disp * NC * NC, win)
+        #end
     end
 
 
     MPI.Win_fence(0, win)
+    MPI.free(win)
     MPI.Win_fence(0, win_i)
+    MPI.free(win_i)
     MPI.Win_fence(0, win_c)
+    MPI.free(win_c)
     #GC.enable(true)
 
     your_ranks .= -1
@@ -1521,105 +1534,9 @@ function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) where {NC}
         return
 
 
-        for rank = 0:get_nprocs(U)
-            if rank == get_myrank(U)
-                println("myrank = ", rank, " length = $(length(send_ranks))")
-                for (key, value) in send_ranks
-                    println(key, "\t", value.count)
-                end
-                for i = 1:get_nprocs(U)
-                    println("other ", otherranks[i])
-                end
-                for i = 1:get_nprocs(U)
-                    println("my data ", your_ranks[i])
-                end
-                #println("I have ",)
-            end
-            barrier(U)
-        end
-        otherranks .= 0
-
-        for (myrank_send, value) in send_ranks
-            count = value.count
-            #count = value.count
-            MPI.Put(Int64[count], myrank_send, win_c)
-
-            # count = value.count
-            MPI.Put(value.positions[1:count], myrank_send, win_i)
-            MPI.Put(value.data[:, :, 1:count], myrank_send, win)
-
-        end
-
-        MPI.Win_fence(0, win)
-        MPI.Win_fence(0, win_i)
-        MPI.Win_fence(0, win_c)
-
-        count = countvec[1]
-
-        for i = 1:count
-            position = positions[i]
-            for jc = 1:NC
-                for ic = 1:NC
-                    ii = ((position - 1) * NC + jc - 1) * NC + ic
-                    U.Ushifted[ii] = tempmatrix[ic, jc, i]
-                end
-            end
-            #println(position)
-        end
-
-        #MPI.free(win)
-
-        #=
 
 
 
-        #for (myrank_send,value) in send_ranks
-        #    count = value.count
-        #    MPI.Put(value.positions[1:count], myrank_send,win_i)
-        #end
-
-
-        #MPI.free(win_i)
-
-        countvec = U.countvec#zeros(Int64,1)
-
-
-        for (myrank_send,value) in send_ranks
-            count = value.count
-            MPI.Put(Int64[count], myrank_send,win_c)
-        end
-
-
-        #MPI.free(win_c)
-
-        count = countvec[1]
-
-
-
-        #=
-        for rank=0:get_nprocs(U)
-            if rank == get_myrank(U)
-                println("myrank = ",myrank)
-                for position in positions[1:count]
-                    println(position)
-                end
-            end
-            barrier(U)
-        end
-        =#
-
-        for i = 1:count
-            position = positions[i]
-            for jc = 1:NC
-                for ic= 1:NC
-                    ii = ((position-1)*NC + jc-1)*NC + ic
-                    U.Ushifted[ii] = tempmatrix[ic,jc,i]
-                end
-            end
-            #println(position)
-        end
-
-        =#
 
         #error("in shiftdU")
     end
