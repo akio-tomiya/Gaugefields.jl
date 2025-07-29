@@ -3,10 +3,25 @@ import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, su
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
 import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
-struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
+mutable struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
+    ρs::TN
+    const dataset::Vector{STOUT_dataset{Dim}}
+    const Uin::Vector{T}
+    const Uinβ::Vector{T}
+    const eQs::Vector{T}
+    const Cs::Vector{T}
+    const Qs::Vector{T}
+    const temps::Temporalfields{T}
+    const dSdCs::Vector{T}
+    islocalρ::Bool
+    isαβsame::Bool
+    hasdSdCs::Vector{Bool}#Bool
+    dSdρ::Union{Nothing,TN}
+    #=
     ρs::Vector{TN}
     dataset::Vector{STOUT_dataset{Dim}}
     Uin::Vector{T}
+    const Uinβ::Vector{T}
     eQs::Vector{T}
     Cs::Vector{T}
     Qs::Vector{T}
@@ -15,6 +30,7 @@ struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     dSdCs::Vector{T}
     hasdSdCs::Vector{Bool}
     dSdρ::Vector{TN}
+    =#
 end
 export STOUT_Layer
 
@@ -65,10 +81,30 @@ function STOUT_Layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:Abstr
     end
 
     Uin = Vector{T}(undef, Dim)
+    Uinβ = Vector{T}(undef, Dim)
     eQs = Vector{T}(undef, Dim)
     Cs = Vector{T}(undef, Dim)
     Qs = Vector{T}(undef, Dim)
     dSdCs = Vector{T}(undef, Dim)
+
+    for μ = 1:Dim
+        Uin[μ] = similar(U[1])
+        Uinβ[μ] = similar(U[1])
+        eQs[μ] = similar(U[1])
+        Cs[μ] = similar(U[1])
+        Qs[μ] = similar(U[1])
+        dSdCs[μ] = similar(U[1])
+    end
+    #dSdρ = nothing
+    TN = typeof(ρs)#eltype(ρs)
+    if eltype(ρs) <: Number
+        islocalρ = false
+    else
+        islocalρ = true
+    end
+    dSdρ = zero(ρs)
+
+    #=
 
     for μ = 1:Dim
         Uin[μ] = similar(U[1])
@@ -82,6 +118,9 @@ function STOUT_Layer(loopset::Vector{Vector{Wilsonline{Dim}}}, U::Vector{<:Abstr
     hasdSdCs = [false]
 
     st = STOUT_Layer{T,Dim,TN}(ρs, dataset, Uin, eQs, Cs, Qs, temps, dSdCs, hasdSdCs, dSdρ)
+    =#
+    hasdSdCs = [false]
+    return STOUT_Layer{T,Dim,TN}(ρs, dataset, Uin, Uinβ, eQs, Cs, Qs, temps, dSdCs, islocalρ, false, hasdSdCs, dSdρ)
 
     return st
 end
@@ -239,6 +278,38 @@ function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Di
 end
 export forward!
 
+function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uinα, Uinβ) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
+    s.isαβsame = (Uinα == Uinβ)
+    s.islocalρ = false
+    #println("is $isαβsame")
+    substitute_U!(s.Uin, Uinα)
+    if s.isαβsame == false
+        substitute_U!(s.Uinβ, Uinβ)
+    end
+    for i = 1:length(s.ρs)
+        s.ρs[i] = deepcopy(ρs[i])
+    end
+    #temps = s.temps
+    #Ω = temps[end]
+    Ω, iΩ = get_temp(s.temps)
+    temps, it_s = get_temp(s.temps, 2)
+
+    for μ = 1:Dim
+        calc_C!(s.Cs[μ], μ, ρs, s.dataset, Uinβ, s.temps)
+        mul!(Ω, s.Cs[μ], Uinβ[μ]') #Ω = C*Udag
+        Traceless_antihermitian!(s.Qs[μ], Ω)
+        exptU!(s.eQs[μ], 1, s.Qs[μ], temps)
+        mul!(Uout[μ], s.eQs[μ], Uinα[μ])
+    end
+    set_wing_U!(Uout)
+    s.hasdSdCs .= false
+    unused!(s.temps, iΩ)
+    unused!(s.temps, it_s)
+end
+
+
+
+
 
 
 function backward_dSdU_add!(s::STOUT_Layer, dSdUin, dSdUout)
@@ -340,6 +411,81 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
 end
 export backward_dSdUαUβρ_add!
 
+function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim}, dSdUα, dSdUβ, dSdρ, dSdUout) where {T,Dim}
+    @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
+    temp1, itemp1 = get_temp(s.temps)
+    dSdQ, idSdQ = get_temp(s.temps)
+    dSdΩ, idSdΩ = get_temp(s.temps)
+    dSdUdag, idSdUdag = get_temp(s.temps)
+    dSdCs, idSdCs = get_temp(s.temps, Dim)
+    temps, itemps = get_temp(s.temps, 4)
+
+    #temps = s.temps
+    #temp1 = temps[1]
+    #dSdQ = temps[2]
+    #dSdΩ = temps[3]
+    #dSdUdag = temps[4]
+    #dSdCs = temps[5:5+Dim-1]
+
+    if s.isαβsame
+        Uin = s.Uin
+    else
+        Uin = s.Uinβ
+    end
+
+
+    for μ = 1:Dim
+
+        #dS/dUα
+        calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
+        add_U!(dSdUα[μ], temp1)
+
+        #dS/dUβ
+        Cμ = s.Cs[μ]
+        Qμ = s.Qs[μ]
+
+        calc_dSdQ!(dSdQ, dSdUout[μ], Qμ, s.Uin[μ], temp1)
+        calc_dSdΩ!(dSdΩ, dSdQ)
+        calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
+
+        calc_dSdUdag!(dSdUdag, dSdΩ, Cμ)
+        add_U!(dSdUβ[μ], dSdUdag')
+
+        if s.islocalρ == false
+            Cμi, iCμi = get_temp(s.temps)
+
+            #Cμi = temps[4] #dSdUdag
+            #dS/dρ
+            num = length(s.ρs)
+            for i = 1:num
+                loops = s.dataset[i].Cμ[μ]
+                evaluate_gaugelinks!(Cμi, loops, Uin, temps)
+                mul!(temp1, dSdCs[μ], Cμi)
+                dSdρ[i] += real(tr(temp1)) * 2
+            end
+            unused!(s.temps, iCμi)
+        else
+            error("not supported yet")
+        end
+
+    end
+
+    for ν = 1:Dim
+        for μ = 1:Dim
+            calc_dSdUν_fromdSCμ_add!(dSdUβ[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, s.temps)
+        end
+    end
+
+    unused!(s.temps, itemp1)
+    unused!(s.temps, idSdQ)
+    unused!(s.temps, idSdΩ)
+    unused!(s.temps, idSdCs)
+    unused!(s.temps, idSdUdag)
+    unused!(s.temps, itemps)
+
+
+
+end
 
 
 function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,Dim,TN}
@@ -378,7 +524,7 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
         for i = 1:num
             loops = s.dataset[i].Cμ[μ]
             #println(loops)
-            temps, its_temps = get_temp(s.temps, 2)
+            temps, its_temps = get_temp(s.temps, 4)
             Cμi, it_Cμi = get_temp(s.temps)
             evaluate_gaugelinks!(Cμi, loops, Uin, temps)
             unused!(s.temps, its_temps)
@@ -386,7 +532,7 @@ function backward_dSdρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdρ, dSdUout) where {T,
             mul!(temp1, s.dSdCs[μ], Cμi)
             dSdρ[i] += real(tr(temp1)) * 2
 
-            unused(s.temps, it_Cμi)
+            unused!(s.temps, it_Cμi)
             unused!(s.temps, it_temp1)
         end
     end
@@ -436,7 +582,7 @@ function backward_dSdUβ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,
 
     for ν = 1:Dim
         for μ = 1:Dim
-            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, s.dSdCs[μ], s.ρs, Uin, μ, ν, temps)
+            calc_dSdUν_fromdSCμ_add!(dSdU[ν], s.dataset, s.dSdCs[μ], s.ρs, Uin, μ, ν, s.temps)
         end
     end
     s.hasdSdCs[1] = true
@@ -454,7 +600,7 @@ function backward_dSdUα_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout) where {T,
         calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
         add_U!(dSdU[μ], temp1)
     end
-    unused!(temps, it_temp1)
+    unused!(s.temps, it_temp1)
 end
 export backward_dSdUα_add!
 

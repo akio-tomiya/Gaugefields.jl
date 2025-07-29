@@ -154,7 +154,9 @@ import .Abstractsmearing_module:
     get_parameter_derivatives,
     apply_smearing_U,
     zero_grad!,
-    get_parameters
+    get_parameters,
+    CASK_layer,
+    zero_grad!
 import .SUN_generator: Generator
 import .Gradientflow_module: Gradientflow, Gradientflow_general, flow!, get_tempG, get_eps
 #import .Verbose_print:Verbose_level,Verbose_3,Verbose_2,Verbose_1,println_verbose3,println_verbose2,println_verbose1,
@@ -272,6 +274,6 @@ import .Bfield_module: Initialize_Bfields,
 export Initialize_Bfields
 
 
-
+export CASK_layer, zero_grad!
 
 end

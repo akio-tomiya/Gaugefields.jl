@@ -126,6 +126,9 @@ end
 include("./stout.jl")
 include("./stout_fast.jl")
 include("./stout_fast_accelerator.jl")
+#include("./stout_smearing.jl")
+include("./CASK_smearing.jl")
+
 #include("./stout_b.jl")
 #include("./stout_smearing.jl")
 #include("./gradientflow.jl")
