@@ -16,7 +16,7 @@ using MPI, StaticArrays, JACC
 # ---------------------------------------------------------------------------
 # container  (faces / derived datatypes are GONE)
 # ---------------------------------------------------------------------------
-struct LatticeMatrix{D,T,AT,NC1,NC2} <: Lattice{D,T,AT}
+struct LatticeMatrix{D,T,AT,NC1,NC2,nw} <: Lattice{D,T,AT}
     nw::Int                          # ghost width
     phases::SVector{D,T}                 # phases
     NC1::Int
@@ -72,7 +72,7 @@ function LatticeMatrix(NC1, NC2, dim, gsize, PEs; nw=1, elementtype=ComplexF64, 
     PN = ntuple(i -> gsize[i] ÷ dims[i], D)
     #println("LatticeMatrix: $dims, $gsize, $PN, $nw")
 
-    return LatticeMatrix{D,T,typeof(A),NC1,NC2}(nw, phases, NC1, NC2, gsize,
+    return LatticeMatrix{D,T,typeof(A),NC1,NC2,nw}(nw, phases, NC1, NC2, gsize,
         cart, Tuple(coords), dims, nbr,
         A, buf, MPI.Comm_rank(cart), PN, comm0)
 end

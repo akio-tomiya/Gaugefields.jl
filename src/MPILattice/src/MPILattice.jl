@@ -42,9 +42,9 @@ function Shifted_Lattice(data::Lattice{D,T,AT}, shift) where {D,T,AT}
 end
 
 
-function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2}, shift) where {D,T,AT,NC1,NC2}
+function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2,nw}, shift) where {D,T,AT,NC1,NC2,nw}
     #set_halo!(data)
-    nw = data.nw
+    #nw = data.nw
     isinside = true
     for i in 1:D
         if shift[i] < -nw || shift[i] > nw
