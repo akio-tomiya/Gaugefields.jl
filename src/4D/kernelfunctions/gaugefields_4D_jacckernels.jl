@@ -753,6 +753,7 @@ function jacckernel_exptU_TAwuww_NC!(i, uout, u, t, NC, NG, generators, temp1, t
     matrixexponential!(view(uout, :, :, i), u0, NC, nmax, view(temp1, :, :, i), view(temp3, :, :, i))
 end
 
+#=
 function matrixexponential!(aout, a, Nc, nmax, temp1, temp2)
     atemp = temp1
     atemp2 = temp2
@@ -796,10 +797,11 @@ function matrixexponential!(aout, a, Nc, nmax, temp1, temp2)
 
 
 end
+=#
 
 
 
-
+#=
 function lie2matrix_tuple!(matrix, a, NG, generators, NC, t)
     matrix .= 0
     for i = 1:NG
@@ -812,6 +814,7 @@ function lie2matrix_tuple!(matrix, a, NG, generators, NC, t)
     end
     return
 end
+=#
 
 function jacckernel_exptU_TAwuww_NC2!(i, uout, u, t)
     u1 = t * u[1, i] / 2
@@ -1424,6 +1427,7 @@ function jacckernel_Traceless_antihermitian_add_TAU_NC2!(i,
 
 end
 
+#=
 function matrix2lie_tuple!(a, NG, generators, NC, A)
     for i = 1:NG
         #println("i = $i")
@@ -1439,6 +1443,7 @@ function matrix2lie_tuple!(a, NG, generators, NC, A)
     end
     return
 end
+=#
 
 function jacckernel_Traceless_antihermitian_add_TAU_NC!(i,
     c, vin, factor, NC, NG, generators, temp, tempa)

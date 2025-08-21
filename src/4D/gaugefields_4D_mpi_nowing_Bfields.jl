@@ -1,4 +1,5 @@
-function substitute_U!(
+
+#=function substitute_U!(
     a::Array{T1,2},
     b::Array{T2,2},
 ) where {T1<:Gaugefields_4D_nowing_mpi,T2<:Gaugefields_4D_nowing_mpi}
@@ -12,6 +13,9 @@ function substitute_U!(
     end
 end
 
+=#
+
+#=
 function substitute_U!(
     a::Array{T1,2},
     b::Array{T2,2},
@@ -26,7 +30,9 @@ function substitute_U!(
         end
     end
 end
+=#
 
+#=
 function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing_mpi}
     Uout = Array{T,2}(undef, 4, 4)
     for μ = 1:4
@@ -39,6 +45,7 @@ function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing_mpi}
     end
     return Uout
 end
+=#
 
 function thooftFlux_4D_B_at_bndry_nowing_mpi(
     NC,

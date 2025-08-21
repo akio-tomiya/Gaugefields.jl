@@ -4,6 +4,7 @@ abstract type Gaugefields_2D{NC} <: AbstractGaugefields{NC,2} end
 include("./gaugefields_2D_wing.jl")
 include("./gaugefields_2D_nowing.jl")
 include("./Isingfields_2D.jl")
+include("./gaugefields_2D_mpi_nowing.jl")
 
 function Base.size(U::Gaugefields_2D{NC}) where {NC}
     return NC, NC, U.NX, U.NT

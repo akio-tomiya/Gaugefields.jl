@@ -109,6 +109,9 @@ mutable struct Data_sent{NC} #data format for MPI
     end
 end
 
+using MPI
+using JACC
+
 include("./2D/gaugefields_2D.jl")
 include("./4D/gaugefields_4D.jl")
 
@@ -365,11 +368,11 @@ function Initialize_Gaugefields(
     cuda=false,
     blocks=nothing,
     accelerator="none",
-    singleprecision=false
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4)
 )
-    if NDW == 1
-        @warn "Now, Nwing=0 is recommended. Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). "
-    end
+
 
     Dim = length(NN)
     if condition == "cold"
@@ -384,7 +387,9 @@ function Initialize_Gaugefields(
             cuda,
             blocks,
             accelerator,
-            singleprecision
+            singleprecision,
+            isMPILattice,
+            boundarycondition
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -413,15 +418,17 @@ function Initialize_Gaugefields(
             U[μ] = IdentityGauges(
                 NC,
                 NDW,
-                NN...,
-                mpi=mpi,
-                PEs=PEs,
+                NN...;
+                mpi,
+                PEs,
                 mpiinit=false,
-                verbose_level=verbose_level,
-                cuda=cuda,
-                blocks=blocks,
-                accelerator=accelerator,
-                singleprecision=singleprecision
+                verbose_level,
+                cuda,
+                blocks,
+                accelerator,
+                singleprecision,
+                isMPILattice,
+                boundarycondition
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -591,131 +598,157 @@ function IdentityGauges(
     cuda=false,
     blocks=nothing,
     accelerator="none",
-    singleprecision=false
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4)
 )
     accelerator_g = accelerator
     dim = length(NN)
 
     @assert mpi * cuda == 0 "CUDA with mpi is not supported!"
 
-    if mpi
-        if PEs == nothing || mpiinit == nothing
-            error("not implemented yet!")
+    if isMPILattice
+        if dim == 4
+            U = identityGaugefields_4D_MPILattice(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3],
+                NN[4];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition,
+                PEs,
+                #mpiinit
+            )
+        else
+            error("$dim dimension case with MPILattice is not implemented yet")
+        end
+    else
+        if NDW == 1
+            @warn "Now, Nwing=0 is recommended. Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). "
+        end
+
+        if mpi
+            if PEs == nothing || mpiinit == nothing
+                error("not implemented yet!")
+            else
+                if dim == 4
+                    if NDW == 0
+                        U = identityGaugefields_4D_nowing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            PEs,
+                            mpiinit=mpiinit,
+                            verbose_level=verbose_level,
+                        )
+                    else
+                        U = identityGaugefields_4D_wing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            NDW,
+                            PEs,
+                            mpiinit=mpiinit,
+                            verbose_level=verbose_level,
+                        )
+                    end
+                elseif dim == 2
+                    if NDW == 0
+                        U = identityGaugefields_2D_nowing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            PEs,
+                            mpiinit=mpiinit,
+                            verbose_level=verbose_level,
+                        )
+                    end
+                else
+                    error("$dim dimension with $NDW  is not implemented yet! set NDW = 0")
+                end
+
+            end
         else
             if dim == 4
                 if NDW == 0
-                    U = identityGaugefields_4D_nowing_mpi(
-                        NC,
-                        NN[1],
-                        NN[2],
-                        NN[3],
-                        NN[4],
-                        PEs,
-                        mpiinit=mpiinit,
-                        verbose_level=verbose_level,
-                    )
+                    if cuda
+                        accelerator_g = "cuda"
+                    end
+                    if accelerator_g != "none"
+                        U = identityGaugefields_4D_accelerator(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            blocks,
+                            verbose_level=verbose_level,
+                            accelerator=accelerator_g,
+                            singleprecision=singleprecision
+                        )
+                    else
+                        U = identityGaugefields_4D_nowing(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            verbose_level=verbose_level,
+                        )
+                    end
                 else
-                    U = identityGaugefields_4D_wing_mpi(
+                    U = identityGaugefields_4D_wing(
                         NC,
                         NN[1],
                         NN[2],
                         NN[3],
                         NN[4],
                         NDW,
-                        PEs,
-                        mpiinit=mpiinit,
                         verbose_level=verbose_level,
                     )
                 end
             elseif dim == 2
                 if NDW == 0
-                    U = identityGaugefields_2D_nowing_mpi(
-                        NC,
-                        NN[1],
-                        NN[2],
-                        PEs,
-                        mpiinit=mpiinit,
-                        verbose_level=verbose_level,
-                    )
-                end
-            else
-                error("$dim dimension with $NDW  is not implemented yet! set NDW = 0")
-            end
 
-        end
-    else
-        if dim == 4
-            if NDW == 0
-                if cuda
-                    accelerator_g = "cuda"
-                end
-                if accelerator_g != "none"
-                    U = identityGaugefields_4D_accelerator(
+                    U = identityGaugefields_2D_nowing(
                         NC,
                         NN[1],
                         NN[2],
-                        NN[3],
-                        NN[4],
-                        blocks,
                         verbose_level=verbose_level,
-                        accelerator=accelerator_g,
-                        singleprecision=singleprecision
                     )
                 else
-                    U = identityGaugefields_4D_nowing(
+                    U = identityGaugefields_2D_wing(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NDW,
+                        verbose_level=verbose_level,
+                    )
+                end
+            elseif dim == 3
+                if NDW == 0
+
+                    U = identityGaugefields_3D_nowing(
                         NC,
                         NN[1],
                         NN[2],
                         NN[3],
-                        NN[4],
                         verbose_level=verbose_level,
                     )
+                else
+                    error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
                 end
-            else
-                U = identityGaugefields_4D_wing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    NN[4],
-                    NDW,
-                    verbose_level=verbose_level,
-                )
-            end
-        elseif dim == 2
-            if NDW == 0
 
-                U = identityGaugefields_2D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    verbose_level=verbose_level,
-                )
             else
-                U = identityGaugefields_2D_wing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NDW,
-                    verbose_level=verbose_level,
-                )
+                error("$dim dimension system is not implemented yet!")
             end
-        elseif dim == 3
-            if NDW == 0
-
-                U = identityGaugefields_3D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    verbose_level=verbose_level,
-                )
-            else
-                error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
-            end
-
-        else
-            error("$dim dimension system is not implemented yet!")
         end
     end
     set_wing_U!(U)

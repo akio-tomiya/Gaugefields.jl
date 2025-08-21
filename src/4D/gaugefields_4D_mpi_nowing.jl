@@ -3675,6 +3675,7 @@ function LinearAlgebra.mul!(
         end
     end
 end
+#=
 
 function Antihermitian!(
     vin::Gaugefields_4D_nowing_mpi{NC},
@@ -3709,6 +3710,7 @@ function Antihermitian!(
     end
     #set_wing_U!(c)
 end
+=#
 
 function set_wing_U!(u::Array{Gaugefields_4D_nowing_mpi{NC},1}) where {NC}
     return
@@ -4014,6 +4016,7 @@ function minusidentityGaugefields_4D_nowing_mpi(
     return U
 end
 
+#=
 
 function thooftFlux_4D_B_at_bndry_nowing_mpi(
     NC,
@@ -4143,7 +4146,7 @@ function thooftFlux_4D_B_at_bndry_nowing_mpi(
     end
 end
 
-
+=#
 
 
 ### HH: added for WLB gauge fixing projection

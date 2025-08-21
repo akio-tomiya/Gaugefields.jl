@@ -1,8 +1,9 @@
 abstract type TA_Gaugefields_2D{NC} <: TA_Gaugefields{NC,2} end
 
 include("./TA_gaugefields_2D_serial.jl")
+include("./TA_gaugefields_2D_mpi.jl")
 
-function TA_Gaugefields(NC, NX, NT; mpi = false)
+function TA_Gaugefields(NC, NX, NT; mpi=false)
     if mpi
         return TA_Gaugefields_2D_mpi(NC, NX, NT)
         #error("mpi = $mpi is not supoorted")

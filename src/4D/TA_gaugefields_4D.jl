@@ -4,6 +4,7 @@ include("./TA_gaugefields_4D_serial.jl")
 
 include("./TA_gaugefields_4D_accelerator.jl")
 
+include("./TA_gaugefields_4D_mpi.jl")
 #=
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
@@ -32,3 +33,5 @@ function clear_U!(U::Array{T,1}) where {T<:TA_Gaugefields_4D}
         clear_U!(U[μ])
     end
 end
+
+include("./kernelfunctions/TA_gaugefields_4D_jacckernels.jl")
