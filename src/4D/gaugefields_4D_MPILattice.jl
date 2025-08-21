@@ -204,7 +204,7 @@ function substitute_U!(A::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT},
         phases,
         comm0)
     substitute!(A.U, tempU)
-
+    set_halo!(A.U)
 end
 
 

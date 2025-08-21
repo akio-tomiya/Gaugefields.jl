@@ -2005,6 +2005,7 @@ function construct_staple!(
 ) where {NC,Dim,T<:AbstractGaugefields}
     U1U2 = temp
     firstterm = true
+    
 
     for ν = 1:Dim
         if ν == μ
