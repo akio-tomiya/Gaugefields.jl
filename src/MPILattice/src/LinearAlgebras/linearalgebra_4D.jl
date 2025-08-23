@@ -788,6 +788,51 @@ end
     end
 end
 
+@inline function kernel_4Dmatrix_mul_shiftAB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
+        a11 = A[1, 1, ixp,iyp,izp,itp]
+        a21 = A[2, 1, ixp,iyp,izp,itp]
+        a31 = A[3, 1, ixp,iyp,izp,itp]
+        a12 = A[1, 2, ixp,iyp,izp,itp]
+        a22 = A[2, 2, ixp,iyp,izp,itp]
+        a32 = A[3, 2, ixp,iyp,izp,itp]
+        a13 = A[1, 3, ixp,iyp,izp,itp]
+        a23 = A[2, 3, ixp,iyp,izp,itp]
+        a33 = A[3, 3, ixp,iyp,izp,itp]
+
+        b11 = B[1, 1, ix,iy,iz,it]
+        b21 = B[2, 1, ix,iy,iz,it]
+        b31 = B[3, 1, ix,iy,iz,it]
+        b12 = B[1, 2, ix,iy,iz,it]
+        b22 = B[2, 2, ix,iy,iz,it]
+        b32 = B[3, 2, ix,iy,iz,it]
+        b13 = B[1, 3, ix,iy,iz,it]
+        b23 = B[2, 3, ix,iy,iz,it]
+        b33 = B[3, 3, ix,iy,iz,it]
+        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+    end
+end
+
+
 #C = α shiftedA*B + β*C
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
     A::Shifted_Lattice{LatticeMatrix{4,T2,AT2,NC1,NC3,nw},shift}, B::LatticeMatrix{4,T3,AT3,NC3,NC2,nw},
@@ -816,6 +861,53 @@ end
         end
     end
 end
+
+@inline function kernel_4Dmatrix_mul_shiftAB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift, α::S, β::S) where {nw,S<:Number}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
+        a11 = α *A[1, 1, ixp,iyp,izp,itp]
+        a21 = α *A[2, 1, ixp,iyp,izp,itp]
+        a31 = α *A[3, 1, ixp,iyp,izp,itp]
+        a12 = α *A[1, 2, ixp,iyp,izp,itp]
+        a22 = α *A[2, 2, ixp,iyp,izp,itp]
+        a32 = α *A[3, 2, ixp,iyp,izp,itp]
+        a13 = α *A[1, 3, ixp,iyp,izp,itp]
+        a23 = α *A[2, 3, ixp,iyp,izp,itp]
+        a33 = α *A[3, 3, ixp,iyp,izp,itp]
+        b11 = B[1, 1, ix,iy,iz,it]
+        b21 = B[2, 1, ix,iy,iz,it]
+        b31 = B[3, 1, ix,iy,iz,it]
+        b12 = B[1, 2, ix,iy,iz,it]
+        b22 = B[2, 2, ix,iy,iz,it]
+        b32 = B[3, 2, ix,iy,iz,it]
+        b13 = B[1, 3, ix,iy,iz,it]
+        b23 = B[2, 3, ix,iy,iz,it]
+        b33 = B[3, 3, ix,iy,iz,it]
+        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+    end
+
+
+end
+
+
 
 #C = A*shiftedB
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
@@ -1004,6 +1096,51 @@ end
     end
 end
 
+@inline function kernel_4Dmatrix_mul_shiftAdagB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
+        a11 = A[1, 1, ixp,iyp,izp,itp]'
+        a12 = A[2, 1, ixp,iyp,izp,itp]'
+        a13 = A[3, 1, ixp,iyp,izp,itp]'
+        a21 = A[1, 2, ixp,iyp,izp,itp]'
+        a22 = A[2, 2, ixp,iyp,izp,itp]'
+        a23 = A[3, 2, ixp,iyp,izp,itp]'
+        a31 = A[1, 3, ixp,iyp,izp,itp]'
+        a32 = A[2, 3, ixp,iyp,izp,itp]'
+        a33 = A[3, 3, ixp,iyp,izp,itp]'
+
+        b11 = B[1, 1, ix,iy,iz,it]
+        b21 = B[2, 1, ix,iy,iz,it]
+        b31 = B[3, 1, ix,iy,iz,it]
+        b12 = B[1, 2, ix,iy,iz,it]
+        b22 = B[2, 2, ix,iy,iz,it]
+        b32 = B[3, 2, ix,iy,iz,it]
+        b13 = B[1, 3, ix,iy,iz,it]
+        b23 = B[2, 3, ix,iy,iz,it]
+        b33 = B[3, 3, ix,iy,iz,it]
+        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+    end
+end
+
+
 #C = α*shiftedA'*B + β*C
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
     A::Adjoint_Lattice{Shifted_Lattice{LatticeMatrix{4,T2,AT2,NC1,NC3,nw},shift}}, B::LatticeMatrix{4,T3,AT3,NC3,NC2,nw},
@@ -1033,6 +1170,52 @@ end
     end
 end
 
+@inline function kernel_4Dmatrix_mul_shiftAdagB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift, α::S, β::S) where {nw,S<:Number}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
+        a11 = α *A[1, 1, ixp,iyp,izp,itp]'
+        a12 = α *A[2, 1, ixp,iyp,izp,itp]'
+        a13 = α *A[3, 1, ixp,iyp,izp,itp]'
+        a21 = α *A[1, 2, ixp,iyp,izp,itp]'
+        a22 = α *A[2, 2, ixp,iyp,izp,itp]'
+        a23 = α *A[3, 2, ixp,iyp,izp,itp]'
+        a31 = α *A[1, 3, ixp,iyp,izp,itp]'
+        a32 = α *A[2, 3, ixp,iyp,izp,itp]'
+        a33 = α *A[3, 3, ixp,iyp,izp,itp]'
+        b11 = B[1, 1, ix,iy,iz,it]
+        b21 = B[2, 1, ix,iy,iz,it]
+        b31 = B[3, 1, ix,iy,iz,it]
+        b12 = B[1, 2, ix,iy,iz,it]
+        b22 = B[2, 2, ix,iy,iz,it]
+        b32 = B[3, 2, ix,iy,iz,it]
+        b13 = B[1, 3, ix,iy,iz,it]
+        b23 = B[2, 3, ix,iy,iz,it]
+        b33 = B[3, 3, ix,iy,iz,it]
+        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+    end
+
+
+end
+
+
 #C = shiftedA*B'
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
     A::Shifted_Lattice{LatticeMatrix{4,T2,AT2,NC1,NC3,nw},shift}, B::Adjoint_Lattice{LatticeMatrix{4,T3,AT3,NC3,NC2,nw}}) where {T1,T2,T3,AT1,AT2,AT3,NC1,NC2,NC3,shift,nw}
@@ -1060,6 +1243,52 @@ end
         end
     end
 end
+
+@inline function kernel_4Dmatrix_mul_shiftABdag!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
+        a11 = A[1, 1, ixp,iyp,izp,itp]
+        a21 = A[2, 1, ixp,iyp,izp,itp]
+        a31 = A[3, 1, ixp,iyp,izp,itp]
+        a12 = A[1, 2, ixp,iyp,izp,itp]
+        a22 = A[2, 2, ixp,iyp,izp,itp]
+        a32 = A[3, 2, ixp,iyp,izp,itp]
+        a13 = A[1, 3, ixp,iyp,izp,itp]
+        a23 = A[2, 3, ixp,iyp,izp,itp]
+        a33 = A[3, 3, ixp,iyp,izp,itp]
+
+        b11 = B[1, 1, ix,iy,iz,it]'
+        b12 = B[2, 1, ix,iy,iz,it]'
+        b13 = B[3, 1, ix,iy,iz,it]'
+        b21 = B[1, 2, ix,iy,iz,it]'
+        b22 = B[2, 2, ix,iy,iz,it]'
+        b23 = B[3, 2, ix,iy,iz,it]'
+        b31 = B[1, 3, ix,iy,iz,it]'
+        b32 = B[2, 3, ix,iy,iz,it]'
+        b33 = B[3, 3, ix,iy,iz,it]'
+
+        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+    end
+end
+
 
 #C = α*shiftedA*B'+β*C
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
@@ -1091,18 +1320,21 @@ end
 end
 
 
+
+
 @inline function kernel_4Dmatrix_mul_shiftABdag!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift, α::S, β::S) where {nw,S<:Number}
     ix, iy, iz, it = get_4Dindex(i, PN)
     ix += nw
     iy += nw
     iz += nw
     it += nw
-    ixp = ix + shift[1]
-    iyp = iy + shift[2]
-    izp = iz + shift[3]
-    itp = it + shift[4]
-
     @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+    
         a11 = α *A[1, 1, ixp,iyp,izp,itp]
         a21 = α *A[2, 1, ixp,iyp,izp,itp]
         a31 = α *A[3, 1, ixp,iyp,izp,itp]
