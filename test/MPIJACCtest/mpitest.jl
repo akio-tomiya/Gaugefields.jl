@@ -31,8 +31,13 @@ function main()
         condition="cold",
         accelerator="JACC")
 
+    Uc = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+        condition="cold",
+        accelerator="cuda",blocks=(4,4,4,4))
+
     substitute_U!(U, Ucpu)
     substitute_U!(Uj, Ucpu)
+    substitute_U!(Uc, Ucpu)
 
 
     println(typeof(U))
@@ -48,6 +53,11 @@ function main()
     tempsj = Temporalfields(Uj[1]; num=10)
     temp1j, it_temp1j = get_temp(tempsj)#similar(U[1])
     temp2j, it_temp2j = get_temp(tempsj)
+
+        println(typeof(Uc))
+    tempsc = Temporalfields(Uc[1]; num=10)
+    temp1c, it_temp1c = get_temp(tempsc)#similar(U[1])
+    temp2c, it_temp2c = get_temp(tempsc)
 
 
     if Dim == 4
@@ -75,6 +85,10 @@ function main()
     println("JACC0: 0 plaq_t = $plaq_tj")
     #polycpu = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
     #println("CPU: 0 polyakov loop = $(real(polycpu)) $(imag(polycpu))")
+    @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
+    println("CUDA: 0 plaq_t = $plaq_tc")
+
+    println("--------------2nd time-----------------")
 
     @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
     println("JACC: 0 plaq_t = $plaq_t")
@@ -86,5 +100,8 @@ function main()
 
     @time plaq_tj = calculate_Plaquette(Uj, temp1j, temp2j) * factor
     println("JACC0: 0 plaq_t = $plaq_tj")
+
+    @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
+    println("CUDA: 0 plaq_t = $plaq_tc")
 end
 main()
