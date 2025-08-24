@@ -34,10 +34,10 @@ end
 
 using MPI
 using JACC
-include("./gaugefields_4D_mpi.jl")
-include("./gaugefields_4D_mpi_Bfields.jl")
-include("./gaugefields_4D_mpi_nowing.jl")
-include("./gaugefields_4D_mpi_nowing_Bfields.jl")
+include("./mpi/gaugefields_4D_mpi.jl")
+include("./mpi/gaugefields_4D_mpi_Bfields.jl")
+include("./mpi/gaugefields_4D_mpi_nowing.jl")
+include("./mpi/gaugefields_4D_mpi_nowing_Bfields.jl")
 
 
 
@@ -54,7 +54,7 @@ include("./kernelfunctions/gaugefields_4D_jacckernels.jl")
 
 
 
-include("gaugefields_4D_MPILattice.jl")
+include("mpi_jacc/gaugefields_4D_MPILattice.jl")
 
 
 function Base.size(U::Gaugefields_4D{NC}) where {NC}

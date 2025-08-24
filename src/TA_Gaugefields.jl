@@ -32,26 +32,35 @@ end
 
 
 function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim}
-    mpi = u.mpi
-    if mpi
+    #println(typeof(u))
+    if typeof(u) <: Gaugefields_4D_MPILattice
         if Dim == 4
-            return TA_Gaugefields_4D_mpi(u)
-        elseif Dim == 2
-            return TA_Gaugefields_2D_mpi(u)
-            #error("Dim = $Dim is not supoorted")
-
+            return TA_Gaugefields_4D_MPILattice(u)
         else
             error("Dim = $Dim is not supoorted")
         end
     else
-        if Dim == 4
-            return TA_Gaugefields(NC, u.NX, u.NY, u.NZ, u.NT)
-        elseif Dim == 2
-            return TA_Gaugefields(NC, u.NX, u.NT)
-        elseif Dim == 3
-            return TA_Gaugefields(NC, u.NX, u.NY, u.NT)
+        mpi = u.mpi
+        if mpi
+            if Dim == 4
+                return TA_Gaugefields_4D_mpi(u)
+            elseif Dim == 2
+                return TA_Gaugefields_2D_mpi(u)
+                #error("Dim = $Dim is not supoorted")
+
+            else
+                error("Dim = $Dim is not supoorted")
+            end
         else
-            error("Dim = $Dim is not supoorted")
+            if Dim == 4
+                return TA_Gaugefields(NC, u.NX, u.NY, u.NZ, u.NT)
+            elseif Dim == 2
+                return TA_Gaugefields(NC, u.NX, u.NT)
+            elseif Dim == 3
+                return TA_Gaugefields(NC, u.NX, u.NY, u.NT)
+            else
+                error("Dim = $Dim is not supoorted")
+            end
         end
     end
 end

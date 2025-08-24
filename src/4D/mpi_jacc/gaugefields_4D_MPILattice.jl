@@ -4,7 +4,8 @@ import ..MPILattice: LatticeMatrix,
     TALattice,
     makeidentity_matrix!,
     set_halo!,
-    substitute!
+    substitute!,
+    partial_trace
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Gaugefields_4D{NC} end
 
@@ -93,9 +94,9 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Fields_4D_MPILattic
     end
 end
 
-struct TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW}
-    U::TALattice{4,T,AT,NC}
-end
+#struct TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW}
+#    U::TALattice{4,T,AT,NC}
+#end
 
 struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw}
     U::Shifted_Lattice{LatticeMatrix{4,T,AT,NC,NC,nw},shift}
@@ -144,6 +145,23 @@ function identityGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
     return U
 
 end
+
+function mul_skiplastindex!(
+    c::Gaugefields_4D_MPILattice{NC},
+    a::T1,
+    b::T2,
+) where {NC,T1<:Abstractfields,T2<:Abstractfields}
+    #@assert NC != 2 && NC != 3 "This function is for NC != 2,3"
+
+    mul!(c, a, b)
+
+end
+
+function partial_tr(a::Gaugefields_4D_MPILattice{NC}, μ) where {NC}
+    s = partial_trace(a.U, μ)
+    return s
+end
+
 
 function set_wing_U!(u::Array{Gaugefields_4D_MPILattice{NC},1}) where {NC}
     for i = 1:length(u)

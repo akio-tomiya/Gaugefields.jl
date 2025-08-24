@@ -129,34 +129,34 @@ end
     it += nw
 
     @inbounds begin
-        a11 = A[1, 1, ix,iy,iz,it]
-        a21 = A[2, 1, ix,iy,iz,it]
-        a31 = A[3, 1, ix,iy,iz,it]
-        a12 = A[1, 2, ix,iy,iz,it]
-        a22 = A[2, 2, ix,iy,iz,it]
-        a32 = A[3, 2, ix,iy,iz,it]
-        a13 = A[1, 3, ix,iy,iz,it]
-        a23 = A[2, 3, ix,iy,iz,it]
-        a33 = A[3, 3, ix,iy,iz,it]
+        a11 = A[1, 1, ix, iy, iz, it]
+        a21 = A[2, 1, ix, iy, iz, it]
+        a31 = A[3, 1, ix, iy, iz, it]
+        a12 = A[1, 2, ix, iy, iz, it]
+        a22 = A[2, 2, ix, iy, iz, it]
+        a32 = A[3, 2, ix, iy, iz, it]
+        a13 = A[1, 3, ix, iy, iz, it]
+        a23 = A[2, 3, ix, iy, iz, it]
+        a33 = A[3, 3, ix, iy, iz, it]
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -170,33 +170,33 @@ end
     iz += nw
     it += nw
 
-    a11 = A[1, 1, ix,iy,iz,it]
-    a21 = A[2, 1, ix,iy,iz,it]
-    a31 = A[3, 1, ix,iy,iz,it]
-    a12 = A[1, 2, ix,iy,iz,it]
-    a22 = A[2, 2, ix,iy,iz,it]
-    a32 = A[3, 2, ix,iy,iz,it]
-    a13 = A[1, 3, ix,iy,iz,it]
-    a23 = A[2, 3, ix,iy,iz,it]
-    a33 = A[3, 3, ix,iy,iz,it]
-    b11 = B[1, 1, ix,iy,iz,it]
-    b21 = B[2, 1, ix,iy,iz,it]
-    b31 = B[3, 1, ix,iy,iz,it]
-    b12 = B[1, 2, ix,iy,iz,it]
-    b22 = B[2, 2, ix,iy,iz,it]
-    b32 = B[3, 2, ix,iy,iz,it]
-    b13 = B[1, 3, ix,iy,iz,it]
-    b23 = B[2, 3, ix,iy,iz,it]
-    b33 = B[3, 3, ix,iy,iz,it]
-    C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-    C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-    C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-    C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-    C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-    C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-    C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-    C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-    C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+    a11 = A[1, 1, ix, iy, iz, it]
+    a21 = A[2, 1, ix, iy, iz, it]
+    a31 = A[3, 1, ix, iy, iz, it]
+    a12 = A[1, 2, ix, iy, iz, it]
+    a22 = A[2, 2, ix, iy, iz, it]
+    a32 = A[3, 2, ix, iy, iz, it]
+    a13 = A[1, 3, ix, iy, iz, it]
+    a23 = A[2, 3, ix, iy, iz, it]
+    a33 = A[3, 3, ix, iy, iz, it]
+    b11 = B[1, 1, ix, iy, iz, it]
+    b21 = B[2, 1, ix, iy, iz, it]
+    b31 = B[3, 1, ix, iy, iz, it]
+    b12 = B[1, 2, ix, iy, iz, it]
+    b22 = B[2, 2, ix, iy, iz, it]
+    b32 = B[3, 2, ix, iy, iz, it]
+    b13 = B[1, 3, ix, iy, iz, it]
+    b23 = B[2, 3, ix, iy, iz, it]
+    b33 = B[3, 3, ix, iy, iz, it]
+    C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+    C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+    C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+    C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+    C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+    C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+    C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+    C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+    C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
 
 end
 
@@ -235,34 +235,34 @@ end
     it += nw
 
     @inbounds begin
-        a11 = α*A[1, 1, ix,iy,iz,it]
-        a21 = α*A[2, 1, ix,iy,iz,it]
-        a31 = α*A[3, 1, ix,iy,iz,it]
-        a12 = α*A[1, 2, ix,iy,iz,it]
-        a22 = α*A[2, 2, ix,iy,iz,it]
-        a32 = α*A[3, 2, ix,iy,iz,it]
-        a13 = α*A[1, 3, ix,iy,iz,it]
-        a23 = α*A[2, 3, ix,iy,iz,it]
-        a33 = α*A[3, 3, ix,iy,iz,it]
+        a11 = α * A[1, 1, ix, iy, iz, it]
+        a21 = α * A[2, 1, ix, iy, iz, it]
+        a31 = α * A[3, 1, ix, iy, iz, it]
+        a12 = α * A[1, 2, ix, iy, iz, it]
+        a22 = α * A[2, 2, ix, iy, iz, it]
+        a32 = α * A[3, 2, ix, iy, iz, it]
+        a13 = α * A[1, 3, ix, iy, iz, it]
+        a23 = α * A[2, 3, ix, iy, iz, it]
+        a33 = α * A[3, 3, ix, iy, iz, it]
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] =  β*C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] =  β*C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] =  β*C[3, 1, ix,iy,iz,it] + a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] =  β*C[1, 2, ix,iy,iz,it] + a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] =  β*C[2, 2, ix,iy,iz,it] + a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] =  β*C[3, 2, ix,iy,iz,it] + a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] =  β*C[1, 3, ix,iy,iz,it] + a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] =  β*C[2, 3, ix,iy,iz,it] + a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] =  β*C[3, 3, ix,iy,iz,it] + a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 end
@@ -364,36 +364,36 @@ end
     it += nw
 
     @inbounds begin
-        a11 = A[1, 1, ix,iy,iz,it]'
-        a12 = A[2, 1, ix,iy,iz,it]'
-        a13 = A[3, 1, ix,iy,iz,it]'
+        a11 = A[1, 1, ix, iy, iz, it]'
+        a12 = A[2, 1, ix, iy, iz, it]'
+        a13 = A[3, 1, ix, iy, iz, it]'
 
-        a21 = A[1, 2, ix,iy,iz,it]'
-        a22 = A[2, 2, ix,iy,iz,it]'
-        a23 = A[3, 2, ix,iy,iz,it]'
+        a21 = A[1, 2, ix, iy, iz, it]'
+        a22 = A[2, 2, ix, iy, iz, it]'
+        a23 = A[3, 2, ix, iy, iz, it]'
 
-        a31 = A[1, 3, ix,iy,iz,it]'
-        a32 = A[2, 3, ix,iy,iz,it]'
-        a33 = A[3, 3, ix,iy,iz,it]'
+        a31 = A[1, 3, ix, iy, iz, it]'
+        a32 = A[2, 3, ix, iy, iz, it]'
+        a33 = A[3, 3, ix, iy, iz, it]'
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -430,36 +430,36 @@ end
     it += nw
 
     @inbounds begin
-        a11 = α*A[1, 1, ix,iy,iz,it]'
-        a12 = α*A[2, 1, ix,iy,iz,it]'
-        a13 = α*A[3, 1, ix,iy,iz,it]'
+        a11 = α * A[1, 1, ix, iy, iz, it]'
+        a12 = α * A[2, 1, ix, iy, iz, it]'
+        a13 = α * A[3, 1, ix, iy, iz, it]'
 
-        a21 = α*A[1, 2, ix,iy,iz,it]'
-        a22 = α*A[2, 2, ix,iy,iz,it]'
-        a23 = α*A[3, 2, ix,iy,iz,it]'
+        a21 = α * A[1, 2, ix, iy, iz, it]'
+        a22 = α * A[2, 2, ix, iy, iz, it]'
+        a23 = α * A[3, 2, ix, iy, iz, it]'
 
-        a31 = α*A[1, 3, ix,iy,iz,it]'
-        a32 = α*A[2, 3, ix,iy,iz,it]'
-        a33 = α*A[3, 3, ix,iy,iz,it]'
+        a31 = α * A[1, 3, ix, iy, iz, it]'
+        a32 = α * A[2, 3, ix, iy, iz, it]'
+        a33 = α * A[3, 3, ix, iy, iz, it]'
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] =  β*C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] =  β*C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] =  β*C[3, 1, ix,iy,iz,it] + a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] =  β*C[1, 2, ix,iy,iz,it] + a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] =  β*C[2, 2, ix,iy,iz,it] + a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] =  β*C[3, 2, ix,iy,iz,it] + a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] =  β*C[1, 3, ix,iy,iz,it] + a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] =  β*C[2, 3, ix,iy,iz,it] + a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] =  β*C[3, 3, ix,iy,iz,it] + a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -524,36 +524,36 @@ end
     it += nw
 
     @inbounds begin
-        a11 = α*A[1, 1, ix,iy,iz,it]
-        a21 = α*A[2, 1, ix,iy,iz,it]
-        a31 = α*A[3, 1, ix,iy,iz,it]
-        a12 = α*A[1, 2, ix,iy,iz,it]
-        a22 = α*A[2, 2, ix,iy,iz,it]
-        a32 = α*A[3, 2, ix,iy,iz,it]
-        a13 = α*A[1, 3, ix,iy,iz,it]
-        a23 = α*A[2, 3, ix,iy,iz,it]
-        a33 = α*A[3, 3, ix,iy,iz,it]
+        a11 = α * A[1, 1, ix, iy, iz, it]
+        a21 = α * A[2, 1, ix, iy, iz, it]
+        a31 = α * A[3, 1, ix, iy, iz, it]
+        a12 = α * A[1, 2, ix, iy, iz, it]
+        a22 = α * A[2, 2, ix, iy, iz, it]
+        a32 = α * A[3, 2, ix, iy, iz, it]
+        a13 = α * A[1, 3, ix, iy, iz, it]
+        a23 = α * A[2, 3, ix, iy, iz, it]
+        a33 = α * A[3, 3, ix, iy, iz, it]
 
 
-        b11 = B[1, 1, ix,iy,iz,it]'
-        b12 = B[2, 1, ix,iy,iz,it]'
-        b13 = B[3, 1, ix,iy,iz,it]'
-        b21 = B[1, 2, ix,iy,iz,it]'
-        b22 = B[2, 2, ix,iy,iz,it]'
-        b23 = B[3, 2, ix,iy,iz,it]'
-        b31 = B[1, 3, ix,iy,iz,it]'
-        b32 = B[2, 3, ix,iy,iz,it]'
-        b33 = B[3, 3, ix,iy,iz,it]'
+        b11 = B[1, 1, ix, iy, iz, it]'
+        b12 = B[2, 1, ix, iy, iz, it]'
+        b13 = B[3, 1, ix, iy, iz, it]'
+        b21 = B[1, 2, ix, iy, iz, it]'
+        b22 = B[2, 2, ix, iy, iz, it]'
+        b23 = B[3, 2, ix, iy, iz, it]'
+        b31 = B[1, 3, ix, iy, iz, it]'
+        b32 = B[2, 3, ix, iy, iz, it]'
+        b33 = B[3, 3, ix, iy, iz, it]'
 
-        C[1, 1, ix,iy,iz,it] =  β*C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] =  β*C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] =  β*C[3, 1, ix,iy,iz,it] + a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] =  β*C[1, 2, ix,iy,iz,it] + a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] =  β*C[2, 2, ix,iy,iz,it] + a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] =  β*C[3, 2, ix,iy,iz,it] + a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] =  β*C[1, 3, ix,iy,iz,it] + a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] =  β*C[2, 3, ix,iy,iz,it] + a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] =  β*C[3, 3, ix,iy,iz,it] + a31 * b13 + a32 * b23 + a33 * b33
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -587,36 +587,36 @@ end
     it += nw
 
     @inbounds begin
-        a11 = A[1, 1, ix,iy,iz,it]'
-        a12 = A[2, 1, ix,iy,iz,it]'
-        a13 = A[3, 1, ix,iy,iz,it]'
-        a21 = A[1, 2, ix,iy,iz,it]'
-        a22 = A[2, 2, ix,iy,iz,it]'
-        a23 = A[3, 2, ix,iy,iz,it]'
-        a31 = A[1, 3, ix,iy,iz,it]'
-        a32 = A[2, 3, ix,iy,iz,it]'
-        a33 = A[3, 3, ix,iy,iz,it]'
+        a11 = A[1, 1, ix, iy, iz, it]'
+        a12 = A[2, 1, ix, iy, iz, it]'
+        a13 = A[3, 1, ix, iy, iz, it]'
+        a21 = A[1, 2, ix, iy, iz, it]'
+        a22 = A[2, 2, ix, iy, iz, it]'
+        a23 = A[3, 2, ix, iy, iz, it]'
+        a31 = A[1, 3, ix, iy, iz, it]'
+        a32 = A[2, 3, ix, iy, iz, it]'
+        a33 = A[3, 3, ix, iy, iz, it]'
 
 
-        b11 = B[1, 1, ix,iy,iz,it]'
-        b12 = B[2, 1, ix,iy,iz,it]'
-        b13 = B[3, 1, ix,iy,iz,it]'
-        b21 = B[1, 2, ix,iy,iz,it]'
-        b22 = B[2, 2, ix,iy,iz,it]'
-        b23 = B[3, 2, ix,iy,iz,it]'
-        b31 = B[1, 3, ix,iy,iz,it]'
-        b32 = B[2, 3, ix,iy,iz,it]'
-        b33 = B[3, 3, ix,iy,iz,it]'
-        
-        C[1, 1, ix,iy,iz,it] =  a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] =  a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] =  a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] =  a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] =  a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] =  a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] =  a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] =  a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] =  a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]'
+        b12 = B[2, 1, ix, iy, iz, it]'
+        b13 = B[3, 1, ix, iy, iz, it]'
+        b21 = B[1, 2, ix, iy, iz, it]'
+        b22 = B[2, 2, ix, iy, iz, it]'
+        b23 = B[3, 2, ix, iy, iz, it]'
+        b31 = B[1, 3, ix, iy, iz, it]'
+        b32 = B[2, 3, ix, iy, iz, it]'
+        b33 = B[3, 3, ix, iy, iz, it]'
+
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -651,36 +651,36 @@ end
     it += nw
 
     @inbounds begin
-        a11 = α*A[1, 1, ix,iy,iz,it]'
-        a12 = α*A[2, 1, ix,iy,iz,it]'
-        a13 = α*A[3, 1, ix,iy,iz,it]'
-        a21 = α*A[1, 2, ix,iy,iz,it]'
-        a22 = α*A[2, 2, ix,iy,iz,it]'
-        a23 = α*A[3, 2, ix,iy,iz,it]'
-        a31 = α*A[1, 3, ix,iy,iz,it]'
-        a32 = α*A[2, 3, ix,iy,iz,it]'
-        a33 = α*A[3, 3, ix,iy,iz,it]'
+        a11 = α * A[1, 1, ix, iy, iz, it]'
+        a12 = α * A[2, 1, ix, iy, iz, it]'
+        a13 = α * A[3, 1, ix, iy, iz, it]'
+        a21 = α * A[1, 2, ix, iy, iz, it]'
+        a22 = α * A[2, 2, ix, iy, iz, it]'
+        a23 = α * A[3, 2, ix, iy, iz, it]'
+        a31 = α * A[1, 3, ix, iy, iz, it]'
+        a32 = α * A[2, 3, ix, iy, iz, it]'
+        a33 = α * A[3, 3, ix, iy, iz, it]'
 
 
-        b11 = B[1, 1, ix,iy,iz,it]'
-        b12 = B[2, 1, ix,iy,iz,it]'
-        b13 = B[3, 1, ix,iy,iz,it]'
-        b21 = B[1, 2, ix,iy,iz,it]'
-        b22 = B[2, 2, ix,iy,iz,it]'
-        b23 = B[3, 2, ix,iy,iz,it]'
-        b31 = B[1, 3, ix,iy,iz,it]'
-        b32 = B[2, 3, ix,iy,iz,it]'
-        b33 = B[3, 3, ix,iy,iz,it]'
-        
-        C[1, 1, ix,iy,iz,it] =  β*C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] =  β*C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] =  β*C[3, 1, ix,iy,iz,it] + a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] =  β*C[1, 2, ix,iy,iz,it] + a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] =  β*C[2, 2, ix,iy,iz,it] + a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] =  β*C[3, 2, ix,iy,iz,it] + a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] =  β*C[1, 3, ix,iy,iz,it] + a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] =  β*C[2, 3, ix,iy,iz,it] + a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] =  β*C[3, 3, ix,iy,iz,it] + a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]'
+        b12 = B[2, 1, ix, iy, iz, it]'
+        b13 = B[3, 1, ix, iy, iz, it]'
+        b21 = B[1, 2, ix, iy, iz, it]'
+        b22 = B[2, 2, ix, iy, iz, it]'
+        b23 = B[3, 2, ix, iy, iz, it]'
+        b31 = B[1, 3, ix, iy, iz, it]'
+        b32 = B[2, 3, ix, iy, iz, it]'
+        b33 = B[3, 3, ix, iy, iz, it]'
+
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -800,35 +800,35 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = A[1, 1, ixp,iyp,izp,itp]
-        a21 = A[2, 1, ixp,iyp,izp,itp]
-        a31 = A[3, 1, ixp,iyp,izp,itp]
-        a12 = A[1, 2, ixp,iyp,izp,itp]
-        a22 = A[2, 2, ixp,iyp,izp,itp]
-        a32 = A[3, 2, ixp,iyp,izp,itp]
-        a13 = A[1, 3, ixp,iyp,izp,itp]
-        a23 = A[2, 3, ixp,iyp,izp,itp]
-        a33 = A[3, 3, ixp,iyp,izp,itp]
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+        a11 = A[1, 1, ixp, iyp, izp, itp]
+        a21 = A[2, 1, ixp, iyp, izp, itp]
+        a31 = A[3, 1, ixp, iyp, izp, itp]
+        a12 = A[1, 2, ixp, iyp, izp, itp]
+        a22 = A[2, 2, ixp, iyp, izp, itp]
+        a32 = A[3, 2, ixp, iyp, izp, itp]
+        a13 = A[1, 3, ixp, iyp, izp, itp]
+        a23 = A[2, 3, ixp, iyp, izp, itp]
+        a33 = A[3, 3, ixp, iyp, izp, itp]
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -874,34 +874,34 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = α *A[1, 1, ixp,iyp,izp,itp]
-        a21 = α *A[2, 1, ixp,iyp,izp,itp]
-        a31 = α *A[3, 1, ixp,iyp,izp,itp]
-        a12 = α *A[1, 2, ixp,iyp,izp,itp]
-        a22 = α *A[2, 2, ixp,iyp,izp,itp]
-        a32 = α *A[3, 2, ixp,iyp,izp,itp]
-        a13 = α *A[1, 3, ixp,iyp,izp,itp]
-        a23 = α *A[2, 3, ixp,iyp,izp,itp]
-        a33 = α *A[3, 3, ixp,iyp,izp,itp]
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+
+        a11 = α * A[1, 1, ixp, iyp, izp, itp]
+        a21 = α * A[2, 1, ixp, iyp, izp, itp]
+        a31 = α * A[3, 1, ixp, iyp, izp, itp]
+        a12 = α * A[1, 2, ixp, iyp, izp, itp]
+        a22 = α * A[2, 2, ixp, iyp, izp, itp]
+        a32 = α * A[3, 2, ixp, iyp, izp, itp]
+        a13 = α * A[1, 3, ixp, iyp, izp, itp]
+        a23 = α * A[2, 3, ixp, iyp, izp, itp]
+        a33 = α * A[3, 3, ixp, iyp, izp, itp]
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 
@@ -939,7 +939,7 @@ end
 
 
 
-@inline function kernel_4Dmatrix_mul_AshiftB!(i, C, A, B, ::Val{3}, ::Val{3},::Val{3},::Val{nw}, PN, shift) where {nw}
+@inline function kernel_4Dmatrix_mul_AshiftB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift) where {nw}
     ix, iy, iz, it = get_4Dindex(i, PN)
     ix += nw
     iy += nw
@@ -951,34 +951,34 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = A[1, 1, ix,iy,iz,it]
-        a21 = A[2, 1, ix,iy,iz,it]
-        a31 = A[3, 1, ix,iy,iz,it]
-        a12 = A[1, 2, ix,iy,iz,it]
-        a22 = A[2, 2, ix,iy,iz,it]
-        a32 = A[3, 2, ix,iy,iz,it]
-        a13 = A[1, 3, ix,iy,iz,it]
-        a23 = A[2, 3, ix,iy,iz,it]
-        a33 = A[3, 3, ix,iy,iz,it]
-        b11 = B[1, 1, ixp,iyp,izp,itp]
-        b21 = B[2, 1, ixp,iyp,izp,itp]
-        b31 = B[3, 1, ixp,iyp,izp,itp]
-        b12 = B[1, 2, ixp,iyp,izp,itp]
-        b22 = B[2, 2, ixp,iyp,izp,itp]
-        b32 = B[3, 2, ixp,iyp,izp,itp]
-        b13 = B[1, 3, ixp,iyp,izp,itp]
-        b23 = B[2, 3, ixp,iyp,izp,itp]
-        b33 = B[3, 3, ixp,iyp,izp,itp]
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+
+        a11 = A[1, 1, ix, iy, iz, it]
+        a21 = A[2, 1, ix, iy, iz, it]
+        a31 = A[3, 1, ix, iy, iz, it]
+        a12 = A[1, 2, ix, iy, iz, it]
+        a22 = A[2, 2, ix, iy, iz, it]
+        a32 = A[3, 2, ix, iy, iz, it]
+        a13 = A[1, 3, ix, iy, iz, it]
+        a23 = A[2, 3, ix, iy, iz, it]
+        a33 = A[3, 3, ix, iy, iz, it]
+        b11 = B[1, 1, ixp, iyp, izp, itp]
+        b21 = B[2, 1, ixp, iyp, izp, itp]
+        b31 = B[3, 1, ixp, iyp, izp, itp]
+        b12 = B[1, 2, ixp, iyp, izp, itp]
+        b22 = B[2, 2, ixp, iyp, izp, itp]
+        b32 = B[3, 2, ixp, iyp, izp, itp]
+        b13 = B[1, 3, ixp, iyp, izp, itp]
+        b23 = B[2, 3, ixp, iyp, izp, itp]
+        b33 = B[3, 3, ixp, iyp, izp, itp]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -1003,7 +1003,7 @@ end
     iyp = iy + shift[2]
     izp = iz + shift[3]
     itp = it + shift[4]
-    
+
 
     @inbounds for jc = 1:NC2
         for ic = 1:NC1
@@ -1017,7 +1017,7 @@ end
 
 
 
-@inline function kernel_4Dmatrix_mul_AshiftB!(i, C, A, B, ::Val{3}, ::Val{3},::Val{3},::Val{nw}, PN, shift, α::S, β::S) where {nw,S<:Number}
+@inline function kernel_4Dmatrix_mul_AshiftB!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw}, PN, shift, α::S, β::S) where {nw,S<:Number}
     ix, iy, iz, it = get_4Dindex(i, PN)
     ix += nw
     iy += nw
@@ -1029,34 +1029,34 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = α *A[1, 1, ix,iy,iz,it]
-        a21 = α *A[2, 1, ix,iy,iz,it]
-        a31 = α *A[3, 1, ix,iy,iz,it]
-        a12 = α *A[1, 2, ix,iy,iz,it]
-        a22 = α *A[2, 2, ix,iy,iz,it]
-        a32 = α *A[3, 2, ix,iy,iz,it]
-        a13 = α *A[1, 3, ix,iy,iz,it]
-        a23 = α *A[2, 3, ix,iy,iz,it]
-        a33 = α *A[3, 3, ix,iy,iz,it]
-        b11 = B[1, 1, ixp,iyp,izp,itp]
-        b21 = B[2, 1, ixp,iyp,izp,itp]
-        b31 = B[3, 1, ixp,iyp,izp,itp]
-        b12 = B[1, 2, ixp,iyp,izp,itp]
-        b22 = B[2, 2, ixp,iyp,izp,itp]
-        b32 = B[3, 2, ixp,iyp,izp,itp]
-        b13 = B[1, 3, ixp,iyp,izp,itp]
-        b23 = B[2, 3, ixp,iyp,izp,itp]
-        b33 = B[3, 3, ixp,iyp,izp,itp]
-        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+
+        a11 = α * A[1, 1, ix, iy, iz, it]
+        a21 = α * A[2, 1, ix, iy, iz, it]
+        a31 = α * A[3, 1, ix, iy, iz, it]
+        a12 = α * A[1, 2, ix, iy, iz, it]
+        a22 = α * A[2, 2, ix, iy, iz, it]
+        a32 = α * A[3, 2, ix, iy, iz, it]
+        a13 = α * A[1, 3, ix, iy, iz, it]
+        a23 = α * A[2, 3, ix, iy, iz, it]
+        a33 = α * A[3, 3, ix, iy, iz, it]
+        b11 = B[1, 1, ixp, iyp, izp, itp]
+        b21 = B[2, 1, ixp, iyp, izp, itp]
+        b31 = B[3, 1, ixp, iyp, izp, itp]
+        b12 = B[1, 2, ixp, iyp, izp, itp]
+        b22 = B[2, 2, ixp, iyp, izp, itp]
+        b32 = B[3, 2, ixp, iyp, izp, itp]
+        b13 = B[1, 3, ixp, iyp, izp, itp]
+        b23 = B[2, 3, ixp, iyp, izp, itp]
+        b33 = B[3, 3, ixp, iyp, izp, itp]
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 
@@ -1108,35 +1108,35 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = A[1, 1, ixp,iyp,izp,itp]'
-        a12 = A[2, 1, ixp,iyp,izp,itp]'
-        a13 = A[3, 1, ixp,iyp,izp,itp]'
-        a21 = A[1, 2, ixp,iyp,izp,itp]'
-        a22 = A[2, 2, ixp,iyp,izp,itp]'
-        a23 = A[3, 2, ixp,iyp,izp,itp]'
-        a31 = A[1, 3, ixp,iyp,izp,itp]'
-        a32 = A[2, 3, ixp,iyp,izp,itp]'
-        a33 = A[3, 3, ixp,iyp,izp,itp]'
 
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+        a11 = A[1, 1, ixp, iyp, izp, itp]'
+        a12 = A[2, 1, ixp, iyp, izp, itp]'
+        a13 = A[3, 1, ixp, iyp, izp, itp]'
+        a21 = A[1, 2, ixp, iyp, izp, itp]'
+        a22 = A[2, 2, ixp, iyp, izp, itp]'
+        a23 = A[3, 2, ixp, iyp, izp, itp]'
+        a31 = A[1, 3, ixp, iyp, izp, itp]'
+        a32 = A[2, 3, ixp, iyp, izp, itp]'
+        a33 = A[3, 3, ixp, iyp, izp, itp]'
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -1182,34 +1182,34 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = α *A[1, 1, ixp,iyp,izp,itp]'
-        a12 = α *A[2, 1, ixp,iyp,izp,itp]'
-        a13 = α *A[3, 1, ixp,iyp,izp,itp]'
-        a21 = α *A[1, 2, ixp,iyp,izp,itp]'
-        a22 = α *A[2, 2, ixp,iyp,izp,itp]'
-        a23 = α *A[3, 2, ixp,iyp,izp,itp]'
-        a31 = α *A[1, 3, ixp,iyp,izp,itp]'
-        a32 = α *A[2, 3, ixp,iyp,izp,itp]'
-        a33 = α *A[3, 3, ixp,iyp,izp,itp]'
-        b11 = B[1, 1, ix,iy,iz,it]
-        b21 = B[2, 1, ix,iy,iz,it]
-        b31 = B[3, 1, ix,iy,iz,it]
-        b12 = B[1, 2, ix,iy,iz,it]
-        b22 = B[2, 2, ix,iy,iz,it]
-        b32 = B[3, 2, ix,iy,iz,it]
-        b13 = B[1, 3, ix,iy,iz,it]
-        b23 = B[2, 3, ix,iy,iz,it]
-        b33 = B[3, 3, ix,iy,iz,it]
-        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+
+        a11 = α * A[1, 1, ixp, iyp, izp, itp]'
+        a12 = α * A[2, 1, ixp, iyp, izp, itp]'
+        a13 = α * A[3, 1, ixp, iyp, izp, itp]'
+        a21 = α * A[1, 2, ixp, iyp, izp, itp]'
+        a22 = α * A[2, 2, ixp, iyp, izp, itp]'
+        a23 = α * A[3, 2, ixp, iyp, izp, itp]'
+        a31 = α * A[1, 3, ixp, iyp, izp, itp]'
+        a32 = α * A[2, 3, ixp, iyp, izp, itp]'
+        a33 = α * A[3, 3, ixp, iyp, izp, itp]'
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 
@@ -1256,36 +1256,36 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = A[1, 1, ixp,iyp,izp,itp]
-        a21 = A[2, 1, ixp,iyp,izp,itp]
-        a31 = A[3, 1, ixp,iyp,izp,itp]
-        a12 = A[1, 2, ixp,iyp,izp,itp]
-        a22 = A[2, 2, ixp,iyp,izp,itp]
-        a32 = A[3, 2, ixp,iyp,izp,itp]
-        a13 = A[1, 3, ixp,iyp,izp,itp]
-        a23 = A[2, 3, ixp,iyp,izp,itp]
-        a33 = A[3, 3, ixp,iyp,izp,itp]
 
-        b11 = B[1, 1, ix,iy,iz,it]'
-        b12 = B[2, 1, ix,iy,iz,it]'
-        b13 = B[3, 1, ix,iy,iz,it]'
-        b21 = B[1, 2, ix,iy,iz,it]'
-        b22 = B[2, 2, ix,iy,iz,it]'
-        b23 = B[3, 2, ix,iy,iz,it]'
-        b31 = B[1, 3, ix,iy,iz,it]'
-        b32 = B[2, 3, ix,iy,iz,it]'
-        b33 = B[3, 3, ix,iy,iz,it]'
+        a11 = A[1, 1, ixp, iyp, izp, itp]
+        a21 = A[2, 1, ixp, iyp, izp, itp]
+        a31 = A[3, 1, ixp, iyp, izp, itp]
+        a12 = A[1, 2, ixp, iyp, izp, itp]
+        a22 = A[2, 2, ixp, iyp, izp, itp]
+        a32 = A[3, 2, ixp, iyp, izp, itp]
+        a13 = A[1, 3, ixp, iyp, izp, itp]
+        a23 = A[2, 3, ixp, iyp, izp, itp]
+        a33 = A[3, 3, ixp, iyp, izp, itp]
 
-        C[1, 1, ix,iy,iz,it] = a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = a31 * b13 + a32 * b23 + a33 * b33
+        b11 = B[1, 1, ix, iy, iz, it]'
+        b12 = B[2, 1, ix, iy, iz, it]'
+        b13 = B[3, 1, ix, iy, iz, it]'
+        b21 = B[1, 2, ix, iy, iz, it]'
+        b22 = B[2, 2, ix, iy, iz, it]'
+        b23 = B[3, 2, ix, iy, iz, it]'
+        b31 = B[1, 3, ix, iy, iz, it]'
+        b32 = B[2, 3, ix, iy, iz, it]'
+        b33 = B[3, 3, ix, iy, iz, it]'
+
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
     end
 end
 
@@ -1334,37 +1334,37 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
-    
-        a11 = α *A[1, 1, ixp,iyp,izp,itp]
-        a21 = α *A[2, 1, ixp,iyp,izp,itp]
-        a31 = α *A[3, 1, ixp,iyp,izp,itp]
-        a12 = α *A[1, 2, ixp,iyp,izp,itp]
-        a22 = α *A[2, 2, ixp,iyp,izp,itp]
-        a32 = α *A[3, 2, ixp,iyp,izp,itp]
-        a13 = α *A[1, 3, ixp,iyp,izp,itp]
-        a23 = α *A[2, 3, ixp,iyp,izp,itp]
-        a33 = α *A[3, 3, ixp,iyp,izp,itp]
-        b11 = B[1, 1, ix,iy,iz,it]'
-        b12 = B[2, 1, ix,iy,iz,it]'
-        b13 = B[3, 1, ix,iy,iz,it]'
 
-        b21 = B[1, 2, ix,iy,iz,it]'
-        b22 = B[2, 2, ix,iy,iz,it]'
-        b23 = B[3, 2, ix,iy,iz,it]'
+        a11 = α * A[1, 1, ixp, iyp, izp, itp]
+        a21 = α * A[2, 1, ixp, iyp, izp, itp]
+        a31 = α * A[3, 1, ixp, iyp, izp, itp]
+        a12 = α * A[1, 2, ixp, iyp, izp, itp]
+        a22 = α * A[2, 2, ixp, iyp, izp, itp]
+        a32 = α * A[3, 2, ixp, iyp, izp, itp]
+        a13 = α * A[1, 3, ixp, iyp, izp, itp]
+        a23 = α * A[2, 3, ixp, iyp, izp, itp]
+        a33 = α * A[3, 3, ixp, iyp, izp, itp]
+        b11 = B[1, 1, ix, iy, iz, it]'
+        b12 = B[2, 1, ix, iy, iz, it]'
+        b13 = B[3, 1, ix, iy, iz, it]'
 
-        b31 = B[1, 3, ix,iy,iz,it]'
-        b32 = B[2, 3, ix,iy,iz,it]'
-        b33 = B[3, 3, ix,iy,iz,it]'
+        b21 = B[1, 2, ix, iy, iz, it]'
+        b22 = B[2, 2, ix, iy, iz, it]'
+        b23 = B[3, 2, ix, iy, iz, it]'
 
-        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+        b31 = B[1, 3, ix, iy, iz, it]'
+        b32 = B[2, 3, ix, iy, iz, it]'
+        b33 = B[3, 3, ix, iy, iz, it]'
+
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 end
@@ -1565,36 +1565,36 @@ end
     itp = it + shift[4]
 
     @inbounds begin
-        a11 = α *A[1, 1, ix,iy,iz,it]
-        a21 = α *A[2, 1, ix,iy,iz,it]
-        a31 = α *A[3, 1, ix,iy,iz,it]
-        a12 = α *A[1, 2, ix,iy,iz,it]
-        a22 = α *A[2, 2, ix,iy,iz,it]
-        a32 = α *A[3, 2, ix,iy,iz,it]
-        a13 = α *A[1, 3, ix,iy,iz,it]
-        a23 = α *A[2, 3, ix,iy,iz,it]
-        a33 = α *A[3, 3, ix,iy,iz,it]
-        b11 = conj(B[1, 1, ixp,iyp,izp,itp])
-        b12 = conj(B[2, 1, ixp,iyp,izp,itp])
-        b13 = conj(B[3, 1, ixp,iyp,izp,itp])
+        a11 = α * A[1, 1, ix, iy, iz, it]
+        a21 = α * A[2, 1, ix, iy, iz, it]
+        a31 = α * A[3, 1, ix, iy, iz, it]
+        a12 = α * A[1, 2, ix, iy, iz, it]
+        a22 = α * A[2, 2, ix, iy, iz, it]
+        a32 = α * A[3, 2, ix, iy, iz, it]
+        a13 = α * A[1, 3, ix, iy, iz, it]
+        a23 = α * A[2, 3, ix, iy, iz, it]
+        a33 = α * A[3, 3, ix, iy, iz, it]
+        b11 = conj(B[1, 1, ixp, iyp, izp, itp])
+        b12 = conj(B[2, 1, ixp, iyp, izp, itp])
+        b13 = conj(B[3, 1, ixp, iyp, izp, itp])
 
-        b21 = conj(B[1, 2, ixp,iyp,izp,itp])
-        b22 = conj(B[2, 2, ixp,iyp,izp,itp])
-        b23 = conj(B[3, 2, ixp,iyp,izp,itp])
+        b21 = conj(B[1, 2, ixp, iyp, izp, itp])
+        b22 = conj(B[2, 2, ixp, iyp, izp, itp])
+        b23 = conj(B[3, 2, ixp, iyp, izp, itp])
 
-        b31 = conj(B[1, 3, ixp,iyp,izp,itp])
-        b32 = conj(B[2, 3, ixp,iyp,izp,itp])
-        b33 = conj(B[3, 3, ixp,iyp,izp,itp])
+        b31 = conj(B[1, 3, ixp, iyp, izp, itp])
+        b32 = conj(B[2, 3, ixp, iyp, izp, itp])
+        b33 = conj(B[3, 3, ixp, iyp, izp, itp])
 
-        C[1, 1, ix,iy,iz,it] = β *C[1, 1, ix,iy,iz,it] + a11 * b11 + a12 * b21 + a13 * b31
-        C[2, 1, ix,iy,iz,it] = β *C[2, 1, ix,iy,iz,it] + a21 * b11 + a22 * b21 + a23 * b31
-        C[3, 1, ix,iy,iz,it] = β *C[3, 1, ix,iy,iz,it] +a31 * b11 + a32 * b21 + a33 * b31
-        C[1, 2, ix,iy,iz,it] = β *C[1, 2, ix,iy,iz,it] +a11 * b12 + a12 * b22 + a13 * b32
-        C[2, 2, ix,iy,iz,it] = β *C[2, 2, ix,iy,iz,it] +a21 * b12 + a22 * b22 + a23 * b32
-        C[3, 2, ix,iy,iz,it] = β *C[3, 2, ix,iy,iz,it] +a31 * b12 + a32 * b22 + a33 * b32
-        C[1, 3, ix,iy,iz,it] = β *C[1, 3, ix,iy,iz,it] +a11 * b13 + a12 * b23 + a13 * b33
-        C[2, 3, ix,iy,iz,it] = β *C[2, 3, ix,iy,iz,it] +a21 * b13 + a22 * b23 + a23 * b33
-        C[3, 3, ix,iy,iz,it] = β *C[3, 3, ix,iy,iz,it] +a31 * b13 + a32 * b23 + a33 * b33
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
     end
 
 end
@@ -1963,6 +1963,8 @@ end
     return s
 end
 
+
+
 #=
 function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,3,3}) where {T1,AT1}
     s = JACC.parallel_reduce(prod(C.PN), +, kernel_tr_4D_NC3, C.A, C.PN, Val(nw); init=zero(eltype(C.A)))
@@ -2310,15 +2312,15 @@ end
     it += nw
     v1 = one(eltype(u))
     v0 = zero(eltype(u))
-    u[1,1,ix,iy,iz,it] = v1
-    u[2,1,ix,iy,iz,it] = v0
-    u[3,1,ix,iy,iz,it] = v0
-    u[1,2,ix,iy,iz,it] = v0
-    u[2,2,ix,iy,iz,it] = v1
-    u[3,2,ix,iy,iz,it] = v0
-    u[1,3,ix,iy,iz,it] = v0
-    u[2,3,ix,iy,iz,it] = v0
-    u[3,3,ix,iy,iz,it] = v1
+    u[1, 1, ix, iy, iz, it] = v1
+    u[2, 1, ix, iy, iz, it] = v0
+    u[3, 1, ix, iy, iz, it] = v0
+    u[1, 2, ix, iy, iz, it] = v0
+    u[2, 2, ix, iy, iz, it] = v1
+    u[3, 2, ix, iy, iz, it] = v0
+    u[1, 3, ix, iy, iz, it] = v0
+    u[2, 3, ix, iy, iz, it] = v0
+    u[3, 3, ix, iy, iz, it] = v1
 
 end
 
