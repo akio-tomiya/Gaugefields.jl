@@ -164,6 +164,34 @@ end
     end
 end
 
+@inline function kernel_4Dmatrix_mul!(i, C, A, B, ::Val{2}, ::Val{nw}, PN) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    @inbounds begin
+        a11 = A[1, 1, ix, iy, iz, it]
+        a21 = A[2, 1, ix, iy, iz, it]
+        a12 = A[1, 2, ix, iy, iz, it]
+        a22 = A[2, 2, ix, iy, iz, it]
+
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22
+
+    end
+end
+
+
 
 
 
@@ -174,36 +202,63 @@ end
     iz += nw
     it += nw
 
-    a11 = A[1, 1, ix, iy, iz, it]
-    a21 = A[2, 1, ix, iy, iz, it]
-    a31 = A[3, 1, ix, iy, iz, it]
-    a12 = A[1, 2, ix, iy, iz, it]
-    a22 = A[2, 2, ix, iy, iz, it]
-    a32 = A[3, 2, ix, iy, iz, it]
-    a13 = A[1, 3, ix, iy, iz, it]
-    a23 = A[2, 3, ix, iy, iz, it]
-    a33 = A[3, 3, ix, iy, iz, it]
-    b11 = B[1, 1, ix, iy, iz, it]
-    b21 = B[2, 1, ix, iy, iz, it]
-    b31 = B[3, 1, ix, iy, iz, it]
-    b12 = B[1, 2, ix, iy, iz, it]
-    b22 = B[2, 2, ix, iy, iz, it]
-    b32 = B[3, 2, ix, iy, iz, it]
-    b13 = B[1, 3, ix, iy, iz, it]
-    b23 = B[2, 3, ix, iy, iz, it]
-    b33 = B[3, 3, ix, iy, iz, it]
-    C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
-    C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
-    C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
-    C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
-    C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
-    C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
-    C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
-    C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
-    C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
-
+    @inbounds begin
+        a11 = A[1, 1, ix, iy, iz, it]
+        a21 = A[2, 1, ix, iy, iz, it]
+        a31 = A[3, 1, ix, iy, iz, it]
+        a12 = A[1, 2, ix, iy, iz, it]
+        a22 = A[2, 2, ix, iy, iz, it]
+        a32 = A[3, 2, ix, iy, iz, it]
+        a13 = A[1, 3, ix, iy, iz, it]
+        a23 = A[2, 3, ix, iy, iz, it]
+        a33 = A[3, 3, ix, iy, iz, it]
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b31 = B[3, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+        b32 = B[3, 2, ix, iy, iz, it]
+        b13 = B[1, 3, ix, iy, iz, it]
+        b23 = B[2, 3, ix, iy, iz, it]
+        b33 = B[3, 3, ix, iy, iz, it]
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
+    end
 end
 
+
+@inline function kernel_4Dmatrix_mul!(i, C, A, B, ::Val{2}, ::Val{2}, ::Val{2}, ::Val{nw}, PN) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    @inbounds begin
+        a11 = A[1, 1, ix, iy, iz, it]
+        a21 = A[2, 1, ix, iy, iz, it]
+        a12 = A[1, 2, ix, iy, iz, it]
+        a22 = A[2, 2, ix, iy, iz, it]
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22
+
+    end
+end
 
 
 
@@ -267,6 +322,35 @@ end
         C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
         C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
         C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
+    end
+
+end
+
+@inline function kernel_4Dmatrix_mul!(i, C, A, B, ::Val{2}, ::Val{2}, ::Val{2}, ::Val{nw}, PN, α, β) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    @inbounds begin
+        a11 = α * A[1, 1, ix, iy, iz, it]
+        a21 = α * A[2, 1, ix, iy, iz, it]
+        a12 = α * A[1, 2, ix, iy, iz, it]
+        a22 = α * A[2, 2, ix, iy, iz, it]
+
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+
+
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22
     end
 
 end
@@ -651,6 +735,34 @@ end
         C[1, 3, ix, iy, iz, it] = a11 * b13 + a12 * b23 + a13 * b33
         C[2, 3, ix, iy, iz, it] = a21 * b13 + a22 * b23 + a23 * b33
         C[3, 3, ix, iy, iz, it] = a31 * b13 + a32 * b23 + a33 * b33
+    end
+end
+
+@inline function kernel_4Dmatrix_mul_AdagB!(i, C, A, B, ::Val{2}, ::Val{2}, ::Val{2}, ::Val{nw}, PN) where {nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    @inbounds begin
+        a11 = A[1, 1, ix, iy, iz, it]'
+        a12 = A[2, 1, ix, iy, iz, it]'
+
+        a21 = A[1, 2, ix, iy, iz, it]'
+        a22 = A[2, 2, ix, iy, iz, it]'
+
+
+        b11 = B[1, 1, ix, iy, iz, it]
+        b21 = B[2, 1, ix, iy, iz, it]
+
+        b12 = B[1, 2, ix, iy, iz, it]
+        b22 = B[2, 2, ix, iy, iz, it]
+
+        C[1, 1, ix, iy, iz, it] = a11 * b11 + a12 * b21
+        C[2, 1, ix, iy, iz, it] = a21 * b11 + a22 * b21
+        C[1, 2, ix, iy, iz, it] = a11 * b12 + a12 * b22
+        C[2, 2, ix, iy, iz, it] = a21 * b12 + a22 * b22
     end
 end
 
