@@ -136,6 +136,11 @@ function Base.similar(ls::LatticeMatrix{D,T,AT,NC1,NC2}) where {D,T,AT,NC1,NC2}
     return LatticeMatrix(NC1, NC2, D, ls.gsize, ls.dims; nw=ls.nw, elementtype=T, phases=ls.phases, comm0=ls.comm)
 end
 
+function get_PEs(ls::LatticeMatrix{D,T,AT,NC1,NC2}) where {D,T,AT,NC1,NC2}
+    return ls.dims
+end
+export get_PEs
+
 function Base.display(ls::LatticeMatrix{4,T,AT,NC1,NC2}) where {T,AT,NC1,NC2}
 
     NN = size(ls.A)

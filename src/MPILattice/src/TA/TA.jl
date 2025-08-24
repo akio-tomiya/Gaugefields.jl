@@ -1,10 +1,12 @@
 struct TALattice{D,T,AT,N} <: Lattice{D,T,AT}
     lt::LatticeMatrix{D,T,AT,N,N}
 
-    function TALattice(A::LatticeMatrix{D,T,AT,N,N2}) where {D,T,AT,N,N2}
+    function TALattice(A::LatticeMatrix{D,T,AT,N,N2}; doTA=false) where {D,T,AT,N,N2}
         @assert N == N2 "The number of columns must match the number of rows."
         su = new{D,T,AT,N}(A)
-        traceless_antihermitian!(su)
+        if doTA
+            traceless_antihermitian!(su)
+        end
         return su
     end
 end

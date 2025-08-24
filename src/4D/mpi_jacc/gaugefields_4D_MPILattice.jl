@@ -5,7 +5,13 @@ import ..MPILattice: LatticeMatrix,
     makeidentity_matrix!,
     set_halo!,
     substitute!,
-    partial_trace
+    partial_trace,
+    get_PEs,
+    clear_matrix!,
+    add_matrix!,
+    expt!,
+    get_4Dindex,
+    traceless_antihermitian_add!
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Gaugefields_4D{NC} end
 
@@ -321,4 +327,17 @@ end
 
 function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice)
     tr(a.U)
+end
+
+
+function clear_U!(c::Gaugefields_4D_MPILattice)
+    clear_matrix!(c.U)
+end
+
+function add_U!(c::Gaugefields_4D_MPILattice, t::T, a::T1) where {T1<:Fields_4D_MPILattice,T<:Number}
+    add_matrix!(c.U, a.U, t)
+end
+
+function add_U!(c::Gaugefields_4D_MPILattice, a::T1) where {T1<:Fields_4D_MPILattice}
+    add_matrix!(c.U, a.U)
 end

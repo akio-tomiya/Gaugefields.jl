@@ -79,6 +79,8 @@ function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
 end
 
 
+
+
 @inline function kernel_4Dmatrix_mul!(i, C, A, B, ::Val{NC1}, ::Val{NC2}, ::Val{NC3}, ::Val{nw}, PN) where {NC1,NC2,NC3,nw}
     ix, iy, iz, it = get_4Dindex(i, PN)
     @inbounds for jc = 1:NC2
@@ -94,6 +96,8 @@ end
         end
     end
 end
+
+
 
 #C = A B 
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC1,nw},
@@ -270,23 +274,15 @@ end
 
 function expt!(C::LatticeMatrix{4,T,AT,NC1,NC2,nw}, A::LatticeMatrix{4,T1,AT1,NC1,NC2,nw}, t::S=one(S)) where {T,AT,NC1,NC2,S<:Number,T1,AT1,nw}
     @assert NC1 == NC2 "Matrix exponentiation requires square matrices, but got $(NC1) x $(NC2)."
-    if NC1 == 3
-        JACC.parallel_for(
-            prod(C.PN), kernel_4Dexpt_NC3!, C.A, A.A, C.PN, Val(nw), t
-        )
-    elseif NC1 == 2
-        JACC.parallel_for(
-            prod(C.PN), kernel_4Dexpt_NC2!, C.A, A.A, C.PN, Val(nw), t
-        )
-    else
-        JACC.parallel_for(
-            prod(C.PN), kernel_4Dexpt!, C.A, A.A, C.PN, Val(nw), t, Val(NC1)
-        )
-    end
+
+    JACC.parallel_for(
+        prod(C.PN), kernel_4Dexpt!, C.A, A.A, C.PN, Val(nw), t, Val(NC1)
+    )
+    return
     #set_halo!(C)
 end
 
-@inline function kernel_4Dexpt_NC3!(i, C, A, PN, ::Val{nw}, t) where nw
+@inline function kernel_4Dexpt!(i, C, A, PN, ::Val{nw}, t, ::Val{3}) where nw
     ix, iy, iz, it = get_4Dindex(i, PN)
     a11 = A[1, 1, ix+nw, iy+nw, iz+nw, it+nw]
     a12 = A[1, 2, ix+nw, iy+nw, iz+nw, it+nw]
@@ -311,7 +307,7 @@ end
 
 end
 
-@inline function kernel_4Dexpt_NC2!(i, C, A, PN, ::Val{nw}, t) where nw
+@inline function kernel_4Dexpt!(i, C, A, PN, ::Val{nw}, t, ::Val{2}) where nw
     ix, iy, iz, it = get_4Dindex(i, PN)
     a11 = A[1, 1, ix+nw, iy+nw, iz+nw, it+nw]
     a21 = A[2, 1, ix+nw, iy+nw, iz+nw, it+nw]
@@ -325,12 +321,273 @@ end
     C[2, 2, ix+nw, iy+nw, iz+nw, it+nw] = c22
 end
 
+
+
 @inline function kernel_4Dexpt!(i, C, A, PN, ::Val{nw}, t, ::Val{N}) where {N,nw}
     ix, iy, iz, it = get_4Dindex(i, PN)
     expm_pade13_writeback!(C, A, ix + nw, iy + nw, iz + nw, it + nw, t, Val(N))
     #C[:, :, ix, iy, iz, it] = expm_pade13(A[:, :, ix, iy, iz, it], t)
 end
 
+function expt!(C::LatticeMatrix{4,T,AT,NC1,NC1,nw}, TA::LatticeMatrix{4,T1,AT1,Num,1,nw2}, t::S=one(S)) where {T,AT,NC1,Num,S<:Number,T1<:Real,AT1,nw,nw2}
+
+    if NC1 > 3
+        error("In NC > 3 case, this function should not be used")
+    else
+        JACC.parallel_for(
+            prod(C.PN), kernel_4Dexpt_TA!, C.A, TA.A, C.PN, Val(nw), t, Val(NC1), Val(nw2)
+        )
+    end
+    return
+    #set_halo!(C)
+end
+
+function kernel_4Dexpt_TA!(i, uout, A, PN, ::Val{nw}, t, ::Val{2}, ::Val{nw2}) where {nw,nw2}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ixt = ix + nw2
+    iyt = iy + nw2
+    izt = iz + nw2
+    itt = it + nw2
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    c1_0 = A[1, 1, ixt, iyt, izt, itt]
+    c2_0 = A[2, 1, ixt, iyt, izt, itt]
+    c3_0 = A[3, 1, ixt, iyt, izt, itt]
+
+    #icum = (((it-1)*NX+iz-1)*NY+iy-1)*NX+ix  
+    u1 = t * c1_0 / 2
+    u2 = t * c2_0 / 2
+    u3 = t * c3_0 / 2
+    R = sqrt(u1^2 + u2^2 + u3^2) + tinyvalue
+    sR = sin(R) / R
+    #sR = ifelse(R == 0,1,sR)
+    a0 = cos(R)
+    a1 = u1 * sR
+    a2 = u2 * sR
+    a3 = u3 * sR
+
+    uout[1, 1, ix, iy, iz, it] = cos(R) + im * a3
+    uout[1, 2, ix, iy, iz, it] = im * a1 + a2
+    uout[2, 1, ix, iy, iz, it] = im * a1 - a2
+    uout[2, 2, ix, iy, iz, it] = cos(R) - im * a3
+end
+
+
+function kernel_4Dexpt_TA!(i, C, A, PN, ::Val{nw}, t, ::Val{3}, ::Val{nw2}) where {nw,nw2}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    T = eltype(C)
+    ixt = ix + nw2
+    iyt = iy + nw2
+    izt = iz + nw2
+    itt = it + nw2
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    c1_0 = A[1, 1, ixt, iyt, izt, itt]
+    c2_0 = A[2, 1, ixt, iyt, izt, itt]
+    c3_0 = A[3, 1, ixt, iyt, izt, itt]
+    c4_0 = A[4, 1, ixt, iyt, izt, itt]
+    c5_0 = A[5, 1, ixt, iyt, izt, itt]
+
+    c6_0 = A[6, 1, ixt, iyt, izt, itt]
+    c7_0 = A[7, 1, ixt, iyt, izt, itt]
+    c8_0 = A[8, 1, ixt, iyt, izt, itt]
+
+    c1 = t * c1_0 * 0.5
+    c2 = t * c2_0 * 0.5
+    c3 = t * c3_0 * 0.5
+    c4 = t * c4_0 * 0.5
+    c5 = t * c5_0 * 0.5
+    c6 = t * c6_0 * 0.5
+    c7 = t * c7_0 * 0.5
+    c8 = t * c8_0 * 0.5
+    csum = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8
+    if csum == 0
+        c = Mat3{eltype(C)}(one(eltype(C)))
+        C[1, 1, ix, iy, iz, it] = c.a11
+        C[1, 2, ix, iy, iz, it] = c.a12
+        C[1, 3, ix, iy, iz, it] = c.a13
+        C[2, 1, ix, iy, iz, it] = c.a21
+        C[2, 2, ix, iy, iz, it] = c.a22
+        C[2, 3, ix, iy, iz, it] = c.a23
+        C[3, 1, ix, iy, iz, it] = c.a31
+        C[3, 2, ix, iy, iz, it] = c.a32
+        C[3, 3, ix, iy, iz, it] = c.a33
+
+    end
+
+
+    #x[1,1,icum] =  c3+sr3i*c8 +im*(  0.0 )
+    v1 = c3 + sr3i * c8
+    v2 = 0.0
+    #x[1,2,icum] =  c1         +im*( -c2   )
+    v3 = c1
+    v4 = -c2
+    #x[1,3,icum] =  c4         +im*(-c5   )
+    v5 = c4
+    v6 = -c5
+
+    #x[2,1,icum] =  c1         +im*(  c2   )
+    v7 = c1
+    v8 = c2
+
+    #x[2,2,icum] =  -c3+sr3i*c8+im*(  0.0 )
+    v9 = -c3 + sr3i * c8
+    v10 = 0.0
+
+    #x[2,3,icum] =  c6         +im*( -c7   )
+    v11 = c6
+    v12 = -c7
+
+    #x[3,1,icum] =  c4         +im*(  c5   )
+    v13 = c4
+    v14 = c5
+
+    #x[3,2,icum] =  c6         +im*(  c7   )
+    v15 = c6
+    v16 = c7
+    #x[3,3,icum] =  -sr3i2*c8  +im*(  0.0 )
+    v17 = -sr3i2 * c8
+    v18 = 0.0
+
+
+    #c find eigenvalues of v
+    trv3 = (v1 + v9 + v17) / 3.0
+    cofac =
+        v1 * v9 - v3^2 - v4^2 + v1 * v17 - v5^2 - v6^2 + v9 * v17 - v11^2 -
+        v12^2
+    det =
+        v1 * v9 * v17 - v1 * (v11^2 + v12^2) - v9 * (v5^2 + v6^2) -
+        v17 * (v3^2 + v4^2) +
+        (v5 * (v3 * v11 - v4 * v12) + v6 * (v3 * v12 + v4 * v11)) * 2.0
+    p3 = cofac / 3.0 - trv3^2
+    q = trv3 * cofac - det - 2.0 * trv3^3
+    x = sqrt(-4.0 * p3) + tinyvalue
+    arg = q / (x * p3)
+
+    arg = min(1, max(-1, arg))
+    theta = acos(arg) / 3.0
+    e1 = x * cos(theta) + trv3
+    theta = theta + pi23
+    e2 = x * cos(theta) + trv3
+    #       theta = theta + pi23
+    #       e3 = x * cos(theta) + trv3
+    e3 = 3.0 * trv3 - e1 - e2
+
+    # solve for eigenvectors
+
+    w1 = v5 * (v9 - e1) - v3 * v11 + v4 * v12
+    w2 = -v6 * (v9 - e1) + v4 * v11 + v3 * v12
+    w3 = (v1 - e1) * v11 - v3 * v5 - v4 * v6
+    w4 = -(v1 - e1) * v12 - v4 * v5 + v3 * v6
+    w5 = -(v1 - e1) * (v9 - e1) + v3^2 + v4^2
+    w6 = 0.0
+
+    coeff = 1.0 / sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
+
+
+    w1 = w1 * coeff
+    w2 = w2 * coeff
+    w3 = w3 * coeff
+    w4 = w4 * coeff
+    w5 = w5 * coeff
+
+    w7 = v5 * (v9 - e2) - v3 * v11 + v4 * v12
+    w8 = -v6 * (v9 - e2) + v4 * v11 + v3 * v12
+    w9 = (v1 - e2) * v11 - v3 * v5 - v4 * v6
+    w10 = -(v1 - e2) * v12 - v4 * v5 + v3 * v6
+    w11 = -(v1 - e2) * (v9 - e2) + v3^2 + v4^2
+    w12 = 0.0
+
+    coeff = 1.0 / sqrt(w7^2 + w8^2 + w9^2 + w10^2 + w11^2)
+
+    w7 = w7 * coeff
+    w8 = w8 * coeff
+    w9 = w9 * coeff
+    w10 = w10 * coeff
+    w11 = w11 * coeff
+
+    w13 = v5 * (v9 - e3) - v3 * v11 + v4 * v12
+    w14 = -v6 * (v9 - e3) + v4 * v11 + v3 * v12
+    w15 = (v1 - e3) * v11 - v3 * v5 - v4 * v6
+    w16 = -(v1 - e3) * v12 - v4 * v5 + v3 * v6
+    w17 = -(v1 - e3) * (v9 - e3) + v3^2 + v4^2
+    w18 = 0.0
+
+    coeff = 1.0 / sqrt(w13^2 + w14^2 + w15^2 + w16^2 + w17^2)
+    w13 = w13 * coeff
+    w14 = w14 * coeff
+    w15 = w15 * coeff
+    w16 = w16 * coeff
+    w17 = w17 * coeff
+
+    # construct the projection v
+    c1 = cos(e1)
+    s1 = sin(e1)
+    ww1 = w1 * c1 - w2 * s1
+    ww2 = w2 * c1 + w1 * s1
+    ww3 = w3 * c1 - w4 * s1
+    ww4 = w4 * c1 + w3 * s1
+    ww5 = w5 * c1 - w6 * s1
+    ww6 = w6 * c1 + w5 * s1
+
+    c2 = cos(e2)
+    s2 = sin(e2)
+    ww7 = w7 * c2 - w8 * s2
+    ww8 = w8 * c2 + w7 * s2
+    ww9 = w9 * c2 - w10 * s2
+    ww10 = w10 * c2 + w9 * s2
+    ww11 = w11 * c2 - w12 * s2
+    ww12 = w12 * c2 + w11 * s2
+
+    c3 = cos(e3)
+    s3 = sin(e3)
+    ww13 = w13 * c3 - w14 * s3
+    ww14 = w14 * c3 + w13 * s3
+    ww15 = w15 * c3 - w16 * s3
+    ww16 = w16 * c3 + w15 * s3
+    ww17 = w17 * c3 - w18 * s3
+    ww18 = w18 * c3 + w17 * s3
+
+
+    w = Mat3{T}(w1 + im * w2,
+        w3 + im * w4,
+        w5 + im * w6,
+        w7 + im * w8,
+        w9 + im * w10,
+        w11 + im * w12,
+        w13 + im * w14,
+        w15 + im * w16,
+        w17 + im * w18)
+    ww = Mat3{T}(ww1 + im * ww2,
+        ww3 + im * ww4,
+        ww5 + im * ww6,
+        ww7 + im * ww8,
+        ww9 + im * ww10,
+        ww11 + im * ww12,
+        ww13 + im * ww14,
+        ww15 + im * ww16,
+        ww17 + im * ww18)
+    c = mul3(conjugate3(w), ww)
+
+    C[1, 1, ix, iy, iz, it] = c.a11
+    C[1, 2, ix, iy, iz, it] = c.a12
+    C[1, 3, ix, iy, iz, it] = c.a13
+    C[2, 1, ix, iy, iz, it] = c.a21
+    C[2, 2, ix, iy, iz, it] = c.a22
+    C[2, 3, ix, iy, iz, it] = c.a23
+    C[3, 1, ix, iy, iz, it] = c.a31
+    C[3, 2, ix, iy, iz, it] = c.a32
+    C[3, 3, ix, iy, iz, it] = c.a33
+
+
+
+end
 
 
 #C = A'*B
@@ -1963,6 +2220,25 @@ end
     return s
 end
 
+function LinearAlgebra.dot(A::LatticeMatrix{4,T1,AT1,NC1,1,nw}, B::LatticeMatrix{4,T2,AT2,NC1,1,nw}) where {T1<:Real,T2<:Real,AT1,AT2,NC1,nw}
+    s = JACC.parallel_reduce(prod(A.PN), +, kernel_dot_real_1,
+        A.A, B.A, A.PN, Val(NC1), Val(nw); init=zero(eltype(A.A)))
+end
+
+@inline function kernel_dot_real_1(i, A, B, PN, ::Val{NC1}, ::Val{nw}) where {NC1,nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    s = zero(eltype(A))
+
+    @inbounds for ic = 1:NC1
+        s += A[ic, 1, ix, iy, iz, it] * B[ic, 1, ix, iy, iz, it]
+    end
+    return s
+end
+
 
 
 #=
@@ -2422,4 +2698,132 @@ export applyfunction!
             u[ic, jc, ix+nw, iy+nw, iz+nw, it+nw] = Aout[ic, jc]
         end
     end
+end
+
+function traceless_antihermitian_add!(C::LatticeMatrix{4,T,AT,NG,1,nw}, factor,
+    A::LatticeMatrix{4,T2,AT2,NC,NC,nw2}) where {T<:Real,AT,NG,nw,T2,AT2,NC,nw2}
+    JACC.parallel_for(prod(C.PN), kernel_4d_Traceless_antihermitian_add!, C.A, A.A, factor, C.PN, Val(NG), Val(NC), Val(nw), Val(nw2))
+end
+
+function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{NC}, ::Val{nw}, ::Val{nw2}) where {NC,NG,nw,nw2}
+    error("NC > 3 is not supported")
+end
+
+function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{2}, ::Val{nw}, ::Val{nw2}) where {NG,nw,nw2}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix2 = ix + nw2
+    iy2 = iy + nw2
+    iz2 = iz + nw2
+    it2 = it + nw2
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    v11 = vin[1, 1, ix2, iy2, iz2, it2]
+    v22 = vin[2, 2, ix2, iy2, iz2, it2]
+
+    tri = fac12 * (imag(v11) + imag(v22))
+
+    v12 = vin[1, 2, ix2, iy2, iz2, it2]
+    #v13 = vin[1,3,ix,iy,iz,it]
+    v21 = vin[2, 1, ix2, iy2, iz2, it2]
+
+    x12 = v12 - conj(v21)
+
+    x21 = -conj(x12)
+
+    y11 = (imag(v11) - tri) * im
+    y12 = 0.5 * x12
+    y21 = 0.5 * x21
+    y22 = (imag(v22) - tri) * im
+
+    c[1, 1, ix, iy, iz, it] =
+        (imag(y12) + imag(y21)) * factor + c[1, 1, ix, iy, iz, it]
+    c[2, 1, ix, iy, iz, it] =
+        (real(y12) - real(y21)) * factor + c[2, 1, ix, iy, iz, it]
+    c[3, 1, ix, iy, iz, it] =
+        (imag(y11) - imag(y22)) * factor + c[3, 1, ix, iy, iz, it]
+
+end
+
+
+function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{3}, ::Val{nw}, ::Val{nw2}) where {NG,nw,nw2}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix2 = ix + nw2
+    iy2 = iy + nw2
+    iz2 = iz + nw2
+    it2 = it + nw2
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    fac13 = 1 / 3
+
+
+    v11 = vin[1, 1, ix2, iy2, iz2, it2]
+    v22 = vin[2, 2, ix2, iy2, iz2, it2]
+    v33 = vin[3, 3, ix2, iy2, iz2, it2]
+
+    tri = fac13 * (imag(v11) + imag(v22) + imag(v33))
+
+    #=
+    vout[1,1,ix,iy,iz,it] = (imag(v11)-tri)*im
+    vout[2,2,ix,iy,iz,it] = (imag(v22)-tri)*im
+    vout[3,3,ix,iy,iz,it] = (imag(v33)-tri)*im
+    =#
+    y11 = (imag(v11) - tri) * im
+    y22 = (imag(v22) - tri) * im
+    y33 = (imag(v33) - tri) * im
+
+    v12 = vin[1, 2, ix2, iy2, iz2, it2]
+    v13 = vin[1, 3, ix2, iy2, iz2, it2]
+    v21 = vin[2, 1, ix2, iy2, iz2, it2]
+    v23 = vin[2, 3, ix2, iy2, iz2, it2]
+    v31 = vin[3, 1, ix2, iy2, iz2, it2]
+    v32 = vin[3, 2, ix2, iy2, iz2, it2]
+
+    x12 = v12 - conj(v21)
+    x13 = v13 - conj(v31)
+    x23 = v23 - conj(v32)
+
+    x21 = -conj(x12)
+    x31 = -conj(x13)
+    x32 = -conj(x23)
+
+    #=
+    vout[1,2,ix,iy,iz,it] = 0.5  * x12
+    vout[1,3,ix,iy,iz,it] = 0.5  * x13
+    vout[2,1,ix,iy,iz,it] = 0.5  * x21
+    vout[2,3,ix,iy,iz,it] = 0.5  * x23
+    vout[3,1,ix,iy,iz,it] = 0.5  * x31
+    vout[3,2,ix,iy,iz,it] = 0.5  * x32
+    =#
+    y12 = 0.5 * x12
+    y13 = 0.5 * x13
+    y21 = 0.5 * x21
+    y23 = 0.5 * x23
+    y31 = 0.5 * x31
+    y32 = 0.5 * x32
+
+
+    c[1, 1, ix, iy, iz, it] =
+        (imag(y12) + imag(y21)) * factor + c[1, 1, ix, iy, iz, it]
+    c[2, 1, ix, iy, iz, it] =
+        (real(y12) - real(y21)) * factor + c[2, 1, ix, iy, iz, it]
+    c[3, 1, ix, iy, iz, it] =
+        (imag(y11) - imag(y22)) * factor + c[3, 1, ix, iy, iz, it]
+    c[4, 1, ix, iy, iz, it] =
+        (imag(y13) + imag(y31)) * factor + c[4, 1, ix, iy, iz, it]
+    c[5, 1, ix, iy, iz, it] =
+        (real(y13) - real(y31)) * factor + c[5, 1, ix, iy, iz, it]
+
+    c[6, 1, ix, iy, iz, it] =
+        (imag(y23) + imag(y32)) * factor + c[6, 1, ix, iy, iz, it]
+    c[7, 1, ix, iy, iz, it] =
+        (real(y23) - real(y32)) * factor + c[7, 1, ix, iy, iz, it]
+    c[8, 1, ix, iy, iz, it] =
+        sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor +
+        c[8, 1, ix, iy, iz, it]
 end
