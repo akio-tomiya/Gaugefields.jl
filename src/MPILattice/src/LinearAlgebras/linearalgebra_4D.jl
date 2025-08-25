@@ -2319,7 +2319,7 @@ end
     end
 end
 
-#=
+
 @inline function kernel_4Dmatrix_mul_shiftAshiftBdag!(i, C, A, B, ::Val{2}, ::Val{2}, ::Val{2}, ::Val{nw},
      PN, shiftA, shiftB, α::S, β::S) where {nw,S<:Number}
     ix, iy, iz, it = get_4Dindex(i, PN)
@@ -2359,7 +2359,7 @@ end
 
 
 end
-=#
+
 
 @inline function kernel_4Dmatrix_mul_shiftAshiftBdag!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw},
      PN, shiftA, shiftB, α::S, β::S) where {nw,S<:Number}
