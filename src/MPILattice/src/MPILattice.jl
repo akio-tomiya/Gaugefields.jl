@@ -38,21 +38,26 @@ include("LinearAlgebras/linearalgebra.jl")
 include("TA/TA.jl")
 
 function Shifted_Lattice(data::Lattice{D,T,AT}, shift) where {D,T,AT}
+    #println("shft,$shift")
     return Shifted_Lattice{typeof(data),Tuple(shift)}(data)
 end
 
+function get_shift(::Shifted_Lattice{<:LatticeMatrix{D,T,AT,NC1,NC2,nw},shift}) where {D,T,AT,NC1,NC2,nw,shift}
+    return shift
+end
 
 function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2,nw}, shift) where {D,T,AT,NC1,NC2,nw}
     #set_halo!(data)
     #nw = data.nw
     isinside = true
+    #println("shft,$shift")
     for i in 1:D
         if shift[i] < -nw || shift[i] > nw
             isinside = false
             break
         end
     end
-    println("Shifted_Lattice: shift = ", shift, " isinside = ", isinside)
+    #println("Shifted_Lattice: shift = ", shift, " isinside = ", isinside)
     if isinside
         sl = Shifted_Lattice{typeof(data),Tuple(shift)}(data)
     else
@@ -60,6 +65,7 @@ function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2,nw}, shift) where {D
         sl1 = similar(data)
         shift0 = zeros(Int64, D)
         substitute!(sl0, data)
+        set_halo!(sl0)
         for i in 1:D
             if shift[i] > nw
                 smallshift = shift[i] ÷ nw
@@ -69,22 +75,25 @@ function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2,nw}, shift) where {D
                     sls = Shifted_Lattice{typeof(data),Tuple(shift0)}(sl0)
                     substitute!(sl1, sls)
                     substitute!(sl0, sl1)
+                    set_halo!(sl0)
                 end
                 shift0 .= 0
                 shift0[i] = shift[i] % nw
                 sls = Shifted_Lattice{typeof(data),Tuple(shift0)}(sl0)
                 substitute!(sl1, sls)
                 substitute!(sl0, sl1)
+                set_halo!(sl0)
             elseif shift[i] < -nw
                 smallshift = abs(shift[i]) ÷ nw
                 shift0 .= 0
                 shift0[i] = -nw
                 #println(shift0)
                 for k = 1:smallshift
-                    println(shift0)
+                    #println(shift0)
                     sls = Shifted_Lattice{typeof(data),Tuple(shift0)}(sl0)
                     substitute!(sl1, sls)
                     substitute!(sl0, sl1)
+                    set_halo!(sl0)
                 end
                 shift0 .= 0
                 shift0[i] = -(abs(shift[i]) % nw)
@@ -92,12 +101,14 @@ function Shifted_Lattice(data::LatticeMatrix{D,T,AT,NC1,NC2,nw}, shift) where {D
                 sls = Shifted_Lattice{typeof(data),Tuple(shift0)}(sl0)
                 substitute!(sl1, sls)
                 substitute!(sl0, sl1)
+                set_halo!(sl0)
             else
                 shift0 .= 0
                 shift0[i] = shift[i]
                 sls = Shifted_Lattice{typeof(data),Tuple(shift0)}(sl0)
                 substitute!(sl1, sls)
                 substitute!(sl0, sl1)
+                set_halo!(sl0)
             end
         end
         zeroshift = ntuple(_ -> 0, D)

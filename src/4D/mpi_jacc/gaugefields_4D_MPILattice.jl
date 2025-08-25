@@ -11,7 +11,10 @@ import ..MPILattice: LatticeMatrix,
     add_matrix!,
     expt!,
     get_4Dindex,
-    traceless_antihermitian_add!
+    traceless_antihermitian_add!,
+    normalize_matrix!,
+    randomize_matrix!,
+     get_shift
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Gaugefields_4D{NC} end
 
@@ -108,8 +111,10 @@ struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw} <: Fields
     U::Shifted_Lattice{LatticeMatrix{4,T,AT,NC,NC,nw},shift}
 
     function Shifted_Gaugefields_4D_MPILattice(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw}, shift) where {NC,NX,NY,NZ,NT,T,AT,nw}
-        sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
-        return new{NC,NX,NY,NZ,NT,T,AT,shift,nw}(sU)
+        #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
+        sU = Shifted_Lattice(U.U,shift)
+        shiftin =  get_shift(sU)
+        return new{NC,NX,NY,NZ,NT,T,AT ,shiftin,nw}(sU)
     end
 end
 
@@ -148,6 +153,40 @@ function identityGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
     )
 
     makeidentity_matrix!(U.U)
+    return U
+
+end
+
+function randomGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
+    NDW=1,
+    verbose_level=2,
+    singleprecision=false,
+    boundarycondition=ones(4),
+    PEs=nothing,
+    comm=MPI.COMM_WORLD,
+    randomnumber="Random",
+    #mpiinit=false
+)
+
+
+    U = Gaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
+        NDW,
+        singleprecision,
+        boundarycondition,
+        PEs,
+        comm,
+        verbose_level
+    )
+
+        if randomnumber == "Random"
+    else
+        error(
+            "randomnumber should be \"Random\" in accelerator version. Now randomnumber = $randomnumber",
+        )
+    end
+
+    randomize_matrix!(U.U)
+    normalize_matrix!(U.U)
     return U
 
 end

@@ -404,7 +404,9 @@ function Initialize_Gaugefields(
             cuda,
             blocks,
             accelerator,
-            singleprecision
+            singleprecision,
+            isMPILattice,
+            boundarycondition
         )
     else
         error("not supported")
@@ -434,16 +436,18 @@ function Initialize_Gaugefields(
             U[μ] = RandomGauges(
                 NC,
                 NDW,
-                NN...,
-                mpi=mpi,
-                PEs=PEs,
+                NN...;
+                mpi,
+                PEs,
                 mpiinit=false,
-                verbose_level=verbose_level,
-                randomnumber=randomnumber,
-                cuda=cuda,
-                blocks=blocks,
-                accelerator=accelerator,
-                singleprecision=singleprecision
+                verbose_level,
+                randomnumber,
+                cuda,
+                blocks,
+                accelerator,
+                singleprecision,
+                isMPILattice,
+                boundarycondition
             )
         else
             error("not supported")
@@ -464,124 +468,147 @@ function RandomGauges(
     cuda=false,
     blocks=nothing,
     accelerator="none",
-    singleprecision=false
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4)
 )
     accelerator_g = accelerator
     dim = length(NN)
-    if mpi
-        if PEs == nothing || mpiinit == nothing
-            error("not implemented yet!")
+    if isMPILattice
+        if dim == 4
+            U = randomGaugefields_4D_MPILattice(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3],
+                NN[4];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition,
+                PEs,
+                randomnumber
+                #mpiinit
+            )
+        else
+            error("$dim dimension case with MPILattice is not implemented yet")
+        end
+    else
+        if mpi
+            if PEs == nothing || mpiinit == nothing
+                error("not implemented yet!")
+            else
+                if dim == 4
+                    if NDW == 0
+                        U = randomGaugefields_4D_nowing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            PEs,
+                            mpiinit=mpiinit,
+                            verbose_level=verbose_level,
+                            randomnumber=randomnumber,
+                        )
+                    else
+                        U = randomGaugefields_4D_wing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            NDW,
+                            PEs,
+                            mpiinit=mpiinit,
+                            verbose_level=verbose_level,
+                            randomnumber=randomnumber,
+                        )
+                    end
+                else
+                    error("not implemented yet!")
+                end
+
+            end
         else
             if dim == 4
                 if NDW == 0
-                    U = randomGaugefields_4D_nowing_mpi(
-                        NC,
-                        NN[1],
-                        NN[2],
-                        NN[3],
-                        NN[4],
-                        PEs,
-                        mpiinit=mpiinit,
-                        verbose_level=verbose_level,
-                        randomnumber=randomnumber,
-                    )
+                    if cuda
+                        accelerator_g = "cuda"
+                    end
+                    if accelerator_g != "none"
+                        U = randomGaugefields_4D_accelerator(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            blocks,
+                            verbose_level=verbose_level,
+                            randomnumber=randomnumber,
+                            accelerator=accelerator_g,
+                            singleprecision=singleprecision
+                        )
+                    else
+                        U = randomGaugefields_4D_nowing(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            NN[3],
+                            NN[4],
+                            verbose_level=verbose_level,
+                            randomnumber=randomnumber,
+                        )
+                    end
+
                 else
-                    U = randomGaugefields_4D_wing_mpi(
+                    U = randomGaugefields_4D_wing(
                         NC,
                         NN[1],
                         NN[2],
                         NN[3],
                         NN[4],
                         NDW,
-                        PEs,
-                        mpiinit=mpiinit,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
                     )
                 end
-            else
-                error("not implemented yet!")
-            end
-
-        end
-    else
-        if dim == 4
-            if NDW == 0
-                if cuda
-                    accelerator_g = "cuda"
-                end
-                if accelerator_g != "none"
-                    U = randomGaugefields_4D_accelerator(
+            elseif dim == 2
+                if NDW == 0
+                    U = randomGaugefields_2D_nowing(
                         NC,
                         NN[1],
                         NN[2],
-                        NN[3],
-                        NN[4],
-                        blocks,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
-                        accelerator=accelerator_g,
-                        singleprecision=singleprecision
                     )
                 else
-                    U = randomGaugefields_4D_nowing(
+                    U = randomGaugefields_2D_wing(
                         NC,
                         NN[1],
                         NN[2],
-                        NN[3],
-                        NN[4],
+                        NDW,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
                     )
                 end
+            elseif dim == 3
+                if NDW == 0
+                    U = randomGaugefields_3D_nowing(
+                        NC,
+                        NN[1],
+                        NN[2],
+                        NN[3],
+                        verbose_level=verbose_level,
+                        randomnumber=randomnumber,
+                    )
+                else
+                    error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
+                end
+            else
 
-            else
-                U = randomGaugefields_4D_wing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    NN[4],
-                    NDW,
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
+                error("not implemented yet!")
             end
-        elseif dim == 2
-            if NDW == 0
-                U = randomGaugefields_2D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
-            else
-                U = randomGaugefields_2D_wing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NDW,
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
-            end
-        elseif dim == 3
-            if NDW == 0
-                U = randomGaugefields_3D_nowing(
-                    NC,
-                    NN[1],
-                    NN[2],
-                    NN[3],
-                    verbose_level=verbose_level,
-                    randomnumber=randomnumber,
-                )
-            else
-                error("Now, NDW = 0 is recommended. ")#Please use NDW = 0 like Initialize_Gaugefields(NC,0,NX,NY,NZ,NT). ")
-            end
-        else
-
-            error("not implemented yet!")
         end
     end
     return U
@@ -2025,6 +2052,7 @@ function construct_staple!(
         U2 = shift_U(U[μ], ν)
         #println(typeof(U1))
         mul!(U1U2, U1, U2)
+
         #error("test")
 
         U3 = shift_U(U[ν], μ)

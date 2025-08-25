@@ -1358,9 +1358,10 @@ end
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
     A::LatticeMatrix{4,T2,AT2,NC1,NC3,nw}, B::Shifted_Lattice{LatticeMatrix{4,T3,AT3,NC3,NC2,nw},shift},
     α::S, β::S) where {T1,T2,T3,AT1,AT2,AT3,NC1,NC2,NC3,shift,nw,S<:Number}
-
+    βin = T1(β)
+    αin = T1(α)
     JACC.parallel_for(
-        prod(C.PN), kernel_4Dmatrix_mul_AshiftB!, C.A, A.A, B.data.A, Val(NC1), Val(NC2), Val(NC3), Val(nw), C.PN, shift, α::S, β::S
+        prod(C.PN), kernel_4Dmatrix_mul_AshiftB!, C.A, A.A, B.data.A, Val(NC1), Val(NC2), Val(NC3), Val(nw), C.PN, shift, αin, βin
     )
     #set_halo!(C)
 end
@@ -1398,7 +1399,46 @@ end
         izp = iz + shift[3]
         itp = it + shift[4]
 
+        
+        a11 = A[1,1,ix,iy,iz,it]; a21 = A[2,1,ix,iy,iz,it]; a31 = A[3,1,ix,iy,iz,it]
+        a12 = A[1,2,ix,iy,iz,it]; a22 = A[2,2,ix,iy,iz,it]; a32 = A[3,2,ix,iy,iz,it]
+        a13 = A[1,3,ix,iy,iz,it]; a23 = A[2,3,ix,iy,iz,it]; a33 = A[3,3,ix,iy,iz,it]
 
+        b11 = B[1,1,ixp, iyp, izp, itp]; b21 = B[2,1,ixp, iyp, izp, itp]; b31 = B[3,1,ixp, iyp, izp, itp]
+        c11 = a11*b11 + a12*b21 + a13*b31
+        c21 = a21*b11 + a22*b21 + a23*b31
+        c31 = a31*b11 + a32*b21 + a33*b31
+
+        # ----  j=2 ----
+        b12 = B[1,2,ixp, iyp, izp, itp]; b22 = B[2,2,ixp, iyp, izp, itp]; b32 = B[3,2,ixp, iyp, izp, itp]
+        c12 = a11*b12 + a12*b22 + a13*b32
+        c22 = a21*b12 + a22*b22 + a23*b32
+        c32 = a31*b12 + a32*b22 + a33*b32
+
+        # ----  j=3 ----
+        b13 = B[1,3,ixp, iyp, izp, itp]; b23 = B[2,3,ixp, iyp, izp, itp]; b33 = B[3,3,ixp, iyp, izp, itp]
+        c13 = a11*b13 + a12*b23 + a13*b33
+        c23 = a21*b13 + a22*b23 + a23*b33
+        c33 = a31*b13 + a32*b23 + a33*b33
+
+        if iszero(β)
+            C[1,1,ix,iy,iz,it] = α*c11; C[2,1,ix,iy,iz,it] = α*c21; C[3,1,ix,iy,iz,it] = α*c31
+            C[1,2,ix,iy,iz,it] = α*c12; C[2,2,ix,iy,iz,it] = α*c22; C[3,2,ix,iy,iz,it] = α*c32
+            C[1,3,ix,iy,iz,it] = α*c13; C[2,3,ix,iy,iz,it] = α*c23; C[3,3,ix,iy,iz,it] = α*c33
+        else
+            C[1,1,ix,iy,iz,it] = α*c11 + β*C[1,1,ix,iy,iz,it]
+            C[2,1,ix,iy,iz,it] = α*c21 + β*C[2,1,ix,iy,iz,it]
+            C[3,1,ix,iy,iz,it] = α*c31 + β*C[3,1,ix,iy,iz,it]
+            C[1,2,ix,iy,iz,it] = α*c12 + β*C[1,2,ix,iy,iz,it]
+            C[2,2,ix,iy,iz,it] = α*c22 + β*C[2,2,ix,iy,iz,it]
+            C[3,2,ix,iy,iz,it] = α*c32 + β*C[3,2,ix,iy,iz,it]
+            C[1,3,ix,iy,iz,it] = α*c13 + β*C[1,3,ix,iy,iz,it]
+            C[2,3,ix,iy,iz,it] = α*c23 + β*C[2,3,ix,iy,iz,it]
+            C[3,3,ix,iy,iz,it] = α*c33 + β*C[3,3,ix,iy,iz,it]
+        end
+        
+
+        #=
         a11 = α * A[1, 1, ix, iy, iz, it]
         a21 = α * A[2, 1, ix, iy, iz, it]
         a31 = α * A[3, 1, ix, iy, iz, it]
@@ -1426,6 +1466,7 @@ end
         C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
         C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
         C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
+        =#
     end
 
 
@@ -1928,12 +1969,50 @@ end
     iz += nw
     it += nw
 
-    ixp = ix + shift[1]
-    iyp = iy + shift[2]
-    izp = iz + shift[3]
-    itp = it + shift[4]
-
     @inbounds begin
+        ixp = ix + shift[1]
+        iyp = iy + shift[2]
+        izp = iz + shift[3]
+        itp = it + shift[4]
+
+        a11 = A[1,1,ix,iy,iz,it]; a21 = A[2,1,ix,iy,iz,it]; a31 = A[3,1,ix,iy,iz,it]
+        a12 = A[1,2,ix,iy,iz,it]; a22 = A[2,2,ix,iy,iz,it]; a32 = A[3,2,ix,iy,iz,it]
+        a13 = A[1,3,ix,iy,iz,it]; a23 = A[2,3,ix,iy,iz,it]; a33 = A[3,3,ix,iy,iz,it]
+
+        b11 = B[1,1,ixp, iyp, izp, itp]'; b21 = B[1,2,ixp, iyp, izp, itp]'; b31 = B[1,3,ixp, iyp, izp, itp]'
+        c11 = a11*b11 + a12*b21 + a13*b31
+        c21 = a21*b11 + a22*b21 + a23*b31
+        c31 = a31*b11 + a32*b21 + a33*b31
+
+        # ----  j=2 ----
+        b12 = B[2,1,ixp, iyp, izp, itp]'; b22 = B[2,2,ixp, iyp, izp, itp]'; b32 = B[2,3,ixp, iyp, izp, itp]'
+        c12 = a11*b12 + a12*b22 + a13*b32
+        c22 = a21*b12 + a22*b22 + a23*b32
+        c32 = a31*b12 + a32*b22 + a33*b32
+
+        # ----  j=3 ----
+        b13 = B[3,1,ixp, iyp, izp, itp]'; b23 = B[3,2,ixp, iyp, izp, itp]'; b33 = B[3,3,ixp, iyp, izp, itp]'
+        c13 = a11*b13 + a12*b23 + a13*b33
+        c23 = a21*b13 + a22*b23 + a23*b33
+        c33 = a31*b13 + a32*b23 + a33*b33
+
+        if iszero(β)
+            C[1,1,ix,iy,iz,it] = α*c11; C[2,1,ix,iy,iz,it] = α*c21; C[3,1,ix,iy,iz,it] = α*c31
+            C[1,2,ix,iy,iz,it] = α*c12; C[2,2,ix,iy,iz,it] = α*c22; C[3,2,ix,iy,iz,it] = α*c32
+            C[1,3,ix,iy,iz,it] = α*c13; C[2,3,ix,iy,iz,it] = α*c23; C[3,3,ix,iy,iz,it] = α*c33
+        else
+            C[1,1,ix,iy,iz,it] = α*c11 + β*C[1,1,ix,iy,iz,it]
+            C[2,1,ix,iy,iz,it] = α*c21 + β*C[2,1,ix,iy,iz,it]
+            C[3,1,ix,iy,iz,it] = α*c31 + β*C[3,1,ix,iy,iz,it]
+            C[1,2,ix,iy,iz,it] = α*c12 + β*C[1,2,ix,iy,iz,it]
+            C[2,2,ix,iy,iz,it] = α*c22 + β*C[2,2,ix,iy,iz,it]
+            C[3,2,ix,iy,iz,it] = α*c32 + β*C[3,2,ix,iy,iz,it]
+            C[1,3,ix,iy,iz,it] = α*c13 + β*C[1,3,ix,iy,iz,it]
+            C[2,3,ix,iy,iz,it] = α*c23 + β*C[2,3,ix,iy,iz,it]
+            C[3,3,ix,iy,iz,it] = α*c33 + β*C[3,3,ix,iy,iz,it]
+        end
+
+        #=
         a11 = α * A[1, 1, ix, iy, iz, it]
         a21 = α * A[2, 1, ix, iy, iz, it]
         a31 = α * A[3, 1, ix, iy, iz, it]
@@ -1964,6 +2043,7 @@ end
         C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
         C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
         C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
+        =#
     end
 
 end
@@ -2209,6 +2289,7 @@ function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
     α::S, β::S) where {T1,T2,T3,AT1,AT2,
     AT3,NC1,NC2,NC3,shiftA,shiftB,nw,S<:Number}
 
+    #println((shiftA, shiftB))
     JACC.parallel_for(
         prod(C.PN), kernel_4Dmatrix_mul_shiftAshiftBdag!, C.A, A.data.A, B.data.data.A, Val(NC1), Val(NC2), Val(NC3), Val(nw), C.PN, shiftA, shiftB, α::S, β::S
     )
@@ -2228,7 +2309,7 @@ end
     izpB = iz + shiftB[3]
     itpB = it + shiftB[4]
 
-    @inbounds for jc = 1:NC2
+    for jc = 1:NC2
         for ic = 1:NC1
             C[ic, jc, ix+nw, iy+nw, iz+nw, it+nw] = β * C[ic, jc, ix+nw, iy+nw, iz+nw, it+nw]
             for kc = 1:NC3
@@ -2237,6 +2318,108 @@ end
         end
     end
 end
+
+#=
+@inline function kernel_4Dmatrix_mul_shiftAshiftBdag!(i, C, A, B, ::Val{2}, ::Val{2}, ::Val{2}, ::Val{nw},
+     PN, shiftA, shiftB, α::S, β::S) where {nw,S<:Number}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    begin
+        ixpA = ix + shiftA[1]
+        iypA = iy + shiftA[2]
+        izpA = iz + shiftA[3]
+        itpA = it + shiftA[4]
+
+        ixpB = ix + shiftB[1]
+        iypB = iy + shiftB[2]
+        izpB = iz + shiftB[3]
+        itpB = it + shiftB[4]
+
+        a11 = α * A[1, 1, ixpA, iypA, izpA, itpA]
+        a21 = α * A[2, 1, ixpA, iypA, izpA, itpA]
+        a12 = α * A[1, 2, ixpA, iypA, izpA, itpA]
+        a22 = α * A[2, 2, ixpA, iypA, izpA, itpA]
+
+        b11 = B[1, 1, ixpB, iypB, izpB, itpB]'
+        b12 = B[2, 1, ixpB, iypB, izpB, itpB]'
+        b21 = B[1, 2, ixpB, iypB, izpB, itpB]'
+        b22 = B[2, 2, ixpB, iypB, izpB, itpB]'
+
+
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 
+    end
+
+
+
+end
+=#
+
+@inline function kernel_4Dmatrix_mul_shiftAshiftBdag!(i, C, A, B, ::Val{3}, ::Val{3}, ::Val{3}, ::Val{nw},
+     PN, shiftA, shiftB, α::S, β::S) where {nw,S<:Number}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+
+    @inbounds begin
+        ixpA = ix + shiftA[1]
+        iypA = iy + shiftA[2]
+        izpA = iz + shiftA[3]
+        itpA = it + shiftA[4]
+
+        ixpB = ix + shiftB[1]
+        iypB = iy + shiftB[2]
+        izpB = iz + shiftB[3]
+        itpB = it + shiftB[4]
+
+        a11 = α * A[1, 1, ixpA, iypA, izpA, itpA]
+        a21 = α * A[2, 1, ixpA, iypA, izpA, itpA]
+        a31 = α * A[3, 1, ixpA, iypA, izpA, itpA]
+        a12 = α * A[1, 2, ixpA, iypA, izpA, itpA]
+        a22 = α * A[2, 2, ixpA, iypA, izpA, itpA]
+        a32 = α * A[3, 2, ixpA, iypA, izpA, itpA]
+        a13 = α * A[1, 3, ixpA, iypA, izpA, itpA]
+        a23 = α * A[2, 3, ixpA, iypA, izpA, itpA]
+        a33 = α * A[3, 3, ixpA, iypA, izpA, itpA]
+
+        b11 = B[1, 1, ixpB, iypB, izpB, itpB]'
+        b12 = B[2, 1, ixpB, iypB, izpB, itpB]'
+        b13 = B[3, 1, ixpB, iypB, izpB, itpB]'
+
+        b21 = B[1, 2, ixpB, iypB, izpB, itpB]'
+        b22 = B[2, 2, ixpB, iypB, izpB, itpB]'
+        b23 = B[3, 2, ixpB, iypB, izpB, itpB]'
+
+
+        b31 = B[1, 3, ixpB, iypB, izpB, itpB]'
+        b32 = B[2, 3, ixpB, iypB, izpB, itpB]'
+        b33 = B[3, 3, ixpB, iypB, izpB, itpB]'
+
+
+        C[1, 1, ix, iy, iz, it] = β * C[1, 1, ix, iy, iz, it] + a11 * b11 + a12 * b21 + a13 * b31
+        C[2, 1, ix, iy, iz, it] = β * C[2, 1, ix, iy, iz, it] + a21 * b11 + a22 * b21 + a23 * b31
+        C[3, 1, ix, iy, iz, it] = β * C[3, 1, ix, iy, iz, it] + a31 * b11 + a32 * b21 + a33 * b31
+        C[1, 2, ix, iy, iz, it] = β * C[1, 2, ix, iy, iz, it] + a11 * b12 + a12 * b22 + a13 * b32
+        C[2, 2, ix, iy, iz, it] = β * C[2, 2, ix, iy, iz, it] + a21 * b12 + a22 * b22 + a23 * b32
+        C[3, 2, ix, iy, iz, it] = β * C[3, 2, ix, iy, iz, it] + a31 * b12 + a32 * b22 + a33 * b32
+        C[1, 3, ix, iy, iz, it] = β * C[1, 3, ix, iy, iz, it] + a11 * b13 + a12 * b23 + a13 * b33
+        C[2, 3, ix, iy, iz, it] = β * C[2, 3, ix, iy, iz, it] + a21 * b13 + a22 * b23 + a23 * b33
+        C[3, 3, ix, iy, iz, it] = β * C[3, 3, ix, iy, iz, it] + a31 * b13 + a32 * b23 + a33 * b33
+
+    end
+
+
+
+end
+
 
 #C = shiftA'*shiftedB'
 function LinearAlgebra.mul!(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw},
@@ -2820,6 +3003,8 @@ end
 function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{NC}, ::Val{nw}, ::Val{nw2}) where {NC,NG,nw,nw2}
     error("NC > 3 is not supported")
 end
+
+const fac12 = 1/2
 
 function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{2}, ::Val{nw}, ::Val{nw2}) where {NG,nw,nw2}
     ix, iy, iz, it = get_4Dindex(i, PN)

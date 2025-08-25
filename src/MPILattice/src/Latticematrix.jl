@@ -279,6 +279,9 @@ function exchange_dim!(ls::LatticeMatrix{D}, d::Int) where D
         # minus ghost <= plus face
         copy!(_ghostMatrix(ls.A, ls.nw, d, :minus),
             _faceMatrix(ls.A, ls.nw, d, :plus))
+        #    println( ls.phases[d])
+        #println(ls.nw)
+        #println(length(_ghostMatrix(ls.A, ls.nw, d, :minus)))
         _mul_phase!(_ghostMatrix(ls.A, ls.nw, d, :minus), ls.phases[d])
 
         # plus  ghost <= minus face

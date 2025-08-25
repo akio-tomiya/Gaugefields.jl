@@ -24,7 +24,7 @@ struct TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis} <: TA_Gaugef
         end
 
         elementtype = ifelse(u.singleprecision, Float32, Float64)
-        nw = 0
+        nw = 1
         gsize = (NX, NY, NZ, NT)
         dim = 4
         phases = u.U.phases
@@ -71,7 +71,7 @@ function gauss_distribution!(
     pwork = rand(d, NumofBasis, 1, NX, NY, NZ, NT)
     PEs = get_PEs(p.a)
 
-    a = LatticeMatrix(pwork, 4, PEs; nw=0, phases=p.a.phases, comm0=p.a.comm)
+    a = LatticeMatrix(pwork, 4, PEs; nw=1, phases=p.a.phases, comm0=p.a.comm)
     substitute!(p.a, a)
 end
 
@@ -132,4 +132,12 @@ function Traceless_antihermitian_add!(
     vin::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW},
 ) where {NC,NX,NY,NZ,NT,T,AT,NDW,NumofBasis,AT1,T1}
     traceless_antihermitian_add!(c.a, factor, vin.U)
+end
+
+function clear_U!(c::TA_Gaugefields_4D_MPILattice)
+    clear_matrix!(c.a)
+end
+
+function add_U!(c::TA_Gaugefields_4D_MPILattice, t::T, a::T1) where {T1<:TA_Gaugefields_4D_MPILattice,T<:Number}
+    add_matrix!(c.a, a.a, t)
 end
