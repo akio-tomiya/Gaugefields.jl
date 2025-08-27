@@ -15,49 +15,77 @@ function main()
     NT = 32
     NC = 3
     β = 6.0
+    NV = NX * NY * NZ * NT
 
     Random.seed!(123)
 
 
+    docpu = true
+    donewJACC = true
+    dooldJACC = true
+    docuda = false
+
     #Ucpu = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="one instanton")
     #"Reproducible"
-    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
-        condition="cold"; isMPILattice=true)
+    if donewJACC
+        U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
+            condition="cold"; isMPILattice=true)
+    end
 
-    Ucpu = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
-        condition="hot")
+    if docpu
+        Ucpu = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+            condition="hot")
+    end
+    if dooldJACC
+        Uj = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+            condition="cold",
+            accelerator="JACC")
+    end
+    if docuda
+        Uc = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+            condition="cold",
+            accelerator="cuda", blocks=(4, 4, 4, 4))
+    end
 
-    Uj = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
-        condition="cold",
-        accelerator="JACC")
+    if docpu
+        if donewJACC
+            substitute_U!(U, Ucpu)
+        end
+        if dooldJACC
+            substitute_U!(Uj, Ucpu)
+        end
+        if docuda
+            substitute_U!(Uc, Ucpu)
+        end
+    end
 
-    Uc = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
-        condition="cold",
-        accelerator="cuda",blocks=(4,4,4,4))
 
-    substitute_U!(U, Ucpu)
-    substitute_U!(Uj, Ucpu)
-    substitute_U!(Uc, Ucpu)
+    if donewJACC
+        println(typeof(U))
+        temps = Temporalfields(U[1]; num=10)
+        temp1, it_temp1 = get_temp(temps)#similar(U[1])
+        temp2, it_temp2 = get_temp(temps)
+    end
 
+    if docpu
+        tempscpu = Temporalfields(Ucpu[1]; num=10)
+        temp1cpu, it_temp1cpu = get_temp(tempscpu)#similar(U[1])
+        temp2cpu, it_temp2cpu = get_temp(tempscpu)
+    end
 
-    println(typeof(U))
-    temps = Temporalfields(U[1]; num=10)
-    temp1, it_temp1 = get_temp(temps)#similar(U[1])
-    temp2, it_temp2 = get_temp(temps)
+    if dooldJACC
+        println(typeof(Uj))
+        tempsj = Temporalfields(Uj[1]; num=10)
+        temp1j, it_temp1j = get_temp(tempsj)#similar(U[1])
+        temp2j, it_temp2j = get_temp(tempsj)
+    end
 
-    tempscpu = Temporalfields(Ucpu[1]; num=10)
-    temp1cpu, it_temp1cpu = get_temp(tempscpu)#similar(U[1])
-    temp2cpu, it_temp2cpu = get_temp(tempscpu)
-
-    println(typeof(Uj))
-    tempsj = Temporalfields(Uj[1]; num=10)
-    temp1j, it_temp1j = get_temp(tempsj)#similar(U[1])
-    temp2j, it_temp2j = get_temp(tempsj)
-
+    if docuda
         println(typeof(Uc))
-    tempsc = Temporalfields(Uc[1]; num=10)
-    temp1c, it_temp1c = get_temp(tempsc)#similar(U[1])
-    temp2c, it_temp2c = get_temp(tempsc)
+        tempsc = Temporalfields(Uc[1]; num=10)
+        temp1c, it_temp1c = get_temp(tempsc)#similar(U[1])
+        temp2c, it_temp2c = get_temp(tempsc)
+    end
 
 
     if Dim == 4
@@ -70,38 +98,70 @@ function main()
         error("dimension $Dim is not supported")
     end
 
-    factor = 1 / (comb * U[1].NV * U[1].NC)
+    factor = 1 / (comb * NV * NC)
 
+    if donewJACC
+        @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+        println("JACC: 0 plaq_t = $plaq_t")
+        poly_t = calculate_Polyakov_loop(U, temp1, temp2)
+        println("JACC: 0 polyakov loop = $(real(poly_t)) $(imag(poly_t))")
+    end
 
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
-    println("JACC: 0 plaq_t = $plaq_t")
-    #poly = calculate_Polyakov_loop(U, temp1, temp2)
-    #println("JACC: 0 polyakov loop = $(real(poly)) $(imag(poly))")
+    if docpu
+        @time plaq_tcpu = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
+        println("CPU: 0 plaq_tcpu = $plaq_tcpu")
+        poly_tcpu = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
+        println("CPU: 0 polyakov loop = $(real(poly_tcpu)) $(imag(poly_tcpu))")
+    end
 
-    @time plaq_tcpu = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
-    println("CPU: 0 plaq_tcpu = $plaq_tcpu")
+    if dooldJACC
+        @time plaq_tj = calculate_Plaquette(Uj, temp1j, temp2j) * factor
+        println("old JACC: 0 plaq_t = $plaq_tj")
+        poly_tj = calculate_Polyakov_loop(Uj, temp1j, temp2j)
+        println("old JACC: 0 polyakov loop = $(real(poly_tj)) $(imag(poly_tj))")
 
-    @time plaq_tj = calculate_Plaquette(Uj, temp1j, temp2j) * factor
-    println("JACC0: 0 plaq_t = $plaq_tj")
+    end
     #polycpu = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
     #println("CPU: 0 polyakov loop = $(real(polycpu)) $(imag(polycpu))")
-    @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
-    println("CUDA: 0 plaq_t = $plaq_tc")
+    if docuda
+        @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
+        println("CUDA: 0 plaq_t = $plaq_tc")
+        poly_tc = calculate_Polyakov_loop(Uc, temp1c, temp2c)
+        println("CUDA: 0 polyakov loop = $(real(poly_tc)) $(imag(poly_tc))")
+
+    end
 
     println("--------------2nd time-----------------")
 
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
-    println("JACC: 0 plaq_t = $plaq_t")
-    #poly = calculate_Polyakov_loop(U, temp1, temp2)
-    #println("JACC: 0 polyakov loop = $(real(poly)) $(imag(poly))")
+    if donewJACC
+        @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+        println("JACC: 0 plaq_t = $plaq_t")
+        poly_t = calculate_Polyakov_loop(U, temp1, temp2)
+        println("JACC: 0 polyakov loop = $(real(poly_t)) $(imag(poly_t))")
+    end
 
-    @time plaq_tcpu = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
-    println("CPU: 0 plaq_tcpu = $plaq_tcpu")
+    if docpu
+        @time plaq_tcpu = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
+        println("CPU: 0 plaq_tcpu = $plaq_tcpu")
+        poly_tcpu = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
+        println("CPU: 0 polyakov loop = $(real(poly_tcpu)) $(imag(poly_tcpu))")
+    end
 
-    @time plaq_tj = calculate_Plaquette(Uj, temp1j, temp2j) * factor
-    println("JACC0: 0 plaq_t = $plaq_tj")
+    if dooldJACC
+        @time plaq_tj = calculate_Plaquette(Uj, temp1j, temp2j) * factor
+        println("old JACC: 0 plaq_t = $plaq_tj")
+        poly_tj = calculate_Polyakov_loop(Uj, temp1j, temp2j)
+        println("old JACC: 0 polyakov loop = $(real(poly_tj)) $(imag(poly_tj))")
 
-    @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
-    println("CUDA: 0 plaq_t = $plaq_tc")
+    end
+    #polycpu = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
+    #println("CPU: 0 polyakov loop = $(real(polycpu)) $(imag(polycpu))")
+    if docuda
+        @time plaq_tc = calculate_Plaquette(Uc, temp1c, temp2c) * factor
+        println("CUDA: 0 plaq_t = $plaq_tc")
+        poly_tc = calculate_Polyakov_loop(Uc, temp1c, temp2c)
+        println("CUDA: 0 polyakov loop = $(real(poly_tc)) $(imag(poly_tc))")
+
+    end
 end
 main()
