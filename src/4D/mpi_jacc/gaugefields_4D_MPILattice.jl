@@ -14,7 +14,8 @@ import ..MPILattice: LatticeMatrix,
     traceless_antihermitian_add!,
     normalize_matrix!,
     randomize_matrix!,
-     get_shift
+     get_shift,
+     gather_and_bcast_matrix
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Gaugefields_4D{NC} end
 
