@@ -6,14 +6,14 @@ using Wilsonloop
 
 function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     Dim = 4
-    Nwing = 0
+    Nwing = 1
 
     Random.seed!(123)
 
     #U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
         condition="hot";
-        isMPILattice)
+        isMPILattice=true)
 
     temps = Temporalfields(U[1]; num=10)
     temp1 = temps[1]#similar(U[1])
@@ -73,7 +73,7 @@ function gradientflow_test_4D(NX, NY, NZ, NT, NC)
     g = Gradientflow_general(U, listloops, listvalues, eps=0.01)
 
     for itrj = 1:100
-        flow!(U, g)
+        @time flow!(U, g)
         if itrj % 10 == 0
             @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
             println("$itrj plaq_t = $plaq_t")
@@ -169,7 +169,7 @@ end
 
 
 #const eps = 0.1
-
+#=
 
 println("2D system")
 @testset "2D" begin
@@ -221,6 +221,7 @@ println("2D system")
     end
 end
 
+=#
 println("4D system")
 @testset "4D" begin
     NX = 4

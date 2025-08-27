@@ -1,5 +1,6 @@
 [JACC]
-backend = "cuda"
+#backend = "cuda"
+backend = "threads"
 
 [MPIPreferences]
 __clear__ = ["preloads_env_switch"]
