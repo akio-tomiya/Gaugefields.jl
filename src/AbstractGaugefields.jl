@@ -2032,7 +2032,7 @@ function construct_staple!(
 ) where {NC,Dim,T<:AbstractGaugefields}
     U1U2 = temp
     firstterm = true
-    
+
 
     for ν = 1:Dim
         if ν == μ
@@ -2205,7 +2205,7 @@ end
     Tr(A*B)
 """
 function LinearAlgebra.tr(a::T, b::T) where {T<:Abstractfields}
-    error("LinearAlgebra.tr! is not implemented in type $(typeof(a)) ")
+    error("LinearAlgebra.tr is not implemented in type $(typeof(a)) ")
 end
 
 """

@@ -24,6 +24,14 @@ const sr3ih = 0.5 * sr3i
 const sqr3inv = sr3i
 const sr3i2 = 2 * sr3i
 
+function traceless_antihermitian!(vout::LatticeMatrix{4,T,AT,N,N}, vin::LatticeMatrix{4,T,AT,N,N}) where {T,AT,N}
+
+    substitute!(vout, vin)
+    traceless_antihermitian!(vout)
+
+end
+
+
 function traceless_antihermitian!(A::LatticeMatrix{4,T,AT,N,N}) where {T,AT,N}
     if N == 3
         JACC.parallel_for(

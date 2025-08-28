@@ -3206,7 +3206,7 @@ end
         a13 = α * A[3, 1, ixpA, iypA, izpA, itpA]'
         a21 = α * A[1, 2, ixpA, iypA, izpA, itpA]'
         a22 = α * A[2, 2, ixpA, iypA, izpA, itpA]'
-        a32 = α * A[3, 2, ixpA, iypA, izpA, itpA]'
+        a23 = α * A[3, 2, ixpA, iypA, izpA, itpA]'
         a31 = α * A[1, 3, ixpA, iypA, izpA, itpA]'
         a32 = α * A[2, 3, ixpA, iypA, izpA, itpA]'
         a33 = α * A[3, 3, ixpA, iypA, izpA, itpA]'
@@ -3265,6 +3265,29 @@ end
     end
     return s
 end
+
+@inline _preduce(n, op, kern, A, B, NC1, PN, vnw, init::T) where {T} =
+    JACC.parallel_reduce(n, op, kern, A, B, NC1, PN, vnw; init=init)::T
+
+function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}, B::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}) where {T1,AT1,NC1,nw}
+    return _preduce(prod(C.PN), +, kernel_tr_4D, C.A, B.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
+end
+
+@inline function kernel_tr_4D(i, A, B, ::Val{NC1}, PN, ::Val{nw}) where {NC1,nw}
+    ix, iy, iz, it = get_4Dindex(i, PN)
+    ix += nw
+    iy += nw
+    iz += nw
+    it += nw
+    s = zero(eltype(A))
+    @inbounds for k = 1:NC1
+        for k2 = 1:NC1
+            s += A[k, k2, ix, iy, iz, it] * B[k2, k, ix, iy, iz, it]
+        end
+    end
+    return s
+end
+
 
 function LinearAlgebra.dot(A::LatticeMatrix{4,T1,AT1,NC1,1,nw}, B::LatticeMatrix{4,T2,AT2,NC1,1,nw}) where {T1<:Real,T2<:Real,AT1,AT2,NC1,nw}
     s = JACC.parallel_reduce(prod(A.PN), +, kernel_dot_real_1,

@@ -14,8 +14,9 @@ import ..MPILattice: LatticeMatrix,
     traceless_antihermitian_add!,
     normalize_matrix!,
     randomize_matrix!,
-     get_shift,
-     gather_and_bcast_matrix
+    get_shift,
+    gather_and_bcast_matrix,
+    traceless_antihermitian!
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW} <: Gaugefields_4D{NC} end
 
@@ -113,9 +114,9 @@ struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw} <: Fields
 
     function Shifted_Gaugefields_4D_MPILattice(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw}, shift) where {NC,NX,NY,NZ,NT,T,AT,nw}
         #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
-        sU = Shifted_Lattice(U.U,shift)
-        shiftin =  get_shift(sU)
-        return new{NC,NX,NY,NZ,NT,T,AT ,shiftin,nw}(sU)
+        sU = Shifted_Lattice(U.U, shift)
+        shiftin = get_shift(sU)
+        return new{NC,NX,NY,NZ,NT,T,AT,shiftin,nw}(sU)
     end
 end
 
@@ -179,7 +180,7 @@ function randomGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
         verbose_level
     )
 
-        if randomnumber == "Random"
+    if randomnumber == "Random"
     else
         error(
             "randomnumber should be \"Random\" in accelerator version. Now randomnumber = $randomnumber",
@@ -369,6 +370,10 @@ function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice)
     tr(a.U)
 end
 
+function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice, b::Gaugefields_4D_MPILattice)
+    tr(a.U, b.U)
+end
+
 
 function clear_U!(c::Gaugefields_4D_MPILattice)
     clear_matrix!(c.U)
@@ -380,4 +385,13 @@ end
 
 function add_U!(c::Gaugefields_4D_MPILattice, a::T1) where {T1<:Fields_4D_MPILattice}
     add_matrix!(c.U, a.U)
+end
+
+function Traceless_antihermitian!(
+    vout::Gaugefields_4D_MPILattice,
+    vin::Gaugefields_4D_MPILattice,
+)
+
+    traceless_antihermitian!(vout.U, vin.U)
+
 end
