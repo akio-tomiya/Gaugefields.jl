@@ -39,6 +39,12 @@ function initialize_TA_Gaugefields(u::AbstractGaugefields{NC,Dim}) where {NC,Dim
         else
             error("Dim = $Dim is not supoorted")
         end
+    elseif typeof(u) <: Gaugefields_2D_MPILattice
+        if Dim == 2
+            return TA_Gaugefields_2D_MPILattice(u)
+        else
+            error("Dim = $Dim is not supoorted")
+        end
     else
         mpi = u.mpi
         if mpi

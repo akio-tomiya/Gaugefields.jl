@@ -3249,8 +3249,8 @@ function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw}) where {T1,AT1,N
     return s
 end
 
-@inline _preduce(n, op, kern, A, vNC1, PN, vnw, init::T) where {T} =
-    JACC.parallel_reduce(n, op, kern, A, vNC1, PN, vnw; init=init)::T
+@inline _preduce(n, op, kern, A, NC1, PN, vnw, init::T) where {T} =
+    JACC.parallel_reduce(n, op, kern, A, NC1, PN, vnw; init=init)::T
 
 function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}) where {T1,AT1,NC1,nw}
     return _preduce(prod(C.PN), +, kernel_tr_4D, C.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
@@ -3775,7 +3775,7 @@ function traceless_antihermitian_add!(C::LatticeMatrix{4,T,AT,NG,1,nw}, factor,
 end
 
 function kernel_4d_Traceless_antihermitian_add!(i, c, vin, factor, PN, ::Val{NG}, ::Val{NC}, ::Val{nw}, ::Val{nw2}) where {NC,NG,nw,nw2}
-    error("NC > 3 is not supported")
+    error("NC > 3 is not supported in kernel_4d_Traceless_antihermitian_add!")
 end
 
 const fac12 = 1 / 2

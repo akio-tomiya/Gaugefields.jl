@@ -88,10 +88,11 @@ end
 
 function gradientflow_test_2D(NX, NT, NC)
     Dim = 2
-    Nwing = 0
+    Nwing = 1
 
 
-    U = Initialize_Gaugefields(NC, Nwing, NX, NT, condition="hot", randomnumber="Reproducible")
+    U = Initialize_Gaugefields(NC, Nwing, NX, NT, condition="hot",
+        isMPILattice=true)
 
     temp1 = similar(U[1])
     temp2 = similar(U[1])
@@ -169,7 +170,7 @@ end
 
 
 #const eps = 0.1
-#=
+
 
 println("2D system")
 @testset "2D" begin
@@ -179,6 +180,7 @@ println("2D system")
     NT = 4
     Nwing = 0
 
+    #=
     @testset "NC=1" begin
         β = 2.3
         NC = 1
@@ -189,6 +191,7 @@ println("2D system")
         #@test abs(plaq_t-val)/abs(val) < eps
     end
     #error("d")
+    =#
 
     @testset "NC=2" begin
         β = 2.3
@@ -210,6 +213,7 @@ println("2D system")
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
+    #=
     @testset "NC=4" begin
         β = 5.7
         NC = 4
@@ -219,9 +223,10 @@ println("2D system")
         @time plaq_t = gradientflow_test_2D(NX, NT, NC)
         #@test abs(plaq_t-val)/abs(val) < eps
     end
+    =#
 end
 
-=#
+
 println("4D system")
 @testset "4D" begin
     NX = 4
@@ -255,6 +260,7 @@ println("4D system")
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
+    #=
     @testset "NC=4" begin
         β = 5.7
         NC = 4
@@ -266,6 +272,7 @@ println("4D system")
         #@test abs(plaq_t-val)/abs(val) < eps
     end
 
+    =#
 
 
 

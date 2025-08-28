@@ -32,11 +32,21 @@ end
 end
 
 # Deterministic per-site stream: combine indices into (state,inc)
-@inline function mix_seed(ix,iy,iz,it,ic,jc,seed0::UInt64)
+@inline function mix_seed(ix, iy, iz, it, ic, jc, seed0::UInt64)
     h = seed0 ⊻ (UInt64(ix) * 0x9E3779B97F4A7C15) ⊻ (UInt64(iy) * 0xBF58476D1CE4E5B9) ⊻
         (UInt64(iz) * 0x94D049BB133111EB) ⊻ (UInt64(it) * 0xD6E8FEB86659FD93) ⊻
         (UInt64(ic) * 0xA24BAED4963EE407) ⊻ (UInt64(jc) * 0x9FB21C651E98DF25)
     state = h ⊻ 0xDA942042E4DD58B5
-    inc   = (h >> 1) | 0x1                 # must be odd
+    inc = (h >> 1) | 0x1                 # must be odd
+    return state, inc
+end
+
+# Deterministic per-site stream: combine indices into (state,inc)
+@inline function mix_seed(ix, iy, ic, jc, seed0::UInt64)
+    h = seed0 ⊻ (UInt64(ix) * 0x9E3779B97F4A7C15) ⊻ (UInt64(iy) * 0xBF58476D1CE4E5B9) ⊻
+        #(UInt64(iz) * 0x94D049BB133111EB) ⊻ (UInt64(it) * 0xD6E8FEB86659FD93) ⊻
+        (UInt64(ic) * 0xA24BAED4963EE407) ⊻ (UInt64(jc) * 0x9FB21C651E98DF25)
+    state = h ⊻ 0xDA942042E4DD58B5
+    inc = (h >> 1) | 0x1                 # must be odd
     return state, inc
 end

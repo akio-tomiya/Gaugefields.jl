@@ -490,6 +490,19 @@ function RandomGauges(
                 randomnumber
                 #mpiinit
             )
+        elseif dim == 2
+            U = randomGaugefields_2D_MPILattice(
+                NC,
+                NN[1],
+                NN[2];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition=boundarycondition[1:2],
+                PEs,
+                randomnumber
+                #mpiinit
+            )
         else
             error("$dim dimension case with MPILattice is not implemented yet")
         end
@@ -646,6 +659,18 @@ function IdentityGauges(
                 verbose_level,
                 singleprecision,
                 boundarycondition,
+                PEs,
+                #mpiinit
+            )
+        elseif dim == 2
+            U = identityGaugefields_2D_MPILattice(
+                NC,
+                NN[1],
+                NN[2];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition=boundarycondition[1:2],
                 PEs,
                 #mpiinit
             )
