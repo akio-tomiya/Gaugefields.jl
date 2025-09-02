@@ -3357,6 +3357,7 @@ end
 function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw}) where {T1,AT1,NC1,NC2,nw}
     @assert NC1 == NC2 "Trace is only defined for square matrices"
     s = JACC.parallel_reduce(prod(C.PN), +, kernel_tr_4D, C.A, Val(NC1), C.PN, Val(nw); init=zero(eltype(C.A)))::T1
+    s = MPI.Allreduce(s, MPI.SUM, C.comm)
     return s
 end
 
@@ -3364,7 +3365,9 @@ end
     JACC.parallel_reduce(n, op, kern, A, NC1, PN, vnw; init=init)::T
 
 function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}) where {T1,AT1,NC1,nw}
-    return _preduce(prod(C.PN), +, kernel_tr_4D, C.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
+    s = _preduce(prod(C.PN), +, kernel_tr_4D, C.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
+    s = MPI.Allreduce(s, MPI.SUM, C.comm)    
+    return s
 end
 
 
@@ -3381,7 +3384,9 @@ end
     JACC.parallel_reduce(n, op, kern, A, B, NC1, PN, vnw; init=init)::T
 
 function LinearAlgebra.tr(C::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}, B::LatticeMatrix{4,T1,AT1,NC1,NC1,nw}) where {T1,AT1,NC1,nw}
-    return _preduce(prod(C.PN), +, kernel_tr_4D, C.A, B.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
+    s= _preduce(prod(C.PN), +, kernel_tr_4D, C.A, B.A, Val(NC1), C.PN, Val(nw), zero(T1))::T1
+    s = MPI.Allreduce(s, MPI.SUM, C.comm)
+    return s
 end
 
 @inline function kernel_tr_4D(i, A, B, ::Val{NC1}, PN, ::Val{nw}) where {NC1,nw}
@@ -3403,6 +3408,7 @@ end
 function LinearAlgebra.dot(A::LatticeMatrix{4,T1,AT1,NC1,1,nw}, B::LatticeMatrix{4,T2,AT2,NC1,1,nw}) where {T1<:Real,T2<:Real,AT1,AT2,NC1,nw}
     s = JACC.parallel_reduce(prod(A.PN), +, kernel_dot_real_1,
         A.A, B.A, A.PN, Val(NC1), Val(nw); init=zero(eltype(A.A)))
+    s = MPI.Allreduce(s, MPI.SUM, A.comm)
 end
 
 @inline function kernel_dot_real_1(i, A, B, PN, ::Val{NC1}, ::Val{nw}) where {NC1,nw}
@@ -3438,6 +3444,7 @@ end
 
 function partial_trace(C::LatticeMatrix{4,T1,AT1,NC1,NC2,nw}, μ::Int, position::Int=1) where {T1,AT1,NC1,NC2,nw}
     s = JACC.parallel_reduce(prod(C.PN), +, kernel_partial_trace_4D, C.A, NC1, C.PN, μ, position, Val(nw); init=zero(eltype(C.A)))
+    s = MPI.Allreduce(s, MPI.SUM, C.comm)
     return s
 end
 export partial_trace

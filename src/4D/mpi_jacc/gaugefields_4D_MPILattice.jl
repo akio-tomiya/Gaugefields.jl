@@ -364,10 +364,12 @@ function LinearAlgebra.mul!(
     β::Tb,
 ) where {T<:Gaugefields_4D_MPILattice,T1<:Fields_4D_MPILattice,T2<:Fields_4D_MPILattice,Ta<:Number,Tb<:Number}
     mul!(c.U, a.U, b.U, α, β)
+    
 end
 
 function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice)
     tr(a.U)
+    #set_halo!(a.U)
 end
 
 function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice, b::Gaugefields_4D_MPILattice)

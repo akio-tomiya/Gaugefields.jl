@@ -1,4 +1,6 @@
 function index_to_coords(i, NX, NY, NZ, NT)
+    #return inv_evenodd_index(i, NX, NY, NZ, NT)
+
     ix = mod1(i, NX)
     iy = mod1(div(i - 1, NX) + 1, NY)
     iz = mod1(div(i - 1, NX * NY) + 1, NZ)
@@ -7,8 +9,165 @@ function index_to_coords(i, NX, NY, NZ, NT)
 end
 
 function coords_to_index(ix, iy, iz, it, NX, NY, NZ, NT)
+    #return evenodd_index(ix, iy, iz, it, NX, NY, NZ, NT)
+
     i = (it - 1) * NX * NY * NZ + (iz - 1) * NX * NY + (iy - 1) * NX + ix
     return i
+end
+
+"""
+    evenodd_index(ix::Int, iy::Int, iz::Int, it::Int,
+                  NX::Int, NY::Int, NZ::Int, NT::Int) -> Int
+
+Compute a 1-based “evenodd” index by splitting the lexicographic range [1…V]
+into two halves (even-parity first, odd-parity second), where
+V = NX*NY*NZ*NT must be even.
+"""
+function evenodd_index(ix::Int, iy::Int, iz::Int, it::Int,
+                       NX::Int, NY::Int, NZ::Int, NT::Int)
+    # Total number of sites
+    V = NX * NY * NZ * NT
+    #@assert V % 2 == 0 "Total number of sites V must be even"
+
+    # Compute 0-based lexicographic index
+    site4 = (it - 1) * NZ * NY * NX +
+            (iz - 1) * NY * NX +
+            (iy - 1) * NX +
+            (ix - 1)         # in [0, V-1]
+
+    # Determine parity (0 = even, 1 = odd)
+    parity = mod(ix + iy + iz + it, 2)
+
+    # Position within its parity block
+    idx0 = div(site4, 2) + parity * div(V, 2)
+
+    # Convert to 1-based and return
+    return idx0 + 1
+end
+
+#=
+function evenodd_index(ix::Int, iy::Int, iz::Int, it::Int,
+                       NX::Int, NY::Int, NZ::Int, NT::Int)
+    V = NX * NY * NZ * NT
+    site4 = (it - 1) * NZ * NY * NX +
+            (iz - 1) * NY * NX +
+            (iy - 1) * NX +
+            (ix - 1)              # 0 … V-1
+    parity = mod(ix + iy + iz + it, 2)
+
+    idx0 = div(site4, 2) + parity * div(V, 2)
+    return idx0 + 1      
+end
+=#
+
+function decode(site4,NX,NY,NZ,NT)
+    sites_per_time  = NZ * NY * NX
+    sites_per_plane = NY * NX
+    it   = fld(site4, sites_per_time) + 1
+    rem1 = site4 % sites_per_time
+    iz   = fld(rem1, sites_per_plane) + 1
+    rem2 = rem1 % sites_per_plane
+    iy   = fld(rem2, NX) + 1
+    ix   = (rem2 % NX) + 1
+    return ix, iy, iz, it
+end
+
+function coord_parity(ix, iy, iz, it )
+    #ix, iy, iz, it = coords
+    return mod(ix + iy + iz + it, 2)
+end
+
+"""
+    inv_evenodd_index(idx::Int, NX::Int, NY::Int, NZ::Int, NT::Int) -> (ix, iy, iz, it)
+
+Given a 1-based “evenodd” index `idx`, returns the original 4D coordinates
+`(ix, iy, iz, it)` in the range `1:NX`, `1:NY`, `1:NZ`, `1:NT`.
+"""
+function inv_evenodd_index(idx::Int, NX::Int, NY::Int, NZ::Int, NT::Int)
+    # Total number of sites
+    V = NX * NY * NZ * NT
+    halfV = div(V, 2)
+    #@assert V % 2 == 0 "Total number of sites V must be even"
+    #@assert 1 ≤ idx ≤ V "Index out of range"
+
+    # Convert to 0-based index
+    idx0 = idx - 1
+
+    # Determine parity (0 = even, 1 = odd) based on which half of the range we're in
+    parity = idx0 < halfV ? 0 : 1
+
+    # Recover the “raw” half-index (i.e., div(site4, 2))
+    idx0raw = idx0 - parity * halfV
+
+    # Compute both candidate linear indices:
+    site4_even = 2 * idx0raw         # candidate for even parity
+    site4_odd  = 2 * idx0raw + 1     # candidate for odd parity
+
+    # Decode both candidates
+    cand1  = decode(site4_even,NX,NY,NZ,NT)
+    cand2 = decode(site4_odd,NX,NY,NZ,NT)
+    ix,iy,iz,it = cand1
+
+    ix, iy, iz, it = ifelse(coord_parity(ix, iy, iz, it) == parity,cand1,cand2)# ? ix, iy, iz, it  : cand2
+
+    # Select the candidate matching the stored parity
+    # parity == 0 → even candidate, parity == 1 → odd candidate
+    #site4 = parity == 0 ? site4_even : site4_odd
+
+    # Reconstruct the original linear index (0-based)
+    # site4 = 2 * div(site4,2) + parity
+    #site4 = 2 * idx0raw + parity
+
+    #=
+    # Precompute block sizes
+    sites_per_time = NZ * NY * NX   # sites in one it-slice
+    sites_per_plane = NY * NX       # sites in one iz-plane
+
+    # Compute time coordinate (it)
+    it = fld(site4, sites_per_time) + 1
+    rem1 = site4 % sites_per_time
+
+    # Compute z-coordinate (iz)
+    iz = fld(rem1, sites_per_plane) + 1
+    rem2 = rem1 % sites_per_plane
+
+    # Compute y-coordinate (iy)
+    iy = fld(rem2, NX) + 1
+
+    # Compute x-coordinate (ix)
+    ix = (rem2 % NX) + 1
+    =#
+
+    i = evenodd_index(ix, iy, iz, it,NX,NY,NZ,NT)
+    #@assert i == idx "$i $idx ix,iy,iz,it $(coords...)"
+
+    return ix,iy,iz,it
+end
+
+function inverse_evenodd_index(idx::Int,
+                               NX::Int, NY::Int, NZ::Int, NT::Int)
+    V = NX * NY * NZ * NT
+    halfV = div(V, 2)
+    idx0 = idx - 1  
+
+    parity = idx0 >= halfV ? 1 : 0
+
+    site4 = 2 * (idx0 % halfV) + parity
+
+    ix1 = site4 % NX
+    tmp1 = div(site4, NX)
+    iy1 = tmp1 % NY
+    tmp2 = div(tmp1, NY)
+    iz1 = tmp2 % NZ
+    it1 = div(tmp2, NZ)
+
+    ix, iy, iz, it = ix1 + 1, iy1 + 1, iz1 + 1, it1 + 1
+
+    i = evenodd_index(ix,iy,iz,it,NX,NY,NZ,NT)
+    @assert i == idx "$i $idx ix,iy,iz,it $ix $iy $iz $it"
+
+
+    return ix, iy, iz, it
 end
 
 function applyfunction!(M::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS},

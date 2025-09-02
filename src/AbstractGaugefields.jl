@@ -1868,6 +1868,7 @@ function calculate_Plaquette(
 ) where {NC,Dim,T<:AbstractGaugefields}
     plaq = 0
     V = staple
+    #println("tr ",tr(V))
     for μ = 1:Dim
         construct_staple!(V, U, μ, temp)
         mul!(temp, U[μ], V')
