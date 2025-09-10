@@ -1412,7 +1412,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     #println(typeof(win))
     #Isend Irecv
 
-    win_i = U.win_i#MPI.Win_create(positions,comm)
+    #win_i = U.win_i#MPI.Win_create(positions,comm)
     win_i = MPI.Win_create(positions, U.comm)
 
     #win_c = U.win_1i
