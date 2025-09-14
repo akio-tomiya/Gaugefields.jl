@@ -10,10 +10,10 @@ module Gaugefields_4D_module
 abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4} end
 
 
-include("./gaugefields_4D_wing.jl")
-include("./gaugefields_4D_wing_Bfields.jl")
-include("./gaugefields_4D_nowing.jl")
-include("./gaugefields_4D_nowing_Bfields.jl")
+include("./wing/gaugefields_4D_wing.jl")
+include("./wing/gaugefields_4D_wing_Bfields.jl")
+include("./nowing/gaugefields_4D_nowing.jl")
+include("./nowing/gaugefields_4D_nowing_Bfields.jl")
 
 function __init__()
     #    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
