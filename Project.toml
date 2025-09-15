@@ -1,7 +1,7 @@
 name = "Gaugefields"
 uuid = "a461e10c-0d91-493e-bc41-027b226eee91"
 authors = ["Akio Tomiya, Yuki Nagai <cometscome@gmail.com> and contributors"]
-version = "0.6.5"
+version = "0.6.6"
 
 [deps]
 CLIME_jll = "3c6ae550-c37b-5556-a07e-d40b4910cf1c"
@@ -27,8 +27,7 @@ EzXML = "1"
 InteractiveUtils = "1"
 JACC = "0.5.0"
 JLD2 = "0.4, 0.5"
-LatticeMatrices = "0.0.3"
-MPI = "0.20.23"
+MPI = "0.20"
 NPZ = "0.4"
 PreallocatedArrays = "0.0.1"
 Requires = "1"
