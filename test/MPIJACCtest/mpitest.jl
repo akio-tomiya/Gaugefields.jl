@@ -9,10 +9,10 @@ function main()
     Dim = 4
     Nwing = 1
     Random.seed!(123)
-    NX = 32
-    NY = 32
-    NZ = 32
-    NT = 32
+    NX = 12#32
+    NY = 12#32
+    NZ = 12#32
+    NT = 12#32
     NC = 3
     β = 6.0
     NV = NX * NY * NZ * NT

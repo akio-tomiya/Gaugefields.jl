@@ -113,24 +113,24 @@ end
 #    U::TALattice{4,T,AT,NC}
 #end
 
-struct Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
-    U::Shifted_Lattice{LatticeMatrix{2,T,AT,NC,NC,nw},shift}
+struct Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
+    U::Shifted_Lattice{L,shift} #L<: LatticeMatrix{2,T,AT,NC,NC,nw}
 
     function Shifted_Gaugefields_2D_MPILattice(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw}, shift) where {NC,NX,NY,T,AT,nw}
         #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
         sU = Shifted_Lattice(U.U, shift)
         shiftin = get_shift(sU)
-        return new{NC,NX,NY,T,AT,shiftin,nw}(sU)
+        return new{NC,NX,NY,T,AT,shiftin,nw,typeof(U.U)}(sU)
     end
 end
 
 
-struct Adjoint_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
-    U::Adjoint_Lattice{LatticeMatrix{2,T,AT,NC,NC,nw}}
+struct Adjoint_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw,L} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
+    U::Adjoint_Lattice{L} #LatticeMatrix{2,T,AT,NC,NC,nw}
 end
 
-struct Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
-    U::Adjoint_Lattice{Shifted_Lattice{LatticeMatrix{2,T,AT,NC,NC,nw},shift}}
+struct Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
+    U::Adjoint_Lattice{Shifted_Lattice{L,shift}} #LatticeMatrix{2,T,AT,NC,NC,nw}
 end
 
 
@@ -350,14 +350,14 @@ end
 
 
 function Base.adjoint(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw}) where {NC,NX,NY,T,AT,nw}
-    Adjoint_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw}(U.U')
+    Adjoint_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw,typeof(U.U)}(U.U')
 end
 
 
 
 
-function Base.adjoint(U::Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw}) where {NC,NX,NY,T,AT,shift,nw}
-    Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw}(U.U')
+function Base.adjoint(U::Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L}) where {L,NC,NX,NY,T,AT,shift,nw}
+    Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L}(U.U')
 end
 
 function LinearAlgebra.mul!(
