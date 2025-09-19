@@ -2,7 +2,8 @@ module Gaugefields
 
 using Requires
 
-include("./MPILattice/src/MPILattice.jl")
+include("./MPILattice/MPILattice.jl")
+#include("./MPILattice/src/MPILattice.jl")
 
 include("./Temporalfields/temporalfields.jl")
 include("./output/verboseprint_mpi.jl")
