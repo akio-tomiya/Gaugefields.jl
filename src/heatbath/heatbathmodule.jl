@@ -607,7 +607,8 @@ function SU2update_KP!(Unew, V, beta, NC, temps, ITERATION_MAX=10^5)
     Rppp = rand()
 
     a = zeros(Float64, 4)
-    while (Rppp^2 > 1 - 0.5 * delta)
+    for tries in 1:ITERATION_MAX
+        #while (Rppp^2 > 1 - 0.5 * delta)
         R = rand()
         Rp = rand()
         X = -log(R) / k
@@ -618,6 +619,12 @@ function SU2update_KP!(Unew, V, beta, NC, temps, ITERATION_MAX=10^5)
         delta = Xp + A
         Rppp = rand()
         #println(Rppp^2,"\t",1-0.5*delta)
+        if Rppp^2 <= 1 - 0.5 * delta
+            break
+        end
+        if tries == ITERATION_MAX
+            error("KP heatbath failed to accept after $ITERATION_MAX tries; k=$k, ρ=$ρ, delta=$delta R = $R Rp=$Rp Rpp=$Rpp Rppp=$Rppp")
+        end
     end
     a[1] = 1 - delta
 
