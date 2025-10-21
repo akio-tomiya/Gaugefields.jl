@@ -111,7 +111,7 @@ end
 #end
 
 struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
-    U::Shifted_Lattice{L,shift}
+    U::Shifted_Lattice{L}
 
     function Shifted_Gaugefields_4D_MPILattice(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}, shift) where {NC,NX,NY,NZ,NT,T,AT,nw,DI}
         #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
@@ -127,7 +127,7 @@ struct Adjoint_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_
 end
 
 struct Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
-    U::Adjoint_Lattice{Shifted_Lattice{L,shift}} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
+    U::Adjoint_Lattice{Shifted_Lattice{L}} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
 end
 
 
