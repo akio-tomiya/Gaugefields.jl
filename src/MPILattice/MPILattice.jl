@@ -22,14 +22,8 @@ import LatticeMatrices: LatticeMatrix,
 
 export LatticeMatrix
 
-function get_PEs(ls::LatticeMatrix{D,T,AT,NC1,NC2}) where {D,T,AT,NC1,NC2}
-    return ls.dims
-end
-export get_PEs
 
-function get_shift(::Shifted_Lattice{<:LatticeMatrix{D,T,AT,NC1,NC2,nw},shift}) where {D,T,AT,NC1,NC2,nw,shift}
-    return shift
-end
+
 
 # Generic, fast path using divrem (works for any sizes)
 @inline function get_2Dindex(i::I, dims::NTuple{2,I}) where {I<:Integer}
