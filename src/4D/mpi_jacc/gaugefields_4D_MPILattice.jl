@@ -1,6 +1,4 @@
-import ..MPILattice: LatticeMatrix,
-    Shifted_Lattice,
-    Adjoint_Lattice,
+import ..MPILattice:
     TALattice,
     makeidentity_matrix!,
     set_halo!,
@@ -17,11 +15,15 @@ import ..MPILattice: LatticeMatrix,
     get_shift,
     gather_and_bcast_matrix,
     traceless_antihermitian!
+import LatticeMatrices: LatticeMatrix,
+    Shifted_Lattice,
+    Adjoint_Lattice
+
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Gaugefields_4D{NC} end
 
-struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI}
-    U::LatticeMatrix{4,T,AT,NC,NC}
+struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,T,AT,NC,NC}} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI}
+    U::TU
     mpi::Bool
     verbose_print::Verbose_print
     singleprecision::Bool
@@ -91,8 +93,9 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Fields_4D_MPILat
 
         NV = NX * NY * NZ * NT
         DI = typeof(U.indexer)
+        TU = typeof(U)
 
-        return new{NC,NX,NY,NZ,NT,T,AT,NDW,DI}(
+        return new{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU}(
             U, mpi, verbose_print, singleprecision,
             NX,
             NY,
@@ -110,24 +113,25 @@ end
 #    U::TALattice{4,T,AT,NC}
 #end
 
-struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
-    U::Shifted_Lattice{L}
+struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
+    U::Shifted_Lattice{L,4}
 
-    function Shifted_Gaugefields_4D_MPILattice(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}, shift) where {NC,NX,NY,NZ,NT,T,AT,nw,DI}
+    function Shifted_Gaugefields_4D_MPILattice(U::TU, shift) where {NC,NX,NY,NZ,NT,T,AT,nw,DI,TM,TU<:Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,TM}}
         #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
         sU = Shifted_Lattice(U.U, shift)
-        shiftin = get_shift(sU)
-        return new{NC,NX,NY,NZ,NT,T,AT,shiftin,nw,DI,typeof(U.U)}(sU)
+        s = new{NC,NX,NY,NZ,NT,T,AT,nw,DI,TM}(sU)
+        return s
     end
 end
+
 
 
 struct Adjoint_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
     U::Adjoint_Lattice{L} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
 end
 
-struct Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
-    U::Adjoint_Lattice{Shifted_Lattice{L}} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
+struct Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
+    U::Adjoint_Lattice{Shifted_Lattice{L,4}} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
 end
 
 
@@ -336,12 +340,15 @@ function shift_U(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}, ν::Ts
         shift = (0, 0, 0, -1)
     end
 
-    return shift_U(U, shift)
+    s = shift_U(U, shift)
+
+    return s
 end
 
 
 function shift_U(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}, shift::NTuple{4,Ts}) where {NC,NX,NY,NZ,NT,T,AT,Ts<:Int,nw,DI}
-    return Shifted_Gaugefields_4D_MPILattice(U, shift)
+    s = Shifted_Gaugefields_4D_MPILattice(U, shift)
+    return s
 end
 
 
@@ -354,8 +361,8 @@ end
 
 
 
-function Base.adjoint(U::Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L}) where {L,NC,NX,NY,NZ,NT,T,AT,shift,nw,DI}
-    Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,shift,nw,DI,L}(U.U')
+function Base.adjoint(U::Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L}) where {L,NC,NX,NY,NZ,NT,T,AT,nw,DI}
+    Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L}(U.U')
 end
 
 function LinearAlgebra.mul!(
