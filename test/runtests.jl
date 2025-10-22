@@ -13,6 +13,10 @@ const eps = 1e-1
 end
 =#
 
+@testset "Initialization" begin
+    println("Initialization")
+    include("init.jl")
+end
 
 
 
@@ -90,10 +94,6 @@ end
     include("scalarnn.jl")
 end
 
-@testset "Initialization" begin
-    println("Initialization")
-    include("init.jl")
-end
 
 
 #@testset "Accel test" begin
