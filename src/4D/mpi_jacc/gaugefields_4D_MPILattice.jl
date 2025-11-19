@@ -259,6 +259,39 @@ function substitute_U!(
     end
 end
 
+
+function substitute_U!(a::Gaugefields_4D_MPILattice, b::Shifted_Gaugefields_4D_MPILattice)
+    substitute!(a.U, b.U)
+    set_wing_U!(a)
+end
+
+
+function substitute_U!(
+    a::Array{T1,1},
+    b::Array{T2,1}
+) where {T1<:Gaugefields_4D_MPILattice,T2<:Shifted_Gaugefields_4D_MPILattice}
+    for μ = 1:4
+        substitute_U!(a[μ], b[μ])
+    end
+end
+
+
+function substitute_U!(a::Gaugefields_4D_MPILattice, b::Adjoint_Shifted_Gaugefields_4D_MPILattice)
+    substitute!(a.U, b.U)
+    set_wing_U!(a)
+end
+
+
+function substitute_U!(
+    a::Array{T1,1},
+    b::Array{T2,1}
+) where {T1<:Gaugefields_4D_MPILattice,T2<:Adjoint_Shifted_Gaugefields_4D_MPILattice}
+    for μ = 1:4
+        substitute_U!(a[μ], b[μ])
+    end
+end
+
+
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1}
@@ -450,4 +483,30 @@ export Traceless_AntiHermitian
     LatticeMatrices.expt_TA!(C.U, A.data, t)
     return
     #set_halo!(C)
+end
+
+
+
+function exptU!(
+    uout::Tg,
+    t::N,
+    v::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis},
+    temps::Array{Tg,1},
+) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis,Tg<:Gaugefields_4D_MPILattice,N<:Number} #uout = exp(t*u)
+
+    if NC > 3
+        Uta = temps[1]
+        substitute_U!(Uta, v)
+        error("not implemented for NC > 3")
+    else
+        expt!(uout.U, v.U, t)
+    end
+    set_wing_U!(uout)
+end
+
+
+function unit_U!(U::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis}
+) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis}
+    makeidentity_matrix!(U.U)
+    set_wing_U!(U)
 end

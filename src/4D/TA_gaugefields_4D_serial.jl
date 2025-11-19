@@ -875,6 +875,8 @@ function exptU!(
                     #       e3 = x * cos(theta) + trv3
                     e3 = 3.0 * trv3 - e1 - e2
 
+
+
                     # solve for eigenvectors
 
                     w1 = v5 * (v9 - e1) - v3 * v11 + v4 * v12
@@ -890,6 +892,11 @@ function exptU!(
                     #coeff = ifelse(coeffv == zero(coeffv),0,coeffv)
                     nrm2_1 = w1^2 + w2^2 + w3^2 + w4^2 + w5^2
                     if nrm2_1 < 1e-24
+                        de12 = abs(e1 - e2)
+                        de23 = abs(e2 - e3)
+                        de31 = abs(e3 - e1)
+                        println((de12, de23, de31))
+
                         E11, E12, E13, E21, E22, E23, E31, E32, E33 = exp_T4(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
                         w[1, 1, ix, iy, iz, it] = 1
                         w[1, 2, ix, iy, iz, it] = 0
