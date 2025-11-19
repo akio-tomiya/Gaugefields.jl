@@ -22,7 +22,7 @@ struct Gradientflow_general_Bfields{Dim,TA,T} <: Abstractsmearing
             links[i] = make_loops_fromname(linknames[i], Dim=Dim)
         end
 
-        return Gradientflow_general(U, B, links, linkvalues, Nflow=Nflow, eps=eps)
+        return Gradientflow_general_Bfields(U, B, links, linkvalues, Nflow=Nflow, eps=eps)
     end
 
     function Gradientflow_general_Bfields(
@@ -45,7 +45,71 @@ struct Gradientflow_general_Bfields{Dim,TA,T} <: Abstractsmearing
         #for i = 1:2
         #    Utemps[i] = similar(U)
         #end
-        tempG = Temporalfields(U[1], num=3)
+        tempG = Temporalfields(U[1], num=5)
+        #tempG = Array{T,1}(undef, 3)
+        #for i = 1:3
+        #    tempG[i] = similar(U[1])
+        #end
+
+        gaugeaction = GaugeAction(U, B)
+        @assert length(links) == length(linkvalues)
+        numlinks = length(links)
+        for i = 1:numlinks
+            loop = links[i]#make_loops_fromname(linknames[i],Dim=Dim)
+            factor = linkvalues[i]
+            if typeof(factor) <: Real
+                append!(loop, loop')
+                push!(gaugeaction, factor, loop)
+            elseif typeof(factor) <: Number
+                push!(gaugeaction, factor, loop)
+                push!(gaugeaction, factor', loop')
+            else
+                error("type of factor $(typeof(factor)) is not supported")
+            end
+        end
+
+        return new{Dim,typeof(F0),T}(Nflow, eps, gaugeaction, Ftemps, tempG, Utemps)
+    end
+
+    function Gradientflow_general_Bfields(
+        U::Array{T1,1},
+        B,
+        linknames,
+        linkvalues;
+        Nflow=1,
+        eps=0.01,
+    ) where {NC,Dim,T1<:AbstractGaugefields{NC,Dim}}
+        @assert length(linknames) == length(linkvalues)
+        numlinks = length(linknames)
+        links = Vector{Vector{Wilsonline{Dim}}}(undef, numlinks)
+        for i = 1:numlinks
+            links[i] = make_loops_fromname(linknames[i], Dim=Dim)
+        end
+
+        return Gradientflow_general_Bfields(U, B, links, linkvalues, Nflow=Nflow, eps=eps)
+    end
+
+    function Gradientflow_general_Bfields(
+        U::Array{T1,1},
+        B,
+        links::Vector{Vector{Wilsonline{Dim}}},
+        linkvalues;
+        Nflow=1,
+        eps=0.01,
+    ) where {NC,Dim,T1<:AbstractGaugefields{NC,Dim}}
+        F0 = initialize_TA_Gaugefields(U)
+        Ftemps = Array{typeof(F0),1}(undef, 4)
+        Ftemps[1] = F0
+        for i = 2:4
+            Ftemps[i] = initialize_TA_Gaugefields(U)
+        end
+        T = eltype(U)
+        Utemps = Temporalfields(U, num=2)
+        #Utemps = Array{Array{T,1},1}(undef, 2)
+        #for i = 1:2
+        #    Utemps[i] = similar(U)
+        #end
+        tempG = Temporalfields(U[1], num=5)
         #tempG = Array{T,1}(undef, 3)
         #for i = 1:3
         #    tempG[i] = similar(U[1])
