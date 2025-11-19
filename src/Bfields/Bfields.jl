@@ -7,7 +7,8 @@ import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evalua
     substitute_U!,
     clear_U!,
     multiply_12!,
-    add_U!, thooftFlux_4D_B_at_bndry_nowing_mpi
+    add_U!, thooftFlux_4D_B_at_bndry_nowing_mpi,
+    thooftLoop_4D_B_temporal
 import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, GLink, isdag, make_cloverloops
 import ..Wilsonloops_module: Wilson_loop_set
 import ..Temporalfields_module: Temporalfields, get_temp, unused!

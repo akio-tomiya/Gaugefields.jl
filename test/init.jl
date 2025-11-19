@@ -128,6 +128,49 @@ function Init_hot_2D(NX, NT, Nwing, NC)
 
 end
 
+function init_Bfield_4D(NX, NY, NZ, NT, Nwing, NC, condition)
+    Dim = 4
+    Random.seed!(123)
+    flux = zeros(Int, 6)
+    strtrj = 0
+    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="cold", randomnumber="Reproducible")
+    flux = rand(0:NC-1, 6)
+    B = Initialize_Bfields(NC, flux, Nwing, NX, NY, NZ, NT; condition)
+
+end
+
+@testset "Bfield 4D" begin
+    println("Bfield start")
+    @testset "NC=2" begin
+        println("NC = 2")
+        L = 4
+        NX = L
+        NY = L
+        NZ = L
+        NT = L
+        Nwing = 0
+        NC = 2
+        condition = "tflux"
+        init_Bfield_4D(NX, NY, NZ, NT, Nwing, NC, condition)
+        condition = "tloop"
+        init_Bfield_4D(NX, NY, NZ, NT, Nwing, NC, condition)
+    end
+
+    @testset "NC=3" begin
+        println("NC = 3")
+        L = 4
+        NX = L
+        NY = L
+        NZ = L
+        NT = L
+        Nwing = 0
+        NC = 3
+        condition = "tflux"
+        init_Bfield_4D(NX, NY, NZ, NT, Nwing, NC, condition)
+        condition = "tloop"
+        init_Bfield_4D(NX, NY, NZ, NT, Nwing, NC, condition)
+    end
+end
 
 @testset "cold start" begin
     println("cold start")

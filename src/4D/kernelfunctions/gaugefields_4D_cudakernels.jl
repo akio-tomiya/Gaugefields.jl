@@ -1,4 +1,7 @@
 #import CUDA
+import JACC
+JACC.@init_backend
+
 
 function cudakernel_identityGaugefields!(U, NC)
     b = Int64(CUDA.threadIdx().x)
@@ -131,7 +134,7 @@ end
 function cudakernel_mul_NC_abdag!(C, A, B, α, β, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    kernel_mul_NC_abdag!(b, r, C, A, B, α, β,NC)
+    kernel_mul_NC_abdag!(b, r, C, A, B, α, β, NC)
 end
 
 
@@ -480,10 +483,10 @@ function cudakernel_exptU_wvww_NC3!(w, v, ww, t)
 
 end
 
-function cudakernel_exptU_wvww_NC2!(w, uout,v, t)
+function cudakernel_exptU_wvww_NC2!(w, uout, v, t)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
-    kernel_exptU_wvww_NC2!(b, r, uout,v, t)
+    kernel_exptU_wvww_NC2!(b, r, uout, v, t)
     return
 
 end
@@ -513,7 +516,7 @@ function exptU!(
 ) where {N<:Number,T<:Gaugefields_4D_accelerator,TU<:CUDA.CuArray,TUv} #uout = exp(t*u)
 
     CUDA.@sync begin
-        CUDA.@cuda threads = v.blockinfo.blocksize blocks = v.blockinfo.rsize cudakernel_exptU_wvww_NC2!(uout.U,v.U, t)
+        CUDA.@cuda threads = v.blockinfo.blocksize blocks = v.blockinfo.rsize cudakernel_exptU_wvww_NC2!(uout.U, v.U, t)
     end
 
 end
@@ -591,7 +594,7 @@ function cudakernel_mul_NC!(C, A, B, α, β, NC)
     return
 end
 
-function cudakernel_substitute_U!(A,B,NC)
+function cudakernel_substitute_U!(A, B, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
     for ic = 1:NC
@@ -603,11 +606,11 @@ end
 
 function substitute_U!(a::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TshifedU}, B::Adjoint_Gaugefields{T1}) where {NC,T1<:Shifted_Gaugefields_4D_accelerator,TU,TUv,TshifedU}
     CUDA.@sync begin
-        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_substitute_U!(a.U,B.parent.parent.Ushifted,NC)
+        CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_substitute_U!(a.U, B.parent.parent.Ushifted, NC)
     end
 end
 
-function cudakernel_unit_U!(U,NC)
+function cudakernel_unit_U!(U, NC)
     b = Int64(CUDA.threadIdx().x)
     r = Int64(CUDA.blockIdx().x)
     for ic = 1:NC
@@ -620,6 +623,6 @@ end
 
 function unit_U!(U::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TshifedU}) where {NC,TU,TUv,TshifedU}
     CUDA.@sync begin
-        CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_unit_U!(U.U,NC)
+        CUDA.@cuda threads = U.blockinfo.blocksize blocks = U.blockinfo.rsize cudakernel_unit_U!(U.U, NC)
     end
 end
