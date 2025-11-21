@@ -379,6 +379,83 @@ function __init__()
 
         end
     end
+
+    
+    @require JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea" begin
+        import ..AbstractGaugefields_module: Gaugefields_4D_MPILattice, set_halo!
+        import LatticeMatrices: delinearize
+
+
+        function load_binarydata!(
+            U::Array{T,1},
+            NX,
+            NY,
+            NZ,
+            NT,
+            NC,
+            filename,
+            precision,) where {T<:Gaugefields_4D_MPILattice}
+
+            # 1. Read binary file on host
+            bi = Binarydata_ILDG(filename, precision)
+            total_sites = NX * NY * NZ * NT
+            Nfields = 4 * NC * NC
+            total_elems = total_sites * Nfields
+            
+
+            host_data = Vector{ComplexF64}(undef, total_elems)
+            for i = 1:total_elems # can be reduce to N_localsites with modified `read!(bi)`
+                host_data[i] = read!(bi)
+            end
+
+            # 2. Copy to device array
+            device_data = JACC.array(host_data)
+            
+            # 3. Launch parallel kernel to assign to lattice
+            N_localsites = prod(U[1].U.PN)
+            offset_coords = U[1].U.coords .* U[1].U.PN
+            for μ = 1:4
+            
+                JACC.parallel_for(N_localsites, kernel_assign_configuration!,
+                                U[μ].U.A, U[μ].U.indexer, U[μ].U.nw, device_data, NX, NY, NZ, NT, NC, μ, offset_coords)
+
+                set_halo!(U[μ].U)
+            end
+        end
+
+
+        @inline function kernel_assign_configuration!(
+            i, u, dindexer, nw, data,
+            NX::Int, NY::Int, NZ::Int, NT::Int,
+            NC::Int, μ::Int,
+            offset_coords)
+            indices = delinearize(dindexer, i, nw)
+            ix = indices[1]; iy = indices[2]; iz = indices[3]; it = indices[4]
+
+            # Compute linear offset for this site
+            site_id = ( 
+                (it - 1 - nw + offset_coords[4]) * (NZ * NY * NX) + 
+                (iz - 1 - nw + offset_coords[3]) * (NY * NX) + 
+                (iy - 1 - nw + offset_coords[2]) * NX + 
+                (ix - 1 - nw + offset_coords[1])
+            )
+
+            # per-site stride (number of complex numbers stored for each site)
+            site_stride = 4 * NC * NC
+
+            # base offset for this site and this μ (0-based)
+            base = site_id * site_stride + (μ - 1) * (NC * NC) 
+
+            @inbounds for ic2 = 1:NC
+                for ic1 = 1:NC
+                    offset = base + (ic2 - 1) * NC + (ic1 - 1)
+                    val = data[offset + 1]
+                    u[ic2, ic1, ix, iy, iz, it] = val
+                end
+            end
+        end
+    end
+
 end
 #using MPI
 
