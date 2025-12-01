@@ -28,15 +28,6 @@ end
 #    include("Btest/gradientflow_general_B.jl")
 #end
 
-@testset "HMCstout nowing" begin
-    println("HMCstout nowing")
-    include("HMCstout_test_nowing.jl")
-end
-
-@testset "HMC nowing" begin
-    println("HMC nowing")
-    include("HMC_test_nowing.jl")
-end
 
 
 @testset "Initialization" begin
@@ -44,8 +35,6 @@ end
     include("init.jl")
 end
 
-#=
-
 @testset "HMC nowing" begin
     println("HMC nowing")
     include("HMC_test_nowing.jl")
@@ -55,6 +44,19 @@ end
     println("HMCstout nowing")
     include("HMCstout_test_nowing.jl")
 end
+
+@testset "gradientflow_general" begin
+    println("gradientflow with general action")
+    include("gradientflow_general.jl")
+end
+
+@testset "gradientflow nowing" begin
+    println("gradientflow nowing")
+    include("gradientflow_test_nowing.jl")
+end
+
+#=
+
 
 
 @testset "gradientflow_general" begin
