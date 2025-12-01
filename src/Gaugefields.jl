@@ -35,12 +35,12 @@ import .AbstractGaugefields_module:
     minusidentityGaugefields_4D_nowing_mpi,
     thooftFlux_4D_B_at_bndry_wing_mpi,
     thooftFlux_4D_B_at_bndry_nowing_mpi,
-    Gaugefields_4D_wing_mpi,
-    Gaugefields_4D_nowing_mpi,
+    #Gaugefields_4D_wing_mpi,
+    #Gaugefields_4D_nowing_mpi,
     calc_rank_and_indices,
-    barrier,
-    comm,
-    setvalue!
+    barrier
+#comm,
+#setvalue!
 #    end
 
 #@require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
@@ -281,5 +281,8 @@ export Initialize_Bfields
 
 
 export CASK_layer, zero_grad!
+
+
+#export TA_Gaugefields_2D_mpi, TA_Gaugefields_4D_mpi
 
 end

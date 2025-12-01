@@ -14,8 +14,6 @@ module Gaugefields_4D_mpi_module
 
 #const comm = MPI.COMM_WORLD
 
-# This is defined in ext
-#=
 """
 `Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}`
 
@@ -64,6 +62,7 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
         comm=MPI.COMM_WORLD,
     ) where {T<:Integer}
         NV = NX * NY * NZ * NT
+
         NDW = 0
         @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
         @assert NY % PEs[2] == 0 "NY % PEs[2] should be 0. Now NY = $NY and PEs = $PEs"
@@ -152,8 +151,6 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
 end
 
 
-
-
 function get_myrank(U::T) where {T<:Gaugefields_4D_nowing_mpi}
     return U.myrank
 end
@@ -170,10 +167,7 @@ function get_nprocs(U::Array{T,1}) where {T<:Gaugefields_4D_nowing_mpi}
     return U[1].nprocs
 end
 
-=#
-
-function calc_rank_and_indices end
-#=
+#import Gaugefields.AbstractGaugefields_module: calc_rank_and_indices
 function calc_rank_and_indices(x::Gaugefields_4D_nowing_mpi, ix, iy, iz, it)
     pex = (ix - 1) ÷ x.PN[1]
     ix_local = (ix - 1) % x.PN[1] + 1
@@ -189,16 +183,12 @@ function calc_rank_and_indices(x::Gaugefields_4D_nowing_mpi, ix, iy, iz, it)
     myrank = get_myrank((pex, pey, pez, pet), x.PEs)
     return myrank, ix_local, iy_local, iz_local, it_local
 end
-=#
 
-function barrier end
-#=
 function barrier(x::T) where {T<:Gaugefields_4D_nowing_mpi}
     #println("ba")
     MPI.Barrier(x.comm)
 end
-=#
-#=
+
 function Base.setindex!(x::Gaugefields_4D_nowing_mpi, v, i1, i2, i3, i4, i5, i6)
     error(
         "Each element can not be accessed by global index in $(typeof(x)). Use setvalue! function",
@@ -241,25 +231,19 @@ function Base.getindex(
     )
     #return x.U[i1,i2,i3 .+ x.NDW,i4 .+ x.NDW,i5 .+ x.NDW,i6 .+ x.NDW]
 end
-=#
 
-function getvalue end
-#=
+#import Gaugefields.AbstractGaugefields_module: getvalue
 @inline function getvalue(x::Gaugefields_4D_nowing_mpi, i1, i2, i3, i4, i5, i6)
     @inbounds return x.U[i1, i2, i3, i4, i5, i6]
 end
-=#
-function setvalue end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: setvalue
 @inline function setvalue!(x::Gaugefields_4D_nowing_mpi, v, i1, i2, i3, i4, i5, i6)
     @inbounds x.U[i1, i2, i3, i4, i5, i6] = v
 end
-=#
 
 
-
-function identityGaugefields_4D_nowing_mpi end
-#=
+#import Gaugefields.AbstractGaugefields_module:
 function identityGaugefields_4D_nowing_mpi(
     NC,
     NX,
@@ -301,9 +285,8 @@ function identityGaugefields_4D_nowing_mpi(
 
     return U
 end
-=#
-function randomGaugefields_4D_nowing_mpi end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: randomGaugefields_4D_nowing_mpi
 function randomGaugefields_4D_nowing_mpi(
     NC,
     NX,
@@ -349,8 +332,8 @@ function randomGaugefields_4D_nowing_mpi(
 
     return U
 end
-=#
-#=
+
+#import Gaugefields.AbstractGaugefields_module: clear_U!
 function clear_U!(U::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     for it = 1:U.PN[4]
         for iz = 1:U.PN[3]
@@ -416,8 +399,8 @@ function clear_U!(
     end
     set_wing_U!(U)
 end
-=#
-#=
+
+#import Gaugefields.AbstractGaugefields_module: add_U!
 function add_U!(c::Gaugefields_4D_nowing_mpi{NC}, a::T1) where {NC,T1<:Abstractfields}
     for it = 1:c.PN[4]
         for iz = 1:c.PN[3]
@@ -501,8 +484,8 @@ function add_U!(
     end
     #set_wing_U!(c)
 end
-=#
-#=
+
+#import Gaugefields.AbstractGaugefields_module: substitute_U!
 function substitute_U!(
     a::Array{T1,1},
     b::Array{T2,1},
@@ -600,9 +583,9 @@ function substitute_U!(
     set_wing_U!(U)
 
 end
-=#
 
-#=
+
+#import Gaugefields.AbstractGaugefields_module: map_U!
 function map_U!(
     U::Gaugefields_4D_nowing_mpi{NC},
     f!::Function,
@@ -677,8 +660,7 @@ function map_U!(
     end
     set_wing_U!(U)
 end
-=#
-#=
+
 function map_U!(
     Uout::Gaugefields_4D_nowing_mpi{NC},
     U::Gaugefields_4D_nowing_mpi{NC},
@@ -718,13 +700,13 @@ function map_U!(
 end
 
 
+#import Gaugefields.AbstractGaugefields_module: map_U_sequential!
 function map_U_sequential!(U::Gaugefields_4D_nowing_mpi{NC}, f!::Function, Uin) where {NC}
     error("The function map_U_sequential! can not be used with MPI")
 end
 
 
-=#
-#=
+
 struct Shifted_Gaugefields_4D_mpi_nowing{NC} <: Shifted_Gaugefields{NC,4}
     parent::Gaugefields_4D_nowing_mpi{NC}
     #parent::T
@@ -746,9 +728,9 @@ struct Shifted_Gaugefields_4D_mpi_nowing{NC} <: Shifted_Gaugefields{NC,4}
         return new{NC}(U, shift, U.NX, U.NY, U.NZ, U.NT, U.NDW)
     end
 end
-=#
-function shifted_U_improved_zeroshift! end
-#=
+
+
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved_zeroshift!
 function shifted_U_improved_zeroshift!(U::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     for it = 1:U.PN[4]
         for iz = 1:U.PN[3]
@@ -766,9 +748,8 @@ function shifted_U_improved_zeroshift!(U::Gaugefields_4D_nowing_mpi{NC}) where {
         end
     end
 end
-=#
-function update_sent_data! end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: update_sent_data!
 function update_sent_data!(
     send_ranks,
     N,
@@ -886,11 +867,9 @@ function update_sent_data!(
     send_ranks[myrank_send].positions[send_ranks[myrank_send].count] = disp
 
 end
-=#
 
 
-function shifted_U_improved_xshift! end
-#=
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved_xshift!
 function shifted_U_improved_xshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     yP = 0
     zP = 0
@@ -995,10 +974,8 @@ function shifted_U_improved_xshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) whe
     mpi_updates_U!(U, send_ranks)
 
 end
-=#
 
-function shifted_U_improved_yshift! end
-#=
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved_yshift!
 function shifted_U_improved_yshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     xP = 0
     zP = 0
@@ -1104,10 +1081,8 @@ function shifted_U_improved_yshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) whe
     mpi_updates_U!(U, send_ranks)
 
 end
-=#
 
-function shifted_U_improved_zshift! end
-#=
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved_zshift!
 function shifted_U_improved_zshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     xP = 0
     yP = 0
@@ -1214,10 +1189,7 @@ function shifted_U_improved_zshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) whe
 
 
 end
-=#
-
-function shifted_U_improved_tshift! end
-#=
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved_tshift!
 function shifted_U_improved_tshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     xP = 0
     yP = 0
@@ -1329,9 +1301,8 @@ function shifted_U_improved_tshift!(U::Gaugefields_4D_nowing_mpi{NC}, shift) whe
 
 
 end
-=#
-function mpi_updates_U_1data! end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: mpi_updates_U_1data!
 function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) where {NC}
     if length(send_ranks) != 0
         #=
@@ -1418,12 +1389,8 @@ function mpi_updates_U_1data!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) wher
         #error("in shiftdU")
     end
 end
-=#
 
-#const printdata = false
-
-function mpi_updates_U_moredata! end
-#=
+#import Gaugefields.AbstractGaugefields_module: mpi_updates_U_moredata!
 function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) where {NC}
 
 
@@ -1443,7 +1410,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
         MPI.Put(Int64[count], myrank_send, myrank, win_other)
     end
     MPI.Win_fence(0, win_other)
-    MPI.free(win_other)
+    #MPI.free(win_other)
 
 
     tempmatrix = U.tempmatrix #zeros(ComplexF64,NC,NC,N)
@@ -1499,14 +1466,14 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
         end
 
 
-        MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
-        MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
+        #MPI.Put(value.positions[1:count], myrank_send, disp, win_i)
+        #MPI.Put(value.data[:, :, 1:count], myrank_send, disp * NC * NC, win)
 
         #GC.@preserve value begin
-        #    buf_pos = view(value.positions, 1:count)
-        #    buf_data = view(value.data, :, :, 1:count)
-        #    MPI.Put(buf_pos, myrank_send, disp, win_i)
-        #    MPI.Put(buf_data, myrank_send, disp * NC * NC, win)
+        buf_pos = view(value.positions, 1:count)
+        buf_data = view(value.data, :, :, 1:count)
+        MPI.Put(buf_pos, myrank_send, disp, win_i)
+        MPI.Put(buf_data, myrank_send, disp * NC * NC, win)
         #end
     end
 
@@ -1538,9 +1505,8 @@ function mpi_updates_U_moredata!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) w
     otherranks .= 0
 
 end
-=#
-function mpi_updates_U! end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: mpi_updates_U!
 function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) where {NC}
     if length(send_ranks) != 0
 
@@ -1586,10 +1552,9 @@ function mpi_updates_U!(U::Gaugefields_4D_nowing_mpi{NC}, send_ranks) where {NC}
         #error("in shiftdU")
     end
 end
-=#
 
-function shifted_U_improved! end
-#=
+
+#import Gaugefields.AbstractGaugefields_module: shifted_U_improved!
 function shifted_U_improved!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     if shift == (0, 0, 0, 0)
         shifted_U_improved_zeroshift!(U)
@@ -1940,9 +1905,9 @@ function shifted_U_improved!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
 
 
 end
-=#
 
-#=
+
+#import Gaugefields.AbstractGaugefields_module: shifted_U!
 function shifted_U!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
     PEs = U.PEs
     PN = U.PN
@@ -2184,10 +2149,9 @@ function shifted_U!(U::Gaugefields_4D_nowing_mpi{NC}, shift) where {NC}
 
 
 end
-=#
 
-#=
 
+#import Gaugefields.AbstractGaugefields_module: getvalue
 @inline function getvalue(
     U::Shifted_Gaugefields_4D_mpi_nowing{NC},
     i1,
@@ -2200,6 +2164,7 @@ end
     @inbounds return U.parent.Ushifted[i1, i2, i3, i4, i5, i6]
 end
 
+#import Gaugefields.AbstractGaugefields_module: setvalue!
 @inline function setvalue!(
     U::Shifted_Gaugefields_4D_mpi_nowing{NC},
     v,
@@ -2212,10 +2177,8 @@ end
 ) where {NC}
     error("type $(typeof(U)) has no setindex method. This type is read only.")
 end
-=#
-function setvalue! end
 
-#=
+#import Gaugefields.AbstractGaugefields_module: shift_U
 function shift_U(U::Gaugefields_4D_nowing_mpi{NC}, ν::T) where {T<:Integer,NC}
     if ν == 1
         shift = (1, 0, 0, 0)
@@ -2244,10 +2207,9 @@ function shift_U(
 ) where {Dim,T<:Integer,TU<:Gaugefields_4D_nowing_mpi}
     return Shifted_Gaugefields_4D_mpi_nowing(U, shift)
 end
-=#
 
 
-#=
+#import Gaugefields.AbstractGaugefields_module: normalize_U!
 function normalize_U!(U::Gaugefields_4D_nowing_mpi{NC}) where {NC}
 
     A = zeros(ComplexF64, NC, NC)
@@ -2276,9 +2238,8 @@ function normalize_U!(U::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     set_wing_U!(U)
 
 end
-=#
 
-#=
+
 function Base.similar(U::T) where {T<:Gaugefields_4D_nowing_mpi}
     Uout = Gaugefields_4D_nowing_mpi(
         U.NC,
@@ -2294,9 +2255,8 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_nowing_mpi}
     #identityGaugefields_4D_nowing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
 end
-=#
 
-#=
+
 function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_nowing_mpi}
     Uout = Array{T,1}(undef, 4)
     for μ = 1:4
@@ -2317,12 +2277,12 @@ function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_nowing_mpi}
     return Uout
 end
 
-=#
 
 
 
 
-#=
+#import Gaugefields.AbstractGaugefields_module: exptU!
+
 function exptU!(
     uout::T,
     t::N,
@@ -2360,10 +2320,7 @@ function exptU!(
     end
     #error("exptU! is not implemented in type $(typeof(u)) ")
 end
-=#
 
-#const fac12 = 1 / 2
-#=
 function exptU!(
     uout::T,
     t::N,
@@ -2426,13 +2383,8 @@ function exptU!(
         end
     end
 end
-=#
 
-#const tinyvalue = 1e-100
-#const pi23 = 2pi / 3
-#const fac13 = 1 / 3
 
-#=
 # #=
 function exptU!(
     uout::T,
@@ -2443,17 +2395,18 @@ function exptU!(
     ww = temps[1]
     w = temps[2]
 
+    v = uin
+    NT = uin.NT
+    NZ = uin.NZ
+    NY = uin.NY
+    NX = uin.NX
 
-    NT = v.NT
-    NZ = v.NZ
-    NY = v.NY
-    NX = v.NX
     #t = 1
 
-    @inbounds for it = 1:v.PN[4]
-        for iz = 1:v.PN[3]
-            for iy = 1:v.PN[2]
-                for ix = 1:v.PN[1]
+    @inbounds for it = 1:uin.PN[4]
+        for iz = 1:uin.PN[3]
+            for iy = 1:uin.PN[2]
+                for ix = 1:uin.PN[1]
                     v11 = getvalue(uin, 1, 1, ix, iy, iz, it)
                     v22 = getvalue(uin, 2, 2, ix, iy, iz, it)
                     v33 = getvalue(uin, 3, 3, ix, iy, iz, it)
@@ -2719,11 +2672,9 @@ function exptU!(
 
     #error("exptU! is not implemented in type $(typeof(u)) ")
 end
-=# 
-
 # =#
 
-
+#import Gaugefields.AbstractGaugefields_module: Traceless_antihermitian!
 """
 -----------------------------------------------------c
      !!!!!   vin and vout should be different vectors
@@ -2733,7 +2684,7 @@ end
      wher   x = vin - Conjg(vin)      
 -----------------------------------------------------c
     """
-#= 
+
 #Q = -(1/2)*(Ω' - Ω) + (1/(2NC))*tr(Ω' - Ω)*I0_2
 #Omega' - Omega = -2i imag(Omega)
 function Traceless_antihermitian!(
@@ -2822,9 +2773,7 @@ function Traceless_antihermitian!(
 
 end
 
-=#
 
-#=
 function Traceless_antihermitian!(
     vout::Gaugefields_4D_nowing_mpi{2},
     vin::Gaugefields_4D_nowing_mpi{2},
@@ -2872,9 +2821,6 @@ function Traceless_antihermitian!(
 
 end
 
-=#
-
-#=
 
 function Traceless_antihermitian!(
     vout::Gaugefields_4D_nowing_mpi{NC},
@@ -2930,10 +2876,7 @@ function Traceless_antihermitian!(
 
 end
 
-=#
-
-
-#=
+#import Gaugefields.AbstractGaugefields_module: Antihermitian!
 function Antihermitian!(
     vout::Gaugefields_4D_nowing_mpi{NC},
     vin::Gaugefields_4D_nowing_mpi{NC}; factor=1
@@ -2973,10 +2916,6 @@ function Antihermitian!(
 
 
 end
-
-=#
-
-#=
 
 function Antihermitian!(
     vout::Gaugefields_4D_nowing_mpi{3},
@@ -3027,7 +2966,6 @@ function Antihermitian!(
 
 end
 
-=#
 
 
 
@@ -3035,7 +2973,6 @@ end
 
 
 
-#=
 
 
 function LinearAlgebra.tr(
@@ -3069,8 +3006,8 @@ function LinearAlgebra.tr(
     return s
 end
 
-=#
-#=
+
+
 
 function LinearAlgebra.tr(a::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     NX = a.NX
@@ -3099,9 +3036,7 @@ function LinearAlgebra.tr(a::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     return s
 end
 
-=#
-
-#=
+#import Gaugefields.AbstractGaugefields_module: calculate_Polyakov_loop
 function calculate_Polyakov_loop(
     U::Array{T,1},
     temp1::AbstractGaugefields{NC,Dim},
@@ -3140,9 +3075,7 @@ function calculate_Polyakov_loop(
 
 end
 
-=#
-
-#=
+#import Gaugefields.AbstractGaugefields_module: partial_tr
 function partial_tr(a::Gaugefields_4D_nowing_mpi{NC}, μ) where {NC}
     #error("Polyakov loop is not supported with MPI yet.")
     PN = a.PN
@@ -3217,9 +3150,8 @@ function partial_tr(a::Gaugefields_4D_nowing_mpi{NC}, μ) where {NC}
     return s
 end
 
-=#
 
-#=
+
 function LinearAlgebra.mul!(
     c::Gaugefields_4D_nowing_mpi{NC},
     a::T1,
@@ -3257,10 +3189,6 @@ function LinearAlgebra.mul!(
     end
     #set_wing_U!(c)
 end
-
-=#
-
-#=
 
 function LinearAlgebra.mul!(
     c::Gaugefields_4D_nowing_mpi{NC},
@@ -3305,8 +3233,7 @@ function LinearAlgebra.mul!(
     #set_wing_U!(c)
 end
 
-=#
-#=
+#import Gaugefields.AbstractGaugefields_module: mul_skiplastindex!
 function mul_skiplastindex!(
     c::Gaugefields_4D_nowing_mpi{NC},
     a::T1,
@@ -3795,6 +3722,7 @@ function Antihermitian!(
 end
 =#
 
+#import Gaugefields.AbstractGaugefields_module: set_wing_U!
 function set_wing_U!(u::Array{Gaugefields_4D_nowing_mpi{NC},1}) where {NC}
     return
 end
@@ -3803,14 +3731,13 @@ function set_wing_U!(u::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     return
 end
 
-=#
 
-#const sr3 = sqrt(3)
-#const sr3i = 1 / sr3
-#const sr3ih = 0.5 * sr3i
-#const sqr3inv = sr3i
+const sr3 = sqrt(3)
+const sr3i = 1 / sr3
+const sr3ih = 0.5 * sr3i
+const sqr3inv = sr3i
 
-#=
+#import Gaugefields.AbstractGaugefields_module: lambda_k_mul!
 """
     b = (lambda_k/2)*a
     lambda_k : GellMann matrices. k=1, 8 
@@ -4056,10 +3983,7 @@ function lambda_k_mul!(b::Gaugefields_4D_nowing_mpi{NC}, a::Gaugefields_4D_nowin
 end
 
 
-=#
-
-function minusidentityGaugefields_4D_nowing_mpi end
-#=
+#import Gaugefields.AbstractGaugefields_module: minusidentityGaugefields_4D_nowing_mpi
 function minusidentityGaugefields_4D_nowing_mpi(
     NC,
     NX,
@@ -4102,152 +4026,19 @@ function minusidentityGaugefields_4D_nowing_mpi(
     return U
 end
 
-=#
 
-#=
 
-function thooftFlux_4D_B_at_bndry_nowing_mpi(
-    NC,
-    FLUX,
-    FLUXNUM,
-    NX,
-    NY,
-    NZ,
-    NT,
-    PEs;
-    overallminus=false,
-    mpiinit=true,
-    verbose_level=2,
-    randomnumber="Random",
-    comm=MPI.COMM_WORLD,
-)
-    dim = 4
-    if dim == 4
-        if overallminus
-            U = minusidentityGaugefields_4D_nowing_mpi(
-                NC,
-                NX,
-                NY,
-                NZ,
-                NT,
-                PEs,
-                mpiinit=mpiinit,
-                verbose_level=verbose_level,
-                randomnumber=randomnumber,
-                comm=comm,
-            )
-        else
-            U = identityGaugefields_4D_nowing_mpi(
-                NC,
-                NX,
-                NY,
-                NZ,
-                NT,
-                PEs,
-                mpiinit=mpiinit,
-                verbose_level=verbose_level,
-                randomnumber=randomnumber,
-                comm=comm,
-            )
-        end
-
-        if overallminus
-            v = exp(-im * (2pi / NC) * FLUX)
-        else
-            v = -exp(-im * (2pi / NC) * FLUX)
-        end
-        if FLUXNUM == 1
-            for it = 1:U.PN[4]
-                for iz = 1:U.PN[3]
-                    #for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, NX, NY, iz, it)
-                    end
-                    #end
-                    #end
-                end
-            end
-        elseif FLUXNUM == 2
-            for it = 1:U.PN[4]
-                #for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, NX, iy, NZ, it)
-                    end
-                    #end
-                end
-                #end
-            end
-        elseif FLUXNUM == 3
-            #for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, NX, iy, iz, NT)
-                    end
-                    #end
-                end
-            end
-            #end
-        elseif FLUXNUM == 4
-            for it = 1:U.PN[4]
-                #for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, ix, NY, NZ, it)
-                    end
-                end
-                #end
-                #end
-            end
-        elseif FLUXNUM == 5
-            #for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, ix, NY, iz, NT)
-                    end
-                end
-                #end
-            end
-            #end
-        elseif FLUXNUM == 6
-            #for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-            for iy = 1:U.PN[2]
-                for ix = 1:U.PN[1]
-                    @simd for ic = 1:NC
-                        setvalue!(U, v, ic, ic, ix, iy, NZ, NT)
-                    end
-                end
-            end
-            #end
-            #end
-        end
-        set_wing_U!(U)
-        return U
-    end
-end
-
-=#
-
-#=
 ### HH: added for WLB gauge fixing projection
-
+#import Gaugefields.AbstractGaugefields_module: construct_Λmatrix_forSTOUT!
 """
 M = (U*δ_prev) star (dexp(Q)/dQ)
 Λ = TA(M)
 """
 function construct_Λmatrix_forSTOUT!(
     Λ,
-    δ_current::Gaugefields_4D_wing_mpi{NC},
+    δ_current::Gaugefields_4D_nowing_mpi{NC},
     Q,
-    u::Gaugefields_4D_wing_mpi{NC},
+    u::Gaugefields_4D_nowing_mpi{NC},
 ) where {NC}
     ### HH: get the position under MPI
     NT = u.PN[4]
@@ -4293,10 +4084,8 @@ function construct_Λmatrix_forSTOUT!(
     set_wing_U!(Λ)
 end
 
-=#
-
-#=
-function unit_U!(Uμ::Gaugefields_4D_wing_mpi{NC}) where {NC}
+#import Gaugefields.AbstractGaugefields_module: unit_U!
+function unit_U!(Uμ::Gaugefields_4D_nowing_mpi{NC}) where {NC}
     NT = Uμ.PN[4]
     NZ = Uμ.PN[3]
     NY = Uμ.PN[2]
@@ -4318,7 +4107,5 @@ function unit_U!(Uμ::Gaugefields_4D_wing_mpi{NC}) where {NC}
     set_wing_U!(Uμ)
 
 end
-
-=#
 
 ### HH ends here

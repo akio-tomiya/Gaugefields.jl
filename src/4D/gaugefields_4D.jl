@@ -32,7 +32,7 @@ function __init__()
     #    end
 end
 
-using MPI
+#using MPI
 using JACC
 include("./mpi/gaugefields_4D_mpi.jl")
 include("./mpi/gaugefields_4D_mpi_Bfields.jl")

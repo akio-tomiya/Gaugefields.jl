@@ -1,7 +1,8 @@
-function init_TA_Gaugefields_2D_mpi end
+function init_TA_Gaugefields_2D_mpi(u::Gaugefields_2D{NC}) where {NC}
+    return TA_Gaugefields_2D_mpi(u)
+end
 
-#This is defined in ext
-#=
+
 struct TA_Gaugefields_2D_mpi{NC,NumofBasis} <: TA_Gaugefields_2D{NC}
     a::Array{Float64,3}
     NX::Int64
@@ -44,9 +45,14 @@ struct TA_Gaugefields_2D_mpi{NC,NumofBasis} <: TA_Gaugefields_2D{NC}
     end
 end
 
-=#
+@inline function getvalue(x::TA_Gaugefields_2D_mpi, i1, i3, i6)
+    @inbounds return x.a[i1, i3, i6]
+end
 
-#=
+@inline function setvalue!(x::TA_Gaugefields_2D_mpi, v, i1, i3, i6)
+    @inbounds x.a[i1, i3, i6] = v
+end
+
 function Base.setindex!(x::T, v, i...) where {T<:TA_Gaugefields_2D_mpi}
     @inbounds x.a[i...] = v
 end
@@ -148,10 +154,6 @@ function Base.:*(
     return s
 end
 
-=#
-
-#=
-
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_2D_mpi{3,NumofBasis},
     factor,
@@ -213,17 +215,48 @@ function Traceless_antihermitian_add!(
             y31 = 0.5 * x31
             y32 = 0.5 * x32
 
+            vt = getvalue(c, 1, ix, it)
+            #c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
+            v = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
 
-            c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
-            c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
-            c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
-            c[4, ix, it] = (imag(y13) + imag(y31)) * factor + c[4, ix, it]
-            c[5, ix, it] = (real(y13) - real(y31)) * factor + c[5, ix, it]
+            setvalue!(c, v, 1, ix, it)
 
-            c[6, ix, it] = (imag(y23) + imag(y32)) * factor + c[6, ix, it]
-            c[7, ix, it] = (real(y23) - real(y32)) * factor + c[7, ix, it]
-            c[8, ix, it] =
-                sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor + c[8, ix, it]
+            vt = getvalue(c, 2, ix, it)
+            #c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
+            v = (real(y12) - real(y21)) * factor + vt
+            setvalue!(c, v, 2, ix, it)
+
+            vt = getvalue(c, 3, ix, it)
+            #c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
+            v = (imag(y11) - imag(y22)) * factor + vt
+            setvalue!(c, v, 3, ix, it)
+
+            vt = getvalue(c, 4, ix, it)
+            #c[4, ix, it] = (imag(y13) + imag(y31)) * factor + c[4, ix, it]
+            v = (imag(y13) + imag(y31)) * factor + vt
+            setvalue!(c, v, 4, ix, it)
+
+            vt = getvalue(c, 5, ix, it)
+            #c[5, ix, it] = (real(y13) - real(y31)) * factor + c[5, ix, it]
+            v = (real(y13) - real(y31)) * factor + vt
+            setvalue!(c, v, 5, ix, it)
+
+            vt = getvalue(c, 6, ix, it)
+            #c[6, ix, it] = (imag(y23) + imag(y32)) * factor + c[6, ix, it]
+            v = (imag(y23) + imag(y32)) * factor + vt
+            setvalue!(c, v, 6, ix, it)
+
+            vt = getvalue(c, 7, ix, it)
+            #c[7, ix, it] = (real(y23) - real(y32)) * factor + c[7, ix, it]
+            v = (real(y23) - real(y32)) * factor + vt
+            setvalue!(c, v, 7, ix, it)
+
+            vt = getvalue(c, 8, ix, it)
+            #c[8, ix, it] =
+            #    sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor + c[8, ix, it]
+            v =
+                sr3i * (imag(y11) + imag(y22) - 2 * imag(y33)) * factor + vt
+            setvalue!(c, v, 8, ix, it)
 
 
         end
@@ -271,9 +304,18 @@ function Traceless_antihermitian_add!(
             y21 = 0.5 * x21
             y22 = (imag(v22) - tri) * im
 
-            c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
-            c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
-            c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
+            vt = getvalue(c, 1, ix, it)
+            #c[1, ix, it] = (imag(y12) + imag(y21)) * factor + c[1, ix, it]
+            v = (imag(y12) + imag(y21)) * factor + vt
+            setvalue!(c, v, 1, ix, it)
+            vt = getvalue(c, 2, ix, it)
+            #c[2, ix, it] = (real(y12) - real(y21)) * factor + c[2, ix, it]
+            v = (real(y12) - real(y21)) * factor + vt
+            setvalue!(c, v, 2, ix, it)
+            vt = getvalue(c, 3, ix, it)
+            #c[3, ix, it] = (imag(y11) - imag(y22)) * factor + c[3, ix, it]
+            v = (imag(y11) - imag(y22)) * factor + vt
+            setvalue!(c, v, 3, ix, it)
 
         end
         #end
@@ -283,6 +325,39 @@ function Traceless_antihermitian_add!(
 
 
 end
+
+function Traceless_antihermitian_add!(
+    c::TA_Gaugefields_2D_mpi{1,NumofBasis},
+    factor,
+    vin::Union{Gaugefields_2D_nowing_mpi{1},Gaugefields_2D_nowing_mpi{1}},
+) where {NumofBasis}
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(c)) ")
+    fac12 = 1 / 2
+    NX = vin.NX
+    ##NY = vin.NY
+    ##NZ = vin.NZ
+    NT = vin.NT
+
+    for it = 1:vin.PN[2]
+        #for iz=1:NZ
+        #for iy=1:NY
+        @simd for ix = 1:vin.PN[1]
+            #v11 = vin[1, 1, ix, it]
+            v11 = getvalue(vin, 1, 1, ix, it)
+            #c[1, ix, it] = 2 * imag(v11) * factor + c[1, ix, it]
+            vt = getvalue(c, 1, ix, it)
+            v = 2 * imag(v11) * factor + vt#c[1, ix, it]
+            #c[1,ix,it] += ifelse(c[1,ix,it] > 2π,-2π,0)
+            #c[1,ix,it] += ifelse(c[1,ix,it] < 0,2π,0)
+            setvalue!(c, v, 1, ix, it)
+        end
+        #end
+        #end
+    end
+
+
+end
+
 
 """
 -----------------------------------------------------c
@@ -354,15 +429,23 @@ function Traceless_antihermitian!(
             y32 = 0.5 * x32
 
 
-            c[1, ix, it] = (imag(y12) + imag(y21))
-            c[2, ix, it] = (real(y12) - real(y21))
-            c[3, ix, it] = (imag(y11) - imag(y22))
-            c[4, ix, it] = (imag(y13) + imag(y31))
-            c[5, ix, it] = (real(y13) - real(y31))
+            v = (imag(y12) + imag(y21))
+            setvalue!(c, v, 1, ix, it)
+            v = (real(y12) - real(y21))
+            setvalue!(c, v, 2, ix, it)
+            v = (imag(y11) - imag(y22))
+            setvalue!(c, v, 3, ix, it)
+            v = (imag(y13) + imag(y31))
+            setvalue!(c, v, 4, ix, it)
+            v = (real(y13) - real(y31))
+            setvalue!(c, v, 5, ix, it)
 
-            c[6, ix, it] = (imag(y23) + imag(y32))
-            c[7, ix, it] = (real(y23) - real(y32))
-            c[8, ix, it] = sr3i * (imag(y11) + imag(y22) - 2 * imag(y33))
+            v = (imag(y23) + imag(y32))
+            setvalue!(c, v, 6, ix, it)
+            v = (real(y23) - real(y32))
+            setvalue!(c, v, 7, ix, it)
+            v = sr3i * (imag(y11) + imag(y22) - 2 * imag(y33))
+            setvalue!(c, v, 8, ix, it)
         end
         #end
         #end
@@ -415,7 +498,10 @@ function Traceless_antihermitian!(
 
             matrix2lie!(a, g, matrix)
             for k = 1:length(g)
-                c[k, ix, it] = 2 * imag(a[k])
+                #c[k, ix, it] = 2 * imag(a[k])
+                v = 2 * imag(a[k])
+                setvalue!(c, v, k, ix, it)
+
             end
 
         end
@@ -476,7 +562,10 @@ function Traceless_antihermitian_add!(
 
             matrix2lie!(a, g, matrix)
             for k = 1:length(g)
-                c[k, ix, it] = 2 * imag(a[k]) * factor + c[k, ix, it]
+                #c[k, ix, it] = 2 * imag(a[k]) * factor + c[k, ix, it]
+                vt = getvalue(c, k, ix, it)
+                v = 2 * imag(a[k]) * factor + vt#c[k, ix, it]
+                setvalue!(c, v, k, ix, it)
             end
 
         end
@@ -492,6 +581,33 @@ end
 function exptU!(
     uout::T,
     t::N,
+    u::TA_Gaugefields_2D_mpi{1,NumofBasis},
+    temps::Array{T,1},
+) where {N<:Number,T<:Gaugefields_2D,NumofBasis} #uout = exp(t*u)
+    NT = u.NT
+    #NZ = u.NZ
+    #NY = u.NY
+    NX = u.NX
+    vin = u
+
+    @inbounds for it = 1:vin.PN[2]
+        #for iz=1:NZ
+        #for iy=1:NY
+        for ix = 1:vin.PN[1]
+            #uout[1, 1, ix, it] = exp(t * im * u[1, ix, it])
+            v = exp(t * im * u[1, ix, it])
+            setvalue!(uout, v, 1, 1, ix, it)
+        end
+        #end
+        #end
+    end
+    #error("exptU! is not implemented in type $(typeof(u)) ")
+end
+
+
+function exptU!(
+    uout::T,
+    t::N,
     u::TA_Gaugefields_2D_mpi{NC,NumofBasis},
     temps::Array{T,1},
 ) where {N<:Number,T<:Gaugefields_2D,NC,NumofBasis} #uout = exp(t*u)
@@ -502,6 +618,7 @@ function exptU!(
     #NY = u.NY
     NX = u.NX
     V = zeros(ComplexF64, NC, NC)
+    vin = u
 
     u0 = zeros(ComplexF64, NC, NC)
     a = zeros(Float64, length(g))
@@ -834,5 +951,3 @@ function exptU!(
 
 
 end
-
-=#

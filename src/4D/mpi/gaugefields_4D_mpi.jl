@@ -10,13 +10,15 @@ module Gaugefields_4D_mpi_module
     using MPI
     =#
 
-const comm = MPI.COMM_WORLD
+#const comm = MPI.COMM_WORLD
 
+#This is defined in ext
 """
 `Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}`
 
 MPI version of SU(N) Gauge fields in four dimensional lattice. 
 """
+#=
 struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
     U::Array{ComplexF64,6}
     NX::Int64
@@ -105,7 +107,10 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         )
     end
 end
+=#
 
+function get_myrank_xyzt end
+#=
 function get_myrank_xyzt(myrank, PEs)
     #myrank = (((myrank_t)*PEs[3]+myrank_z)*PEs[2] + myrank_y)*PEs[1] + myrank_x
     myrank_x = myrank % PEs[1]
@@ -117,12 +122,14 @@ function get_myrank_xyzt(myrank, PEs)
 
     return myrank_x, myrank_y, myrank_z, myrank_t
 end
-
+=#
+#=
 function get_myrank(myrank_xyzt, PEs)
     @inbounds return (
         ((myrank_xyzt[4]) * PEs[3] + myrank_xyzt[3]) * PEs[2] + myrank_xyzt[2]
     ) * PEs[1] + myrank_xyzt[1]
 end
+
 
 function get_myrank(U::T) where {T<:Gaugefields_4D_wing_mpi}
     return U.myrank
@@ -140,6 +147,9 @@ function get_nprocs(U::Array{T,1}) where {T<:Gaugefields_4D_wing_mpi}
     return U[1].nprocs
 end
 
+=#
+function calc_rank_and_indices end
+#=
 function calc_rank_and_indices(x::Gaugefields_4D_wing_mpi, ix, iy, iz, it)
     pex = (ix - 1) ÷ x.PN[1]
     ix_local = (ix - 1) % x.PN[1] + 1
@@ -155,7 +165,8 @@ function calc_rank_and_indices(x::Gaugefields_4D_wing_mpi, ix, iy, iz, it)
     myrank = get_myrank((pex, pey, pez, pet), x.PEs)
     return myrank, ix_local, iy_local, iz_local, it_local
 end
-
+=#
+#=
 function barrier(x::Gaugefields_4D_wing_mpi)
     MPI.Barrier(comm)
 end
@@ -223,8 +234,9 @@ function Base.setindex!(U::Adjoint_Gaugefields{Shifted_Gaugefields{T,4}},v,i1,i2
     error("type $(typeof(U)) has no setindex method. This type is read only.")
 end
 =#
+=#
 
-
+#=
 @inline function getvalue(x::Gaugefields_4D_wing_mpi, i1, i2, i3, i4, i5, i6)
     @inbounds return x.U[i1, i2, i3.+x.NDW, i4.+x.NDW, i5.+x.NDW, i6.+x.NDW]
 end
@@ -302,7 +314,10 @@ end
 
 =#
 
+=#
 
+function identityGaugefields_4D_wing_mpi end
+#=
 function identityGaugefields_4D_wing_mpi(
     NC,
     NX,
@@ -344,7 +359,9 @@ function identityGaugefields_4D_wing_mpi(
 
     return U
 end
-
+=#
+function randomGaugefields_4D_wing_mpi end
+#=
 function randomGaugefields_4D_wing_mpi(
     NC,
     NX,
@@ -390,6 +407,9 @@ function randomGaugefields_4D_wing_mpi(
 
     return U
 end
+=#
+
+#=
 
 function clear_U!(U::Gaugefields_4D_wing_mpi{NC}) where {NC}
     for it = 1:U.PN[4]
@@ -653,6 +673,9 @@ function map_U_sequential!(U::Gaugefields_4D_wing_mpi{NC}, f!::Function, Uin) wh
 end
 
 
+=#
+
+#=
 struct Shifted_Gaugefields_4D_mpi{NC,outside} <: Shifted_Gaugefields{NC,4}
     parent::Gaugefields_4D_wing_mpi{NC}
     #parent::T
@@ -669,6 +692,9 @@ struct Shifted_Gaugefields_4D_mpi{NC,outside} <: Shifted_Gaugefields{NC,4}
         return new{NC,outside}(U, shift, U.NX, U.NY, U.NZ, U.NT, U.NDW)
     end
 end
+=#
+
+#=
 
 function shift_U(U::Gaugefields_4D_wing_mpi{NC}, ν::T) where {T<:Integer,NC}
     if ν == 1
@@ -918,10 +944,13 @@ function exptU!(
     set_wing_U!(uout)
 end
 
-const tinyvalue = 1e-100
-const pi23 = 2pi / 3
-const fac13 = 1 / 3
+=#
 
+#const tinyvalue = 1e-100
+#const pi23 = 2pi / 3
+#const fac13 = 1 / 3
+
+#= 
 # #=
 function exptU!(
     uout::T,
@@ -1724,6 +1753,10 @@ function LinearAlgebra.mul!(
     end
     #set_wing_U!(c)
 end
+
+=#
+
+#=
 
 function mul_skiplastindex!(
     c::Gaugefields_4D_wing_mpi{NC},
@@ -2601,8 +2634,10 @@ end
 
 
 
+=#
 
-
+function minusidentityGaugefields_4D_wing_mpi end
+#=
 function minusidentityGaugefields_4D_wing_mpi(
     NC,
     NX,
@@ -2645,3 +2680,4 @@ function minusidentityGaugefields_4D_wing_mpi(
     return U
 end
 
+=#

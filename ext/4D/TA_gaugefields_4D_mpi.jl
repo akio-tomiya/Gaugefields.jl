@@ -1,7 +1,8 @@
+function init_TA_Gaugefields_4D_mpi(u::Gaugefields_4D{NC}) where {NC}
+    return TA_Gaugefields_4D_mpi(u)
+end
 
-function init_TA_Gaugefields_4D_mpi end
-#this is defined in ext
-#=
+
 struct TA_Gaugefields_4D_mpi{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     a::Array{Float64,5}
     NX::Int64
@@ -19,35 +20,37 @@ struct TA_Gaugefields_4D_mpi{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     nprocs::Int64
     myrank_xyzt::NTuple{4,Int64}
 
-    function TA_Gaugefields_4D_mpi(u::Gaugefields_4D{NC}) where {NC}
-        NumofBasis = ifelse(NC == 1, 1, NC^2 - 1)
-        if NC <= 3
-            generators = nothing
-        else
-            generators = Generator(NC)
-        end
 
-        return new{NC,NumofBasis}(
-            zeros(Float64, NumofBasis, u.PN[1], u.PN[2], u.PN[3], u.PN[4]),
-            u.NX,
-            u.NY,
-            u.NZ,
-            u.NT,
-            u.NC,
-            NumofBasis,
-            generators,
-            u.PEs,
-            u.PN,
-            true,
-            u.myrank,
-            u.nprocs,
-            u.myrank_xyzt,
-        )
-    end
 end
-=#
 
-#=
+
+function TA_Gaugefields_4D_mpi(u::Gaugefields_4D{NC}) where {NC}
+    NumofBasis = ifelse(NC == 1, 1, NC^2 - 1)
+    if NC <= 3
+        generators = nothing
+    else
+        generators = Generator(NC)
+    end
+
+    return TA_Gaugefields_4D_mpi{NC,NumofBasis}(
+        zeros(Float64, NumofBasis, u.PN[1], u.PN[2], u.PN[3], u.PN[4]),
+        u.NX,
+        u.NY,
+        u.NZ,
+        u.NT,
+        u.NC,
+        NumofBasis,
+        generators,
+        u.PEs,
+        u.PN,
+        true,
+        u.myrank,
+        u.nprocs,
+        u.myrank_xyzt,
+    )
+end
+
+
 function Base.setindex!(x::T, v, i...) where {T<:TA_Gaugefields_4D_mpi}
     @inbounds x.a[i...] = v
 end
@@ -56,6 +59,24 @@ function Base.getindex(x::T, i...) where {T<:TA_Gaugefields_4D_mpi}
     @inbounds return x.a[i...]
 end
 
+function Base.similar(u::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC,NumofBasis}
+    return TA_Gaugefields_4D_mpi{NC,NumofBasis}(
+        zeros(Float64, u.NumofBasis, u.PN[1], u.PN[2], u.PN[3], u.PN[4]),
+        u.NX,
+        u.NY,
+        u.NZ,
+        u.NT,
+        u.NC,
+        u.NumofBasis,
+        u.generators,
+        u.PEs,
+        u.PN,
+        true,
+        u.myrank,
+        u.nprocs,
+        u.myrank_xyzt,
+    )
+end
 
 function barrier(x::TA_Gaugefields_4D_mpi)
     MPI.Barrier(comm)
@@ -103,9 +124,7 @@ function clear_U!(U::TA_Gaugefields_4D_mpi{NC,NumofBasis}) where {NC,NumofBasis}
     end
     barrier(U)
 end
-=#
 
-#=
 function gauss_distribution!(
     p::TA_Gaugefields_4D_mpi{NC,NumofBasis};
     σ=1.0,
@@ -128,9 +147,7 @@ function gauss_distribution!(
     end
     barrier(p)
 end
-=#
 
-#=
 function Base.:*(
     x::TA_Gaugefields_4D_mpi{NC,NumofBasis},
     y::TA_Gaugefields_4D_mpi{NC,NumofBasis},
@@ -153,9 +170,6 @@ function Base.:*(
 
     return s
 end
-=#
-
-#=
 
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_4D_mpi{3,NumofBasis},
@@ -248,9 +262,6 @@ function Traceless_antihermitian_add!(
 
 end
 
-=#
-
-#=
 function Traceless_antihermitian_add!(
     c::TA_Gaugefields_4D_mpi{2,NumofBasis},
     factor,
@@ -302,10 +313,6 @@ function Traceless_antihermitian_add!(
 
 
 end
-
-=#
-
-#=
 
 """
 -----------------------------------------------------c
@@ -393,10 +400,6 @@ function Traceless_antihermitian!(
 
 
 end
-
-=#
-
-#=
 
 function Traceless_antihermitian!(
     c::TA_Gaugefields_4D_mpi{2,NumofBasis},
@@ -567,6 +570,62 @@ function Traceless_antihermitian_add!(
 
 end
 
+function Traceless_antihermitian_add!(
+    c::TA_Gaugefields_4D_mpi{1,NumofBasis},
+    factor,
+    vin::Union{Gaugefields_4D_wing_mpi{1},Gaugefields_4D_nowing_mpi{1}},
+) where {NumofBasis}
+    #error("Traceless_antihermitian! is not implemented in type $(typeof(vout)) "
+    NX = vin.NX
+    NY = vin.NY
+    NZ = vin.NZ
+    NT = vin.NT
+
+    for it = 1:vin.PN[4]
+        for iz = 1:vin.PN[3]
+            for iy = 1:vin.PN[2]
+                @simd for ix = 1:vin.PN[1]
+                    v11 = getvalue(vin, 1, 1, ix, iy, iz, it)
+                    #v11 = vin[1, 1, ix, iy, iz, it]
+                    c[1, ix, iy, iz, it] = 2 * imag(v11) * factor + c[1, ix, iy, iz, it]
+                end
+            end
+        end
+    end
+
+
+end
+
+
+function exptU!(
+    uout::T,
+    t::N,
+    u::TA_Gaugefields_4D_mpi{1,NumofBasis},
+    temps::Array{T,1},
+) where {N<:Number,T<:Gaugefields_4D,NumofBasis} #uout = exp(t*u)
+    #@assert NC != 3 && NC != 2 "This function is for NC != 2,3"
+    #g = u.generators
+    NT = u.NT
+    NZ = u.NZ
+    NY = u.NY
+    NX = u.NX
+    vin = u
+
+
+    @inbounds for it = 1:vin.PN[4]
+        for iz = 1:vin.PN[3]
+            for iy = 1:vin.PN[2]
+                for ix = 1:vin.PN[1]
+                    v = exp(t * im * u[1, ix, iy, iz, it])
+                    setvalue!(uout, v, 1, 1, ix, iy, iz, it)
+                end
+            end
+        end
+    end
+    #error("exptU! is not implemented in type $(typeof(u)) ")
+end
+
+
 function exptU!(
     uout::T,
     t::N,
@@ -580,6 +639,7 @@ function exptU!(
     NY = u.NY
     NX = u.NX
     V = zeros(ComplexF64, NC, NC)
+    vin = u
 
     u0 = zeros(ComplexF64, NC, NC)
     a = zeros(Float64, length(g))
@@ -860,11 +920,8 @@ function exptU!(
 
 
 end
+const tinyvalue = 1e-100
 
-=#
-#const tinyvalue = 1e-100
-
-#=
 
 function exptU!(
     uout::T,
@@ -913,6 +970,6 @@ function exptU!(
     barrier(uout)
 
 
-end
 
-=#
+
+end

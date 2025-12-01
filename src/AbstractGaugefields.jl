@@ -109,7 +109,7 @@ mutable struct Data_sent{NC} #data format for MPI
     end
 end
 
-using MPI
+#using MPI
 using JACC
 
 include("./2D/gaugefields_2D.jl")
@@ -538,7 +538,22 @@ function RandomGauges(
                             randomnumber=randomnumber,
                         )
                     end
+                elseif dim == 2
+                    if NDW == 0
+                        U = randomGaugefields_2D_nowing_mpi(
+                            NC,
+                            NN[1],
+                            NN[2],
+                            PEs;
+                            mpiinit,
+                            verbose_level,
+                            randomnumber
+                        )
+                    else
+                        error("not implemented yet! NDW should be 0")
+                    end
                 else
+
                     error("not implemented yet!")
                 end
 
@@ -717,10 +732,12 @@ function IdentityGauges(
                             NC,
                             NN[1],
                             NN[2],
-                            PEs,
-                            mpiinit=mpiinit,
-                            verbose_level=verbose_level,
+                            PEs;
+                            mpiinit,
+                            verbose_level
                         )
+
+
                     end
                 else
                     error("$dim dimension with $NDW  is not implemented yet! set NDW = 0")

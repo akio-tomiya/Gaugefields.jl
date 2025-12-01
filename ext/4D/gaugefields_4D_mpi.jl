@@ -10,7 +10,9 @@ module Gaugefields_4D_mpi_module
     using MPI
     =#
 
-const comm = MPI.COMM_WORLD
+
+
+
 
 """
 `Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}`
@@ -43,9 +45,10 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         NZ::T,
         NT::T,
         PEs;
-        mpiinit = true,
-        verbose_level = 2,
+        mpiinit=true,
+        verbose_level=2,
     ) where {T<:Integer}
+
         NV = NX * NY * NZ * NT
         @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
         @assert NY % PEs[2] == 0 "NY % PEs[2] should be 0. Now NY = $NY and PEs = $PEs"
@@ -65,7 +68,7 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
         @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
         myrank = MPI.Comm_rank(comm)
 
-        verbose_print = Verbose_print(verbose_level, myid = myrank)
+        verbose_print = Verbose_print(verbose_level, myid=myrank)
 
         myrank_xyzt = get_myrank_xyzt(myrank, PEs)
 
@@ -311,9 +314,9 @@ function identityGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -323,8 +326,8 @@ function identityGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = 1
 
@@ -353,9 +356,9 @@ function randomGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -365,8 +368,8 @@ function randomGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = 1
 
@@ -549,19 +552,6 @@ function substitute_U!(
         substitute_U!(a[μ], b[μ])
     end
 end
-function substitute_U!(
-    a::Array{T1,2},
-    b::Array{T2,2},
-) where {T1<:Gaugefields_4D_wing_mpi,T2<:Gaugefields_4D_wing_mpi}
-    for μ = 1:4
-        for ν = 1:4
-            if μ == ν
-                continue
-            end
-            substitute_U!(a[μ,ν], b[μ,ν])
-        end
-    end
-end
 
 function substitute_U!(
     a::Array{T1,1},
@@ -570,20 +560,6 @@ function substitute_U!(
 ) where {T1<:Gaugefields_4D_wing_mpi,T2<:Gaugefields_4D_wing_mpi}
     for μ = 1:4
         substitute_U!(a[μ], b[μ], iseven)
-    end
-end
-function substitute_U!(
-    a::Array{T1,2},
-    b::Array{T2,2},
-    iseven,
-) where {T1<:Gaugefields_4D_wing_mpi,T2<:Gaugefields_4D_wing_mpi}
-    for μ = 1:4
-        for ν = 1:4
-            if μ == ν
-                continue
-            end
-            substitute_U!(a[μ,ν], b[μ,ν], iseven)
-        end
     end
 end
 
@@ -774,7 +750,6 @@ end
 end
 
 
-
 function normalize_U!(U::Gaugefields_4D_wing_mpi{NC}) where {NC}
 
     A = zeros(ComplexF64, NC, NC)
@@ -814,8 +789,8 @@ function Base.similar(U::T) where {T<:Gaugefields_4D_wing_mpi}
         U.NZ,
         U.NT,
         U.PEs,
-        mpiinit = U.mpiinit,
-        verbose_level = U.verbose_print.level,
+        mpiinit=U.mpiinit,
+        verbose_level=U.verbose_print.level,
     )
     #identityGaugefields_4D_wing(U.NC,U.NX,U.NY,U.NZ,U.NT,U.NDW)
     return Uout
@@ -829,16 +804,6 @@ function Base.similar(U::Array{T,1}) where {T<:Gaugefields_4D_wing_mpi}
     end
     return Uout
 end
-function Base.similar(U::Array{T,2}) where {T<:Gaugefields_4D_wing_mpi}
-    Uout = Array{T,2}(undef, 4, 4)
-    for μ = 1:4
-        for ν = 1:4
-            Uout[μ,ν] = similar(U[μ,ν])
-        end
-    end
-    return Uout
-end
-
 
 
 
@@ -1439,8 +1404,8 @@ function Traceless_antihermitian!(
                         @simd for k2 = k1+1:NC
                             v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
                             v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
-                            vv = 0.5 * ( v12 - conj(v21) )
-                            setvalue!(vout, vv       , k1, k2, ix, iy, iz, it)
+                            vv = 0.5 * (v12 - conj(v21))
+                            setvalue!(vout, vv, k1, k2, ix, iy, iz, it)
                             setvalue!(vout, -conj(vv), k2, k1, ix, iy, iz, it)
                         end
                     end
@@ -1455,7 +1420,7 @@ end
 
 function Antihermitian!(
     vout::Gaugefields_4D_wing_mpi{NC},
-    vin::Gaugefields_4D_wing_mpi{NC};factor = 1
+    vin::Gaugefields_4D_wing_mpi{NC}; factor=1
 ) where {NC} #vout = factor*(vin - vin^+)
     #NC = vout.NC
 
@@ -1476,9 +1441,9 @@ function Antihermitian!(
                             v12 = getvalue(vin, k1, k2, ix, iy, iz, it)
                             v21 = getvalue(vin, k2, k1, ix, iy, iz, it)
                             vv = v12 - conj(v21)
-                            setvalue!(vout, vv*factor, k1, k2, ix, iy, iz, it)
+                            setvalue!(vout, vv * factor, k1, k2, ix, iy, iz, it)
                             if k1 != k2
-                                setvalue!(vout, -conj(vv)*factor, k2, k1, ix, iy, iz, it)
+                                setvalue!(vout, -conj(vv) * factor, k2, k1, ix, iy, iz, it)
                             end
                         end
                     end
@@ -2648,9 +2613,9 @@ function minusidentityGaugefields_4D_wing_mpi(
     NT,
     NDW,
     PEs;
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
+    mpiinit=true,
+    verbose_level=2,
+    randomnumber="Random",
 )
     U = Gaugefields_4D_wing_mpi(
         NC,
@@ -2660,8 +2625,8 @@ function minusidentityGaugefields_4D_wing_mpi(
         NZ,
         NT,
         PEs,
-        mpiinit = mpiinit,
-        verbose_level = verbose_level,
+        mpiinit=mpiinit,
+        verbose_level=verbose_level,
     )
     v = -1
 
@@ -2682,133 +2647,3 @@ function minusidentityGaugefields_4D_wing_mpi(
     return U
 end
 
-function thooftFlux_4D_B_at_bndry_wing_mpi(
-    NC,
-    NDW,
-    FLUX,
-    FLUXNUM,
-    NX,
-    NY,
-    NZ,
-    NT,
-    PEs;
-    overallminus = false,
-    mpiinit = true,
-    verbose_level = 2,
-    randomnumber = "Random",
-    comm = MPI.COMM_WORLD,
-)
-    dim = 4
-    if dim == 4
-        if overallminus
-            U = minusidentityGaugefields_4D_wing_mpi(
-                NC,
-                NX,
-                NY,
-                NZ,
-                NT,
-                NDW,
-                PEs,
-                mpiinit = mpiinit,
-                verbose_level = verbose_level,
-                randomnumber = randomnumber,
-            )
-        else
-            U = identityGaugefields_4D_wing_mpi(
-                NC,
-                NX,
-                NY,
-                NZ,
-                NT,
-                NDW,
-                PEs,
-                mpiinit = mpiinit,
-                verbose_level = verbose_level,
-                randomnumber = randomnumber,
-            )
-        end
-        
-        if overallminus
-            v = exp(-im * (2pi/NC) * FLUX)
-        else
-            v = - exp(-im * (2pi/NC) * FLUX)
-        end
-      if FLUXNUM==1
-        for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, NY, iz, it)
-                        end
-                    #end
-                #end
-            end
-        end
-      elseif FLUXNUM==2
-        for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, iy, NZ, it)
-                        end
-                    #end
-                end
-            #end
-        end
-      elseif FLUXNUM==3
-        #for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    #for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, NX, iy, iz, NT)
-                        end
-                    #end
-                end
-            end
-        #end
-      elseif FLUXNUM==4
-        for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                    for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, NY, NZ, it)
-                        end
-                    end
-                #end
-            #end
-        end
-      elseif FLUXNUM==5
-        #for it = 1:U.PN[4]
-            for iz = 1:U.PN[3]
-                #for iy = 1:U.PN[2]
-                    for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, NY, iz, NT)
-                        end
-                    end
-                #end
-            end
-        #end
-      elseif FLUXNUM==6
-        #for it = 1:U.PN[4]
-            #for iz = 1:U.PN[3]
-                for iy = 1:U.PN[2]
-                    for ix = 1:U.PN[1]
-                        @simd for ic = 1:NC
-                            setvalue!(U, v, ic, ic, ix, iy, NZ, NT)
-                        end
-                    end
-                end
-            #end
-        #end
-      end
-    set_wing_U!(U)
-    return U
-end
-
-
-end

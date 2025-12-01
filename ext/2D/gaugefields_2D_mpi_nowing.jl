@@ -1,8 +1,5 @@
 
 
-
-
-
 #=
 module Gaugefields_2D_mpi_module
     using LinearAlgebra
@@ -17,8 +14,6 @@ module Gaugefields_2D_mpi_module
 
 #const comm = MPI.COMM_WORLD
 
-#This is defined in ext
-#=
 """
 `Gaugefields_2D_nowing_mpi{NC} <: Gaugefields_2D{NC}`
 
@@ -144,9 +139,6 @@ struct Gaugefields_2D_nowing_mpi{NC} <: Gaugefields_2D{NC}
     end
 end
 
-=#
-
-#=
 
 function get_myrank_xt(myrank, PEs)
     #myrank = (myrank_t)*PEs[1] + myrank_x
@@ -237,12 +229,9 @@ end
 
 
 
-=#
-
-function identityGaugefields_2D_nowing_mpi end
 
 
-#=
+
 function identityGaugefields_2D_nowing_mpi(
     NC,
     NX,
@@ -278,10 +267,7 @@ function identityGaugefields_2D_nowing_mpi(
 
     return U
 end
-=#
 
-function randomGaugefields_2D_nowing_mpi end
-#=
 function randomGaugefields_2D_nowing_mpi(
     NC,
     NX,
@@ -321,9 +307,6 @@ function randomGaugefields_2D_nowing_mpi(
 
     return U
 end
-=#
-
-#=
 
 function clear_U!(U::Gaugefields_2D_nowing_mpi{NC}) where {NC}
     for it = 1:U.PN[2]
@@ -587,8 +570,8 @@ function map_U_sequential!(U::Gaugefields_2D_nowing_mpi{NC}, f!::Function, Uin) 
     error("The function map_U_sequential! can not be used with MPI")
 end
 
-=#
-#=
+
+
 struct Shifted_Gaugefields_2D_mpi_nowing{NC} <: Shifted_Gaugefields{NC,2}
     parent::Gaugefields_2D_nowing_mpi{NC}
     #parent::T
@@ -610,8 +593,6 @@ struct Shifted_Gaugefields_2D_mpi_nowing{NC} <: Shifted_Gaugefields{NC,2}
         return new{NC}(U, shift, U.NX, U.NT, U.NDW)
     end
 end
-=#
-#=
 
 function shifted_U_improved_zeroshift!(U::Gaugefields_2D_nowing_mpi{NC}) where {NC}
     for it = 1:U.PN[2]
@@ -972,18 +953,13 @@ function mpi_updates_U_1data!(U::Gaugefields_2D_nowing_mpi{NC}, send_ranks) wher
     end
 end
 
-=#
-#const printdata = false
 
-function get_myrank_2d end
-#=
+const printdata = false
+
 function get_myrank_2d(myrank_xyzt, PEs)
     @inbounds return myrank_xyzt[2] * PEs[1] + myrank_xyzt[1]
 end
-=#
 
-function mpi_updates_U_moredata! end
-#=
 function mpi_updates_U_moredata!(U::Gaugefields_2D_nowing_mpi{NC}, send_ranks) where {NC}
 
     otherranks = U.otherranks
@@ -1074,10 +1050,7 @@ function mpi_updates_U_moredata!(U::Gaugefields_2D_nowing_mpi{NC}, send_ranks) w
     otherranks .= 0
 
 end
-=#
 
-function mpi_updates_U! end
-#=
 function mpi_updates_U!(U::Gaugefields_2D_nowing_mpi{NC}, send_ranks) where {NC}
     if length(send_ranks) != 0
 
@@ -1109,9 +1082,8 @@ function mpi_updates_U!(U::Gaugefields_2D_nowing_mpi{NC}, send_ranks) where {NC}
 end
 
 
-=#
-function shifted_U_improved! end
-#=
+
+
 function shifted_U_improved!(U::Gaugefields_2D_nowing_mpi{NC}, shift) where {NC}
     if shift == (0, 0)
         shifted_U_improved_zeroshift!(U)
@@ -1285,9 +1257,8 @@ function shifted_U_improved!(U::Gaugefields_2D_nowing_mpi{NC}, shift) where {NC}
 
 end
 
-=#
 
-#=
+
 function shifted_U!(U::Gaugefields_2D_nowing_mpi{NC}, shift) where {NC}
     PEs = U.PEs
     PN = U.PN
@@ -2287,6 +2258,6 @@ function set_wing_U!(u::Gaugefields_2D_nowing_mpi{NC}) where {NC}
 end
 
 
-=#
+
 
 #end
