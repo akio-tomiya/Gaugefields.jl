@@ -69,10 +69,12 @@ function gauss_distribution!(
 ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis}
     d = Normal(0.0, σ)
     pwork = rand(d, NumofBasis, 1, NX, NY, NZ, NT)
-    PEs = get_PEs(p.a)
+    substitute!(p.a, pwork)
+    set_halo!(p.a)
+    #PEs = get_PEs(p.a)
 
-    a = LatticeMatrix(pwork, 4, PEs; nw=1, phases=p.a.phases, comm0=p.a.comm)
-    substitute!(p.a, a)
+    #a = LatticeMatrix(pwork, 4, PEs; nw=1, phases=p.a.phases, comm0=p.a.comm)
+    #substitute!(p.a, a)
 end
 
 
@@ -83,13 +85,14 @@ function exptU!(
     temps::Array{Tg,1},
 ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis,Tg<:Gaugefields_4D_MPILattice,N<:Number} #uout = exp(t*u)
 
-    if NC > 3
-        Uta = temps[1]
-        substitute_U!(Uta, v)
-        error("not implemented for NC > 3")
-    else
-        expt!(uout.U, v.a, t)
-    end
+    expt!(uout.U, v.a, t)
+    #if NC > 3
+    #    Uta = temps[1]
+    #    substitute_U!(Uta, v)
+    #    error("not implemented for NC > 3")
+    #else
+    #    expt!(uout.U, v.a, t)
+    #end
     set_wing_U!(uout)
 end
 
@@ -99,17 +102,28 @@ function substitute_U!(C::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW},
     generators = Tuple(JACC.array.(A.generators.generator))
 
 
-    JACC.parallel_for(prod(C.U.PN), kernel_lie2matrix!!,
-        uout.U, u.a, NC, NG, C.U.PN, generators) #w,u,ww,t
+    JACC.parallel_for(prod(C.U.PN), kernel_lie2matrix!,
+        C.U.A, A.a.A, NC, NumofBasis, C.U.indexer, generators, C.U.nw, A.a.nw) #w,u,ww,t
 end
 
-function kernel_lie2matrix!(i, uout, u, NC, NG, PN, generators, nw1, nw2)
-    ix, iy, iz, it = get_4Dindex(i, PN)
+function kernel_lie2matrix!(i, uout, u, NC, NG, dindexer, generators, nw1, nw2)
+    indices = delinearize(dindexer, i, nw1)
+    indices2 = delinearize(dindexer, i, nw2)
 
-    a = view(u, :, ix + nw2, iy + nw2, iz + nw2, it + nw2)
-    u0 = view(uout, :, :, i)
-    lie2matrix_tuple!(u0, a, NG, generators, NC)
+    for jc = 1:NC
+        for ic = 1:NC
+            for i = 1:NG
+                uout[ic, jc, indices...] += u[i, 1, indices2...] * generators[i][ic, jc] * (im / 2)
+            end
+        end
+    end
+
+
+    #a = view(u, :, indices2...)
+    #u0 = view(uout, :, :, i)
+    #lie2matrix_tuple!(u0, a, NG, generators, NC)
 end
+
 
 function lie2matrix_tuple!(matrix, a, NG, generators, NC)
     matrix .= 0

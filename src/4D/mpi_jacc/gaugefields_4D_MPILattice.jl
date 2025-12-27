@@ -17,7 +17,7 @@ import ..MPILattice:
     traceless_antihermitian!
 import LatticeMatrices: LatticeMatrix,
     Shifted_Lattice,
-    Adjoint_Lattice
+    Adjoint_Lattice, delinearize
 
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Gaugefields_4D{NC} end
@@ -263,18 +263,23 @@ end
 function substitute_U!(A::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT},
     B::Gaugefields_4D_nowing{NC}) where {NC,NX,NY,NZ,NT,T,AT}
 
-    dim = 4
-    PEs = A.U.dims
-    phases = A.U.phases
-    nw = A.U.nw
-    comm0 = A.U.comm
-
-    tempU = LatticeMatrix(B.U, dim, PEs;
-        nw,
-        phases,
-        comm0)
-    substitute!(A.U, tempU)
+    substitute!(A.U, B.U)
     set_halo!(A.U)
+    #=
+        dim = 4
+        PEs = A.U.dims
+        phases = A.U.phases
+        nw = A.U.nw
+        comm0 = A.U.comm
+
+        tempU = LatticeMatrix(B.U, dim, PEs;
+            nw,
+            phases,
+            comm0)
+        substitute!(A.U, tempU)
+
+        set_halo!(A.U)
+        =#
 end
 
 
