@@ -126,6 +126,8 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, β, temps)
 
         U_update!(U, p, 0.5, Δτ, Dim, gauge_action, temps)
     end
+
+
     Snew = calc_action(U..., β, NC, temp) + p * p / 2
     println(Snew)
     unused!(temps, its_temp)
@@ -265,6 +267,99 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, β, temps) # p -> p +facto
 
 end
 
+
+function P_update_original!(U, p, ϵ, Δτ, Dim, gauge_action, β, temps) # p -> p +factor*U*dSdUμ
+    NC = U[1].NC
+    #temps = get_temporary_gaugefields(gauge_action)
+    #dSdUμ, it_dSdUμ = get_block(temps)#temps[end]
+    temp1, it_temp1 = get_block(temps)
+    temp2, it_temp2 = get_block(temps)
+    #dSdUμ = temps[end]
+    factor = -ϵ * Δτ / (NC)
+    factor_ad = ϵ * Δτ / 2
+
+    dSdU, it_dSdU = get_block(temps, 4)#temps[end]
+    temp, its_temp = get_block(temps, 3)
+    dtemp, its_dtemp = get_block(temps, 3)
+
+    Gaugefields.clear_U!(dSdU)
+    #=
+    set_wing_U!(U)
+    indices = (2, 2, 3, 1)
+    Gaugefields.clear_U!(temp[1])
+    Gaugefields.clear_U!(temp[2])
+    Gaugefields.clear_U!(temp[3])
+    dSdUn = Numerical_derivative_Enzyme(calc_action, indices, U...; params=(β, NC, temp))
+    =#
+
+
+
+
+    for μ = 1:Dim
+        calc_dSdUμ!(dSdU[μ], gauge_action, μ, U)
+        mul!(temp1, U[μ], dSdU[μ]) # U*dSdUμ
+        Traceless_antihermitian_add!(p[μ], factor, temp1)
+        #=
+        println("mu = $μ")
+
+        X = U[μ][:, :, indices...] * dSdUn[μ]'
+        #XA = (X - X') ./ 2
+        #XTA = XA - (1 / NC) * tr(XA) * I
+        println("numerical")
+        display(X / 2)
+
+        calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
+        set_wing_U!(U[μ])
+        set_wing_U!(dSdU[μ])
+        mul!(temp2, U[μ], dSdU[μ]')
+        #mul_AtransB!(temp2, U[μ], dSdU[μ]) # U*dSdUμ
+        println("AD")
+        display(temp2[:, :, indices...] / 2)
+        set_wing_U!(temp2)
+        println(tr(temp2))
+        mul!(temp1, U[μ], dSdUμ) # U*dSdUμ
+        #println("mu = $μ")
+        #display(transpose(dSdUn[μ]))
+        println("staple")
+        display(-temp1[:, :, indices...] / NC)
+        set_wing_U!(temp1)
+        println(-tr(temp1) / NC)
+        error("d")
+        for i1 = 1:4
+            for i2 = 1:4
+                for i3 = 1:4
+                    for i4 = 1:4
+                        a = sum(temp2[:, :, i1, i2, i3, i4] .+ temp1[:, :, i1, i2, i3, i4] / NC)
+                        if abs(a) > 1e-8
+                            println((i1, i2, i3, i4))
+                            display(temp2[:, :, i1, i2, i3, i4])
+                            display(-temp1[:, :, i1, i2, i3, i4] / NC)
+                        end
+                        #display(-temp1[:, :, i1, i2, i3, i4] / NC)
+                    end
+                end
+            end
+        end
+        #display(-temp1.U.A / NC .- temp2.U.A)
+        error("stop!")
+        #display(-dSdUμ[:, :, indices...] / NC)
+        #display(transpose(dSdU[μ][:, :, indices...]))
+        #Traceless_antihermitian_add!(p[μ], factor_ad, temp1)
+        =#
+
+        #mul!(temp1, U[μ], dSdU[μ]')
+        #Traceless_antihermitian_add!(p[μ], factor_ad, temp1)
+        #Traceless_antihermitian_add!(p[μ], factor, temp1)
+    end
+    #error("dd")
+    #unused!(temps, it_dSdUμ)
+    unused!(temps, it_temp1)
+    unused!(temps, it_temp2)
+    unused!(temps, it_dSdU)
+    unused!(temps, its_temp)
+    unused!(temps, its_dtemp)
+
+end
 
 
 function _calc_action_step!(C, D, E, Uμ, Uν, shift_μ, shift_ν)
@@ -863,7 +958,7 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold, U)
-    MDsteps = 200
+    MDsteps = 100
     #temp1 = similar(U[1])
     #temp2 = similar(U[1])
     comb = 6
