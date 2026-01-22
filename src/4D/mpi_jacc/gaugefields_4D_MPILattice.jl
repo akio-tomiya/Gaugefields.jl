@@ -17,7 +17,7 @@ import ..MPILattice:
     traceless_antihermitian!
 import LatticeMatrices: LatticeMatrix,
     Shifted_Lattice,
-    Adjoint_Lattice, delinearize
+    Adjoint_Lattice, delinearize, shift_L
 
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Gaugefields_4D{NC} end
@@ -109,6 +109,16 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,
     end
 end
 
+@inline function Base.getindex(x::Gaugefields_4D_MPILattice, i1, i2, i3, i4, i5, i6)
+    @inbounds return x.U.A[i1, i2, i3+x.NDW, i4+x.NDW, i5+x.NDW, i6+x.NDW]
+end
+
+function Base.setindex!(x::Gaugefields_4D_MPILattice, v, i1, i2, i3, i4, i5, i6)
+    @inbounds x.U.A[i1, i2, i3+x.NDW, i4+x.NDW, i5+x.NDW, i6+x.NDW] = v
+end
+
+
+
 #struct TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW}
 #    U::TALattice{4,T,AT,NC}
 #end
@@ -118,7 +128,8 @@ struct Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_
 
     function Shifted_Gaugefields_4D_MPILattice(U::TU, shift) where {NC,NX,NY,NZ,NT,T,AT,nw,DI,TM,TU<:Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,TM}}
         #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
-        sU = Shifted_Lattice(U.U, shift)
+        #sU = Shifted_Lattice(U.U, shift)
+        sU = shift_L(U.U, shift)
         s = new{NC,NX,NY,NZ,NT,T,AT,nw,DI,TM}(sU)
         return s
     end
@@ -209,6 +220,12 @@ function mul_skiplastindex!(
 
 end
 
+import LatticeMatrices
+Base.@noinline function LatticeMatrices.realtrace(C::T) where {NC,T<:Gaugefields_4D_MPILattice{NC}}
+    return LatticeMatrices.realtrace(C.U)
+end
+
+
 function partial_tr(a::Gaugefields_4D_MPILattice{NC}, μ) where {NC}
     s = partial_trace(a.U, μ)
     return s
@@ -217,7 +234,7 @@ end
 
 function set_wing_U!(u::Array{Gaugefields_4D_MPILattice{NC},1}) where {NC}
     for i = 1:length(u)
-        set_halo!(u.U)
+        set_halo!(u[i].U)
     end
     return
 end
@@ -369,6 +386,16 @@ end
 function Base.adjoint(U::Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L}) where {L,NC,NX,NY,NZ,NT,T,AT,nw,DI}
     Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L}(U.U')
 end
+
+import LatticeMatrices: mul_AtransB!
+function mul_AtransB!(
+    c::T,
+    a::T1,
+    b::T2
+) where {T<:Gaugefields_4D_MPILattice,T1<:Fields_4D_MPILattice,T2<:Fields_4D_MPILattice}
+    mul_AtransB!(c.U, a.U, b.U)
+end
+
 
 function LinearAlgebra.mul!(
     c::T,

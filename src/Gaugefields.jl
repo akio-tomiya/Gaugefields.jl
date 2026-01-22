@@ -25,6 +25,10 @@ include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
 
+function Wiltinger_U! end
+import LatticeMatrices: diff, nodiff, toann, Wiltinger_derivative!,
+    Wiltinger!, Wiltinger_numerical_derivative, Enzyme_derivative!
+export Wiltinger_derivative!, Wiltinger_numerical_derivative, Enzyme_derivative!
 
 #function __init__()
 #    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
@@ -85,6 +89,11 @@ import .AbstractGaugefields_module:
     make_Cloverloopterms,
     make_Cloverloopterms!,
     lambda_k_mul!
+
+import LatticeMatrices: realtrace, nodiff, diff, Wiltinger_derivative!,
+    Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
+export nodiff, diff, realtrace, Wiltinger_derivative!,
+    Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
 
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,

@@ -2227,6 +2227,12 @@ function LinearAlgebra.tr(a::T) where {T<:Abstractfields}
     error("LinearAlgebra.tr! is not implemented in type $(typeof(a)) ")
 end
 
+import LatticeMatrices
+Base.@noinline function LatticeMatrices.realtrace(C::T) where {T<:Abstractfields}
+    return real(LinearAlgebra.tr(C))
+end
+export realtrace
+
 """
     Tr(A*B)
 """
@@ -2713,5 +2719,8 @@ function lambda_k_mul!(a::T1, b::T2, k, generator) where {T1<:Abstractfields,T2<
     error("lambda_k_mul! is not implemented in type $(typeof(a)) and $(typeof(b))")
 end
 
+include("ND.jl")
 
 end
+
+

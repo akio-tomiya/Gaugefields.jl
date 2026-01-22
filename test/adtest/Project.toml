@@ -1,0 +1,9 @@
+[deps]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+Gaugefields = "a461e10c-0d91-493e-bc41-027b226eee91"
+JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea"
+LatticeMatrices = "dd6a91e4-736f-4540-ac85-13822ca7b545"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+PreallocatedArrays = "f9710d63-ac16-4fea-bcef-3ac1fb623b0a"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
