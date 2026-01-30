@@ -68,7 +68,7 @@ end
 function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     Dim = 4
     Nwing = 1
-    #Nwing = 0
+    # Nwing = 0
 
     Random.seed!(123)
     #isMPILattice = false
@@ -111,7 +111,7 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
     substitute_U!(Uold, U)
-    MDsteps = 200
+    MDsteps = 100
     temp1 = similar(U[1])
     temp2 = similar(U[1])
     comb = 6
@@ -146,10 +146,10 @@ end
 
 function main()
     β = 6
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
+    NX = 4
+    NY = 4
+    NZ = 4
+    NT = 4
     NC = 3
     HMC_test_4D(NX, NY, NZ, NT, NC, β)
 end
