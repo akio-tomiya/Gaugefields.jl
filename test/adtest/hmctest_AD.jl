@@ -7,13 +7,6 @@ using Enzyme
 import JACC
 JACC.@init_backend
 
-function calc_action(gauge_action, U, p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action, U) / NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
-    Sp = p * p / 2
-    S = Sp + Sg
-    return real(S)
-end
 
 function _calc_action_step!(C, D, E, Uμ, Uν, shift_μ, shift_ν)
     Uμ_pν = shift_U(Uμ, shift_ν)
@@ -55,11 +48,10 @@ function calc_action(U1, U2, U3, U4, β, NC, temp)
     return -S * β / NC
 end
 
-function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, tempvec, β)
+function MDstep!(U, p, MDsteps, Dim, Uold, tempvec, β)
     NC = U[1].NC
     Δτ = 1.0 / MDsteps
     temp1, it_temp1 = get_block(tempvec)
-    temp2, it_temp2 = get_block(tempvec)
     temp, its_temp = get_block(tempvec, 3)
     dtemp, its_dtemp = get_block(tempvec, 3)
 
@@ -70,19 +62,18 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, tempvec, β)
     substitute_U!(Uold, U)
 
     for itrj = 1:MDsteps
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, tempvec)
 
-        P_update!(U, p, 1.0, Δτ, Dim, gauge_action, temp1, temp, dtemp, tempvec, β)
+        P_update!(U, p, 1.0, Δτ, Dim, temp1, temp, dtemp, tempvec, β)
 
-        U_update!(U, p, 0.5, Δτ, Dim, gauge_action)
+        U_update!(U, p, 0.5, Δτ, Dim, tempvec)
     end
-    Snew = calc_action(gauge_action, U, p)
+    Snew = calc_action(U..., β, NC, temp) + p * p / 2
     println("Sold = $Sold, Snew = $Snew")
     println("Snew - Sold = $(Snew-Sold)")
     ratio = min(1, exp(-Snew + Sold))
 
     unused!(tempvec, it_temp1)
-    unused!(tempvec, it_temp2)
     unused!(tempvec, its_temp)
     unused!(tempvec, its_dtemp)
 
@@ -95,22 +86,26 @@ function MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, tempvec, β)
     end
 end
 
-function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+function U_update!(U, p, ϵ, Δτ, Dim, tempvec)
+    temp1, it_temp1 = get_block(tempvec)
+    temp2, it_temp2 = get_block(tempvec)
+    expU, it_expU = get_block(tempvec)
+    W, it_W = get_block(tempvec)
+
 
     for μ = 1:Dim
         exptU!(expU, ϵ * Δτ, p[μ], [temp1, temp2])
         mul!(W, expU, U[μ])
         substitute_U!(U[μ], W)
-
     end
+    unused!(tempvec, it_temp1)
+    unused!(tempvec, it_temp2)
+    unused!(tempvec, it_expU)
+    unused!(tempvec, it_W)
+
 end
 
-function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temp1, temp, dtemp, temps, β) # p -> p +factor*U*dSdUμ
+function P_update!(U, p, ϵ, Δτ, Dim, temp1, temp, dtemp, temps, β) # p -> p +factor*U*dSdUμ
     NC = U[1].NC
     factor = -ϵ * Δτ / (NC)
     factor_ad = ϵ * Δτ / 2
@@ -133,9 +128,6 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temp1, temp, dtemp, temps,
     for μ = 1:Dim
         mul!(temp1, U[μ], dSdU[μ]')
         Traceless_antihermitian_add!(p[μ], factor_ad, temp1)
-        #calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
-        #mul!(temp, U[μ], dSdUμ) # U*dSdUμ
-        #Traceless_antihermitian_add!(p[μ], factor, temp)
     end
 
     unused!(temps, it_dSdU)
@@ -178,13 +170,8 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     poly = calculate_Polyakov_loop(U, temp1, temp2)
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
 
-    gauge_action = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette")
-    append!(plaqloop, plaqloop')
-    β = β / 2
-    push!(gauge_action, β, plaqloop)
 
-    #show(gauge_action)
+    β = β / 2
 
     p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
     Uold = similar(U)
@@ -199,7 +186,7 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     numtrj = 10
     for itrj = 1:numtrj
         t = @timed begin
-            accepted = MDstep!(gauge_action, U, p, MDsteps, Dim, Uold, tempvec, β)
+            accepted = MDstep!(U, p, MDsteps, Dim, Uold, tempvec, β)
         end
         if get_myrank(U) == 0
             println("elapsed time for MDsteps: $(t.time) [s]")
