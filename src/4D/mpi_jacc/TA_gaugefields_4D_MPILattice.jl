@@ -93,7 +93,7 @@ function exptU!(
     #else
     #    expt!(uout.U, v.a, t)
     #end
-    set_wing_U!(uout)
+    #set_wing_U!(uout)
 end
 
 function substitute_U!(C::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW},

@@ -45,6 +45,7 @@ function U_update!(U, p, ϵ, Δτ, Dim, gauge_action)
 
     for μ = 1:Dim
         exptU!(expU, ϵ * Δτ, p[μ], [temp1, temp2])
+
         mul!(W, expU, U[μ])
         substitute_U!(U[μ], W)
 
@@ -59,6 +60,7 @@ function P_update!(U, p, ϵ, Δτ, Dim, gauge_action, temp1, temp2) # p -> p +fa
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
+        #@time calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
         mul!(temp, U[μ], dSdUμ) # U*dSdUμ
         Traceless_antihermitian_add!(p[μ], factor, temp)
     end
@@ -68,15 +70,19 @@ end
 function HMC_test_4D(NX, NY, NZ, NT, NC, β)
     Dim = 4
     Nwing = 1
-    # Nwing = 0
+    Nwing = 0
 
     Random.seed!(123)
-    #isMPILattice = false
-    isMPILattice = true
+    isMPILattice = false
+    #isMPILattice = true
 
     U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT,
         condition="hot";
         isMPILattice)
+
+    Ucpu = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+        condition="hot";)
+    substitute_U!(U, Ucpu)
     println(typeof(U))
 
     temp1 = similar(U[1])
@@ -94,11 +100,36 @@ function HMC_test_4D(NX, NY, NZ, NT, NC, β)
 
     factor = 1 / (comb * U[1].NV * U[1].NC)
 
+    temp1cpu = similar(Ucpu[1])
+    temp2cpu = similar(Ucpu[1])
+
 
     @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
     println("0 plaq_t = $plaq_t")
     poly = calculate_Polyakov_loop(U, temp1, temp2)
     println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+
+    println("CPU ")
+    @time plaq_t = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
+    println("0 plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
+    println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+
+
+    Ucpu = Initialize_Gaugefields(NC, 0, NX, NY, NZ, NT,
+        condition="hot";)
+    substitute_U!(U, Ucpu)
+    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
+    println("0 plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(U, temp1, temp2)
+    println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+
+    println("CPU ")
+    @time plaq_t = calculate_Plaquette(Ucpu, temp1cpu, temp2cpu) * factor
+    println("0 plaq_t = $plaq_t")
+    poly = calculate_Polyakov_loop(Ucpu, temp1cpu, temp2cpu)
+    println("0 polyakov loop = $(real(poly)) $(imag(poly))")
+    #return
 
     gauge_action = GaugeAction(U)
     plaqloop = make_loops_fromname("plaquette")
@@ -147,9 +178,9 @@ end
 function main()
     β = 6
     NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
+    NY = NX
+    NZ = NX
+    NT = NX
     NC = 3
     HMC_test_4D(NX, NY, NZ, NT, NC, β)
 end

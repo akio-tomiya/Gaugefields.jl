@@ -1053,6 +1053,81 @@ end
 function evaluate_gaugelinks!(
     uout::T,
     w::Wilsonline{Dim},
+    U::Vector{T},
+    temps::Vector{T},   # length >= 2
+) where {T<:AbstractGaugefields,Dim}
+
+    origin = ntuple(_ -> 0, Dim)
+
+    glinks = w
+    numlinks = length(glinks)
+
+    # If there are no links, return the identity element
+    if numlinks == 0
+        unit_U!(uout)
+        return
+    end
+
+    # Ping-pong buffers for the accumulated product
+    Acc = temps[1]
+    Tmp = temps[2]
+
+    # ------------------------------------------------------------
+    # First link
+    # ------------------------------------------------------------
+    link1 = glinks[1]
+    dir1 = get_direction(link1)
+    pos1 = get_position(link1)
+    isU1dag = isdag(link1)
+
+    # IMPORTANT:
+    # Avoid substitute_U! here (it may trigger halo communication).
+    # Directly take the shifted view/buffer from U[dir1].
+    Ushift1 = shift_U(U[dir1], pos1)
+
+    # Special case: only one link
+    if numlinks == 1
+        # Only here we write into the output buffer
+        if isU1dag
+            substitute_U!(uout, Ushift1')
+        else
+            substitute_U!(uout, Ushift1)
+        end
+        return
+    end
+
+    # ------------------------------------------------------------
+    # Multiply remaining links
+    # ------------------------------------------------------------
+    for k = 2:numlinks
+        linkk = glinks[k]
+        dirk = get_direction(linkk)
+        posk = get_position(linkk)
+        isUkdag = isdag(linkk)
+
+        # Shift the k-th link field
+        Ushift2 = shift_U(U[dirk], posk)
+
+        # Compute the product into Tmp buffer
+        multiply_12!(Tmp, Ushift1, Ushift2, k, isUkdag, isU1dag)
+
+        # Do NOT call substitute_U! inside the loop.
+        # Just reuse Tmp as the accumulated product for the next step.
+        Ushift1 = Tmp
+
+        # Swap buffers (ping-pong)
+        Acc, Tmp = Tmp, Acc
+    end
+
+    # After the loop, the final result is stored in Acc
+    substitute_U!(uout, Acc)
+
+    return
+end
+
+function evaluate_gaugelinks_old!(
+    uout::T,
+    w::Wilsonline{Dim},
     U::Array{T,1},
     temps::Array{T,1}, # length >= 3
 ) where {T<:AbstractGaugefields,Dim}

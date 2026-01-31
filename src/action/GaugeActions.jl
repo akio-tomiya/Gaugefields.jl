@@ -83,6 +83,7 @@ function calc_dSdUμ!(
         staples_μ = dataset.staples[μ]
         #evaluate_gaugelinks!(temp, staples_μ, U, S._temp_U[1:end-2])
         evaluate_gaugelinks!(temp, staples_μ, U, temps)
+        #@time evaluate_gaugelinks!(temp, staples_μ, U, temps)
 
         #println("temp in dSdUμ! ",getvalue(temp,1,1,1,1,1,1))
         add_U!(dSdUμ, β, temp)
