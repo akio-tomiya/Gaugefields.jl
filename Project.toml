@@ -30,6 +30,7 @@ GaugefieldsEnzymeExt = "Enzyme"
 
 
 [compat]
+Enzyme = "0.13"
 Distributions = "0.25"
 EzXML = "1"
 InteractiveUtils = "1"
