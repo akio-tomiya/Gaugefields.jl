@@ -17,7 +17,7 @@ import ..MPILattice:
     traceless_antihermitian!
 import LatticeMatrices: LatticeMatrix,
     Shifted_Lattice,
-    Adjoint_Lattice, delinearize, shift_L
+    Adjoint_Lattice, delinearize, shift_L, Traceless_AntiHermitian
 
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Gaugefields_4D{NC} end
@@ -388,7 +388,7 @@ function Base.adjoint(U::Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,n
 end
 
 import LatticeMatrices: mul_AtransB!
-function mul_AtransB!(
+@inline function mul_AtransB!(
     c::T,
     a::T1,
     b::T2
@@ -397,7 +397,7 @@ function mul_AtransB!(
 end
 
 
-function LinearAlgebra.mul!(
+@inline function LinearAlgebra.mul!(
     c::T,
     a::T1,
     b::T2,
@@ -408,33 +408,46 @@ function LinearAlgebra.mul!(
 
 end
 
-function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice)
+@inline function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice)
     tr(a.U)
     #set_halo!(a.U)
 end
 
-function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice, b::Gaugefields_4D_MPILattice)
+@inline function LinearAlgebra.tr(a::Gaugefields_4D_MPILattice, b::Gaugefields_4D_MPILattice)
     tr(a.U, b.U)
 end
 
 
-function clear_U!(c::Gaugefields_4D_MPILattice)
+@inline function clear_U!(c::Gaugefields_4D_MPILattice)
     clear_matrix!(c.U)
 end
 
-function add_U!(c::Gaugefields_4D_MPILattice, t::T, a::T1) where {T1<:Fields_4D_MPILattice,T<:Number}
+@inline function add_U!(c::Gaugefields_4D_MPILattice, t::T, a::T1) where {T1<:Fields_4D_MPILattice,T<:Number}
     add_matrix!(c.U, a.U, t)
 end
 
-function add_U!(c::Gaugefields_4D_MPILattice, a::T1) where {T1<:Fields_4D_MPILattice}
+@inline function add_U!(c::Gaugefields_4D_MPILattice, a::T1) where {T1<:Fields_4D_MPILattice}
     add_matrix!(c.U, a.U)
 end
 
-function Traceless_antihermitian!(
+@inline function Traceless_antihermitian!(
     vout::Gaugefields_4D_MPILattice,
     vin::Gaugefields_4D_MPILattice,
 )
 
     traceless_antihermitian!(vout.U, vin.U)
 
+end
+
+@inline function Traceless_AntiHermitian(C::Gaugefields_4D_MPILattice)
+    return Traceless_AntiHermitian(C.U)
+end
+export Traceless_AntiHermitian
+
+@inline function exptU!(C::TC, A::Traceless_AntiHermitian{L}, t=1) where {
+    L,TC<:Gaugefields_4D_MPILattice}
+
+    expt!(C.U, A.data, t)
+    return
+    #set_halo!(C)
 end

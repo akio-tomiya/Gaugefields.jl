@@ -88,7 +88,8 @@ import .AbstractGaugefields_module:
     cloverloops_4D,
     make_Cloverloopterms,
     make_Cloverloopterms!,
-    lambda_k_mul!
+    lambda_k_mul!,
+    Traceless_AntiHermitian
 
 import LatticeMatrices: realtrace, nodiff, diff, Wiltinger_derivative!,
     Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
@@ -234,6 +235,7 @@ import .GaugeAction_module:
 
 import .Temporalfields_module: Temporalfields, unused!
 export Temporalfields, unused!
+export clear_U!, add_U!
 
 export IdentityGauges,
     RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
@@ -290,5 +292,7 @@ export Initialize_Bfields
 
 
 export CASK_layer, zero_grad!
+
+export Traceless_AntiHermitian
 
 end
