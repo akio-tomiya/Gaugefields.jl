@@ -112,10 +112,12 @@ function Enzyme_derivative!(
         )
     end
 
+
     fold_halo_to_core_grad!(dfdU1.U)
     fold_halo_to_core_grad!(dfdU2.U)
     fold_halo_to_core_grad!(dfdU3.U)
     fold_halo_to_core_grad!(dfdU4.U)
+
 
     # Gradients of Active scalar arguments are returned by Enzyme
     return result

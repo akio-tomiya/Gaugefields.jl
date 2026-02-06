@@ -102,7 +102,17 @@ function calc_action(U1, U2, U3, U4, β, NC, t, temp)
         shift_μ = ntuple(i -> ifelse(i == μ, 1, 0), dim)
         make_μloop(Uout, C, D, E, μ, U, shift_μ, dim, t)
         mul!(Ufat[μ], Uout, U[μ])
+
     end
+    for μ = 1:dim
+        set_wing_U!(Ufat[μ])
+    end
+    #set_wing_U!.(Ufat)
+    #for μ = 1:dim
+    #    #println(realtrace(Ufat[μ]))
+    #    S += realtrace(Ufat[μ])
+    #end
+    #return S
 
 
     for μ = 1:dim
@@ -196,6 +206,7 @@ function P_update!(U, p, ϵ, Δτ, Dim, temp1, temp, dtemp, temps, β, t) # p ->
     U2 = U[2]
     U3 = U[3]
     U4 = U[4]
+    set_wing_U!(U)
     Enzyme_derivative!(
         calc_action,
         U1, U2, U3, U4,
@@ -205,30 +216,31 @@ function P_update!(U, p, ϵ, Δτ, Dim, temp1, temp, dtemp, temps, β, t) # p ->
     )
 
     #=
-        Ut = similar(U1)
+    Ut = similar(U1)
+    set_wing_U!(U)
+    sf = calc_action(U1, U2, U3, U4, β, NC, t, temp)
+    indices = (2, 2, 2, 3)
+    dSdUn = zeros(ComplexF64, NC, NC)
+    eta = 1e-4
+    for i = 1:NC
+        for j = 1:NC
+            substitute_U!(Ut, U[1])
+            Ut.U.A[i, j, indices...] += eta
+            set_wing_U!(Ut)
+            resf = calc_action(Ut, U2, U3, U4, β, NC, t, temp)
 
-        sf = calc_action(U1, U2, U3, U4, β, NC, t, temp)
-        indices = (2, 2, 2, 3)
-        dSdUn = zeros(ComplexF64, NC, NC)
-        eta = 1e-4
-        for i = 1:NC
-            for j = 1:NC
-                substitute_U!(Ut, U[1])
-                Ut.U.A[i, j, indices...] += eta
-                set_wing_U!(Ut)
-                resf = calc_action(Ut, U2, U3, U4, β, NC, t, temp)
-
-                substitute_U!(Ut, U[1])
-                Ut.U.A[i, j, indices...] += im * eta
-                set_wing_U!(Ut)
-                imsf = calc_action(Ut, U2, U3, U4, β, NC, t, temp)
-                dSdUn[i, j] = (resf - sf) / eta + im * (imsf - sf) / eta
-            end
+            substitute_U!(Ut, U[1])
+            Ut.U.A[i, j, indices...] += im * eta
+            set_wing_U!(Ut)
+            imsf = calc_action(Ut, U2, U3, U4, β, NC, t, temp)
+            dSdUn[i, j] = (resf - sf) / eta + im * (imsf - sf) / eta
         end
-        display(dSdUn)
-        display(dSdU[1].U.A[:, :, indices...])
-        error("U")
-        =#
+    end
+    display(dSdUn)
+    display(dSdU[1].U.A[:, :, indices...])
+    error("U")
+
+    =#
 
 
     for μ = 1:Dim

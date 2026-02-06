@@ -232,14 +232,14 @@ function partial_tr(a::Gaugefields_4D_MPILattice{NC}, μ) where {NC}
 end
 
 
-function set_wing_U!(u::Array{Gaugefields_4D_MPILattice{NC},1}) where {NC}
+@inline function set_wing_U!(u::Array{Gaugefields_4D_MPILattice{NC},1}) where {NC}
     for i = 1:length(u)
         set_halo!(u[i].U)
     end
     return
 end
 
-function set_wing_U!(u::Gaugefields_4D_MPILattice{NC}) where {NC}
+@inline function set_wing_U!(u::Gaugefields_4D_MPILattice{NC}) where {NC}
     set_halo!(u.U)
     return
 end
