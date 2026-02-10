@@ -446,13 +446,8 @@ export Traceless_AntiHermitian
 
 @inline function exptU!(C::TC, A::Traceless_AntiHermitian{L}, t=1) where {
     L,TC<:Gaugefields_4D_MPILattice}
-
-    # Default to the legacy stable path; enable TA-dispatch explicitly for AD diagnostics.
-    if get(ENV, "GF_USE_EXPT_TA_PATH", "0") == "1"
-        expt!(C.U, A, t)        # dispatches to expt_TA! path in LatticeMatrices
-    else
-        expt!(C.U, A.data, t)   # legacy path
-    end
+    # Always use TA-specialized path (forward + Enzyme custom reverse).
+    LatticeMatrices.expt_TA!(C.U, A.data, t)
     return
     #set_halo!(C)
 end
