@@ -1057,7 +1057,7 @@ function evaluate_gaugelinks!(
     temps::Vector{T},   # length >= 2
 ) where {T<:AbstractGaugefields,Dim}
 
-    origin = ntuple(_ -> 0, Dim)
+    #origin = ntuple(_ -> 0, Dim)
 
     glinks = w
     numlinks = length(glinks)
@@ -1076,50 +1076,40 @@ function evaluate_gaugelinks!(
     # First link
     # ------------------------------------------------------------
     link1 = glinks[1]
-    dir1 = get_direction(link1)
-    pos1 = get_position(link1)
     isU1dag = isdag(link1)
 
+    # Get the initial field
     # IMPORTANT:
     # Avoid substitute_U! here (it may trigger halo communication).
     # Directly take the shifted view/buffer from U[dir1].
-    Ushift1 = shift_U(U[dir1], pos1)
+    U_initial = shift_U(U[get_direction(link1)], get_position(link1))
 
     # Special case: only one link
-    if numlinks == 1
-        # Only here we write into the output buffer
-        if isU1dag
-            substitute_U!(uout, Ushift1')
-        else
-            substitute_U!(uout, Ushift1)
-        end
-        return
+    if isU1dag
+        substitute_U!(Acc, U_initial') # Acc now holds U1†
+    else
+        substitute_U!(Acc, U_initial)  # Acc now holds U1
     end
+
+    # Acc as starting point
+    Uaccumulated = Acc
 
     # ------------------------------------------------------------
     # Multiply remaining links
     # ------------------------------------------------------------
     for k = 2:numlinks
         linkk = glinks[k]
-        dirk = get_direction(linkk)
-        posk = get_position(linkk)
-        isUkdag = isdag(linkk)
+        Ushift_k = shift_U(U[get_direction(linkk)], get_position(linkk))
 
-        # Shift the k-th link field
-        Ushift2 = shift_U(U[dirk], posk)
+        # Note: We now pass 'false' for isU1dag because the 
+        # accumulation buffer is already processed!
+        multiply_12!(Tmp, Uaccumulated, Ushift_k, k, isdag(linkk), false)
 
-        # Compute the product into Tmp buffer
-        multiply_12!(Tmp, Ushift1, Ushift2, k, isUkdag, isU1dag)
-
-        # Do NOT call substitute_U! inside the loop.
-        # Just reuse Tmp as the accumulated product for the next step.
-        Ushift1 = Tmp
-
-        # Swap buffers (ping-pong)
+        # Ping-pong
         Acc, Tmp = Tmp, Acc
+        Uaccumulated = Acc
     end
 
-    # After the loop, the final result is stored in Acc
     substitute_U!(uout, Acc)
 
     return
