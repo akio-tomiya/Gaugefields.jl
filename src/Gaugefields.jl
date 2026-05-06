@@ -64,6 +64,7 @@ import .AbstractGaugefields_module:
     IdentityGauges,
     RandomGauges,
     Oneinstanton,
+    Oneinstanton_SUN_embedded,
     calculate_Plaquette,
     calculate_Polyakov_loop,
     map_U!,
@@ -210,6 +211,7 @@ import .AbstractGaugefields_module:
     IdentityGauges,
     RandomGauges,
     Oneinstanton,
+    Oneinstanton_SUN_embedded,
     Initialize_4DGaugefields,
     construct_Λmatrix_forSTOUT!,
     evaluate_gaugelinks_evenodd!,
@@ -238,7 +240,11 @@ export Temporalfields, unused!
 export clear_U!, add_U!
 
 export IdentityGauges,
-    RandomGauges, Oneinstanton, calculate_Plaquette, calculate_Polyakov_loop
+    RandomGauges,
+    Oneinstanton,
+    Oneinstanton_SUN_embedded,
+    calculate_Plaquette,
+    calculate_Polyakov_loop
 export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
 export ILDG, load_gaugefield!, save_binarydata, load_gaugefield
 export SU2update_KP!, SUNupdate_matrix!, SU3update_matrix!
