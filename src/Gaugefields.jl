@@ -66,6 +66,8 @@ import .AbstractGaugefields_module:
     Oneinstanton,
     Oneinstanton_SUN_embedded,
     calculate_Plaquette,
+    topological_charge_density,
+    topological_charge,
     calculate_Polyakov_loop,
     map_U!,
     evaluate_gaugelinks_evenodd!,
@@ -213,6 +215,8 @@ import .AbstractGaugefields_module:
     Oneinstanton,
     Oneinstanton_SUN_embedded,
     Initialize_4DGaugefields,
+    topological_charge_density,
+    topological_charge,
     construct_Λmatrix_forSTOUT!,
     evaluate_gaugelinks_evenodd!,
     map_U!,
@@ -244,6 +248,8 @@ export IdentityGauges,
     Oneinstanton,
     Oneinstanton_SUN_embedded,
     calculate_Plaquette,
+    topological_charge_density,
+    topological_charge,
     calculate_Polyakov_loop
 export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
 export ILDG, load_gaugefield!, save_binarydata, load_gaugefield
