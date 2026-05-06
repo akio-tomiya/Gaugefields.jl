@@ -94,6 +94,13 @@ end
     @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; radius=0)
     @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; sign=0)
     @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; center=(1, 2, 3))
+    singular_center_error = try
+        AG._su2_instanton_link(1, 1, 1, 1, 1, L; center=(0, 0, 0, 0))
+    catch err
+        err
+    end
+    @test singular_center_error isa ArgumentError
+    @test occursin("center must not coincide", sprint(showerror, singular_center_error))
 end
 
 function normalized_plaquette(U)
@@ -148,6 +155,13 @@ end
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 1))
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 4))
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; NDW=-1)
+    singular_center_error = try
+        Oneinstanton_SUN_embedded(3, 5, 5, 5, 5)
+    catch err
+        err
+    end
+    @test singular_center_error isa ArgumentError
+    @test occursin("center must not coincide", sprint(showerror, singular_center_error))
 end
 
 plaquette_topological_charge(U) = AG._plaquette_topological_charge(U)
