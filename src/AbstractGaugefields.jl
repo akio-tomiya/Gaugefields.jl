@@ -882,6 +882,46 @@ function _embed_su2_matrix_in_sun!(U, u2, block)
     return U
 end
 
+function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothing, sign=+1)
+    length(L) == 4 || throw(ArgumentError("L must contain four lattice extents"))
+    1 <= μ <= 4 || throw(ArgumentError("μ must be in 1:4"))
+    sign in (-1, +1) || throw(ArgumentError("sign must be +1 or -1"))
+
+    center === nothing && (center = (L[1] / 2 + 0.5, L[2] / 2 + 0.5, L[3] / 2 + 0.5, L[4] / 2 + 0.5))
+    length(center) == 4 || throw(ArgumentError("center must contain four coordinates"))
+    radius === nothing && (radius = div(L[1], 2))
+    radius > 0 || throw(ArgumentError("radius must be positive"))
+
+    s1 = ComplexF64[
+        0 1
+        1 0
+    ]
+    s2 = ComplexF64[
+        0 -im
+        im 0
+    ]
+    s3 = ComplexF64[
+        1 0
+        0 -1
+    ]
+    En = ComplexF64[
+        1 0
+        0 1
+    ]
+    ss = (im * s1, im * s2, im * s3, En)
+    sd = (-im * s1, -im * s2, -im * s3, En)
+
+    nv = ComplexF64[ix - 1 - center[1], iy - 1 - center[2], iz - 1 - center[3], it - 1 - center[4]]
+    n2 = real(nv ⋅ nv)
+    tau = zeros(ComplexF64, 2, 2)
+    for ν = 1:4
+        smunu = sd[μ] * ss[ν] - sd[ν] * ss[μ]
+        tau += smunu * nv[ν]
+    end
+
+    return exp(im * tau * (1 / 2) * (1 / n2) * (im * sign * radius^2 / (n2 + radius^2)))
+end
+
 function construct_gauges(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
@@ -2818,4 +2858,3 @@ end
 include("ND.jl")
 
 end
-
