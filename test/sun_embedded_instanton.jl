@@ -59,3 +59,39 @@ end
     @test_throws ArgumentError AG._embed_su2_matrix_in_sun!(zeros(3, 3), zeros(3, 3), (1, 2))
     @test_throws ArgumentError AG._embed_su2_matrix_in_sun!(zeros(3, 2), sample_su2_matrix(), (1, 2))
 end
+
+function check_su2_instanton_links(U)
+    L = (U[1].NX, U[1].NY, U[1].NZ, U[1].NT)
+    center = (L[1] / 2 + 0.5, L[2] / 2 + 0.5, L[3] / 2 + 0.5, L[4] / 2 + 0.5)
+    radius = div(L[1], 2)
+
+    for μ = 1:4
+        for it = 1:L[4], iz = 1:L[3], iy = 1:L[2], ix = 1:L[1]
+            link = AG._su2_instanton_link(μ, ix, iy, iz, it, L; center, radius)
+            measured = ComplexF64[
+                U[μ][1, 1, ix, iy, iz, it] U[μ][1, 2, ix, iy, iz, it]
+                U[μ][2, 1, ix, iy, iz, it] U[μ][2, 2, ix, iy, iz, it]
+            ]
+
+            @test measured ≈ link
+            @test link' * link ≈ Matrix{ComplexF64}(I, 2, 2)
+            @test det(link) ≈ 1
+        end
+    end
+end
+
+@testset "SU(2) instanton link helper" begin
+    check_su2_instanton_links(Oneinstanton(2, 0, 4, 4, 4, 4))
+    check_su2_instanton_links(Oneinstanton(2, 1, 4, 4, 4, 4))
+
+    L = (4, 4, 4, 4)
+    anti_link = AG._su2_instanton_link(1, 1, 1, 1, 1, L; sign=-1)
+    @test anti_link' * anti_link ≈ Matrix{ComplexF64}(I, 2, 2)
+    @test det(anti_link) ≈ 1
+
+    @test_throws ArgumentError AG._su2_instanton_link(0, 1, 1, 1, 1, L)
+    @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, (4, 4, 4))
+    @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; radius=0)
+    @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; sign=0)
+    @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; center=(1, 2, 3))
+end

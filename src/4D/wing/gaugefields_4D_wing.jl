@@ -400,25 +400,6 @@ function Oneinstanton_4D_wing(NC, NX, NY, NZ, NT, NDW; verbose_level=2)
 
     println("# Starting from a instanton backgorund with radius R=$R ")
     inst_cent = [L[1] / 2 + 0.5, L[2] / 2 + 0.5, L[3] / 2 + 0.5, L[4] / 2 + 0.5]
-    #eps = 1/10000000
-    s1 = [
-        0.0 1.0
-        1.0 0.0
-    ]
-    s2 = [
-        0.0 -im*1.0
-        im*1.0 0.0
-    ]
-    s3 = [
-        1.0 0.0
-        0.0 -1.0
-    ]
-    En = [
-        1.0 0.0
-        0.0 1.0
-    ]
-    ss = [im * s1, im * s2, im * s3, En]
-    sd = [-im * s1, -im * s2, -im * s3, En]
     nn = 0
 
     for it = 1:NT
@@ -426,19 +407,8 @@ function Oneinstanton_4D_wing(NC, NX, NY, NZ, NT, NDW; verbose_level=2)
             for iy = 1:NY
                 for ix = 1:NX
                     nn += 0
-                    nv = [ix - 1, iy - 1, iz - 1, it - 1] - inst_cent
-                    n2 = nv ⋅ nv
                     for mu = 1:4
-                        tau = [
-                            0 0
-                            0 0
-                        ]
-                        for nu = 1:4
-                            smunu = sd[mu] * ss[nu] - sd[nu] * ss[mu]
-                            tau += smunu * nv[nu]
-                        end
-                        sq = sqrt(n2 + R^2)
-                        tau = exp(im * tau * (1 / 2) * (1 / (n2)) * (im * R^2 / (n2 + R^2))) #1b
+                        tau = _su2_instanton_link(mu, ix, iy, iz, it, L; center=inst_cent, radius=R)
                         for j = 1:2
                             for i = 1:2
                                 U[mu][i, j, ix, iy, iz, it] = tau[i, j]
