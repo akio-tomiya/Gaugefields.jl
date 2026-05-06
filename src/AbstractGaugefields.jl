@@ -851,6 +851,250 @@ function Oneinstanton(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     return U
 end
 
+function _validate_su2_embedding_block(NC, block)
+    NC isa Integer || throw(ArgumentError("NC must be an integer"))
+    NC >= 2 || throw(ArgumentError("NC must be at least 2"))
+    length(block) == 2 || throw(ArgumentError("block must contain two color indices"))
+
+    i, j = block
+    i isa Integer || throw(ArgumentError("block indices must be integers"))
+    j isa Integer || throw(ArgumentError("block indices must be integers"))
+    1 <= i < j <= NC || throw(ArgumentError("block must satisfy 1 <= i < j <= NC"))
+
+    return (Int(i), Int(j))
+end
+
+function _embed_su2_matrix_in_sun!(U, u2, block)
+    size(u2) == (2, 2) || throw(ArgumentError("u2 must be a 2 by 2 matrix"))
+    NC, NC2 = size(U)
+    NC == NC2 || throw(ArgumentError("U must be a square matrix"))
+    i, j = _validate_su2_embedding_block(NC, block)
+
+    fill!(U, zero(eltype(U)))
+    for c = 1:NC
+        U[c, c] = one(eltype(U))
+    end
+
+    U[i, i] = u2[1, 1]
+    U[i, j] = u2[1, 2]
+    U[j, i] = u2[2, 1]
+    U[j, j] = u2[2, 2]
+    return U
+end
+
+function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothing, sign=+1)
+    length(L) == 4 || throw(ArgumentError("L must contain four lattice extents"))
+    1 <= μ <= 4 || throw(ArgumentError("μ must be in 1:4"))
+    sign in (-1, +1) || throw(ArgumentError("sign must be +1 or -1"))
+
+    center === nothing && (center = (L[1] / 2 + 0.5, L[2] / 2 + 0.5, L[3] / 2 + 0.5, L[4] / 2 + 0.5))
+    length(center) == 4 || throw(ArgumentError("center must contain four coordinates"))
+    radius === nothing && (radius = div(L[1], 2))
+    radius > 0 || throw(ArgumentError("radius must be positive"))
+
+    s1 = ComplexF64[
+        0 1
+        1 0
+    ]
+    s2 = ComplexF64[
+        0 -im
+        im 0
+    ]
+    s3 = ComplexF64[
+        1 0
+        0 -1
+    ]
+    En = ComplexF64[
+        1 0
+        0 1
+    ]
+    ss = (im * s1, im * s2, im * s3, En)
+    sd = (-im * s1, -im * s2, -im * s3, En)
+
+    nv = ComplexF64[ix - 1 - center[1], iy - 1 - center[2], iz - 1 - center[3], it - 1 - center[4]]
+    n2 = real(nv ⋅ nv)
+    tau = zeros(ComplexF64, 2, 2)
+    for ν = 1:4
+        smunu = if sign == +1
+            sd[μ] * ss[ν] - sd[ν] * ss[μ]
+        else
+            ss[μ] * sd[ν] - ss[ν] * sd[μ]
+        end
+        tau += smunu * nv[ν]
+    end
+
+    return exp(im * tau * (1 / 2) * (1 / n2) * (im * radius^2 / (n2 + radius^2)))
+end
+
+function _epsilon_tensor_4d(μ, ν, ρ, σ)
+    p = (μ, ν, ρ, σ)
+    length(unique(p)) == 4 || return 0
+
+    inversions = 0
+    for i = 1:4
+        for j = i+1:4
+            inversions += p[i] > p[j]
+        end
+    end
+    return iseven(inversions) ? 1 : -1
+end
+
+function _site_trace_product(a::AbstractGaugefields{NC,4}, b::AbstractGaugefields{NC,4}, ix, iy, iz, it) where {NC}
+    s = zero(ComplexF64)
+    for j = 1:NC
+        for i = 1:NC
+            s += a[i, j, ix, iy, iz, it] * b[j, i, ix, iy, iz, it]
+        end
+    end
+    return s
+end
+
+function _plaquette_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
+
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    F = Matrix{T}(undef, 4, 4)
+    for μ = 1:4
+        for ν = 1:4
+            F[μ, ν] = similar(U[1])
+        end
+    end
+
+    for μ = 1:4
+        for ν = 1:4
+            if μ != ν
+                plaq = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)])
+                evaluate_gaugelinks!(temps[1], [plaq], U, temps)
+                Traceless_antihermitian!(F[μ, ν], temps[1])
+            end
+        end
+    end
+    return F
+end
+
+function _plaquette_topological_charge_density(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    F = _plaquette_field_strengths(U)
+    NX, NY, NZ, NT = U[1].NX, U[1].NY, U[1].NZ, U[1].NT
+    density = zeros(Float64, NX, NY, NZ, NT)
+    epsilon_terms = Tuple{Int,Int,Int,Int,Int}[]
+    for μ = 1:4
+        for ν = 1:4
+            for ρ = 1:4
+                for σ = 1:4
+                    ε = _epsilon_tensor_4d(μ, ν, ρ, σ)
+                    ε != 0 && push!(epsilon_terms, (μ, ν, ρ, σ, ε))
+                end
+            end
+        end
+    end
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    q = zero(ComplexF64)
+                    for (μ, ν, ρ, σ, ε) in epsilon_terms
+                        q += ε * _site_trace_product(F[μ, ν], F[ρ, σ], ix, iy, iz, it)
+                    end
+                    density[ix, iy, iz, it] = -real(q) / (32 * pi^2)
+                end
+            end
+        end
+    end
+
+    return density
+end
+
+function _plaquette_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) where {NC}
+    return sum(_plaquette_topological_charge_density(U))
+end
+
+function _check_serial_topological_charge_field(U)
+    T = eltype(U)
+    if !(T <: Gaugefields_4D_nowing || T <: Gaugefields_4D_wing)
+        throw(ArgumentError("topological charge only supports serial 4D gauge fields"))
+    end
+    return nothing
+end
+
+"""
+    topological_charge_density(U; method=:plaquette)
+
+Return the site-wise topological charge density `q(x)` for a 4D gauge field.
+The scalar topological charge is `sum(topological_charge_density(U))`.
+"""
+function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
+    Dim == 4 || throw(ArgumentError("topological_charge_density only supports 4D gauge fields"))
+    _check_serial_topological_charge_field(U)
+    method == :plaquette || throw(ArgumentError("only method=:plaquette is supported"))
+    return _plaquette_topological_charge_density(U)
+end
+
+"""
+    topological_charge(U; method=:plaquette)
+
+Return the scalar topological charge `Q` for a 4D gauge field.
+"""
+function topological_charge(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
+    Dim == 4 || throw(ArgumentError("topological_charge only supports 4D gauge fields"))
+    _check_serial_topological_charge_field(U)
+    method == :plaquette || throw(ArgumentError("only method=:plaquette is supported"))
+    return _plaquette_topological_charge(U)
+end
+
+function Oneinstanton_SUN_embedded(
+    NC,
+    NX,
+    NY,
+    NZ,
+    NT;
+    NDW=0,
+    center=(NX / 2 + 0.5, NY / 2 + 0.5, NZ / 2 + 0.5, NT / 2 + 0.5),
+    radius=div(NX, 2),
+    sign=+1,
+    block=(1, 2),
+    verbose_level=2,
+)
+    NDW isa Integer || throw(ArgumentError("NDW must be an integer"))
+    NDW >= 0 || throw(ArgumentError("NDW must be nonnegative"))
+    block = _validate_su2_embedding_block(NC, block)
+    L = (NX, NY, NZ, NT)
+
+    if NDW == 0
+        u = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
+    else
+        u = Gaugefields_4D_wing(NC, NDW, NX, NY, NZ, NT, verbose_level=verbose_level)
+    end
+
+    U = Array{typeof(u),1}(undef, 4)
+    U[1] = u
+    for μ = 2:4
+        U[μ] = similar(u)
+    end
+
+    sunlink = zeros(ComplexF64, NC, NC)
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    for μ = 1:4
+                        su2link = _su2_instanton_link(μ, ix, iy, iz, it, L; center, radius, sign)
+                        _embed_su2_matrix_in_sun!(sunlink, su2link, block)
+                        for j = 1:NC
+                            for i = 1:NC
+                                U[μ][i, j, ix, iy, iz, it] = sunlink[i, j]
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    set_wing_U!(U)
+    return U
+end
+
 function construct_gauges(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
@@ -2787,5 +3031,3 @@ end
 include("ND.jl")
 
 end
-
-

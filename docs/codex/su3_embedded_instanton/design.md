@@ -217,10 +217,28 @@ Tests:
 - `sum(q) == Q` within tolerance using the same normalization.
 - Cold fields have site-wise density close to zero.
 - SU(2) and SU(Nc)-embedded instantons have matching `q(x)`.
-- `sign=-1` flips the sign of `q(x)`.
+- `sign=-1` flips the sign of scalar `Q`; for one-plaquette density, also
+  bound the local difference from `-q(x)` because the plaquette definition is
+  anchored at a site rather than clover-centered.
 - The density shape matches the lattice shape.
 
-PR-7: connect `q(x)` visualization on the VisualizingLQCD side.
+PR-7: expose minimal public topological charge API.
+
+Candidate public functions:
+
+```julia
+topological_charge_density(U; method=:plaquette)
+topological_charge(U; method=:plaquette)
+```
+
+Tests:
+
+- The public density API returns the same data as the internal plaquette helper.
+- The public scalar API returns `sum(q)` using the same normalization.
+- Unsupported methods such as `method=:clover` throw a clear error until they
+  are implemented.
+
+PR-8: connect `q(x)` visualization on the VisualizingLQCD side.
 
 Tests:
 
@@ -259,7 +277,8 @@ Suggested branch sequence:
 - PR-4: `codex/sun-embedded-instanton-api`
 - PR-5: `codex/sun-embedded-instanton-q-tests`
 - PR-6: `codex/sun-embedded-instanton-density`
-- PR-7: `codex/sun-embedded-instanton-visualization`
+- PR-7: `codex/topological-charge-density-api`
+- PR-8: `codex/sun-embedded-instanton-visualization`
 
 Normal flow:
 
