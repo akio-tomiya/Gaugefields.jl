@@ -1009,6 +1009,39 @@ function _plaquette_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) 
     return sum(_plaquette_topological_charge_density(U))
 end
 
+function _check_serial_topological_charge_field(U)
+    T = eltype(U)
+    if !(T <: Gaugefields_4D_nowing || T <: Gaugefields_4D_wing)
+        throw(ArgumentError("topological charge only supports serial 4D gauge fields"))
+    end
+    return nothing
+end
+
+"""
+    topological_charge_density(U; method=:plaquette)
+
+Return the site-wise topological charge density `q(x)` for a 4D gauge field.
+The scalar topological charge is `sum(topological_charge_density(U))`.
+"""
+function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
+    Dim == 4 || throw(ArgumentError("topological_charge_density only supports 4D gauge fields"))
+    _check_serial_topological_charge_field(U)
+    method == :plaquette || throw(ArgumentError("only method=:plaquette is supported"))
+    return _plaquette_topological_charge_density(U)
+end
+
+"""
+    topological_charge(U; method=:plaquette)
+
+Return the scalar topological charge `Q` for a 4D gauge field.
+"""
+function topological_charge(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
+    Dim == 4 || throw(ArgumentError("topological_charge only supports 4D gauge fields"))
+    _check_serial_topological_charge_field(U)
+    method == :plaquette || throw(ArgumentError("only method=:plaquette is supported"))
+    return _plaquette_topological_charge(U)
+end
+
 function Oneinstanton_SUN_embedded(
     NC,
     NX,

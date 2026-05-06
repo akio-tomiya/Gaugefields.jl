@@ -167,6 +167,13 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test abs(Q2) > 1
     @test size(q2) == L
     @test isapprox(sum(q2), Q2; rtol=1e-12, atol=1e-12)
+    @test topological_charge_density(U2) ≈ q2
+    @test topological_charge(U2) ≈ Q2
+    @test_throws ArgumentError topological_charge_density(U2; method=:clover)
+    @test_throws ArgumentError topological_charge(U2; method=:clover)
+    accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
+    @test_throws ArgumentError topological_charge_density(accelerator_field)
+    @test_throws ArgumentError topological_charge(accelerator_field)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
@@ -177,6 +184,7 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test plaquette_topological_charge(U3_alt) ≈ Q2
     @test plaquette_topological_charge(U4) ≈ Q2
     @test plaquette_topological_charge(U5) ≈ Q2
+    @test topological_charge(U3) ≈ Q2
     @test isapprox(plaquette_topological_charge_density(U3), q2; rtol=1e-12, atol=1e-12)
     @test isapprox(plaquette_topological_charge_density(U3_alt), q2; rtol=1e-12, atol=1e-12)
     @test isapprox(plaquette_topological_charge_density(U4), q2; rtol=1e-12, atol=1e-12)
