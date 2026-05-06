@@ -926,6 +926,89 @@ function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothi
     return exp(im * tau * (1 / 2) * (1 / n2) * (im * radius^2 / (n2 + radius^2)))
 end
 
+function _epsilon_tensor_4d(μ, ν, ρ, σ)
+    p = (μ, ν, ρ, σ)
+    length(unique(p)) == 4 || return 0
+
+    inversions = 0
+    for i = 1:4
+        for j = i+1:4
+            inversions += p[i] > p[j]
+        end
+    end
+    return iseven(inversions) ? 1 : -1
+end
+
+function _site_trace_product(a::AbstractGaugefields{NC,4}, b::AbstractGaugefields{NC,4}, ix, iy, iz, it) where {NC}
+    s = zero(ComplexF64)
+    for j = 1:NC
+        for i = 1:NC
+            s += a[i, j, ix, iy, iz, it] * b[j, i, ix, iy, iz, it]
+        end
+    end
+    return s
+end
+
+function _plaquette_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
+
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    F = Matrix{T}(undef, 4, 4)
+    for μ = 1:4
+        for ν = 1:4
+            F[μ, ν] = similar(U[1])
+        end
+    end
+
+    for μ = 1:4
+        for ν = 1:4
+            if μ != ν
+                plaq = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)])
+                evaluate_gaugelinks!(temps[1], [plaq], U, temps)
+                Traceless_antihermitian!(F[μ, ν], temps[1])
+            end
+        end
+    end
+    return F
+end
+
+function _plaquette_topological_charge_density(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    F = _plaquette_field_strengths(U)
+    NX, NY, NZ, NT = U[1].NX, U[1].NY, U[1].NZ, U[1].NT
+    density = zeros(Float64, NX, NY, NZ, NT)
+    epsilon_terms = Tuple{Int,Int,Int,Int,Int}[]
+    for μ = 1:4
+        for ν = 1:4
+            for ρ = 1:4
+                for σ = 1:4
+                    ε = _epsilon_tensor_4d(μ, ν, ρ, σ)
+                    ε != 0 && push!(epsilon_terms, (μ, ν, ρ, σ, ε))
+                end
+            end
+        end
+    end
+
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    q = zero(ComplexF64)
+                    for (μ, ν, ρ, σ, ε) in epsilon_terms
+                        q += ε * _site_trace_product(F[μ, ν], F[ρ, σ], ix, iy, iz, it)
+                    end
+                    density[ix, iy, iz, it] = -real(q) / (32 * pi^2)
+                end
+            end
+        end
+    end
+
+    return density
+end
+
+function _plaquette_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) where {NC}
+    return sum(_plaquette_topological_charge_density(U))
+end
+
 function Oneinstanton_SUN_embedded(
     NC,
     NX,

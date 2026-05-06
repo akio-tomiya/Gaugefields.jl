@@ -1,7 +1,6 @@
 using Gaugefields
 using Test
 using LinearAlgebra
-import Wilsonloop: make_plaq
 
 const AG = Gaugefields.AbstractGaugefields_module
 
@@ -151,62 +150,23 @@ end
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; NDW=-1)
 end
 
-function epsilon4(μ, ν, ρ, σ)
-    p = (μ, ν, ρ, σ)
-    length(unique(p)) == 4 || return 0
-
-    inversions = 0
-    for i = 1:4
-        for j = i+1:4
-            inversions += p[i] > p[j]
-        end
-    end
-    return iseven(inversions) ? 1 : -1
-end
-
-function plaquette_topological_charge(U)
-    Dim = 4
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
-    F = Matrix{typeof(U[1])}(undef, Dim, Dim)
-    for μ = 1:Dim
-        for ν = 1:Dim
-            F[μ, ν] = similar(U[1])
-        end
-    end
-
-    for μ = 1:Dim
-        for ν = 1:Dim
-            if μ != ν
-                evaluate_gaugelinks!(temps[1], [make_plaq(μ, ν, Dim=Dim)], U, temps)
-                Traceless_antihermitian!(F[μ, ν], temps[1])
-            end
-        end
-    end
-
-    Q = 0.0
-    for μ = 1:Dim
-        for ν = 1:Dim
-            for ρ = 1:Dim
-                for σ = 1:Dim
-                    if μ != ν && ρ != σ
-                        Q += epsilon4(μ, ν, ρ, σ) * tr(F[μ, ν], F[ρ, σ])
-                    end
-                end
-            end
-        end
-    end
-
-    return -real(Q) / (32 * pi^2)
-end
+plaquette_topological_charge(U) = AG._plaquette_topological_charge(U)
+plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_density(U)
 
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
     cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
-    @test isapprox(plaquette_topological_charge(cold), 0; atol=1e-12)
+    cold_density = plaquette_topological_charge_density(cold)
+    @test size(cold_density) == L
+    @test all(isapprox.(cold_density, 0; atol=1e-12))
+    @test isapprox(sum(cold_density), plaquette_topological_charge(cold); atol=1e-12)
 
     U2 = Oneinstanton(2, 0, L...)
+    q2 = plaquette_topological_charge_density(U2)
     Q2 = plaquette_topological_charge(U2)
     @test abs(Q2) > 1
+    @test size(q2) == L
+    @test isapprox(sum(q2), Q2; rtol=1e-12, atol=1e-12)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
@@ -217,7 +177,14 @@ end
     @test plaquette_topological_charge(U3_alt) ≈ Q2
     @test plaquette_topological_charge(U4) ≈ Q2
     @test plaquette_topological_charge(U5) ≈ Q2
+    @test isapprox(plaquette_topological_charge_density(U3), q2; rtol=1e-12, atol=1e-12)
+    @test isapprox(plaquette_topological_charge_density(U3_alt), q2; rtol=1e-12, atol=1e-12)
+    @test isapprox(plaquette_topological_charge_density(U4), q2; rtol=1e-12, atol=1e-12)
+    @test isapprox(plaquette_topological_charge_density(U5), q2; rtol=1e-12, atol=1e-12)
 
     U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
     @test plaquette_topological_charge(U3_anti) ≈ -Q2
+    q3_anti = plaquette_topological_charge_density(U3_anti)
+    @test isapprox(sum(q3_anti), -Q2; rtol=1e-12, atol=1e-12)
+    @test maximum(abs.(q3_anti .+ q2)) < 2e-5
 end

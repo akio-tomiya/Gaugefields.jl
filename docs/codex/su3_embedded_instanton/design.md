@@ -217,7 +217,9 @@ Tests:
 - `sum(q) == Q` within tolerance using the same normalization.
 - Cold fields have site-wise density close to zero.
 - SU(2) and SU(Nc)-embedded instantons have matching `q(x)`.
-- `sign=-1` flips the sign of `q(x)`.
+- `sign=-1` flips the sign of scalar `Q`; for one-plaquette density, also
+  bound the local difference from `-q(x)` because the plaquette definition is
+  anchored at a site rather than clover-centered.
 - The density shape matches the lattice shape.
 
 PR-7: connect `q(x)` visualization on the VisualizingLQCD side.
