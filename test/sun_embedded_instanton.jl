@@ -95,3 +95,57 @@ end
     @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; sign=0)
     @test_throws ArgumentError AG._su2_instanton_link(1, 1, 1, 1, 1, L; center=(1, 2, 3))
 end
+
+function normalized_plaquette(U)
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    return calculate_Plaquette(U, temp1, temp2) / (6 * U[1].NV * U[1].NC)
+end
+
+function check_sun_embedded_instanton(NC, block; NDW=0)
+    L = (4, 4, 4, 4)
+    U2 = Oneinstanton(2, NDW, L...)
+    U = Oneinstanton_SUN_embedded(NC, L...; NDW, block)
+    spectator = setdiff(1:NC, block)
+
+    for μ = 1:4
+        for it = 1:L[4], iz = 1:L[3], iy = 1:L[2], ix = 1:L[1]
+            link = Matrix(U[μ][:, :, ix, iy, iz, it])
+            u2 = ComplexF64[
+                U2[μ][1, 1, ix, iy, iz, it] U2[μ][1, 2, ix, iy, iz, it]
+                U2[μ][2, 1, ix, iy, iz, it] U2[μ][2, 2, ix, iy, iz, it]
+            ]
+
+            for b = 1:2, a = 1:2
+                @test link[block[a], block[b]] ≈ u2[a, b]
+            end
+            for c in spectator
+                @test link[c, c] == 1
+                for d = 1:NC
+                    if d != c
+                        @test link[c, d] == 0
+                        @test link[d, c] == 0
+                    end
+                end
+            end
+
+            @test link' * link ≈ Matrix{ComplexF64}(I, NC, NC)
+            @test det(link) ≈ 1
+        end
+    end
+
+    @test normalized_plaquette(U) ≈ (2 * normalized_plaquette(U2) + (NC - 2)) / NC
+end
+
+@testset "SUN embedded instanton public API" begin
+    check_sun_embedded_instanton(3, (1, 2))
+    check_sun_embedded_instanton(3, (1, 3))
+    check_sun_embedded_instanton(3, (2, 3))
+    check_sun_embedded_instanton(4, (2, 4))
+    check_sun_embedded_instanton(5, (2, 5))
+    check_sun_embedded_instanton(3, (1, 3); NDW=1)
+
+    @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 1))
+    @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 4))
+    @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; NDW=-1)
+end

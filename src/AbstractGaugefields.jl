@@ -922,6 +922,59 @@ function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothi
     return exp(im * tau * (1 / 2) * (1 / n2) * (im * sign * radius^2 / (n2 + radius^2)))
 end
 
+function Oneinstanton_SUN_embedded(
+    NC,
+    NX,
+    NY,
+    NZ,
+    NT;
+    NDW=0,
+    center=(NX / 2 + 0.5, NY / 2 + 0.5, NZ / 2 + 0.5, NT / 2 + 0.5),
+    radius=div(NX, 2),
+    sign=+1,
+    block=(1, 2),
+    verbose_level=2,
+)
+    NDW isa Integer || throw(ArgumentError("NDW must be an integer"))
+    NDW >= 0 || throw(ArgumentError("NDW must be nonnegative"))
+    block = _validate_su2_embedding_block(NC, block)
+    L = (NX, NY, NZ, NT)
+
+    if NDW == 0
+        u = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)
+    else
+        u = Gaugefields_4D_wing(NC, NDW, NX, NY, NZ, NT, verbose_level=verbose_level)
+    end
+
+    U = Array{typeof(u),1}(undef, 4)
+    U[1] = u
+    for μ = 2:4
+        U[μ] = similar(u)
+    end
+
+    sunlink = zeros(ComplexF64, NC, NC)
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    for μ = 1:4
+                        su2link = _su2_instanton_link(μ, ix, iy, iz, it, L; center, radius, sign)
+                        _embed_su2_matrix_in_sun!(sunlink, su2link, block)
+                        for j = 1:NC
+                            for i = 1:NC
+                                U[μ][i, j, ix, iy, iz, it] = sunlink[i, j]
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    set_wing_U!(U)
+    return U
+end
+
 function construct_gauges(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
