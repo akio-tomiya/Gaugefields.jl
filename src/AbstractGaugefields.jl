@@ -851,6 +851,37 @@ function Oneinstanton(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     return U
 end
 
+function _validate_su2_embedding_block(NC, block)
+    NC isa Integer || throw(ArgumentError("NC must be an integer"))
+    NC >= 2 || throw(ArgumentError("NC must be at least 2"))
+    length(block) == 2 || throw(ArgumentError("block must contain two color indices"))
+
+    i, j = block
+    i isa Integer || throw(ArgumentError("block indices must be integers"))
+    j isa Integer || throw(ArgumentError("block indices must be integers"))
+    1 <= i < j <= NC || throw(ArgumentError("block must satisfy 1 <= i < j <= NC"))
+
+    return (Int(i), Int(j))
+end
+
+function _embed_su2_matrix_in_sun!(U, u2, block)
+    size(u2) == (2, 2) || throw(ArgumentError("u2 must be a 2 by 2 matrix"))
+    NC, NC2 = size(U)
+    NC == NC2 || throw(ArgumentError("U must be a square matrix"))
+    i, j = _validate_su2_embedding_block(NC, block)
+
+    fill!(U, zero(eltype(U)))
+    for c = 1:NC
+        U[c, c] = one(eltype(U))
+    end
+
+    U[i, i] = u2[1, 1]
+    U[i, j] = u2[1, 2]
+    U[j, i] = u2[2, 1]
+    U[j, j] = u2[2, 2]
+    return U
+end
+
 function construct_gauges(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     dim = length(NN)
     if mpi
@@ -2787,5 +2818,4 @@ end
 include("ND.jl")
 
 end
-
 

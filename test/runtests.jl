@@ -28,6 +28,11 @@ end
     include("init.jl")
 end
 
+@testset "SUN embedded instanton helpers" begin
+    println("SUN embedded instanton helpers")
+    include("sun_embedded_instanton.jl")
+end
+
 
 
 @testset "HMC nowing" begin
@@ -114,7 +119,6 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
 
 
 
