@@ -915,11 +915,15 @@ function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothi
     n2 = real(nv ⋅ nv)
     tau = zeros(ComplexF64, 2, 2)
     for ν = 1:4
-        smunu = sd[μ] * ss[ν] - sd[ν] * ss[μ]
+        smunu = if sign == +1
+            sd[μ] * ss[ν] - sd[ν] * ss[μ]
+        else
+            ss[μ] * sd[ν] - ss[ν] * sd[μ]
+        end
         tau += smunu * nv[ν]
     end
 
-    return exp(im * tau * (1 / 2) * (1 / n2) * (im * sign * radius^2 / (n2 + radius^2)))
+    return exp(im * tau * (1 / 2) * (1 / n2) * (im * radius^2 / (n2 + radius^2)))
 end
 
 function Oneinstanton_SUN_embedded(

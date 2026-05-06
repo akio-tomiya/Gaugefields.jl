@@ -1,6 +1,7 @@
 using Gaugefields
 using Test
 using LinearAlgebra
+import Wilsonloop: make_plaq
 
 const AG = Gaugefields.AbstractGaugefields_module
 
@@ -148,4 +149,75 @@ end
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 1))
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; block=(1, 4))
     @test_throws ArgumentError Oneinstanton_SUN_embedded(3, 4, 4, 4, 4; NDW=-1)
+end
+
+function epsilon4(μ, ν, ρ, σ)
+    p = (μ, ν, ρ, σ)
+    length(unique(p)) == 4 || return 0
+
+    inversions = 0
+    for i = 1:4
+        for j = i+1:4
+            inversions += p[i] > p[j]
+        end
+    end
+    return iseven(inversions) ? 1 : -1
+end
+
+function plaquette_topological_charge(U)
+    Dim = 4
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    F = Matrix{typeof(U[1])}(undef, Dim, Dim)
+    for μ = 1:Dim
+        for ν = 1:Dim
+            F[μ, ν] = similar(U[1])
+        end
+    end
+
+    for μ = 1:Dim
+        for ν = 1:Dim
+            if μ != ν
+                evaluate_gaugelinks!(temps[1], [make_plaq(μ, ν, Dim=Dim)], U, temps)
+                Traceless_antihermitian!(F[μ, ν], temps[1])
+            end
+        end
+    end
+
+    Q = 0.0
+    for μ = 1:Dim
+        for ν = 1:Dim
+            for ρ = 1:Dim
+                for σ = 1:Dim
+                    if μ != ν && ρ != σ
+                        Q += epsilon4(μ, ν, ρ, σ) * tr(F[μ, ν], F[ρ, σ])
+                    end
+                end
+            end
+        end
+    end
+
+    return -real(Q) / (32 * pi^2)
+end
+
+@testset "SUN embedded instanton topological charge" begin
+    L = (4, 4, 4, 4)
+    cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
+    @test isapprox(plaquette_topological_charge(cold), 0; atol=1e-12)
+
+    U2 = Oneinstanton(2, 0, L...)
+    Q2 = plaquette_topological_charge(U2)
+    @test abs(Q2) > 1
+
+    U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
+    U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
+    U4 = Oneinstanton_SUN_embedded(4, L...; block=(2, 4))
+    U5 = Oneinstanton_SUN_embedded(5, L...; block=(2, 5))
+
+    @test plaquette_topological_charge(U3) ≈ Q2
+    @test plaquette_topological_charge(U3_alt) ≈ Q2
+    @test plaquette_topological_charge(U4) ≈ Q2
+    @test plaquette_topological_charge(U5) ≈ Q2
+
+    U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
+    @test plaquette_topological_charge(U3_anti) ≈ -Q2
 end
