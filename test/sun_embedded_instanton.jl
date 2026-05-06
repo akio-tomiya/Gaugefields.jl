@@ -171,6 +171,9 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test topological_charge(U2) ≈ Q2
     @test_throws ArgumentError topological_charge_density(U2; method=:clover)
     @test_throws ArgumentError topological_charge(U2; method=:clover)
+    accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
+    @test_throws ArgumentError topological_charge_density(accelerator_field)
+    @test_throws ArgumentError topological_charge(accelerator_field)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
