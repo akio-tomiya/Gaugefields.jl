@@ -166,6 +166,37 @@ end
 
 plaquette_topological_charge(U) = AG._plaquette_topological_charge(U)
 plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_density(U)
+clover_topological_charge(U) = AG._clover_topological_charge(U)
+clover_topological_charge_density(U) = AG._clover_topological_charge_density(U)
+
+function clover_reference_topological_charge(U)
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    F = Matrix{eltype(U)}(undef, 4, 4)
+    for μ = 1:4
+        for ν = 1:4
+            F[μ, ν] = similar(U[1])
+            if μ != ν
+                evaluate_gaugelinks!(temps[1], AG.make_cloverloops(μ, ν, Dim=4), U, temps)
+                Traceless_antihermitian!(F[μ, ν], temps[1])
+            end
+        end
+    end
+
+    Q = 0.0
+    numofloops = 4
+    for μ = 1:4
+        for ν = 1:4
+            μ == ν && continue
+            for ρ = 1:4
+                for σ = 1:4
+                    ρ == σ && continue
+                    Q += AG._epsilon_tensor_4d(μ, ν, ρ, σ) * tr(F[μ, ν], F[ρ, σ]) / numofloops^2
+                end
+            end
+        end
+    end
+    return -real(Q) / (32 * pi^2)
+end
 
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
@@ -174,6 +205,11 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test size(cold_density) == L
     @test all(isapprox.(cold_density, 0; atol=1e-12))
     @test isapprox(sum(cold_density), plaquette_topological_charge(cold); atol=1e-12)
+    cold_clover_density = clover_topological_charge_density(cold)
+    @test size(cold_clover_density) == L
+    @test all(isapprox.(cold_clover_density, 0; atol=1e-12))
+    @test isapprox(sum(cold_clover_density), clover_topological_charge(cold); atol=1e-12)
+    @test isapprox(clover_topological_charge(cold), clover_reference_topological_charge(cold); atol=1e-12)
 
     U2 = Oneinstanton(2, 0, L...)
     q2 = plaquette_topological_charge_density(U2)
@@ -185,6 +221,11 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test topological_charge(U2) ≈ Q2
     @test_throws ArgumentError topological_charge_density(U2; method=:clover)
     @test_throws ArgumentError topological_charge(U2; method=:clover)
+    q2_clover = clover_topological_charge_density(U2)
+    Q2_clover = clover_topological_charge(U2)
+    @test size(q2_clover) == L
+    @test isapprox(sum(q2_clover), Q2_clover; rtol=1e-12, atol=1e-12)
+    @test isapprox(Q2_clover, clover_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
     @test_throws ArgumentError topological_charge_density(accelerator_field)
     @test_throws ArgumentError topological_charge(accelerator_field)
@@ -203,10 +244,18 @@ plaquette_topological_charge_density(U) = AG._plaquette_topological_charge_densi
     @test isapprox(plaquette_topological_charge_density(U3_alt), q2; rtol=1e-12, atol=1e-12)
     @test isapprox(plaquette_topological_charge_density(U4), q2; rtol=1e-12, atol=1e-12)
     @test isapprox(plaquette_topological_charge_density(U5), q2; rtol=1e-12, atol=1e-12)
+    @test clover_topological_charge(U3) ≈ Q2_clover
+    @test clover_topological_charge(U3_alt) ≈ Q2_clover
+    @test clover_topological_charge(U4) ≈ Q2_clover
+    @test clover_topological_charge(U5) ≈ Q2_clover
+    @test isapprox(clover_topological_charge_density(U3), q2_clover; rtol=1e-12, atol=1e-12)
+    @test isapprox(clover_topological_charge_density(U3_alt), q2_clover; rtol=1e-12, atol=1e-12)
 
     U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
     @test plaquette_topological_charge(U3_anti) ≈ -Q2
     q3_anti = plaquette_topological_charge_density(U3_anti)
     @test isapprox(sum(q3_anti), -Q2; rtol=1e-12, atol=1e-12)
     @test maximum(abs.(q3_anti .+ q2)) < 2e-5
+    q3_anti_clover = clover_topological_charge_density(U3_anti)
+    @test isapprox(sum(q3_anti_clover), -Q2_clover; rtol=1e-12, atol=1e-12)
 end
