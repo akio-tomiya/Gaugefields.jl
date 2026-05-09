@@ -35,9 +35,7 @@ Q = topological_charge(U; method=:plaquette)
 ```
 
 with `Q == sum(q)` by construction. The API currently accepts only
-`method=:plaquette` on `master` at the time this note was written; the next
-implementation step is to route `method=:clover` through the private clover
-helpers.
+`method=:plaquette` and `method=:clover` for serial 4D gauge fields.
 
 ## Usage example for the embedded instanton
 
@@ -200,3 +198,4 @@ julia --project=. test/runtests.jl
    `topological_charge(U; method=:clover)` to the clover helpers, with the
    focused tests above.
 4. Revisit examples or manual docs after the implementation is merged.
+5. Consider improved or rectangle density methods separately.

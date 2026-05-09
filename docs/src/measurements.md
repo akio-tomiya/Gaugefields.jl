@@ -207,6 +207,38 @@ test()
 We show the code to calculate the topological charge. 
 We show three definitions. 
 
+The public API returns either the scalar topological charge `Q` or the
+site-wise topological charge density `q(x)`. The scalar result is defined as
+the sum of the density with the same method and normalization.
+
+```julia
+using Gaugefields
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+
+U = Oneinstanton_SUN_embedded(NC, NX, NY, NZ, NT; block=(1, 2))
+
+q_plaq = topological_charge_density(U; method=:plaquette)
+Q_plaq = topological_charge(U; method=:plaquette)
+
+q_clover = topological_charge_density(U; method=:clover)
+Q_clover = topological_charge(U; method=:clover)
+
+@assert size(q_plaq) == (NX, NY, NZ, NT)
+@assert size(q_clover) == (NX, NY, NZ, NT)
+@assert isapprox(sum(q_plaq), Q_plaq; rtol=1e-12, atol=1e-12)
+@assert isapprox(sum(q_clover), Q_clover; rtol=1e-12, atol=1e-12)
+```
+
+`method=:plaquette` is the default. `method=:clover` uses the four-loop clover
+definition for each ordered direction pair. These public helpers currently
+support serial 4D gauge fields. MPI, accelerator fields, and improved or
+rectangle definitions are separate topics.
+
 ```julia
 using Gaugefields
 using Wilsonloop
