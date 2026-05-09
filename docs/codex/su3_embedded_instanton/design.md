@@ -248,6 +248,10 @@ Tests:
 - A small fixture confirms that the visualized density sums back to the scalar
   `Q` used by Gaugefields.jl.
 
+Follow-up note: `clover_topological_charge_design.md` records the next
+docs-only step for `Oneinstanton_SUN_embedded` usage examples and the
+`topological_charge_density(U; method=:clover)` design.
+
 ## Test placement and commands
 
 Add focused tests in a new file such as `test/sun_embedded_instanton.jl`, then
