@@ -35,7 +35,9 @@ Q = topological_charge(U; method=:plaquette)
 ```
 
 with `Q == sum(q)` by construction. The API currently accepts only
-`method=:plaquette`; `method=:clover` throws a clear `ArgumentError`.
+`method=:plaquette` on `master` at the time this note was written; the next
+implementation step is to route `method=:clover` through the private clover
+helpers.
 
 ## Usage example for the embedded instanton
 
@@ -193,8 +195,7 @@ julia --project=. test/runtests.jl
 
 1. This docs-only PR: document embedded-instanton usage and the clover-density
    design.
-2. Add private clover field-strength and density helpers, leaving the public
-   `method=:clover` error in place if useful for review size.
+2. Add private clover field-strength and density helpers.
 3. Route `topological_charge_density(U; method=:clover)` and
    `topological_charge(U; method=:clover)` to the clover helpers, with the
    focused tests above.

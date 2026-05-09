@@ -219,13 +219,15 @@ end
     @test isapprox(sum(q2), Q2; rtol=1e-12, atol=1e-12)
     @test topological_charge_density(U2) ≈ q2
     @test topological_charge(U2) ≈ Q2
-    @test_throws ArgumentError topological_charge_density(U2; method=:clover)
-    @test_throws ArgumentError topological_charge(U2; method=:clover)
     q2_clover = clover_topological_charge_density(U2)
     Q2_clover = clover_topological_charge(U2)
     @test size(q2_clover) == L
     @test isapprox(sum(q2_clover), Q2_clover; rtol=1e-12, atol=1e-12)
     @test isapprox(Q2_clover, clover_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
+    @test topological_charge_density(U2; method=:clover) ≈ q2_clover
+    @test topological_charge(U2; method=:clover) ≈ Q2_clover
+    @test_throws ArgumentError topological_charge_density(U2; method=:rect)
+    @test_throws ArgumentError topological_charge(U2; method=:rect)
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
     @test_throws ArgumentError topological_charge_density(accelerator_field)
     @test_throws ArgumentError topological_charge(accelerator_field)
@@ -250,6 +252,8 @@ end
     @test clover_topological_charge(U5) ≈ Q2_clover
     @test isapprox(clover_topological_charge_density(U3), q2_clover; rtol=1e-12, atol=1e-12)
     @test isapprox(clover_topological_charge_density(U3_alt), q2_clover; rtol=1e-12, atol=1e-12)
+    @test topological_charge(U3; method=:clover) ≈ Q2_clover
+    @test isapprox(topological_charge_density(U3; method=:clover), q2_clover; rtol=1e-12, atol=1e-12)
 
     U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
     @test plaquette_topological_charge(U3_anti) ≈ -Q2
