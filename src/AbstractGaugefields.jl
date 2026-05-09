@@ -1011,6 +1011,67 @@ function _plaquette_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) 
     return sum(_plaquette_topological_charge_density(U))
 end
 
+function _clover_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
+
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    F = Matrix{T}(undef, 4, 4)
+    for μ = 1:4
+        for ν = 1:4
+            F[μ, ν] = similar(U[1])
+        end
+    end
+
+    for μ = 1:4
+        for ν = 1:4
+            if μ != ν
+                loops = make_cloverloops(μ, ν, Dim=4)
+                evaluate_gaugelinks!(temps[1], loops, U, temps)
+                Traceless_antihermitian!(F[μ, ν], temps[1])
+            end
+        end
+    end
+    return F
+end
+
+function _clover_topological_charge_density(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    F = _clover_field_strengths(U)
+    NX, NY, NZ, NT = U[1].NX, U[1].NY, U[1].NZ, U[1].NT
+    density = zeros(Float64, NX, NY, NZ, NT)
+    epsilon_terms = Tuple{Int,Int,Int,Int,Int}[]
+    for μ = 1:4
+        for ν = 1:4
+            for ρ = 1:4
+                for σ = 1:4
+                    ε = _epsilon_tensor_4d(μ, ν, ρ, σ)
+                    ε != 0 && push!(epsilon_terms, (μ, ν, ρ, σ, ε))
+                end
+            end
+        end
+    end
+
+    numofloops = 4
+    for it = 1:NT
+        for iz = 1:NZ
+            for iy = 1:NY
+                for ix = 1:NX
+                    q = zero(ComplexF64)
+                    for (μ, ν, ρ, σ, ε) in epsilon_terms
+                        q += ε * _site_trace_product(F[μ, ν], F[ρ, σ], ix, iy, iz, it)
+                    end
+                    density[ix, iy, iz, it] = -real(q) / (32 * pi^2 * numofloops^2)
+                end
+            end
+        end
+    end
+
+    return density
+end
+
+function _clover_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) where {NC}
+    return sum(_clover_topological_charge_density(U))
+end
+
 function _check_serial_topological_charge_field(U)
     T = eltype(U)
     if !(T <: Gaugefields_4D_nowing || T <: Gaugefields_4D_wing)
