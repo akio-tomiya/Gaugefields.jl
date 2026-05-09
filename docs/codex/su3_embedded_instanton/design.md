@@ -248,9 +248,12 @@ Tests:
 - A small fixture confirms that the visualized density sums back to the scalar
   `Q` used by Gaugefields.jl.
 
-Follow-up note: `clover_topological_charge_design.md` records the next
-docs-only step for `Oneinstanton_SUN_embedded` usage examples and the
-`topological_charge_density(U; method=:clover)` design.
+Follow-up notes:
+
+- `clover_topological_charge_design.md` records the implemented clover density
+  design and the embedded-instanton usage examples.
+- `topological_charge_method_roadmap.md` records the next measurement-method
+  candidates, including rectangle/improved density and GPU/MPI design questions.
 
 ## Test placement and commands
 
@@ -268,10 +271,11 @@ public API explicitly supports those paths.
 
 ## Branch and PR workflow
 
-Do not push directly to `main`.
+Do not push directly to the default branch. This repository currently uses
+`master`.
 
 Use one local branch and one remote branch per PR. After a PR is merged, update
-local `main` and create the next PR branch from the updated `main`.
+local `master` and create the next PR branch from the updated `master`.
 
 Suggested branch sequence:
 
@@ -287,7 +291,7 @@ Suggested branch sequence:
 Normal flow:
 
 ```sh
-git switch main
+git switch master
 git pull --ff-only
 git switch -c codex/sun-embedded-instanton-design
 # edit, test, commit
@@ -297,7 +301,7 @@ git push -u origin codex/sun-embedded-instanton-design
 After PR-1 is merged:
 
 ```sh
-git switch main
+git switch master
 git pull --ff-only
 git switch -c codex/sun-embedded-instanton-helper
 ```
@@ -311,5 +315,5 @@ git switch -c codex/sun-embedded-instanton-helper
 ```
 
 In stacked mode, keep the PR description clear about the dependency on the
-previous PR. Rebase the later branch onto updated `main` after the earlier PR is
-merged.
+previous PR. Rebase the later branch onto updated `master` after the earlier PR
+is merged.
