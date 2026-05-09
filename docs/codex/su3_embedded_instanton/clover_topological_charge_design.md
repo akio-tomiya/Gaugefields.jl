@@ -1,8 +1,8 @@
 # SU(Nc)-Embedded Instanton Usage and Clover Density Design
 
-This note is a docs-only follow-up to the SU(Nc)-embedded SU(2) instanton work.
-It records the next small step before implementing `method=:clover` support for
-`topological_charge_density` and `topological_charge`.
+This note records the design used for the SU(Nc)-embedded SU(2) instanton
+usage examples and for `method=:clover` support in `topological_charge_density`
+and `topological_charge`.
 
 This PR should not change package behavior. In particular, it should not enable
 `Oneinstanton(3, ...)`, should not alter `Oneinstanton_SUN_embedded`, and should
@@ -163,8 +163,7 @@ slicing, interpolation, color scaling, or smoothing.
 
 ## Tests for the implementation PR
 
-The docs-only PR does not need runtime tests. The implementation PR that enables
-`method=:clover` should add focused tests:
+The implementation PR that enables `method=:clover` should add focused tests:
 
 - cold serial 4D fields have zero clover density and zero scalar charge,
 - `sum(topological_charge_density(U; method=:clover))` matches
@@ -191,11 +190,11 @@ julia --project=. test/runtests.jl
 
 ## Suggested next PRs
 
-1. This docs-only PR: document embedded-instanton usage and the clover-density
-   design.
-2. Add private clover field-strength and density helpers.
-3. Route `topological_charge_density(U; method=:clover)` and
+1. Done: document embedded-instanton usage and the clover-density design.
+2. Done: add private clover field-strength and density helpers.
+3. Done: route `topological_charge_density(U; method=:clover)` and
    `topological_charge(U; method=:clover)` to the clover helpers, with the
    focused tests above.
-4. Revisit examples or manual docs after the implementation is merged.
-5. Consider improved or rectangle density methods separately.
+4. Done: add a short manual example for public plaquette and clover usage.
+5. Next: consider improved or rectangle density methods separately. See
+   `topological_charge_method_roadmap.md`.
