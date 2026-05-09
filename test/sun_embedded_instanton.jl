@@ -171,6 +171,8 @@ clover_topological_charge(U) = AG._clover_topological_charge(U)
 clover_topological_charge_density(U) = AG._clover_topological_charge_density(U)
 rectangle_topological_charge(U) = AG._rectangle_topological_charge(U)
 rectangle_topological_charge_density(U) = AG._rectangle_topological_charge_density(U)
+improved_topological_charge(U) = AG._improved_topological_charge(U)
+improved_topological_charge_density(U) = AG._improved_topological_charge_density(U)
 
 function clover_reference_topological_charge(U)
     temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
@@ -246,6 +248,12 @@ function rectangle_reference_topological_charge(U)
     return 2 * (-real(Q) / (32 * pi^2))
 end
 
+function improved_reference_topological_charge(U)
+    c0 = 5 / 3
+    c1 = -1 / 12
+    return c0 * clover_reference_topological_charge(U) + c1 * rectangle_reference_topological_charge(U)
+end
+
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
     cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
@@ -263,6 +271,11 @@ end
     @test all(isapprox.(cold_rectangle_density, 0; atol=1e-12))
     @test isapprox(sum(cold_rectangle_density), rectangle_topological_charge(cold); atol=1e-12)
     @test isapprox(rectangle_topological_charge(cold), rectangle_reference_topological_charge(cold); atol=1e-12)
+    cold_improved_density = improved_topological_charge_density(cold)
+    @test size(cold_improved_density) == L
+    @test all(isapprox.(cold_improved_density, 0; atol=1e-12))
+    @test isapprox(sum(cold_improved_density), improved_topological_charge(cold); atol=1e-12)
+    @test isapprox(improved_topological_charge(cold), improved_reference_topological_charge(cold); atol=1e-12)
 
     U2 = Oneinstanton(2, 0, L...)
     q2 = plaquette_topological_charge_density(U2)
@@ -284,8 +297,16 @@ end
     @test size(q2_rectangle) == L
     @test isapprox(sum(q2_rectangle), Q2_rectangle; rtol=1e-12, atol=1e-12)
     @test isapprox(Q2_rectangle, rectangle_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
+    q2_improved = improved_topological_charge_density(U2)
+    Q2_improved = improved_topological_charge(U2)
+    @test size(q2_improved) == L
+    @test isapprox(sum(q2_improved), Q2_improved; rtol=1e-12, atol=1e-12)
+    @test isapprox(q2_improved, (5 / 3) .* q2_clover .- (1 / 12) .* q2_rectangle; rtol=1e-12, atol=1e-12)
+    @test isapprox(Q2_improved, improved_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
     @test_throws ArgumentError topological_charge_density(U2; method=:rect)
     @test_throws ArgumentError topological_charge(U2; method=:rect)
+    @test_throws ArgumentError topological_charge_density(U2; method=:improved)
+    @test_throws ArgumentError topological_charge(U2; method=:improved)
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
     @test_throws ArgumentError topological_charge_density(accelerator_field)
     @test_throws ArgumentError topological_charge(accelerator_field)
@@ -318,6 +339,12 @@ end
     @test rectangle_topological_charge(U5) ≈ Q2_rectangle
     @test isapprox(rectangle_topological_charge_density(U3), q2_rectangle; rtol=1e-12, atol=1e-12)
     @test isapprox(rectangle_topological_charge_density(U3_alt), q2_rectangle; rtol=1e-12, atol=1e-12)
+    @test improved_topological_charge(U3) ≈ Q2_improved
+    @test improved_topological_charge(U3_alt) ≈ Q2_improved
+    @test improved_topological_charge(U4) ≈ Q2_improved
+    @test improved_topological_charge(U5) ≈ Q2_improved
+    @test isapprox(improved_topological_charge_density(U3), q2_improved; rtol=1e-12, atol=1e-12)
+    @test isapprox(improved_topological_charge_density(U3_alt), q2_improved; rtol=1e-12, atol=1e-12)
 
     U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
     @test plaquette_topological_charge(U3_anti) ≈ -Q2
@@ -328,4 +355,6 @@ end
     @test isapprox(sum(q3_anti_clover), -Q2_clover; rtol=1e-12, atol=1e-12)
     q3_anti_rectangle = rectangle_topological_charge_density(U3_anti)
     @test isapprox(sum(q3_anti_rectangle), -Q2_rectangle; rtol=1e-12, atol=1e-12)
+    q3_anti_improved = improved_topological_charge_density(U3_anti)
+    @test isapprox(sum(q3_anti_improved), -Q2_improved; rtol=1e-12, atol=1e-12)
 end
