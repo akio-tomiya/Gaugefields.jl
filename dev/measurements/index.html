@@ -184,7 +184,26 @@ function test()
 
 
 end
-test()</code></pre><h2 id="Topological-charge"><a class="docs-heading-anchor" href="#Topological-charge">Topological charge</a><a id="Topological-charge-1"></a><a class="docs-heading-anchor-permalink" href="#Topological-charge" title="Permalink"></a></h2><p>We show the code to calculate the topological charge.  We show three definitions. </p><pre><code class="language-julia hljs">using Gaugefields
+test()</code></pre><h2 id="Topological-charge"><a class="docs-heading-anchor" href="#Topological-charge">Topological charge</a><a id="Topological-charge-1"></a><a class="docs-heading-anchor-permalink" href="#Topological-charge" title="Permalink"></a></h2><p>We show the code to calculate the topological charge.  We show three definitions. </p><p>The public API returns either the scalar topological charge <code>Q</code> or the site-wise topological charge density <code>q(x)</code>. The scalar result is defined as the sum of the density with the same method and normalization.</p><pre><code class="language-julia hljs">using Gaugefields
+
+NX = 4
+NY = 4
+NZ = 4
+NT = 4
+NC = 3
+
+U = Oneinstanton_SUN_embedded(NC, NX, NY, NZ, NT; block=(1, 2))
+
+q_plaq = topological_charge_density(U; method=:plaquette)
+Q_plaq = topological_charge(U; method=:plaquette)
+
+q_clover = topological_charge_density(U; method=:clover)
+Q_clover = topological_charge(U; method=:clover)
+
+@assert size(q_plaq) == (NX, NY, NZ, NT)
+@assert size(q_clover) == (NX, NY, NZ, NT)
+@assert isapprox(sum(q_plaq), Q_plaq; rtol=1e-12, atol=1e-12)
+@assert isapprox(sum(q_clover), Q_clover; rtol=1e-12, atol=1e-12)</code></pre><p><code>method=:plaquette</code> is the default. <code>method=:clover</code> uses the four-loop clover definition for each ordered direction pair. These public helpers currently support serial 4D gauge fields. MPI, accelerator fields, and improved or rectangle definitions are separate topics.</p><pre><code class="language-julia hljs">using Gaugefields
 using Wilsonloop
 using LinearAlgebra
 using Combinatorics
@@ -402,4 +421,4 @@ function test()
 
 
 end
-test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howtoimplement/">« How to implement new gauge fields</a><a class="docs-footer-nextpage" href="../mpi/">Parallel computation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 9 May 2026 14:36">Saturday 9 May 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+test()</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../howtoimplement/">« How to implement new gauge fields</a><a class="docs-footer-nextpage" href="../mpi/">Parallel computation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 9 May 2026 17:32">Saturday 9 May 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
