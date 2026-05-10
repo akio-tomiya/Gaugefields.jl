@@ -954,7 +954,7 @@ end
 function _plaquette_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
     length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
 
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{T}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
@@ -965,8 +965,8 @@ function _plaquette_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefie
     for μ = 1:4
         for ν = 1:4
             if μ != ν
-                plaq = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)])
-                evaluate_gaugelinks!(temps[1], [plaq], U, temps)
+                plaq = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)], Dim=4)
+                evaluate_gaugelinks!(temps[1], [plaq], U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -1014,7 +1014,7 @@ end
 function _clover_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
     length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
 
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{T}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
@@ -1026,7 +1026,7 @@ function _clover_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields
         for ν = 1:4
             if μ != ν
                 loops = make_cloverloops(μ, ν, Dim=4)
-                evaluate_gaugelinks!(temps[1], loops, U, temps)
+                evaluate_gaugelinks!(temps[1], loops, U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -1075,15 +1075,15 @@ end
 function _rectangle_loops(μ, ν; Dim=4)
     loops = Wilsonline{Dim}[]
 
-    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)]))
-    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)]))
-    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)]))
-    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)]))
+    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)], Dim=Dim))
 
-    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)]))
-    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)]))
-    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)]))
-    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)]))
+    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)], Dim=Dim))
 
     return loops
 end
@@ -1091,7 +1091,7 @@ end
 function _rectangle_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
     length(U) == 4 || throw(ArgumentError("U must contain four gauge-link directions"))
 
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{T}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
@@ -1102,7 +1102,7 @@ function _rectangle_field_strengths(U::Array{T,1}) where {NC,T<:AbstractGaugefie
     for μ = 1:4
         for ν = 1:4
             if μ != ν
-                evaluate_gaugelinks!(temps[1], _rectangle_loops(μ, ν, Dim=4), U, temps)
+                evaluate_gaugelinks!(temps[1], _rectangle_loops(μ, ν, Dim=4), U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end

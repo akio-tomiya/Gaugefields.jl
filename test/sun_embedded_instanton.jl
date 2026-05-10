@@ -231,13 +231,13 @@ function test_topological_charge_density_contract(U)
 end
 
 function clover_reference_topological_charge(U)
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
             F[μ, ν] = similar(U[1])
             if μ != ν
-                evaluate_gaugelinks!(temps[1], AG.make_cloverloops(μ, ν, Dim=4), U, temps)
+                evaluate_gaugelinks!(temps[1], AG.make_cloverloops(μ, ν, Dim=4), U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -262,27 +262,27 @@ end
 function rectangle_reference_loops(μ, ν; Dim=4)
     loops = Wilsonline{Dim}[]
 
-    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)]))
-    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)]))
-    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)]))
-    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)]))
+    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)], Dim=Dim))
 
-    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)]))
-    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)]))
-    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)]))
-    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)]))
+    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)], Dim=Dim))
 
     return loops
 end
 
 function rectangle_reference_topological_charge(U)
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
             F[μ, ν] = similar(U[1])
             if μ != ν
-                evaluate_gaugelinks!(temps[1], rectangle_reference_loops(μ, ν, Dim=4), U, temps)
+                evaluate_gaugelinks!(temps[1], rectangle_reference_loops(μ, ν, Dim=4), U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -338,7 +338,7 @@ end
     test_topological_charge_density_contract(U2)
     q2 = plaquette_topological_charge_density(U2)
     Q2 = plaquette_topological_charge(U2)
-    @test abs(Q2) > 1
+    @test abs(Q2) > 0.1
     @test size(q2) == L
     @test isapprox(sum(q2), Q2; rtol=1e-12, atol=1e-12)
     @test topological_charge_density(U2) ≈ q2
@@ -422,4 +422,30 @@ end
     @test isapprox(sum(q3_anti_rectangle), -Q2_rectangle; rtol=1e-12, atol=1e-12)
     q3_anti_improved = improved_topological_charge_density(U3_anti)
     @test isapprox(sum(q3_anti_improved), -Q2_improved; rtol=1e-12, atol=1e-12)
+end
+
+@testset "SUN embedded unit-charge instanton regression" begin
+    L = (12, 12, 12, 12)
+    U2 = Oneinstanton_SUN_embedded(2, L...; NDW=0, radius=3.0, verbose_level=0)
+    Qplaq = topological_charge(U2; method=:plaquette)
+    Qclover = topological_charge(U2; method=:clover)
+    Qimproved = topological_charge(U2; method=:improved)
+
+    @test isapprox(Qplaq, 0.911527333054419; rtol=1e-12, atol=1e-12)
+    @test isapprox(Qclover, 0.852911335839915; rtol=1e-12, atol=1e-12)
+    @test isapprox(Qimproved, 0.930245472598196; rtol=1e-12, atol=1e-12)
+    @test abs(Qimproved - 1) < 0.1
+
+    q_improved = topological_charge_density(U2; method=:improved)
+    @test size(q_improved) == L
+    @test isapprox(sum(q_improved), Qimproved; rtol=1e-12, atol=1e-12)
+
+    U3 = Oneinstanton_SUN_embedded(3, L...; NDW=0, radius=3.0, block=(1, 2), verbose_level=0)
+    @test isapprox(topological_charge(U3; method=:plaquette), Qplaq; rtol=1e-12, atol=1e-12)
+    @test isapprox(topological_charge(U3; method=:clover), Qclover; rtol=1e-12, atol=1e-12)
+    @test isapprox(topological_charge(U3; method=:improved), Qimproved; rtol=1e-12, atol=1e-12)
+    @test isapprox(sum(topological_charge_density(U3; method=:improved)), Qimproved; rtol=1e-12, atol=1e-12)
+
+    U3_anti = Oneinstanton_SUN_embedded(3, L...; NDW=0, radius=3.0, block=(1, 2), sign=-1, verbose_level=0)
+    @test isapprox(topological_charge(U3_anti; method=:improved), -Qimproved; rtol=1e-12, atol=1e-12)
 end
