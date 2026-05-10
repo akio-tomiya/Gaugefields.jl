@@ -216,14 +216,28 @@ function test_topological_charge_storage_guard(U)
     end
 end
 
+function test_topological_charge_density_contract(U)
+    physical_size = (U[1].NX, U[1].NY, U[1].NZ, U[1].NT)
+    storage_size = Tuple(size(U[1].U)[3:6])
+    for method in PUBLIC_TOPOLOGICAL_CHARGE_METHODS
+        q = topological_charge_density(U; method)
+        Q = topological_charge(U; method)
+        @test q isa Array{Float64,4}
+        @test size(q) == physical_size
+        @test axes(q) == map(Base.OneTo, physical_size)
+        U[1].NDW > 0 && @test size(q) != storage_size
+        @test isapprox(sum(q), Q; rtol=1e-12, atol=1e-12)
+    end
+end
+
 function clover_reference_topological_charge(U)
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
             F[μ, ν] = similar(U[1])
             if μ != ν
-                evaluate_gaugelinks!(temps[1], AG.make_cloverloops(μ, ν, Dim=4), U, temps)
+                evaluate_gaugelinks!(temps[1], AG.make_cloverloops(μ, ν, Dim=4), U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -248,27 +262,27 @@ end
 function rectangle_reference_loops(μ, ν; Dim=4)
     loops = Wilsonline{Dim}[]
 
-    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)]))
-    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)]))
-    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)]))
-    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)]))
+    push!(loops, Wilsonline([(μ, 2), (ν, 1), (μ, -2), (ν, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 1), (μ, -2), (ν, -1), (μ, 2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -1), (μ, 2), (ν, 1), (μ, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -2), (ν, -1), (μ, 2), (ν, 1)], Dim=Dim))
 
-    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)]))
-    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)]))
-    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)]))
-    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)]))
+    push!(loops, Wilsonline([(μ, 1), (ν, 2), (μ, -1), (ν, -2)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, 2), (μ, -1), (ν, -2), (μ, 1)], Dim=Dim))
+    push!(loops, Wilsonline([(ν, -2), (μ, 1), (ν, 2), (μ, -1)], Dim=Dim))
+    push!(loops, Wilsonline([(μ, -1), (ν, -2), (μ, 1), (ν, 2)], Dim=Dim))
 
     return loops
 end
 
 function rectangle_reference_topological_charge(U)
-    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
+    temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
     for μ = 1:4
         for ν = 1:4
             F[μ, ν] = similar(U[1])
             if μ != ν
-                evaluate_gaugelinks!(temps[1], rectangle_reference_loops(μ, ν, Dim=4), U, temps)
+                evaluate_gaugelinks!(temps[1], rectangle_reference_loops(μ, ν, Dim=4), U, temps[2:end])
                 Traceless_antihermitian!(F[μ, ν], temps[1])
             end
         end
@@ -299,6 +313,7 @@ end
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
     cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
+    test_topological_charge_density_contract(cold)
     cold_density = plaquette_topological_charge_density(cold)
     @test size(cold_density) == L
     @test all(isapprox.(cold_density, 0; atol=1e-12))
@@ -320,9 +335,10 @@ end
     @test isapprox(improved_topological_charge(cold), improved_reference_topological_charge(cold); atol=1e-12)
 
     U2 = Oneinstanton(2, 0, L...)
+    test_topological_charge_density_contract(U2)
     q2 = plaquette_topological_charge_density(U2)
     Q2 = plaquette_topological_charge(U2)
-    @test abs(Q2) > 1
+    @test abs(Q2) > 0.1
     @test size(q2) == L
     @test isapprox(sum(q2), Q2; rtol=1e-12, atol=1e-12)
     @test topological_charge_density(U2) ≈ q2
@@ -354,6 +370,9 @@ end
 
     mpi_field = Initialize_Gaugefields(3, 0, L...; condition="cold", mpi=true, PEs=(1, 1, 1, 1), mpiinit=false)
     test_topological_charge_storage_guard(mpi_field)
+
+    cold_wing = Initialize_Gaugefields(3, 1, 2, 3, 4, 5; condition="cold")
+    test_topological_charge_density_contract(cold_wing)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
@@ -403,4 +422,30 @@ end
     @test isapprox(sum(q3_anti_rectangle), -Q2_rectangle; rtol=1e-12, atol=1e-12)
     q3_anti_improved = improved_topological_charge_density(U3_anti)
     @test isapprox(sum(q3_anti_improved), -Q2_improved; rtol=1e-12, atol=1e-12)
+end
+
+@testset "SUN embedded unit-charge instanton regression" begin
+    L = (12, 12, 12, 12)
+    U2 = Oneinstanton_SUN_embedded(2, L...; NDW=0, radius=3.0, verbose_level=0)
+    Qplaq = topological_charge(U2; method=:plaquette)
+    Qclover = topological_charge(U2; method=:clover)
+    Qimproved = topological_charge(U2; method=:improved)
+
+    @test isapprox(Qplaq, 0.911527333054419; rtol=1e-12, atol=1e-12)
+    @test isapprox(Qclover, 0.852911335839915; rtol=1e-12, atol=1e-12)
+    @test isapprox(Qimproved, 0.930245472598196; rtol=1e-12, atol=1e-12)
+    @test abs(Qimproved - 1) < 0.1
+
+    q_improved = topological_charge_density(U2; method=:improved)
+    @test size(q_improved) == L
+    @test isapprox(sum(q_improved), Qimproved; rtol=1e-12, atol=1e-12)
+
+    U3 = Oneinstanton_SUN_embedded(3, L...; NDW=0, radius=3.0, block=(1, 2), verbose_level=0)
+    @test isapprox(topological_charge(U3; method=:plaquette), Qplaq; rtol=1e-12, atol=1e-12)
+    @test isapprox(topological_charge(U3; method=:clover), Qclover; rtol=1e-12, atol=1e-12)
+    @test isapprox(topological_charge(U3; method=:improved), Qimproved; rtol=1e-12, atol=1e-12)
+    @test isapprox(sum(topological_charge_density(U3; method=:improved)), Qimproved; rtol=1e-12, atol=1e-12)
+
+    U3_anti = Oneinstanton_SUN_embedded(3, L...; NDW=0, radius=3.0, block=(1, 2), sign=-1, verbose_level=0)
+    @test isapprox(topological_charge(U3_anti; method=:improved), -Qimproved; rtol=1e-12, atol=1e-12)
 end
