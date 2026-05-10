@@ -63,7 +63,8 @@ user-facing reason and keeps the scalar/density normalization pinned by tests.
    Keep `method=:rect` private unless there is a clear user-facing reason to
    expose it.
 4. Done: add short manual docs for `method=:improved` after the API is public.
-5. Treat GPU/MPI support as a separate design PR before implementation.
+5. Done: treat GPU/MPI support as a separate design topic before
+   implementation. See `gpu_mpi_topological_charge_design.md`.
 
 ## Tests for rectangle and improved density
 
@@ -104,6 +105,8 @@ support. A later design should decide:
 
 Until that design exists, serial 4D support is the stable public contract for
 `topological_charge_density` and `topological_charge`.
+
+The more detailed checkpoint is in `gpu_mpi_topological_charge_design.md`.
 
 ## Remaining risks
 
