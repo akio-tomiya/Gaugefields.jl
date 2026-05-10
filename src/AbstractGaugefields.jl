@@ -1172,7 +1172,7 @@ end
 
 Return the site-wise topological charge density `q(x)` for a 4D gauge field.
 The scalar topological charge is `sum(topological_charge_density(U))`.
-Supported methods are `:plaquette` and `:clover`.
+Supported methods are `:plaquette`, `:clover`, and `:improved`.
 """
 function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
     Dim == 4 || throw(ArgumentError("topological_charge_density only supports 4D gauge fields"))
@@ -1181,8 +1181,10 @@ function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; m
         return _plaquette_topological_charge_density(U)
     elseif method == :clover
         return _clover_topological_charge_density(U)
+    elseif method == :improved
+        return _improved_topological_charge_density(U)
     else
-        throw(ArgumentError("supported topological_charge_density methods are :plaquette and :clover"))
+        throw(ArgumentError("supported topological_charge_density methods are :plaquette, :clover, and :improved"))
     end
 end
 
@@ -1190,7 +1192,7 @@ end
     topological_charge(U; method=:plaquette)
 
 Return the scalar topological charge `Q` for a 4D gauge field.
-Supported methods are `:plaquette` and `:clover`.
+Supported methods are `:plaquette`, `:clover`, and `:improved`.
 """
 function topological_charge(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
     Dim == 4 || throw(ArgumentError("topological_charge only supports 4D gauge fields"))
@@ -1199,8 +1201,10 @@ function topological_charge(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:p
         return _plaquette_topological_charge(U)
     elseif method == :clover
         return _clover_topological_charge(U)
+    elseif method == :improved
+        return _improved_topological_charge(U)
     else
-        throw(ArgumentError("supported topological_charge methods are :plaquette and :clover"))
+        throw(ArgumentError("supported topological_charge methods are :plaquette, :clover, and :improved"))
     end
 end
 
