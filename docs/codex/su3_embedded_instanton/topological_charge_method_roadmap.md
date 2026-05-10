@@ -1,8 +1,9 @@
 # Topological Charge Method Roadmap
 
 This note is a docs-only checkpoint after the SU(Nc)-embedded instanton,
-plaquette density, and clover density PRs. It keeps the next measurement work
-separate from the already-merged public behavior.
+plaquette density, clover density, rectangle-density helper, and improved
+topological-charge PRs. It keeps the next measurement work separate from the
+already-merged public behavior.
 
 ## Current supported surface
 
@@ -14,6 +15,9 @@ Q = topological_charge(U; method=:plaquette)
 
 q = topological_charge_density(U; method=:clover)
 Q = topological_charge(U; method=:clover)
+
+q = topological_charge_density(U; method=:improved)
+Q = topological_charge(U; method=:improved)
 ```
 
 `method=:plaquette` remains the default. For each supported method, the scalar
@@ -24,39 +28,41 @@ topological_charge(U; method=method) ==
     sum(topological_charge_density(U; method=method))
 ```
 
-Unsupported methods should keep throwing `ArgumentError` until their density
-and scalar conventions are pinned by tests.
+`method=:improved` is defined as the tested linear combination of the clover
+and rectangle densities. `method=:rect` remains private and should keep
+throwing `ArgumentError` until there is a clear public use case.
 
-## Next measurement candidates
+## Improved Method And Rectangle Candidate
 
-The existing sample measurement code contains an improved scalar convention:
+The existing sample measurement code contains the improved scalar convention
+now matched by the public `method=:improved` helpers:
 
 ```julia
 Qrect = 2 * calc_Q(UmunuTA, numofloops, U)
 Qimproved = (5 / 3) * Qclover - (1 / 12) * Qrect
 ```
 
-The corresponding public density work should preserve the same normalization:
+The corresponding public density preserves the same normalization:
 
 ```julia
 q_improved(x) = (5 / 3) * q_clover(x) - (1 / 12) * q_rect(x)
 sum(q_improved) == Qimproved
 ```
 
-The rectangle density is the risky piece. Before exposing a public
-`method=:rect` or `method=:improved`, a private helper should first reproduce
-the scalar sample result exactly on small serial 4D fields.
+The rectangle density is still treated as the risky piece and remains private.
+It should only be exposed as `method=:rect` if a later PR identifies a clear
+user-facing reason and keeps the scalar/density normalization pinned by tests.
 
 ## Suggested small PR sequence
 
-1. Add a private rectangle-density helper and focused tests against the existing
-   sample scalar formula. Do not expose a public method yet.
-2. Add a private improved-density helper as a linear combination of the clover
+1. Done: add a private rectangle-density helper and focused tests against the
+   existing sample scalar formula. Do not expose a public method yet.
+2. Done: add a private improved-density helper as a linear combination of the clover
    and rectangle densities. Test `sum(q_improved) == Qimproved`.
-3. Route `method=:improved` publicly only after the private helper is pinned.
+3. Done: route `method=:improved` publicly only after the private helper is pinned.
    Keep `method=:rect` private unless there is a clear user-facing reason to
    expose it.
-4. Add short manual docs for `method=:improved` after the API is public.
+4. Done: add short manual docs for `method=:improved` after the API is public.
 5. Treat GPU/MPI support as a separate design PR before implementation.
 
 ## Tests for rectangle and improved density
@@ -70,7 +76,7 @@ Use focused serial 4D tests before touching the full suite:
 - changing `block` does not change scalar charge,
 - `sign=-1` flips scalar charge,
 - existing plaquette and clover tests remain unchanged,
-- unsupported public methods still throw until deliberately enabled.
+- `method=:rect` still throws until deliberately enabled.
 
 Before merging an implementation PR, run:
 
@@ -108,5 +114,5 @@ Until that design exists, serial 4D support is the stable public contract for
   Gaugefields.jl.
 - Coarse instanton tests should check method consistency and sign/block
   invariants, not claim continuum integer charge too strongly.
-- Public methods should only be enabled after both scalar and density tests are
-  in place.
+- Additional public methods should only be enabled after both scalar and density
+  tests are in place.

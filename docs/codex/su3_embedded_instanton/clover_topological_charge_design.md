@@ -196,5 +196,5 @@ julia --project=. test/runtests.jl
    `topological_charge(U; method=:clover)` to the clover helpers, with the
    focused tests above.
 4. Done: add a short manual example for public plaquette and clover usage.
-5. Next: consider improved or rectangle density methods separately. See
-   `topological_charge_method_roadmap.md`.
+5. Done separately: improved density is public, while rectangle density remains
+   private. See `topological_charge_method_roadmap.md`.

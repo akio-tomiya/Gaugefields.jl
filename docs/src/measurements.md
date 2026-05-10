@@ -228,16 +228,25 @@ Q_plaq = topological_charge(U; method=:plaquette)
 q_clover = topological_charge_density(U; method=:clover)
 Q_clover = topological_charge(U; method=:clover)
 
+q_improved = topological_charge_density(U; method=:improved)
+Q_improved = topological_charge(U; method=:improved)
+
 @assert size(q_plaq) == (NX, NY, NZ, NT)
 @assert size(q_clover) == (NX, NY, NZ, NT)
+@assert size(q_improved) == (NX, NY, NZ, NT)
 @assert isapprox(sum(q_plaq), Q_plaq; rtol=1e-12, atol=1e-12)
 @assert isapprox(sum(q_clover), Q_clover; rtol=1e-12, atol=1e-12)
+@assert isapprox(sum(q_improved), Q_improved; rtol=1e-12, atol=1e-12)
 ```
 
 `method=:plaquette` is the default. `method=:clover` uses the four-loop clover
-definition for each ordered direction pair. These public helpers currently
-support serial 4D gauge fields. MPI, accelerator fields, and improved or
-rectangle definitions are separate topics.
+definition for each ordered direction pair. `method=:improved` uses the
+normalization
+`q_improved(x) = (5 / 3) * q_clover(x) - (1 / 12) * q_rect(x)`, matching the
+existing improved scalar convention in the sample measurement code. The
+rectangle density is an internal implementation detail for now; `method=:rect`
+is not a public method. These public helpers currently support serial 4D gauge
+fields. MPI and accelerator fields are separate topics.
 
 ```julia
 using Gaugefields
