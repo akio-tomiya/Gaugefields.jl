@@ -216,6 +216,20 @@ function test_topological_charge_storage_guard(U)
     end
 end
 
+function test_topological_charge_density_contract(U)
+    physical_size = (U[1].NX, U[1].NY, U[1].NZ, U[1].NT)
+    storage_size = Tuple(size(U[1].U)[3:6])
+    for method in PUBLIC_TOPOLOGICAL_CHARGE_METHODS
+        q = topological_charge_density(U; method)
+        Q = topological_charge(U; method)
+        @test q isa Array{Float64,4}
+        @test size(q) == physical_size
+        @test axes(q) == map(Base.OneTo, physical_size)
+        U[1].NDW > 0 && @test size(q) != storage_size
+        @test isapprox(sum(q), Q; rtol=1e-12, atol=1e-12)
+    end
+end
+
 function clover_reference_topological_charge(U)
     temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
@@ -299,6 +313,7 @@ end
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
     cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
+    test_topological_charge_density_contract(cold)
     cold_density = plaquette_topological_charge_density(cold)
     @test size(cold_density) == L
     @test all(isapprox.(cold_density, 0; atol=1e-12))
@@ -320,6 +335,7 @@ end
     @test isapprox(improved_topological_charge(cold), improved_reference_topological_charge(cold); atol=1e-12)
 
     U2 = Oneinstanton(2, 0, L...)
+    test_topological_charge_density_contract(U2)
     q2 = plaquette_topological_charge_density(U2)
     Q2 = plaquette_topological_charge(U2)
     @test abs(Q2) > 1
@@ -354,6 +370,9 @@ end
 
     mpi_field = Initialize_Gaugefields(3, 0, L...; condition="cold", mpi=true, PEs=(1, 1, 1, 1), mpiinit=false)
     test_topological_charge_storage_guard(mpi_field)
+
+    cold_wing = Initialize_Gaugefields(3, 1, 2, 3, 4, 5; condition="cold")
+    test_topological_charge_density_contract(cold_wing)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
