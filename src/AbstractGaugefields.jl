@@ -1149,6 +1149,16 @@ function _rectangle_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) 
     return sum(_rectangle_topological_charge_density(U))
 end
 
+function _improved_topological_charge_density(U::Array{T,1}) where {NC,T<:AbstractGaugefields{NC,4}}
+    c0 = 5 / 3
+    c1 = -1 / 12
+    return c0 .* _clover_topological_charge_density(U) .+ c1 .* _rectangle_topological_charge_density(U)
+end
+
+function _improved_topological_charge(U::Array{<:AbstractGaugefields{NC,4},1}) where {NC}
+    return sum(_improved_topological_charge_density(U))
+end
+
 function _check_serial_topological_charge_field(U)
     T = eltype(U)
     if !(T <: Gaugefields_4D_nowing || T <: Gaugefields_4D_wing)
