@@ -174,6 +174,48 @@ rectangle_topological_charge_density(U) = AG._rectangle_topological_charge_densi
 improved_topological_charge(U) = AG._improved_topological_charge(U)
 improved_topological_charge_density(U) = AG._improved_topological_charge_density(U)
 
+const PUBLIC_TOPOLOGICAL_CHARGE_METHODS = (:plaquette, :clover, :improved)
+
+function test_topological_charge_method_guard(U)
+    density_error = try
+        topological_charge_density(U; method=:rect)
+    catch err
+        err
+    end
+    @test density_error isa ArgumentError
+    @test occursin("supported topological_charge_density methods", sprint(showerror, density_error))
+
+    charge_error = try
+        topological_charge(U; method=:rect)
+    catch err
+        err
+    end
+    @test charge_error isa ArgumentError
+    @test occursin("supported topological_charge methods", sprint(showerror, charge_error))
+end
+
+function test_topological_charge_storage_guard(U)
+    for method in PUBLIC_TOPOLOGICAL_CHARGE_METHODS
+        density_error = try
+            topological_charge_density(U; method)
+        catch err
+            err
+        end
+        @test density_error isa ArgumentError
+        @test occursin("topological charge only supports serial 4D gauge fields",
+            sprint(showerror, density_error))
+
+        charge_error = try
+            topological_charge(U; method)
+        catch err
+            err
+        end
+        @test charge_error isa ArgumentError
+        @test occursin("topological charge only supports serial 4D gauge fields",
+            sprint(showerror, charge_error))
+    end
+end
+
 function clover_reference_topological_charge(U)
     temps = [similar(U[1]), similar(U[1]), similar(U[1]), similar(U[1])]
     F = Matrix{eltype(U)}(undef, 4, 4)
@@ -305,11 +347,13 @@ end
     @test isapprox(Q2_improved, improved_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
     @test topological_charge_density(U2; method=:improved) ≈ q2_improved
     @test topological_charge(U2; method=:improved) ≈ Q2_improved
-    @test_throws ArgumentError topological_charge_density(U2; method=:rect)
-    @test_throws ArgumentError topological_charge(U2; method=:rect)
+    test_topological_charge_method_guard(U2)
+
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
-    @test_throws ArgumentError topological_charge_density(accelerator_field)
-    @test_throws ArgumentError topological_charge(accelerator_field)
+    test_topological_charge_storage_guard(accelerator_field)
+
+    mpi_field = Initialize_Gaugefields(3, 0, L...; condition="cold", mpi=true, PEs=(1, 1, 1, 1), mpiinit=false)
+    test_topological_charge_storage_guard(mpi_field)
 
     U3 = Oneinstanton_SUN_embedded(3, L...; block=(1, 2))
     U3_alt = Oneinstanton_SUN_embedded(3, L...; block=(2, 3))
