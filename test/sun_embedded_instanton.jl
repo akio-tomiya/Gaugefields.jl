@@ -303,10 +303,10 @@ end
     @test isapprox(sum(q2_improved), Q2_improved; rtol=1e-12, atol=1e-12)
     @test isapprox(q2_improved, (5 / 3) .* q2_clover .- (1 / 12) .* q2_rectangle; rtol=1e-12, atol=1e-12)
     @test isapprox(Q2_improved, improved_reference_topological_charge(U2); rtol=1e-12, atol=1e-12)
+    @test topological_charge_density(U2; method=:improved) ≈ q2_improved
+    @test topological_charge(U2; method=:improved) ≈ Q2_improved
     @test_throws ArgumentError topological_charge_density(U2; method=:rect)
     @test_throws ArgumentError topological_charge(U2; method=:rect)
-    @test_throws ArgumentError topological_charge_density(U2; method=:improved)
-    @test_throws ArgumentError topological_charge(U2; method=:improved)
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
     @test_throws ArgumentError topological_charge_density(accelerator_field)
     @test_throws ArgumentError topological_charge(accelerator_field)
@@ -345,6 +345,8 @@ end
     @test improved_topological_charge(U5) ≈ Q2_improved
     @test isapprox(improved_topological_charge_density(U3), q2_improved; rtol=1e-12, atol=1e-12)
     @test isapprox(improved_topological_charge_density(U3_alt), q2_improved; rtol=1e-12, atol=1e-12)
+    @test topological_charge(U3; method=:improved) ≈ Q2_improved
+    @test isapprox(topological_charge_density(U3; method=:improved), q2_improved; rtol=1e-12, atol=1e-12)
 
     U3_anti = Oneinstanton_SUN_embedded(3, L...; block=(1, 2), sign=-1)
     @test plaquette_topological_charge(U3_anti) ≈ -Q2
