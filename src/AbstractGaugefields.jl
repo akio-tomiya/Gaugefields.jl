@@ -911,7 +911,7 @@ function _su2_instanton_link(μ, ix, iy, iz, it, L; center=nothing, radius=nothi
     ss = (im * s1, im * s2, im * s3, En)
     sd = (-im * s1, -im * s2, -im * s3, En)
 
-    nv = ComplexF64[ix - 1 - center[1], iy - 1 - center[2], iz - 1 - center[3], it - 1 - center[4]]
+    nv = ComplexF64[ix-1-center[1], iy-1-center[2], iz-1-center[3], it-1-center[4]]
     n2 = real(nv ⋅ nv)
     isfinite(n2) || throw(ArgumentError("instanton center must contain finite coordinates"))
     n2 > 0 || throw(ArgumentError("instanton center must not coincide with a zero-based lattice site"))

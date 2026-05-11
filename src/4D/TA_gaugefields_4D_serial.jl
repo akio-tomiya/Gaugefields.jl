@@ -48,7 +48,7 @@ end
 
 function gauss_distribution!(
     p::TA_Gaugefields_4D_serial{NC,NumofBasis};
-    σ = 1.0,
+    σ=1.0,
 ) where {NC,NumofBasis}
     d = Normal(0.0, σ)
     NT = p.NT
@@ -335,7 +335,7 @@ function Traceless_antihermitian_add!(
             for iy = 1:NY
                 @simd for ix = 1:NX
                     v11 = vin[1, 1, ix, iy, iz, it]
-                    c[1, ix,iy,iz, it] = 2 * imag(v11) * factor + c[1, ix, iy,iz,it]
+                    c[1, ix, iy, iz, it] = 2 * imag(v11) * factor + c[1, ix, iy, iz, it]
                 end
             end
         end
@@ -510,18 +510,18 @@ function Traceless_antihermitian!(
                         matrix[k, k] = (imag(vin[k, k, ix, iy, iz, it]) - tri) * im
                     end
 
-                    for k1=1:NC
-                    @simd for k2 = k1+1:NC
-                        vv =
-                            0.5 * (
-                                vin[k1, k2, ix, iy, iz, it] -
-                                conj(vin[k2, k1, ix, iy, iz, it])
-                            )
-                        #vout[k1,k2,ix,iy,iz,it] = vv
-                        #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
-                        matrix[k1, k2] = vv
-                        matrix[k2, k1] = -conj(vv)
-                    end
+                    for k1 = 1:NC
+                        @simd for k2 = k1+1:NC
+                            vv =
+                                0.5 * (
+                                    vin[k1, k2, ix, iy, iz, it] -
+                                    conj(vin[k2, k1, ix, iy, iz, it])
+                                )
+                            #vout[k1,k2,ix,iy,iz,it] = vv
+                            #vout[k2,k1,ix,iy,iz,it] = -conj(vv)
+                            matrix[k1, k2] = vv
+                            matrix[k2, k1] = -conj(vv)
+                        end
                     end
 
                     matrix2lie!(a, g, matrix)
@@ -616,7 +616,7 @@ function exptU!(
             for iy=1:NY
                 for ix = 1:NX
                     uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
-        
+
                 end
             end
         end
@@ -640,11 +640,11 @@ function exptU!(
 
 
     @inbounds for it = 1:NT
-        for iz=1:NZ
-            for iy=1:NY
+        for iz = 1:NZ
+            for iy = 1:NY
                 for ix = 1:NX
-                    uout[1, 1, ix,iy,iz,it] = exp(t * im * u[1, ix, iy,iz,it])
-        
+                    uout[1, 1, ix, iy, iz, it] = exp(t * im * u[1, ix, iy, iz, it])
+
                 end
             end
         end
@@ -678,13 +678,83 @@ function exptU!(
                     end
 
                     lie2matrix!(u0, g, a)
-                   
+
                     uout[:, :, ix, iy, iz, it] = exp(t * (im / 2) * u0)
                 end
             end
         end
     end
     #error("exptU! is not implemented in type $(typeof(u)) ")
+end
+
+function exp_T4(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+    # V
+    V11 = v1 + im * v2
+    V12 = v3 + im * v4
+    V13 = v5 + im * v6
+    V21 = v7 + im * v8
+    V22 = v9 + im * v10
+    V23 = v11 + im * v12
+    V31 = v13 + im * v14
+    V32 = v15 + im * v16
+    V33 = v17 + im * v18
+    #vt = [V11 V12 V13
+    #    V21 V22 V23
+    #    V31 V32 V33]
+    #expvt = exp(im * vt)
+
+
+    # powers
+    V2_11 = V11 * V11 + V12 * V21 + V13 * V31
+    V2_12 = V11 * V12 + V12 * V22 + V13 * V32
+    V2_13 = V11 * V13 + V12 * V23 + V13 * V33
+    V2_21 = V21 * V11 + V22 * V21 + V23 * V31
+    V2_22 = V21 * V12 + V22 * V22 + V23 * V32
+    V2_23 = V21 * V13 + V22 * V23 + V23 * V33
+    V2_31 = V31 * V11 + V32 * V21 + V33 * V31
+    V2_32 = V31 * V12 + V32 * V22 + V33 * V32
+    V2_33 = V31 * V13 + V32 * V23 + V33 * V33
+
+    V3_11 = V2_11 * V11 + V2_12 * V21 + V2_13 * V31
+    V3_12 = V2_11 * V12 + V2_12 * V22 + V2_13 * V32
+    V3_13 = V2_11 * V13 + V2_12 * V23 + V2_13 * V33
+    V3_21 = V2_21 * V11 + V2_22 * V21 + V2_23 * V31
+    V3_22 = V2_21 * V12 + V2_22 * V22 + V2_23 * V32
+    V3_23 = V2_21 * V13 + V2_22 * V23 + V2_23 * V33
+    V3_31 = V2_31 * V11 + V2_32 * V21 + V2_33 * V31
+    V3_32 = V2_31 * V12 + V2_32 * V22 + V2_33 * V32
+    V3_33 = V2_31 * V13 + V2_32 * V23 + V2_33 * V33
+
+    V4_11 = V2_11 * V2_11 + V2_12 * V2_21 + V2_13 * V2_31
+    V4_12 = V2_11 * V2_12 + V2_12 * V2_22 + V2_13 * V2_32
+    V4_13 = V2_11 * V2_13 + V2_12 * V2_23 + V2_13 * V2_33
+    V4_21 = V2_21 * V2_11 + V2_22 * V2_21 + V2_23 * V2_31
+    V4_22 = V2_21 * V2_12 + V2_22 * V2_22 + V2_23 * V2_32
+    V4_23 = V2_21 * V2_13 + V2_22 * V2_23 + V2_23 * V2_33
+    V4_31 = V2_31 * V2_11 + V2_32 * V2_21 + V2_33 * V2_31
+    V4_32 = V2_31 * V2_12 + V2_32 * V2_22 + V2_33 * V2_32
+    V4_33 = V2_31 * V2_13 + V2_32 * V2_23 + V2_33 * V2_33
+
+    # exp(iV) ≈ I + iV - V^2/2 - iV^3/6 + V^4/24
+    E11 = 1 + im * V11 - 0.5 * V2_11 - (im / 6) * V3_11 + (1 / 24) * V4_11
+    E12 = im * V12 - 0.5 * V2_12 - (im / 6) * V3_12 + (1 / 24) * V4_12
+    E13 = im * V13 - 0.5 * V2_13 - (im / 6) * V3_13 + (1 / 24) * V4_13
+
+    E21 = im * V21 - 0.5 * V2_21 - (im / 6) * V3_21 + (1 / 24) * V4_21
+    E22 = 1 + im * V22 - 0.5 * V2_22 - (im / 6) * V3_22 + (1 / 24) * V4_22
+    E23 = im * V23 - 0.5 * V2_23 - (im / 6) * V3_23 + (1 / 24) * V4_23
+
+    E31 = im * V31 - 0.5 * V2_31 - (im / 6) * V3_31 + (1 / 24) * V4_31
+    E32 = im * V32 - 0.5 * V2_32 - (im / 6) * V3_32 + (1 / 24) * V4_32
+    E33 = 1 + im * V33 - 0.5 * V2_33 - (im / 6) * V3_33 + (1 / 24) * V4_33
+
+    #et = [E11 E12 E13
+    #    E21 E22 E23
+    #    E31 E32 E33]
+
+
+
+    return E11, E12, E13, E21, E22, E23, E31, E32, E33
 end
 
 function exptU!(
@@ -715,6 +785,9 @@ function exptU!(
                     c7 = t * u[7, ix, iy, iz, it] * 0.5
                     c8 = t * u[8, ix, iy, iz, it] * 0.5
                     csum = c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8
+                    #println(csum)
+                    #display(t * u[:, ix, iy, iz, it])
+
                     if csum == 0
                         w[1, 1, ix, iy, iz, it] = 1
                         w[1, 2, ix, iy, iz, it] = 0
@@ -737,6 +810,7 @@ function exptU!(
                         ww[3, 3, ix, iy, iz, it] = 1
                         continue
                     end
+
 
 
                     #x[1,1,icum] =  c3+sr3i*c8 +im*(  0.0 )
@@ -785,9 +859,12 @@ function exptU!(
 
                     p3 = cofac / 3.0 - trv3^2
                     q = trv3 * cofac - det - 2.0 * trv3^3
+                    #@assert !isnan(q) (cofac, det, trv3)
                     x = sqrt(-4.0 * p3) + tinyvalue
 
+
                     arg = q / (x * p3)
+                    #@assert !isnan(arg) (q, x, p3)
 
                     arg = min(1, max(-1, arg))
                     theta = acos(arg) / 3.0
@@ -801,6 +878,7 @@ function exptU!(
                     # solve for eigenvectors
 
                     w1 = v5 * (v9 - e1) - v3 * v11 + v4 * v12
+                    #println((v5, v9, e1, v3, v11, v4, v12))
                     w2 = -v6 * (v9 - e1) + v4 * v11 + v3 * v12
                     w3 = (v1 - e1) * v11 - v3 * v5 - v4 * v6
                     w4 = -(v1 - e1) * v12 - v4 * v5 + v3 * v6
@@ -810,14 +888,31 @@ function exptU!(
                     #coeffv = sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
 
                     #coeff = ifelse(coeffv == zero(coeffv),0,coeffv)
-                    coeff = 1.0 / sqrt(w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
-                    #println("1 ",coeff)
+                    nrm2_1 = w1^2 + w2^2 + w3^2 + w4^2 + w5^2
+                    if nrm2_1 < 1e-24
+                        E11, E12, E13, E21, E22, E23, E31, E32, E33 = exp_T4(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+                        w[1, 1, ix, iy, iz, it] = 1
+                        w[1, 2, ix, iy, iz, it] = 0
+                        w[1, 3, ix, iy, iz, it] = 0
+                        w[2, 1, ix, iy, iz, it] = 0
+                        w[2, 2, ix, iy, iz, it] = 1
+                        w[2, 3, ix, iy, iz, it] = 0
+                        w[3, 1, ix, iy, iz, it] = 0
+                        w[3, 2, ix, iy, iz, it] = 0
+                        w[3, 3, ix, iy, iz, it] = 1
 
-                    w1 = w1 * coeff
-                    w2 = w2 * coeff
-                    w3 = w3 * coeff
-                    w4 = w4 * coeff
-                    w5 = w5 * coeff
+                        ww[1, 1, ix, iy, iz, it] = E11
+                        ww[1, 2, ix, iy, iz, it] = E12
+                        ww[1, 3, ix, iy, iz, it] = E13
+                        ww[2, 1, ix, iy, iz, it] = E21
+                        ww[2, 2, ix, iy, iz, it] = E22
+                        ww[2, 3, ix, iy, iz, it] = E23
+                        ww[3, 1, ix, iy, iz, it] = E31
+                        ww[3, 2, ix, iy, iz, it] = E32
+                        ww[3, 3, ix, iy, iz, it] = E33
+
+                        continue
+                    end
 
                     w7 = v5 * (v9 - e2) - v3 * v11 + v4 * v12
                     w8 = -v6 * (v9 - e2) + v4 * v11 + v3 * v12
@@ -826,13 +921,31 @@ function exptU!(
                     w11 = -(v1 - e2) * (v9 - e2) + v3^2 + v4^2
                     w12 = 0.0
 
-                    coeff = 1.0 / sqrt(w7^2 + w8^2 + w9^2 + w10^2 + w11^2)
+                    nrm2_2 = w7^2 + w8^2 + w9^2 + w10^2 + w11^2
+                    if nrm2_2 < 1e-24
+                        E11, E12, E13, E21, E22, E23, E31, E32, E33 = exp_T4(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+                        w[1, 1, ix, iy, iz, it] = 1
+                        w[1, 2, ix, iy, iz, it] = 0
+                        w[1, 3, ix, iy, iz, it] = 0
+                        w[2, 1, ix, iy, iz, it] = 0
+                        w[2, 2, ix, iy, iz, it] = 1
+                        w[2, 3, ix, iy, iz, it] = 0
+                        w[3, 1, ix, iy, iz, it] = 0
+                        w[3, 2, ix, iy, iz, it] = 0
+                        w[3, 3, ix, iy, iz, it] = 1
 
-                    w7 = w7 * coeff
-                    w8 = w8 * coeff
-                    w9 = w9 * coeff
-                    w10 = w10 * coeff
-                    w11 = w11 * coeff
+                        ww[1, 1, ix, iy, iz, it] = E11
+                        ww[1, 2, ix, iy, iz, it] = E12
+                        ww[1, 3, ix, iy, iz, it] = E13
+                        ww[2, 1, ix, iy, iz, it] = E21
+                        ww[2, 2, ix, iy, iz, it] = E22
+                        ww[2, 3, ix, iy, iz, it] = E23
+                        ww[3, 1, ix, iy, iz, it] = E31
+                        ww[3, 2, ix, iy, iz, it] = E32
+                        ww[3, 3, ix, iy, iz, it] = E33
+
+                        continue
+                    end
 
                     w13 = v5 * (v9 - e3) - v3 * v11 + v4 * v12
                     w14 = -v6 * (v9 - e3) + v4 * v11 + v3 * v12
@@ -841,7 +954,56 @@ function exptU!(
                     w17 = -(v1 - e3) * (v9 - e3) + v3^2 + v4^2
                     w18 = 0.0
 
-                    coeff = 1.0 / sqrt(w13^2 + w14^2 + w15^2 + w16^2 + w17^2)
+                    nrm2_3 = w13^2 + w14^2 + w15^2 + w16^2 + w17^2
+                    if nrm2_3 < 1e-24
+                        E11, E12, E13, E21, E22, E23, E31, E32, E33 = exp_T4(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+                        w[1, 1, ix, iy, iz, it] = 1
+                        w[1, 2, ix, iy, iz, it] = 0
+                        w[1, 3, ix, iy, iz, it] = 0
+                        w[2, 1, ix, iy, iz, it] = 0
+                        w[2, 2, ix, iy, iz, it] = 1
+                        w[2, 3, ix, iy, iz, it] = 0
+                        w[3, 1, ix, iy, iz, it] = 0
+                        w[3, 2, ix, iy, iz, it] = 0
+                        w[3, 3, ix, iy, iz, it] = 1
+
+                        ww[1, 1, ix, iy, iz, it] = E11
+                        ww[1, 2, ix, iy, iz, it] = E12
+                        ww[1, 3, ix, iy, iz, it] = E13
+                        ww[2, 1, ix, iy, iz, it] = E21
+                        ww[2, 2, ix, iy, iz, it] = E22
+                        ww[2, 3, ix, iy, iz, it] = E23
+                        ww[3, 1, ix, iy, iz, it] = E31
+                        ww[3, 2, ix, iy, iz, it] = E32
+                        ww[3, 3, ix, iy, iz, it] = E33
+
+                        continue
+                    end
+
+
+                    coeff = 1.0 / sqrt(nrm2_1)#w1^2 + w2^2 + w3^2 + w4^2 + w5^2)
+
+                    #@assert !isinf(coeff) (w1, w2, w3, w4, w5)
+                    #println("1 ",coeff)
+
+                    w1 = w1 * coeff
+                    #@assert !isnan(w1) (w1, coeff)
+                    w2 = w2 * coeff
+                    w3 = w3 * coeff
+                    w4 = w4 * coeff
+                    w5 = w5 * coeff
+
+
+                    coeff = 1.0 / sqrt(nrm2_2)#w7^2 + w8^2 + w9^2 + w10^2 + w11^2)
+
+                    w7 = w7 * coeff
+                    w8 = w8 * coeff
+                    w9 = w9 * coeff
+                    w10 = w10 * coeff
+                    w11 = w11 * coeff
+
+
+                    coeff = 1.0 / sqrt(nrm2_3)
                     w13 = w13 * coeff
                     w14 = w14 * coeff
                     w15 = w15 * coeff
@@ -875,6 +1037,7 @@ function exptU!(
                     ww16 = w16 * c3 + w15 * s3
                     ww17 = w17 * c3 - w18 * s3
                     ww18 = w18 * c3 + w17 * s3
+                    #@assert !isnan(w1) (w1, nrm2_1, nrm2_2, nrm2_3)
 
                     w[1, 1, ix, iy, iz, it] = w1 + im * w2
                     w[1, 2, ix, iy, iz, it] = w3 + im * w4

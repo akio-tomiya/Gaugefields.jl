@@ -983,6 +983,7 @@ function exptU!(
     NX = v.NX
     #t = 1
 
+
     @inbounds for it = 1:NT
         for iz = 1:NZ
             for iy = 1:NY
