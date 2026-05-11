@@ -310,6 +310,15 @@ function improved_reference_topological_charge(U)
     return c0 * clover_reference_topological_charge(U) + c1 * rectangle_reference_topological_charge(U)
 end
 
+function wilson_action_over_8pi2(U)
+    NC = size(U[1].U, 1)
+    volume = U[1].NX * U[1].NY * U[1].NZ * U[1].NT
+    temp1 = similar(U[1])
+    temp2 = similar(U[1])
+    plaquette = calculate_Plaquette(U, temp1, temp2) / (NC * 6 * volume)
+    return NC * 6 * volume * (1 - plaquette) / (8 * pi^2)
+end
+
 @testset "SUN embedded instanton topological charge" begin
     L = (4, 4, 4, 4)
     cold = Initialize_Gaugefields(3, 0, L..., condition="cold")
@@ -435,6 +444,9 @@ end
     @test isapprox(Qclover, 0.852911335839915; rtol=1e-12, atol=1e-12)
     @test isapprox(Qimproved, 0.930245472598196; rtol=1e-12, atol=1e-12)
     @test abs(Qimproved - 1) < 0.1
+    S_over_8pi2 = wilson_action_over_8pi2(U2)
+    @test abs(S_over_8pi2 - 1) < 0.08
+    @test abs(S_over_8pi2 - abs(Qimproved)) < 0.12
 
     q_improved = topological_charge_density(U2; method=:improved)
     @test size(q_improved) == L
