@@ -68,7 +68,16 @@ function gauss_distribution!(
     σ=1.0,
 ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis}
     d = Normal(0.0, σ)
-    pwork = rand(d, NumofBasis, 1, NX, NY, NZ, NT)
+    #println(p.a.PN)
+    N1, N2, N3, N4 = p.a.PN
+    pwork = rand(d, NumofBasis, 1, N1, N2, N3, N4)
+
+    n1, n2, nsize... = size(p.a.A)
+    n1A, n2A, nsizeA... = size(pwork)
+    #println(n1, "\t", n2)
+    #println(nsize)
+    #println(nsizeA)
+    #println(n1A, "\t", n2A)
     substitute!(p.a, pwork)
     set_halo!(p.a)
     #PEs = get_PEs(p.a)
