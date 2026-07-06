@@ -81,6 +81,11 @@ end
     include("g2_force_test.jl")
 end
 
+@testset "G2 HMC" begin
+    println("G2 HMC")
+    include("g2_hmc_test.jl")
+end
+
 #=
 @testset "Ising field" begin
     println("Ising field")
