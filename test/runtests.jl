@@ -36,6 +36,11 @@ end
     include("g2_gauge_action_test.jl")
 end
 
+@testset "G2 force" begin
+    println("G2 force")
+    include("g2_force_test.jl")
+end
+
 #=
 @testset "Ising field" begin
     println("Ising field")

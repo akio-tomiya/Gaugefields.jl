@@ -283,7 +283,12 @@ export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, 
 export heatbath!, Heatbath
 export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname, STOUT_Layer_fast
 export GaugeAction,
-    evaluate_GaugeAction_untraced!, evaluate_GaugeAction_untraced, calc_dSdUμ, calc_dSdUμ!
+    evaluate_GaugeAction_untraced!,
+    evaluate_GaugeAction_untraced,
+    calc_dSdUμ,
+    calc_dSdUμ!,
+    add_force!,
+    exp_aF_U!
 export initialize_TA_Gaugefields, gauss_distribution!
 export exptU!,
     get_temporary_gaugefields,
