@@ -112,6 +112,7 @@ end
 using MPI
 using JACC
 
+include("./G2/G2Algebra.jl")
 include("./2D/gaugefields_2D.jl")
 include("./4D/gaugefields_4D.jl")
 
