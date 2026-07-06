@@ -46,6 +46,11 @@ end
 
 const eps = 1e-1
 
+@testset "G2 algebra" begin
+    println("G2 algebra")
+    include("g2_algebra_test.jl")
+end
+
 #=
 @testset "Ising field" begin
     println("Ising field")
