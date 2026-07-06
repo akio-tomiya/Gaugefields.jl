@@ -9,6 +9,7 @@ include("./Temporalfields/temporalfields.jl")
 include("./output/verboseprint_mpi.jl")
 #include("./output/verboseprint.jl")
 include("./SUN_generator.jl")
+include("./G2/G2Algebra.jl")
 include("./autostaples/wilsonloops.jl")
 include("./AbstractGaugefields.jl")
 include("./output/io.jl")
@@ -306,5 +307,18 @@ export Initialize_Bfields
 export CASK_layer, zero_grad!
 
 export Traceless_AntiHermitian
+export G2_FUNDAMENTAL_DIM,
+    G2_ALGEBRA_DIM,
+    G2Basis,
+    G2AlgebraElement,
+    g2_basis,
+    g2_matrix,
+    g2_coefficients,
+    coefficients,
+    project_to_g2_coefficients,
+    project_to_g2,
+    is_g2_algebra_matrix,
+    g2_link_defects,
+    is_g2_link
 
 end
