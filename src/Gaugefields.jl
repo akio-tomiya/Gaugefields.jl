@@ -249,6 +249,12 @@ import .AbstractGaugefields_module:
     is_g2_algebra_matrix,
     g2_link_defects,
     is_g2_link,
+    G2Gaugefields_4D_wing,
+    Shifted_G2Gaugefields_4D,
+    identityG2Gaugefields_4D_wing,
+    randomG2Gaugefields_4D_wing,
+    unit_U!,
+    G2TA_Gaugefields_4D_serial,
     AbstractGaugefields,
     identitymatrix,
     Abstractfields,
@@ -401,7 +407,13 @@ export G2_FUNDAMENTAL_DIM,
     project_to_g2,
     is_g2_algebra_matrix,
     g2_link_defects,
-    is_g2_link
+    is_g2_link,
+    G2Gaugefields_4D_wing,
+    Shifted_G2Gaugefields_4D,
+    identityG2Gaugefields_4D_wing,
+    randomG2Gaugefields_4D_wing,
+    unit_U!,
+    G2TA_Gaugefields_4D_serial
 
 include("./molecular_dynamics.jl")
 include("./API.jl")
