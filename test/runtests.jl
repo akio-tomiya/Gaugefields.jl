@@ -31,6 +31,11 @@ end
     include("g2_interface_test.jl")
 end
 
+@testset "G2 gauge action" begin
+    println("G2 gauge action")
+    include("g2_gauge_action_test.jl")
+end
+
 #=
 @testset "Ising field" begin
     println("Ising field")
@@ -144,4 +149,3 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
