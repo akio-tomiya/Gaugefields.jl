@@ -12,6 +12,7 @@ abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4} end
 
 include("./wing/gaugefields_4D_wing.jl")
 include("./wing/gaugefields_4D_wing_Bfields.jl")
+include("./G2_gaugefields_4D_wing.jl")
 include("./nowing/gaugefields_4D_nowing.jl")
 include("./nowing/gaugefields_4D_nowing_Bfields.jl")
 

@@ -11,6 +11,26 @@ const eps = 1e-1
     include("g2_algebra_test.jl")
 end
 
+@testset "G2 gaugefields" begin
+    println("G2 gaugefields")
+    include("g2_gaugefields_test.jl")
+end
+
+@testset "G2 momentum" begin
+    println("G2 momentum")
+    include("g2_momentum_test.jl")
+end
+
+@testset "G2 projection and update" begin
+    println("G2 projection and update")
+    include("g2_projection_update_test.jl")
+end
+
+@testset "G2 interface" begin
+    println("G2 interface")
+    include("g2_interface_test.jl")
+end
+
 #=
 @testset "Ising field" begin
     println("Ising field")
@@ -124,5 +144,4 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
 
