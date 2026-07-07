@@ -25,6 +25,7 @@ The old branch and tag were pushed to GitHub before migration work started.
 - `4256eec` Add G2 gauge action oracle test
 - `d2c627e` Validate G2 plaquette force on v0.7.2
 - `c39f21a` Add G2 HMC smoke tests on v0.7.2
+- `da90730` Document G2 v0.7.2 migration checkpoint
 
 ## Implemented scope
 
@@ -54,15 +55,19 @@ julia --project=. test/g2_force_test.jl
 julia --project=. test/g2_hmc_test.jl
 julia --project=. test/g2_runtests.jl
 julia --project=. test/sun_embedded_instanton.jl
+julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
 Observed results:
 
 - `test/g2_runtests.jl`: 190 / 190 pass.
 - `test/sun_embedded_instanton.jl`: existing SU(N) smoke tests pass.
+- Full `Pkg.test()` passed locally on 2026-07-07.
 
-`Pkg.test()` was not run in full during this migration checkpoint because the
-full suite includes heavier HMC, heatbath, gradient-flow, and B-field tests.
+The full test run included the G2 tests, B-field tests, HMC/HMC-stout tests,
+gradient-flow tests, heatbath tests, scalar neural-network smoke tests, and the
+existing SU(N) smoke tests. The output emitted existing helper-method overwrite
+warnings and `Nwing=0` recommendation warnings, but no test failure.
 
 ## v0.7.2-specific adjustment
 
