@@ -203,7 +203,7 @@ function overrelaxation!(
 
     for μ = 1:Dim
         mapfunc!(A, U, indices...) =
-            heatbath_update_eachsite_SUN!(A, μ, U, h, temps, temps3, indices...)
+            overrelaxation_update_eachsite_SUN!(A, μ, U, h, temps, temps3, indices...)
         map_U_sequential!(U[μ], mapfunc!, U)
     end
 
