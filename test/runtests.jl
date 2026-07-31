@@ -94,6 +94,11 @@ end
     include("heatbathtest_general.jl")
 end
 
+@testset "overrelaxation microcanonical regression" begin
+    println("overrelaxation microcanonical regression")
+    include("overrelaxation_microcanonical.jl")
+end
+
 
 
 
