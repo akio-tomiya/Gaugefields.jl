@@ -3,6 +3,7 @@ module ILDG_format
 using CLIME_jll
 using EzXML
 using Requires
+import ..LatticeMatricesCompat: mark_lattice_dirty!
 
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
@@ -415,7 +416,8 @@ function __init__()
             N_localsites = prod(U[1].U.PN)
             offset_coords = U[1].U.coords .* U[1].U.PN
             for μ = 1:4
-            
+
+                mark_lattice_dirty!(U[μ].U)
                 JACC.parallel_for(N_localsites, kernel_assign_configuration!,
                                 U[μ].U.A, U[μ].U.indexer, U[μ].U.nw, device_data, NX, NY, NZ, NT, NC, μ, offset_coords)
 

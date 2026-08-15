@@ -99,6 +99,7 @@ function substitute_U!(C::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW},
     generators = Tuple(JACC.array.(A.generators.generator))
 
 
+    mark_lattice_dirty!(C.U)
     JACC.parallel_for(prod(C.U.PN), kernel_lie2matrix_2D!,
         uout.U, u.a, NC, NG, C.U.PN, generators) #w,u,ww,t
 end

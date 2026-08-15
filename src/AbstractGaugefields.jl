@@ -18,6 +18,10 @@ import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, 
 using Requires
 using Distributions
 using StableRNGs
+import ..LatticeMatricesCompat:
+    lattice_isopen,
+    mark_lattice_dirty!,
+    release_lattice!
 import ..Verboseprint_mpi:
     Verbose_print, println_verbose_level1, println_verbose_level2, println_verbose_level3
 
@@ -1339,6 +1343,11 @@ function shift_U(U::AbstractGaugefields{NC,Dim}, ν) where {NC,Dim}
     return nothing
 end
 
+# Most shifted gauge-field implementations are non-owning views. The
+# LatticeMatrices-backed implementations specialize this hook because v1 may
+# borrow storage when a shift is wider than the halo.
+@inline _release_shifted_U!(shifted) = nothing
+
 function map_U!(
     U::AbstractGaugefields{NC,Dim},
     f::Function,
@@ -1434,6 +1443,7 @@ function evaluate_gaugelinks_evenodd!(
         else
             substitute_U!(uout, Ushift1, iseven)
         end
+        _release_shifted_U!(Ushift1)
         return
     end
 
@@ -1450,6 +1460,9 @@ function evaluate_gaugelinks_evenodd!(
 
         Ushift2 = shift_U(U[direction], position)
         multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag, iseven)
+
+        _release_shifted_U!(Ushift2)
+        _release_shifted_U!(Ushift1)
 
 
         substitute_U!(Unew, uout)
@@ -1500,6 +1513,7 @@ function evaluate_gaugelinks!(
     else
         substitute_U!(Acc, U_initial)  # Acc now holds U1
     end
+    _release_shifted_U!(U_initial)
 
     # Acc as starting point
     Uaccumulated = Acc
@@ -1514,6 +1528,7 @@ function evaluate_gaugelinks!(
         # Note: We now pass 'false' for isU1dag because the 
         # accumulation buffer is already processed!
         multiply_12!(Tmp, Uaccumulated, Ushift_k, k, isdag(linkk), false)
+        _release_shifted_U!(Ushift_k)
 
         # Ping-pong
         Acc, Tmp = Tmp, Acc
@@ -1570,6 +1585,8 @@ function evaluate_gaugelinks_old!(
             substitute_U!(uout, Ushift1)
         end
 
+        _release_shifted_U!(Ushift1)
+
         return
     end
 
@@ -1606,6 +1623,9 @@ function evaluate_gaugelinks_old!(
         #zerocheck(U,Ushift2.parent.Ushifted,"Ushift2 position $position")
 
         multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag)
+
+        _release_shifted_U!(Ushift2)
+        _release_shifted_U!(Ushift1)
 
 
         #zerocheck(U,uout.U,"uout")
@@ -2239,6 +2259,7 @@ function evaluate_wilson_loops!(
             loopk,
             loopk1_2,
         )
+        _release_shifted_U!(Ushift1)
 
         #=
         for k=2:numloops
@@ -2288,6 +2309,9 @@ function evaluate_wilson_loops_inside!(
 
         #multiply_12!(temp3,temp1,temp2,k,loopk,loopk1_2)
         multiply_12!(Unew, Ushift1, Ushift2, k, loopk, loopk1_2)
+
+        _release_shifted_U!(Ushift2)
+        _release_shifted_U!(Ushift1)
 
         Unew, Uold = Uold, Unew
         Ushift1 = shift_U(Uold, (0, 0, 0, 0))
@@ -2553,6 +2577,7 @@ function construct_staple!(
         U2 = shift_U(U[μ], ν)
         #println(typeof(U1))
         mul!(U1U2, U1, U2)
+        _release_shifted_U!(U2)
 
         #error("test")
 
@@ -2566,6 +2591,7 @@ function construct_staple!(
             β = 1
         end
         mul!(staple, U1U2, U3', 1, β) #C = alpha*A*B + beta*C
+        _release_shifted_U!(U3)
 
         #println("staple ",staple[1,1,1,1,1,1])
 
@@ -2598,6 +2624,7 @@ function calculate_Polyakov_loop(
         shift[μ] = i - 1
         U1 = shift_U(U[μ], Tuple(shift))
         mul_skiplastindex!(Unew, Uold, U1)
+        _release_shifted_U!(U1)
         Uold, Unew = Unew, Uold
     end
 
