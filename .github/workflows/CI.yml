@@ -63,3 +63,40 @@ jobs:
       # - uses: codecov/codecov-action@v1
       #  with:
       #    file: lcov.info
+
+  latticematrices-compat:
+    name: LatticeMatrices ${{ matrix.latticematrices }} compatibility
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        latticematrices:
+          - "0.3.3"
+          - "0.3.13"
+          - "1.0.0"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.11"
+          arch: x64
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-x64-latticematrices-${{ matrix.latticematrices }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-x64-latticematrices-
+            ${{ runner.os }}-x64-
+            ${{ runner.os }}-
+      - name: Pin LatticeMatrices
+        env:
+          LATTICEMATRICES_VERSION: ${{ matrix.latticematrices }}
+        run: >-
+          julia --project=. -e '
+          using Pkg;
+          version = VersionNumber(ENV["LATTICEMATRICES_VERSION"]);
+          Pkg.add(PackageSpec(name="LatticeMatrices", version=version));
+          Pkg.status()'
+      - uses: julia-actions/julia-runtest@latest

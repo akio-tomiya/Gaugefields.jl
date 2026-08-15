@@ -4,6 +4,11 @@ using Random
 import Wilsonloop: loops_staple
 
 
+@testset "LatticeMatrices compatibility" begin
+    include("latticematrices_compat.jl")
+end
+
+
 const eps = 1e-1
 
 #=
@@ -119,6 +124,5 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
 
 

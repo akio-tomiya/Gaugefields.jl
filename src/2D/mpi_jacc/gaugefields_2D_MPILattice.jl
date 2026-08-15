@@ -133,6 +133,20 @@ struct Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L} <: Fi
     U::Adjoint_Lattice{Shifted_Lattice{L}} #LatticeMatrix{2,T,AT,NC,NC,nw}
 end
 
+@inline _release_shifted_U!(shifted::Shifted_Gaugefields_2D_MPILattice) =
+    release_lattice!(getfield(shifted, :U))
+@inline _release_shifted_U!(shifted::Adjoint_Shifted_Gaugefields_2D_MPILattice) =
+    release_lattice!(getfield(shifted, :U))
+
+Base.close(shifted::Shifted_Gaugefields_2D_MPILattice) =
+    _release_shifted_U!(shifted)
+Base.close(shifted::Adjoint_Shifted_Gaugefields_2D_MPILattice) =
+    _release_shifted_U!(shifted)
+Base.isopen(shifted::Shifted_Gaugefields_2D_MPILattice) =
+    lattice_isopen(getfield(shifted, :U))
+Base.isopen(shifted::Adjoint_Shifted_Gaugefields_2D_MPILattice) =
+    lattice_isopen(getfield(shifted, :U))
+
 
 
 

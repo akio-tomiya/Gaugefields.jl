@@ -115,6 +115,8 @@ end
 
 function Base.setindex!(x::Gaugefields_4D_MPILattice, v, i1, i2, i3, i4, i5, i6)
     @inbounds x.U.A[i1, i2, i3+x.NDW, i4+x.NDW, i5+x.NDW, i6+x.NDW] = v
+    mark_lattice_dirty!(x.U)
+    return v
 end
 
 
@@ -144,6 +146,20 @@ end
 struct Adjoint_Shifted_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI,L} <: Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,nw,DI}
     U::Adjoint_Lattice{Shifted_Lattice{L,4}} #LatticeMatrix{4,T,AT,NC,NC,nw,DI}
 end
+
+@inline _release_shifted_U!(shifted::Shifted_Gaugefields_4D_MPILattice) =
+    release_lattice!(getfield(shifted, :U))
+@inline _release_shifted_U!(shifted::Adjoint_Shifted_Gaugefields_4D_MPILattice) =
+    release_lattice!(getfield(shifted, :U))
+
+Base.close(shifted::Shifted_Gaugefields_4D_MPILattice) =
+    _release_shifted_U!(shifted)
+Base.close(shifted::Adjoint_Shifted_Gaugefields_4D_MPILattice) =
+    _release_shifted_U!(shifted)
+Base.isopen(shifted::Shifted_Gaugefields_4D_MPILattice) =
+    lattice_isopen(getfield(shifted, :U))
+Base.isopen(shifted::Adjoint_Shifted_Gaugefields_4D_MPILattice) =
+    lattice_isopen(getfield(shifted, :U))
 
 
 

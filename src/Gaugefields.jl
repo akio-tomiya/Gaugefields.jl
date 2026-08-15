@@ -2,6 +2,7 @@ module Gaugefields
 
 using Requires
 
+include("./LatticeMatricesCompat.jl")
 include("./MPILattice/MPILattice.jl")
 #include("./MPILattice/src/MPILattice.jl")
 
