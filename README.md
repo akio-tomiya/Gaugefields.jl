@@ -8,7 +8,9 @@
 This is a package for lattice QCD codes.
 Treating gauge fields (links), gauge actions with MPI and autograd.
 
-From v0.5.0, **NVIDIA GPU is supported!!**
+Gaugefields v0.7.3 can use the LatticeMatrices v1.0.0 MPI/JACC backend on
+NVIDIA, AMD, and Intel GPUs, including multi-GPU execution with one MPI rank
+per GPU.
 
 <img src="LQCDjl_block.png" width=300> 
 
@@ -44,10 +46,14 @@ This package has following functionarities
 - MPI parallel computation (experimental. See documents.)
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
-- GPU parallel computation with CUDA (experimental. See [documents](https://github.com/akio-tomiya/Gaugefields.jl?tab=readme-ov-file#gpu-parallel-computation-with-cuda-experimental) .)
-    - Only 4D system is supported. 2D one is not supported now. 
-    - Gradient flow for SU(Nc)
-    - Stout smearing for SU(3), A general SU(Nc) case will be added. 
+- Portable GPU and multi-GPU computation through
+  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.0.0
+  and [JACC.jl](https://github.com/JuliaORNL/JACC.jl). See the
+  [multi-GPU example](#multi-gpu-with-latticematrices-v100-and-jacc).
+    - NVIDIA GPUs through CUDA.jl
+    - AMD GPUs through AMDGPU.jl/ROCm
+    - Intel GPUs through oneAPI.jl
+    - MPI domain decomposition with automatic node-local rank-to-device mapping
 
 **The implementation of higher-form gauge fields is based on
 [arXiv:2303.10977 [hep-lat]](https://arxiv.org/abs/2303.10977).**
@@ -1621,8 +1627,214 @@ main()
 
 Also we can implement higher-form gauge fields.
 
-# GPU parallel computation with CUDA (experimental)
-From v0.5.0, we can use NVIDIA GPU for accelarating simulations. 
+# Multi-GPU with LatticeMatrices v1.0.0 and JACC
+
+Gaugefields v0.7.3 supports both the LatticeMatrices 0.3 series and
+LatticeMatrices v1.0.0. The portable GPU and multi-GPU path described here
+requires LatticeMatrices v1.0.0. It uses JACC for device arrays and kernels and
+MPI for lattice decomposition and halo exchange.
+
+## Improvements enabled by LatticeMatrices v1.0.0
+
+- **Portable single- and multi-GPU execution.** The same Gaugefields code runs
+  through JACC on NVIDIA, AMD, and Intel GPUs. Multi-GPU execution uses MPI
+  domain decomposition, normally with one MPI rank per GPU.
+- **Automatic device assignment.** MPI ranks are mapped to devices by their
+  rank within each node. This also works when a scheduler exposes one device to
+  each process.
+- **Safer halo synchronization.** LatticeMatrices tracks core and halo epochs.
+  Gaugefields mutations mark the halo stale, and shifted reads synchronize it
+  when required.
+- **Arbitrary-distance periodic shifts.** A shift can be wider than `NDW` or a
+  local lattice partition. LatticeMatrices performs the required direct MPI
+  redistribution, while Gaugefields v0.7.3 releases temporary shift storage
+  after Wilson-line and loop operations.
+- **Reusable temporary storage.** Shift buffers and other lattice temporaries
+  are pooled or preallocated, reducing repeated allocations in loop and force
+  calculations.
+- **Improved Enzyme reverse-mode AD.** The LatticeMatrices-backed 4D
+  Gaugefields path supports Enzyme pullbacks across lattice algebra and shifts,
+  including folding halo-gradient contributions back into the owning core
+  sites.
+
+These additions are specific to the LatticeMatrices v1.0.0 path. Gaugefields
+v0.7.3 retains compatibility with LatticeMatrices 0.3, but the old series does
+not provide the new multi-GPU, halo-epoch, managed long-shift, or extended AD
+infrastructure.
+
+## Select a JACC backend
+
+The same Gaugefields source code can be used with the following backends:
+
+| GPU vendor | JACC backend | Julia GPU package |
+| --- | --- | --- |
+| NVIDIA | `"cuda"` | CUDA.jl |
+| AMD | `"amdgpu"` | AMDGPU.jl |
+| Intel | `"oneapi"` | oneAPI.jl |
+
+Add the MPI/JACC packages to the application environment and select the
+backend once. The explicit LatticeMatrices version keeps this application on
+the v1.0.0 multi-GPU implementation:
+
+```julia
+using Pkg
+Pkg.add("Gaugefields")
+Pkg.add(PackageSpec(name="LatticeMatrices", version=v"1.0.0"))
+Pkg.add(["JACC", "MPI"])
+
+import JACC
+JACC.set_backend("cuda")    # NVIDIA
+# JACC.set_backend("amdgpu") # AMD
+# JACC.set_backend("oneapi") # Intel
+```
+
+Restart Julia after changing the JACC backend.
+
+`JACC.set_backend` records the selection in `LocalPreferences.toml` and adds
+the corresponding GPU package to the active project.
+
+## Define distributed Gaugefields
+
+In the simulation script, `JACC.@init_backend` must be called at top level
+before loading Gaugefields:
+
+```julia
+using MPI
+import JACC
+JACC.@init_backend
+
+using Gaugefields
+
+MPI.Init()
+
+const comm = MPI.COMM_WORLD
+const nranks = MPI.Comm_size(comm)
+const rank = MPI.Comm_rank(comm)
+
+const NC = 3
+const NDW = 1
+const NX = 8 * nranks
+const NY = 8
+const NZ = 8
+const NT = 8
+
+# prod(PEs) must equal the number of MPI ranks. Each global lattice extent
+# must be divisible by the corresponding entry of PEs.
+const PEs = (nranks, 1, 1, 1)
+
+U = Initialize_Gaugefields(
+    NC,
+    NDW,
+    NX,
+    NY,
+    NZ,
+    NT;
+    condition="cold",
+    isMPILattice=true,
+    PEs=PEs,
+    verbose_level=1,
+)
+
+# U is a four-component gauge field. Each U[mu] owns one distributed
+# LatticeMatrix, whose local storage is allocated on the selected JACC device.
+temp1 = similar(U[1])
+temp2 = similar(U[1])
+normalization = 1 / (6 * U[1].NV * U[1].NC)
+plaquette = calculate_Plaquette(U, temp1, temp2) * normalization
+
+rank == 0 && println("plaquette = ", plaquette)
+
+MPI.Barrier(comm)
+MPI.Finalize()
+```
+
+Save this as, for example, `multigpu_gaugefields.jl` and launch one MPI rank
+per GPU:
+
+```bash
+mpiexec -n 4 julia --project=. multigpu_gaugefields.jl
+```
+
+LatticeMatrices maps the node-local MPI ranks to the visible devices
+automatically. If a scheduler exposes only one GPU to each rank, that sole
+visible device is retained. The same mapping is used for CUDA, AMDGPU, and
+oneAPI backends. The machine must provide a working MPI installation and the
+driver/runtime required by the selected GPU backend.
+
+The important Gaugefields keyword is `isMPILattice=true`. The older
+`mpi=true`, `cuda=true`, and `accelerator="JACC"` options select legacy
+Gaugefields storage implementations and are not the LatticeMatrices v1.0.0
+multi-GPU path. The current LatticeMatrices-backed Gaugefields constructors use
+a positive halo width, so `NDW=1` is the recommended starting point.
+
+## Enzyme automatic differentiation
+
+Enzyme is an optional dependency. Add it to the same application environment:
+
+```julia
+using Pkg
+Pkg.add("Enzyme")
+```
+
+The following minimal example differentiates a real scalar action with respect
+to all four link fields. The gradients are written in place to `dU`:
+
+```julia
+using MPI
+import JACC
+JACC.@init_backend
+
+using Enzyme
+using Gaugefields
+
+MPI.Init()
+
+function link_trace_action(U1, U2, U3, U4)
+    return realtrace(U1) + realtrace(U2) + realtrace(U3) + realtrace(U4)
+end
+
+nranks = MPI.Comm_size(MPI.COMM_WORLD)
+PEs = (nranks, 1, 1, 1)
+
+U = Initialize_Gaugefields(
+    3,
+    1,
+    4 * nranks,
+    4,
+    4,
+    4;
+    condition="cold",
+    isMPILattice=true,
+    PEs=PEs,
+    verbose_level=0,
+)
+
+dU = similar(U)
+clear_U!(dU)
+
+Enzyme_derivative!(
+    link_trace_action,
+    U[1], U[2], U[3], U[4],
+    dU[1], dU[2], dU[3], dU[4],
+)
+
+MPI.Comm_rank(MPI.COMM_WORLD) == 0 &&
+    println("trace of the U1 gradient = ", realtrace(dU[1]))
+
+MPI.Finalize()
+```
+
+The differentiated function must return a real scalar and take `U1`, `U2`,
+`U3`, and `U4` as separate arguments. Use `nodiff(x)` for constant scalar or
+object arguments. For actions that need work fields, pass matching primal and
+adjoint buffers with `temp=...` and `dtemp=...`. A complete force/HMC example
+is given in [HMC with Enzyme-based Force Computation](#hmc-with-enzyme-based-force-computation).
+
+# Legacy single-GPU CUDA backend (experimental)
+
+From v0.5.0, the original Gaugefields accelerator backend can use an NVIDIA GPU
+for accelerating simulations. This backend remains available independently of
+the LatticeMatrices/JACC multi-GPU path above.
 To use GPU, you just add ```using CUDA``` and put two keywords on Initialize_Gaugefields like:
 ```julia
 using CUDA
@@ -2781,12 +2993,12 @@ At present, AD support is implemented only for the MPI lattice backend, so isMPI
 
 ```julia
 using Random
-using Gaugefields
 using LinearAlgebra
 using PreallocatedArrays
 using Enzyme
 import JACC
 JACC.@init_backend
+using Gaugefields
 
 
 function _calc_action_step!(C, D, E, Uμ, Uν, shift_μ, shift_ν)
