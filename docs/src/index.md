@@ -1,71 +1,74 @@
-# Gaugefields
+# Gaugefields.jl v1
 
+Gaugefields.jl provides gauge-link fields and core algorithms for lattice QCD.
+The v1 API uses LatticeMatrices and JACC by default and represents a
+`Dim`-dimensional gauge configuration as a vector of `Dim` link fields.
 
+## Start here
 
-Documentation for [Gaugefields](https://github.com/akio-tomiya/Gaugefields.jl).
+For the main workflow, begin with the
+[four-dimensional quick start](tutorial4d.md). It covers configuration
+creation, measurements, heatbath, molecular dynamics, stout smearing, file
+I/O, MPI, and GPU execution.
 
-```@index
-```
+~~~julia
+import JACC
+JACC.@init_backend
 
+using Gaugefields
 
-[![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
+U = gauge_configuration(
+    (16, 16, 16, 32);
+    colors=3,
+    halo=1,
+    start=:hot,
+    seed=1234,
+)
 
-# Abstract
+println("plaquette = ", measure_plaquette(U))
+println("Polyakov loop = ", measure_polyakov_loop(U))
+~~~
 
-This is a package for lattice QCD codes.
-Treating gauge fields (links), gauge actions with MPI and autograd.
+The same API is used for two and three dimensions; see
+[Two and three dimensions](dimensions.md).
 
+## Manual structure
 
-```@raw html
-<img src="./LQCDjl_block.png" width=300>
-```
+- [Applications](applications.md) combines the v1 building blocks into common
+  simulation workflows.
+- [Measurements](measurements.md) documents the normalized observable API.
+- [Utilities and I/O](utilities.md) covers metadata, link-field algebra, and
+  configuration formats.
+- [MPI, GPU, and multi-GPU execution](mpi.md) explains portable execution with
+  one code path.
+- [HMC and custom integrators](hmc.md) builds HMC around the deterministic MD
+  driver.
+- [High-level API parameters](highlevelapi.md) is the parameter reference.
+- [Public API index](usefulfunctions.md) collects the v1 docstrings.
 
+## Backends
 
-This package will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/LatticeQCD.jl). 
+`LatticeMatricesBackend()` is the default. CPU threads, GPUs, MPI, and
+multi-GPU execution are selected through JACC and `process_grid` without
+accelerator-specific Gaugefields constructors.
 
-# What this package can do:
-This package has following functionarities
+`LegacyBackend()` is available only when an application deliberately needs
+the serial compatibility implementation.
 
-- SU(Nc) (Nc > 1) gauge fields in 2, 3, or 4 dimensions with arbitrary actions.
-- U(1) gauge fields in 2 dimensions with arbitrary actions. 
-- Configuration generation
-    - Heatbath
-    - quenched Hybrid Monte Carlo
-- Gradient flow via RK3
-- I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
-- MPI parallel computation (experimental. not shown)
+!!! warning "Pre-v1 compatibility API"
+    Programs written against earlier Gaugefields releases remain supported,
+    but their constructors, backend flags, low-level HMC drivers, and historical
+    examples are documented only on the
+    [Legacy API (compatibility)](legacyapi.md) page. They are not the recommended
+    interface for new programs.
 
-Dynamical fermions will be supported with [LatticeDiracOperators.jl](https://github.com/akio-tomiya/LatticeDiracOperators.jl).
+## Installation
 
-In addition, this supports followings
-- **Autograd for functions with SU(Nc) variables**
-- Stout smearing (exp projecting smearing)
-- Stout force via [backpropagation](https://arxiv.org/abs/2103.11965)
+In Julia package mode:
 
-Autograd can be worked for general Wilson lines except for ones have overlaps.
+~~~julia
+pkg> add Gaugefields
+~~~
 
-# Install
-
-```
-add Gaugefields
-```
-
-Start with the [four-dimensional quick start](tutorial4d.md). Gaugefields v1
-uses the LatticeMatrices/JACC backend by default; shorter examples for
-[two and three dimensions](dimensions.md) use the same API.
-
-Existing programs that use `Initialize_Gaugefields`, constructor backend flags,
-or the earlier low-level HMC routines remain supported. Their documentation is
-collected on the single [Legacy API (compatibility)](legacyapi.md) page; new
-applications should use the v1 high-level API.
-
-
-
-
-
-
-
-
-
-
-
+Gaugefields v1 requires LatticeMatrices v1.1 or later within the compatibility
+bounds declared by the package.

@@ -11,34 +11,46 @@ makedocs(;
     sitename="Gaugefields.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://github.com/akio-tomiya/Gaugefields.jl",
+        canonical="https://akio-tomiya.github.io/Gaugefields.jl/v1/",
+        repolink="https://github.com/akio-tomiya/Gaugefields.jl",
+        edit_link="master",
+        size_threshold_warn=150 * 2^10,
         assets=String[],
     ),
     pages=[
         "Home" => "index.md",
-        "Tutorials" => [
+        "Getting started" => [
             "Four-dimensional quick start" => "tutorial4d.md",
-            "HMC and custom integrators" => "hmc.md",
             "Two and three dimensions" => "dimensions.md",
             "Randomness and reproducibility" => "randomness.md",
         ],
-        #"File loading" => "fileloading.md",
-        #"Heatbath updates" => "heatbath.md",
-        #"Gradientflow" => "gradientflow.md",
-        "Utilities" => "utilities.md",
-        "Applications" => "applications.md",
-        "Useful functions" => "usefulfunctions.md",
-        "How to implement new gauge fields" => "howtoimplement.md",
-        "Measurements" => "measurements.md",
-        "Parallel computation" => "mpi.md",
-        "High-level API parameters" => "highlevelapi.md",
-        "Legacy API (compatibility)" => "legacyapi.md",
-        #"Derivatives" => "derivatives.md",
-        #"Smearing" => "smearing.md",
+        "Guides" => [
+            "Applications" => "applications.md",
+            "Measurements" => "measurements.md",
+            "Utilities and I/O" => "utilities.md",
+            "Stout smearing" => "smearing.md",
+            "MPI, GPU, and multi-GPU" => "mpi.md",
+            "HMC and custom integrators" => "hmc.md",
+        ],
+        "Reference" => [
+            "High-level API parameters" => "highlevelapi.md",
+            "Public v1 API index" => "usefulfunctions.md",
+            "Extending the v1 API" => "howtoimplement.md",
+        ],
+        "Compatibility" => [
+            "Legacy API" => "legacyapi.md",
+        ],
     ],
 )
 
 deploydocs(;
     repo="github.com/akio-tomiya/Gaugefields.jl",
     devbranch="master",
+    versions=[
+        "stable" => "v^",
+        "v#",
+        "v#.#",
+        "v#.#.#",
+        "dev" => "dev",
+    ],
 )

@@ -1,270 +1,134 @@
-## Parallel computation with MPI
-Gaugefields.jl uses MPI.jl to do the parallel computations. 
-The function ```println_verbose_level1``` is println function with MPI. Please see the example codes. 
+# MPI, GPU, and multi-GPU execution
 
-We show the example codes. 
+Gaugefields v1 uses the LatticeMatrices/JACC backend for distributed fields.
+There is no separate MPI constructor and no accelerator flag in the v1 API.
+The simulation source is selected by `process_grid`; JACC determines where its
+arrays and kernels run.
 
-### Gradient flow
+## Complete MPI example
 
-```julia
-using Gaugefields
-using Wilsonloop
+Save the following as `mpi_example.jl`:
+
+~~~julia
 using MPI
 
+import JACC
+JACC.@init_backend
 
-const pes = Tuple(parse.(Int64,ARGS[1:4]))
-const mpi = parse(Bool,ARGS[5])
-
-function test()
-    NX = 8*2
-    NY = 8*2
-    NZ = 8*2
-    NT = 8*2
-    Nwing = 0
-    Dim = 4
-    NC = 3
-
-
-    if mpi
-        PEs = pes#(1,1,1,2)
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot",mpi=true,PEs = PEs,mpiinit = false)
-        
-    else
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
-    end
-
-    #println(typeof(U))
-    println_verbose_level1(U[1],typeof(U))
-
-
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println_verbose_level1(U[1]," plaq_t = $plaq_t")
-    #println(" plaq_t = $plaq_t")
-
-    loops_p = Wilsonline{Dim}[]
-    for μ=1:Dim
-        for ν=μ:Dim
-            if ν == μ
-                continue
-            end
-
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-
-            push!(loops_p,loop1)
-            loop1 = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)],Dim = Dim)
-            push!(loops_p,loop1)
-        end
-    end
-
-
-    loops = Wilsonline{Dim}[]
-    for μ=1:Dim
-        for ν=μ:Dim
-            if ν == μ
-                continue
-            end
-            loop1 = Wilsonline([(μ,1),(ν,2),(μ,-1),(ν,-2)],Dim = Dim)
-            push!(loops,loop1)
-        end
-    end
-
-
-    listnames = [loops_p,loops]
-    listvalues = [1+im,0.1]
-    g = Gradientflow_general(U,listnames,listvalues,eps = 0.01)
-
-    for itrj=1:100
-        @time flow!(U,g)
-        #if itrj % 10 == 0
-            plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-            
-            println_verbose_level1(U[1],"$itrj plaq_t = $plaq_t")
-            poly = calculate_Polyakov_loop(U,temp1,temp2) 
-            println_verbose_level1(U[1],"$itrj polyakov loop = $(real(poly)) $(imag(poly))")
-        #end
-    end
-
-
-end
-test()
-```
-
-We can do the parallel computation like
-
-```
-mpirun -np 4 julia --project=../ mpigradientflow.jl 1 1 2 2 true
-```
-
-### HMC
-This is the sample code:
-
-```julia
 using Gaugefields
-using MPI
-using LinearAlgebra
-using Random
 
-const pes = Tuple(parse.(Int64,ARGS[1:4]))
-const mpi = parse(Bool,ARGS[5])
+MPI.Init()
 
+world = MPI.COMM_WORLD
+nranks = MPI.Comm_size(world)
 
-function MDtest!(snet,U,Dim,mpi=false)
-    p = initialize_TA_Gaugefields(U)
-    Uold = similar(U)
-    substitute_U!(Uold,U)
-    MDsteps = 200
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    numaccepted = 0
+lattice = (8, 8, 8, 8 * nranks)
+process_grid = (1, 1, 1, nranks)
 
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
+U = gauge_configuration(
+    lattice;
+    colors=3,
+    halo=1,
+    start=:hot,
+    seed=0x1234,
+    process_grid=process_grid,
+)
 
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
-    if get_myrank(U) == 0
-        println("0 plaq_t = $plaq_t")
-        println("polyakov loop = $(real(poly)) $(imag(poly))")
-    end
+comm = gauge_communicator(U)
+rank = MPI.Comm_rank(comm)
 
+plaq = measure_plaquette(U)
+rank == 0 && println("plaquette = ", plaq)
 
-    numtrj = 10
-    for itrj = 1:numtrj
-        @time accepted = MDstep!(snet,U,p,MDsteps,Dim,Uold)
-        numaccepted += ifelse(accepted,1,0)
+flow = gradient_flow(U; steps=2, step_size=0.01)
+flow!(U, flow)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2) 
-        
-        if get_myrank(U) == 0
-            println("$itrj plaq_t = $plaq_t")
-            println("acceptance ratio ",numaccepted/itrj)
-            println("polyakov loop = $(real(poly)) $(imag(poly))")
-        end
-    end
-end
+rank == 0 && println("flowed plaquette = ", measure_plaquette(U))
 
-function calc_action(snet,U,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(snet,U)/NC
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
+MPI.Barrier(comm)
+MPI.Finalize()
+~~~
 
-function MDstep!(snet,U,p,MDsteps,Dim,Uold)
-    Δτ = 1/MDsteps
-    gauss_distribution!(p)
-    Sold = calc_action(snet,U,p)
-    substitute_U!(Uold,U)
+The process grid has one entry per lattice direction. It must satisfy:
 
-    for itrj=1:MDsteps
-        U_update!(U,p,0.5,Δτ,Dim,snet)
-        #println(getvalue(U[1],1,1,1,1,1,1))
+- `prod(process_grid) == nranks`;
+- every global extent is divisible by the corresponding grid entry;
+- local extents must be large enough for the selected halo and operation.
 
-        P_update!(U,p,1.0,Δτ,Dim,snet)
+When `process_grid` is omitted in 4D, the default decomposition places all
+ranks in the final direction.
 
+## CPU execution
 
-        U_update!(U,p,0.5,Δτ,Dim,snet)
-        #error("dd")
-    end
-    #error("end")
-    
-    Snew = calc_action(snet,U,p)
-    if get_myrank(U) == 0
-        println("Sold = $Sold, Snew = $Snew")
-        println("Snew - Sold = $(Snew-Sold)")
-    end
-    ratio = min(1,exp(Snew-Sold))
-    r = rand()
-    if mpi
-        r = MPI.bcast(r, 0, MPI.COMM_WORLD)
-    end
-    #println(r,"\t",ratio)
+Select the threads backend once, then restart Julia:
 
-    if r > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
+~~~julia
+import JACC
+JACC.set_backend("threads")
+~~~
 
-function U_update!(U,p,ϵ,Δτ,Dim,snet)
-    temps = get_temporary_gaugefields(snet)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
+Launch MPI with the desired threads per rank:
 
-    for μ=1:Dim
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        mul!(W,expU,U[μ])
-        substitute_U!(U[μ],W)
-        
-    end
-end
+~~~bash
+mpiexec -n 4 julia --threads=4 --project=. mpi_example.jl
+~~~
 
-function P_update!(U,p,ϵ,Δτ,Dim,snet) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temps = get_temporary_gaugefields(snet)
-    dSdUμ = temps[end]
-    factor =  -ϵ*Δτ/(NC)
+## One GPU
 
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,snet,μ,U)
-        #println("dSdU = ",getvalue(dSdUμ,1,1,1,1,1,1))
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
-    end
-end
+Select the backend once and restart Julia:
 
+~~~julia
+import JACC
+JACC.set_backend("cuda")   # NVIDIA
+# JACC.set_backend("amdgpu") # AMD
+# JACC.set_backend("oneapi") # Intel
+~~~
 
+Run the same Julia source with one process. No Gaugefields GPU keyword is
+needed.
 
-function test1()
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
-    Nwing = 0
-    Dim = 4
-    NC = 3
+## Multiple GPUs
 
+Launch one MPI rank per GPU with the same `mpi_example.jl`:
 
-    if mpi
-        PEs = pes#(1,1,1,2)
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold",mpi=true,PEs = PEs,mpiinit = false)
-        
-    else
-        U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+~~~bash
+mpiexec -n 4 julia --project=. mpi_example.jl
+~~~
 
-    end
+LatticeMatrices maps node-local ranks to visible devices. The number of ranks
+on a node must not exceed the GPUs visible to those ranks. Scheduler resource
+flags are system-specific, but `process_grid` remains the only decomposition
+setting in Gaugefields code.
 
-    Random.seed!(123+get_myrank(U[1]))    
+Direct device-buffer communication requires an MPI installation built for the
+selected GPU runtime. In particular, CUDA multi-GPU runs require CUDA-aware
+MPI, and MPI.jl's `libmpi` must match the `mpiexec` used to launch the job.
 
+## Portable algorithms
 
+The following v1 interfaces use the same LM configuration on CPU, GPU, MPI,
+and multi-GPU:
 
-    snet = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette")
-    append!(plaqloop,plaqloop')
-    β = 5.7/2
-    push!(snet,β,plaqloop)
-    
-    #show(snet)
+- `measure_plaquette` and `measure_polyakov_loop`;
+- `gradient_flow` and `flow!`;
+- `heatbath_updater`, `heatbath!`, and `overrelaxation!`;
+- `stout_smearing` and `smear`;
+- `gaussian_momenta`, `md_driver`, and `md_trajectory!`;
+- `save_configuration` and in-place `load_configuration!` where supported by
+  the selected file format.
 
+All ranks must execute collective algorithms in the same order.
 
-    MDtest!(snet,U,Dim,mpi)
+## Reproducibility across decompositions
 
-end
+An explicit `seed` uses global-site streams for LM hot starts, Gaussian
+momenta, heatbath, and overrelaxation. Keeping the seed, algorithm, and logical
+sweep counter fixed makes these streams independent of the MPI process-grid
+decomposition.
 
+A complete HMC chain must additionally synchronize or broadcast its
+Metropolis decision. See [Randomness and reproducibility](randomness.md) and
+[HMC and custom integrators](hmc.md).
 
-test1()
-
-```
+The pre-v1 `mpi`, `PEs`, `isMPILattice`, `cuda`, and `accelerator` constructor
+flags are documented only in [Legacy API](legacyapi.md).

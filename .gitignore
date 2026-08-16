@@ -1,4 +1,5 @@
 run
 docs/build
+docs/Manifest.toml
 Manifest.toml
 *.ildg
