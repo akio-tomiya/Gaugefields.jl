@@ -383,8 +383,12 @@ function __init__()
 
     
     @require JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea" begin
-        import ..AbstractGaugefields_module: Gaugefields_4D_MPILattice, set_halo!
-        import LatticeMatrices: delinearize
+        import ..AbstractGaugefields_module:
+            Gaugefields_4D_MPILattice,
+            barrier,
+            get_myrank,
+            set_halo!
+        import LatticeMatrices: delinearize, gather_and_bcast_matrix
 
 
         function load_binarydata!(
@@ -455,6 +459,52 @@ function __init__()
                     u[ic2, ic1, ix, iy, iz, it] = val
                 end
             end
+        end
+
+        function save_binarydata(
+            U::Array{T,1},
+            filename;
+            tempfile1="testbin.dat",
+            tempfile2="filelist.dat",
+        ) where {T<:Gaugefields_4D_MPILattice}
+            NX = U[1].NX
+            NY = U[1].NY
+            NZ = U[1].NZ
+            NT = U[1].NT
+            NC = U[1].NC
+            global_fields = map(field -> gather_and_bcast_matrix(field.U), U)
+
+            if get_myrank(U[1]) == 0
+                open(tempfile1, "w") do fp
+                    for it in 1:NT
+                        for iz in 1:NZ
+                            for iy in 1:NY
+                                for ix in 1:NX
+                                    for μ in 1:4
+                                        for ic2 in 1:NC
+                                            for ic1 in 1:NC
+                                                value = global_fields[μ][
+                                                    ic2, ic1, ix, iy, iz, it
+                                                ]
+                                                write(fp, hton(real(value)))
+                                                write(fp, hton(imag(value)))
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                open(tempfile2, "w") do fp
+                    println(fp, "$tempfile1 ", "ildg-binary-data")
+                end
+                lime_pack() do exe
+                    run(`$exe $tempfile2 $filename`)
+                end
+            end
+            barrier(U[1])
+            return nothing
         end
     end
 
@@ -664,7 +714,19 @@ end
 
 import ..AbstractGaugefields_module: Initialize_Gaugefields
 
-function load_gaugefield(i, ildg::ILDG, L, NC; NDW=0)
+function load_gaugefield(
+    i,
+    ildg::ILDG,
+    L,
+    NC;
+    NDW=0,
+    isMPILattice=false,
+    PEs=nothing,
+    verbose_level=2,
+    singleprecision=false,
+    boundarycondition=ones(4),
+    elementtype=nothing,
+)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -672,7 +734,21 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW=0)
     data = ildg[i]
     filename = ildg.filename
 
-    U = Initialize_Gaugefields(NC, NDW, NX, NY, NZ, NT, condition="cold")
+    U = Initialize_Gaugefields(
+        NC,
+        NDW,
+        NX,
+        NY,
+        NZ,
+        NT;
+        condition="cold",
+        isMPILattice,
+        PEs,
+        verbose_level,
+        singleprecision,
+        boundarycondition,
+        elementtype,
+    )
     #=
     if NC == 3
         U = Array{SU3GaugeFields,1}(undef, 4)
@@ -690,7 +766,7 @@ function load_gaugefield(i, ildg::ILDG, L, NC; NDW=0)
 
 end
 
-function load_gaugefield(i, ildg::ILDG; NDW=0)
+function load_gaugefield(i, ildg::ILDG; kwargs...)
     #@assert length(ildg) != 0 "the header file is not found"
     data = ildg[i]
     filename = ildg.filename
@@ -708,7 +784,7 @@ function load_gaugefield(i, ildg::ILDG; NDW=0)
     else
         error("header file is not found. Please put NC")
     end
-    load_gaugefield(i, ildg::ILDG, L, NC; NDW=NDW)
+    load_gaugefield(i, ildg::ILDG, L, NC; kwargs...)
 
 
 

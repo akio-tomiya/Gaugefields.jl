@@ -3,9 +3,25 @@ using Test
 using Random
 import Wilsonloop: loops_staple
 
+@testset "High-level API" begin
+    include("high_level_api.jl")
+end
+
+@testset "Molecular dynamics driver" begin
+    include("md_driver.jl")
+end
+
+@testset "Enzyme molecular dynamics" begin
+    include("enzyme_md.jl")
+end
+
 
 @testset "LatticeMatrices compatibility" begin
     include("latticematrices_compat.jl")
+end
+
+@testset "3D LatticeMatrices compatibility" begin
+    include("MPIJACCtest/three_dimensional.jl")
 end
 
 
@@ -79,6 +95,10 @@ end
 
 @testset "heatbath" begin
     println("heatbath")
+    include("heatbath_coloring.jl")
+    include("su2update_allocationfree.jl")
+    include("su3update_allocationfree.jl")
+    include("overrelaxation_allocationfree.jl")
     include("heatbathtest.jl")
 end
 
@@ -129,5 +149,3 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
-

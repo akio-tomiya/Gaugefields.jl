@@ -22,6 +22,8 @@ import ..LatticeMatricesCompat:
     lattice_isopen,
     mark_lattice_dirty!,
     release_lattice!
+using Random
+import LatticeMatrices: SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
 import ..Verboseprint_mpi:
     Verbose_print, println_verbose_level1, println_verbose_level2, println_verbose_level3
 
@@ -115,6 +117,37 @@ end
 
 using MPI
 using JACC
+
+const _REPRODUCIBLE_MPILATTICE_SEED = UInt64(0x12345678abcdef01)
+const _HOT_START_STREAM_TAG = UInt32(0x00484f54)
+const _GAUSSIAN_MOMENTUM_STREAM_TAG = UInt32(0x47415553)
+const _SUPPORTED_MPILATTICE_ELEMENTTYPES = (Float32, Float64, ComplexF32, ComplexF64)
+
+function _resolve_mpialattice_elementtype(elementtype, singleprecision::Bool)
+    T = isnothing(elementtype) ?
+        (singleprecision ? ComplexF32 : ComplexF64) : elementtype
+    T in _SUPPORTED_MPILATTICE_ELEMENTTYPES || throw(ArgumentError(
+        "elementtype must be Float32, Float64, ComplexF32, or ComplexF64; got $T",
+    ))
+    return T, T === Float32 || T === ComplexF32
+end
+
+function _shared_mpialattice_seed(seed, comm::MPI.Comm; reproducible::Bool=false)
+    root_seed = if MPI.Comm_rank(comm) == 0
+        if seed !== nothing
+            UInt64(seed)
+        elseif reproducible
+            _REPRODUCIBLE_MPILATTICE_SEED
+        else
+            rand(RandomDevice(), UInt64)
+        end
+    else
+        UInt64(0)
+    end
+    seed_buffer = Ref(root_seed)
+    MPI.Bcast!(seed_buffer, 0, comm)
+    return seed_buffer[]
+end
 
 include("./2D/gaugefields_2D.jl")
 include("./4D/gaugefields_4D.jl")
@@ -242,7 +275,13 @@ function Initialize_4DGaugefields(
     randomnumber="Random",
     cuda=false,
     blocks=nothing,
-    accelerator="none"
+    accelerator="none",
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4),
+    seed=nothing,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
+    elementtype=nothing,
 )
 
     @assert length(NN) == 4 "Dimension should be 4. "
@@ -259,7 +298,13 @@ function Initialize_4DGaugefields(
         randomnumber,
         cuda,
         blocks,
-        accelerator
+        accelerator,
+        singleprecision,
+        isMPILattice,
+        boundarycondition,
+        seed,
+        rng_algorithm,
+        elementtype,
     )
     return U
 
@@ -333,7 +378,7 @@ end
 Initialize_Gaugefields(NC,NDW,NN...;
     condition = "cold",mpi = false,PEs=nothing,mpiinit = nothing,verbose_level = 2,randomnumber="Random")
 ```
-Initialize gaugefields. 2D or 4D is supported. 
+Initialize gaugefields. 2D, 3D, or 4D is supported.
 
 ### Examples
 If you want to have randomely distributed gauge fields (so-called "hot start") in four dimension, just do:
@@ -348,13 +393,37 @@ If you want to have uniform gauge fields (so-called "cold start") in four dimens
 U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
 ```
 
+For a real-valued `LatticeMatrices`-backed field, specify the element type:
+
+```julia
+U = Initialize_Gaugefields(
+    NC, Nwing, NX, NY, NZ, NT;
+    condition="cold", isMPILattice=true, elementtype=Float64,
+)
+```
+
 ### Return values:
-*   `U`: Dim dimensional vector. Here, Dim is a dimension (Dim = 2 or 4). 
+*   `U`: Dim dimensional vector. Here, Dim is a dimension (Dim = 2, 3, or 4).
 
 ### Keyword arguments:
 * `condition`: ```cold```(cold start) or ```hot```(hot start). The default is ```cold```
 * `mpi`: Using MPI or not. The default is ```false```. If you want to use MPI, you should call ```using MPI```. 
 * `PEs`: If ```mpi = true```, we have to set ```PEs = [2,2,2,2]```, which is numbers of regions for MPI process. ```prod(PEs)``` should be the number of total MPI processes. 
+* `randomnumber`: Set to `"Reproducible"` for a deterministic hot start. On
+  the `LatticeMatrices` backend, the generated global field is independent of
+  the MPI decomposition. The default is `"Random"`.
+* `seed`: Optional hot-start seed for the `LatticeMatrices` backend. The same
+  seed produces the same global field independently of MPI decomposition.
+  An explicit seed takes precedence over the fixed seed selected by
+  `randomnumber="Reproducible"`.
+* `rng_algorithm`: Site-local RNG selector (`Philox4x32()` by default;
+  `PCG32()` and `Xoshiro256PlusPlus()` are also available) for the
+  `LatticeMatrices` backend.
+* `elementtype`: Element type for the `LatticeMatrices` backend. Supported
+  values are `Float32`, `Float64`, `ComplexF32`, and `ComplexF64`. When it is
+  omitted, the legacy `singleprecision` behavior is preserved (`ComplexF64`
+  by default and `ComplexF32` when `singleprecision=true`). An explicit
+  `elementtype` takes precedence over `singleprecision`.
 
 ### MPI
 Gaugefields with using MPI is not well tested. 
@@ -374,7 +443,10 @@ function Initialize_Gaugefields(
     accelerator="none",
     singleprecision=false,
     isMPILattice=false,
-    boundarycondition=ones(4)
+    boundarycondition=ones(4),
+    seed=nothing,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
+    elementtype=nothing,
 )
 
 
@@ -393,7 +465,8 @@ function Initialize_Gaugefields(
             accelerator,
             singleprecision,
             isMPILattice,
-            boundarycondition
+            boundarycondition,
+            elementtype,
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -410,7 +483,11 @@ function Initialize_Gaugefields(
             accelerator,
             singleprecision,
             isMPILattice,
-            boundarycondition
+            boundarycondition,
+            seed,
+            rng_algorithm,
+            elementtype,
+            direction=1,
         )
     else
         error("not supported")
@@ -434,7 +511,8 @@ function Initialize_Gaugefields(
                 accelerator,
                 singleprecision,
                 isMPILattice,
-                boundarycondition
+                boundarycondition,
+                elementtype,
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -451,7 +529,11 @@ function Initialize_Gaugefields(
                 accelerator,
                 singleprecision,
                 isMPILattice,
-                boundarycondition
+                boundarycondition,
+                seed,
+                rng_algorithm,
+                elementtype,
+                direction=μ,
             )
         else
             error("not supported")
@@ -474,10 +556,17 @@ function RandomGauges(
     accelerator="none",
     singleprecision=false,
     isMPILattice=false,
-    boundarycondition=ones(4)
+    boundarycondition=ones(4),
+    seed=nothing,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
+    elementtype=nothing,
+    direction::Integer=0,
 )
     accelerator_g = accelerator
     dim = length(NN)
+    elementtype !== nothing && !isMPILattice && throw(ArgumentError(
+        "elementtype is currently supported only when isMPILattice=true",
+    ))
     if isMPILattice
         if dim == 4
             U = randomGaugefields_4D_MPILattice(
@@ -491,8 +580,29 @@ function RandomGauges(
                 singleprecision,
                 boundarycondition,
                 PEs,
-                randomnumber
+                randomnumber,
+                seed,
+                rng_algorithm,
+                elementtype,
+                direction,
                 #mpiinit
+            )
+        elseif dim == 3
+            U = randomGaugefields_3D_MPILattice(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition=boundarycondition[1:3],
+                PEs,
+                randomnumber,
+                seed,
+                rng_algorithm,
+                elementtype,
+                direction,
             )
         elseif dim == 2
             U = randomGaugefields_2D_MPILattice(
@@ -504,7 +614,11 @@ function RandomGauges(
                 singleprecision,
                 boundarycondition=boundarycondition[1:2],
                 PEs,
-                randomnumber
+                randomnumber,
+                seed,
+                rng_algorithm,
+                elementtype,
+                direction,
                 #mpiinit
             )
         else
@@ -644,10 +758,15 @@ function IdentityGauges(
     accelerator="none",
     singleprecision=false,
     isMPILattice=false,
-    boundarycondition=ones(4)
+    boundarycondition=ones(4),
+    elementtype=nothing,
 )
     accelerator_g = accelerator
     dim = length(NN)
+
+    elementtype !== nothing && !isMPILattice && throw(ArgumentError(
+        "elementtype is currently supported only when isMPILattice=true",
+    ))
 
     @assert mpi * cuda == 0 "CUDA with mpi is not supported!"
 
@@ -664,7 +783,21 @@ function IdentityGauges(
                 singleprecision,
                 boundarycondition,
                 PEs,
+                elementtype,
                 #mpiinit
+            )
+        elseif dim == 3
+            U = identityGaugefields_3D_MPILattice(
+                NC,
+                NN[1],
+                NN[2],
+                NN[3];
+                NDW,
+                verbose_level,
+                singleprecision,
+                boundarycondition=boundarycondition[1:3],
+                PEs,
+                elementtype,
             )
         elseif dim == 2
             U = identityGaugefields_2D_MPILattice(
@@ -676,6 +809,7 @@ function IdentityGauges(
                 singleprecision,
                 boundarycondition=boundarycondition[1:2],
                 PEs,
+                elementtype,
                 #mpiinit
             )
         else
@@ -811,8 +945,83 @@ function IdentityGauges(
     return U
 end
 
-function Oneinstanton(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
+function _validate_special_configuration_elementtype(elementtype)
+    elementtype === nothing && return nothing
+    elementtype in (ComplexF32, ComplexF64) || throw(ArgumentError(
+        "special gauge configurations require elementtype=ComplexF32 or ComplexF64",
+    ))
+    return nothing
+end
+
+function _copy_special_configuration_to_mpialattice(
+    legacy,
+    NC,
+    NDW,
+    NN...;
+    PEs=nothing,
+    verbose_level=2,
+    singleprecision=false,
+    boundarycondition=ones(4),
+    elementtype=nothing,
+)
+    _validate_special_configuration_elementtype(elementtype)
+    U = Initialize_Gaugefields(
+        NC,
+        NDW,
+        NN...;
+        condition="cold",
+        PEs,
+        verbose_level,
+        singleprecision,
+        isMPILattice=true,
+        boundarycondition,
+        elementtype,
+    )
+    substitute_U!(U, legacy)
+    set_wing_U!(U)
+    return U
+end
+
+function Oneinstanton(
+    NC,
+    NDW,
+    NN...;
+    mpi=false,
+    PEs=nothing,
+    mpiinit=nothing,
+    verbose_level=2,
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4),
+    elementtype=nothing,
+)
     dim = length(NN)
+    if isMPILattice
+        dim in (2, 4) || error("not implemented yet!")
+        _validate_special_configuration_elementtype(elementtype)
+        legacy = Oneinstanton(
+            NC,
+            0,
+            NN...;
+            verbose_level,
+            isMPILattice=false,
+        )
+        return _copy_special_configuration_to_mpialattice(
+            legacy,
+            NC,
+            NDW,
+            NN...;
+            PEs,
+            verbose_level,
+            singleprecision,
+            boundarycondition,
+            elementtype,
+        )
+    end
+
+    elementtype === nothing || throw(ArgumentError(
+        "elementtype is currently supported only when isMPILattice=true",
+    ))
     if mpi
         if PEs == nothing || mpiinit == nothing
             error("not implemented yet!")
@@ -837,15 +1046,30 @@ function Oneinstanton(NC, NDW, NN...; mpi=false, PEs=nothing, mpiinit=nothing)
     else
         if dim == 4
             if NDW == 0
-                U = Oneinstanton_4D_nowing(NC, NN[1], NN[2], NN[3], NN[4])
+                U = Oneinstanton_4D_nowing(
+                    NC,
+                    NN[1],
+                    NN[2],
+                    NN[3],
+                    NN[4];
+                    verbose_level,
+                )
             else
-                U = Oneinstanton_4D_wing(NC, NN[1], NN[2], NN[3], NN[4], NDW)
+                U = Oneinstanton_4D_wing(
+                    NC,
+                    NN[1],
+                    NN[2],
+                    NN[3],
+                    NN[4],
+                    NDW;
+                    verbose_level,
+                )
             end
         elseif dim == 2
             if NDW == 0
-                U = Oneinstanton_2D_nowing(NC, NN[1], NN[2])
+                U = Oneinstanton_2D_nowing(NC, NN[1], NN[2]; verbose_level)
             else
-                U = Oneinstanton_2D_wing(NC, NN[1], NN[2], NDW)
+                U = Oneinstanton_2D_wing(NC, NN[1], NN[2], NDW; verbose_level)
 
             end
         else
@@ -1171,6 +1395,30 @@ function _check_serial_topological_charge_field(U)
     return nothing
 end
 
+function _legacy_copy_for_topological_charge(
+    U::Array{T,1},
+) where {NC,T<:Gaugefields_4D_MPILattice{NC}}
+    source = U[1]
+    get_nprocs(source) == 1 || throw(ArgumentError(
+        "topological charge only supports serial 4D gauge fields",
+    ))
+    legacy_first = Gaugefields_4D_nowing(
+        NC,
+        source.NX,
+        source.NY,
+        source.NZ,
+        source.NT;
+        verbose_level=source.verbose_print.level,
+    )
+    legacy = Array{typeof(legacy_first),1}(undef, 4)
+    legacy[1] = legacy_first
+    for μ = 2:4
+        legacy[μ] = similar(legacy_first)
+    end
+    substitute_U!(legacy, U)
+    return legacy
+end
+
 """
     topological_charge_density(U; method=:plaquette)
 
@@ -1190,6 +1438,13 @@ function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; m
     else
         throw(ArgumentError("supported topological_charge_density methods are :plaquette, :clover, and :improved"))
     end
+end
+
+function topological_charge_density(
+    U::Array{T,1};
+    method=:plaquette,
+) where {NC,T<:Gaugefields_4D_MPILattice{NC}}
+    return topological_charge_density(_legacy_copy_for_topological_charge(U); method)
 end
 
 """
@@ -1212,6 +1467,13 @@ function topological_charge(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:p
     end
 end
 
+function topological_charge(
+    U::Array{T,1};
+    method=:plaquette,
+) where {NC,T<:Gaugefields_4D_MPILattice{NC}}
+    return topological_charge(_legacy_copy_for_topological_charge(U); method)
+end
+
 function Oneinstanton_SUN_embedded(
     NC,
     NX,
@@ -1224,11 +1486,52 @@ function Oneinstanton_SUN_embedded(
     sign=+1,
     block=(1, 2),
     verbose_level=2,
+    PEs=nothing,
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(4),
+    elementtype=nothing,
 )
     NDW isa Integer || throw(ArgumentError("NDW must be an integer"))
     NDW >= 0 || throw(ArgumentError("NDW must be nonnegative"))
     block = _validate_su2_embedding_block(NC, block)
     L = (NX, NY, NZ, NT)
+
+    if isMPILattice
+        _validate_special_configuration_elementtype(elementtype)
+        legacy = Oneinstanton_SUN_embedded(
+            NC,
+            NX,
+            NY,
+            NZ,
+            NT;
+            NDW=0,
+            center,
+            radius,
+            sign,
+            block,
+            verbose_level,
+            isMPILattice=false,
+        )
+        return _copy_special_configuration_to_mpialattice(
+            legacy,
+            NC,
+            NDW,
+            NX,
+            NY,
+            NZ,
+            NT;
+            PEs,
+            verbose_level,
+            singleprecision,
+            boundarycondition,
+            elementtype,
+        )
+    end
+
+    elementtype === nothing || throw(ArgumentError(
+        "elementtype is currently supported only when isMPILattice=true",
+    ))
 
     if NDW == 0
         u = Gaugefields_4D_nowing(NC, NX, NY, NZ, NT, verbose_level=verbose_level)

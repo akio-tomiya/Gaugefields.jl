@@ -26,7 +26,7 @@ This package will be used in [LatticeQCD.jl](https://github.com/akio-tomiya/Latt
 # What this package can do:
 This package has following functionarities
 
-- SU(Nc) (Nc > 1) gauge fields in 2 or 4 dimensions with arbitrary actions.
+- SU(Nc) (Nc > 1) gauge fields in 2, 3, or 4 dimensions with arbitrary actions.
 - U(1) gauge fields in 2 dimensions with arbitrary actions. 
 - Configuration generation
     - Heatbath
@@ -50,7 +50,14 @@ Autograd can be worked for general Wilson lines except for ones have overlaps.
 add Gaugefields
 ```
 
+Start with the [four-dimensional quick start](tutorial4d.md). Gaugefields v1
+uses the LatticeMatrices/JACC backend by default; shorter examples for
+[two and three dimensions](dimensions.md) use the same API.
 
+Existing programs that use `Initialize_Gaugefields`, constructor backend flags,
+or the earlier low-level HMC routines remain supported. Their documentation is
+collected on the single [Legacy API (compatibility)](legacyapi.md) page; new
+applications should use the v1 high-level API.
 
 
 

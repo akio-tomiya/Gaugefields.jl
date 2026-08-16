@@ -1,6 +1,7 @@
 abstract type TA_Gaugefields_3D{NC} <: TA_Gaugefields{NC,3} end
 
 include("./TA_gaugefields_3D_serial.jl")
+include("./mpi_jacc/TA_gaugefields_3D_MPILattice.jl")
 
 function TA_Gaugefields(NC, NX, NY, NT; mpi=false)
     if mpi

@@ -50,6 +50,97 @@ struct TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis} <: TA_Gaugef
 
 
     end
+
+    function TA_Gaugefields_4D_MPILattice(
+        u::TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis},
+    ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis}
+        a = similar(u.a)
+        ATa = typeof(a.A)
+
+        return new{NC,NX,NY,NZ,NT,T,ATa,NumofBasis}(
+            a,
+            u.NX,
+            u.NY,
+            u.NZ,
+            u.NT,
+            u.NV,
+            u.NC,
+            u.NumofBasis,
+            u.generators,
+        )
+    end
+end
+
+Base.similar(u::TA_Gaugefields_4D_MPILattice) = TA_Gaugefields_4D_MPILattice(u)
+
+@inline function kernel_getindex_TA_4D_MPILattice!(
+    _, output, input, basis, ix, iy, iz, it,
+)
+    @inbounds output[1] = input[basis, 1, ix, iy, iz, it]
+    return nothing
+end
+
+@inline function kernel_setindex_TA_4D_MPILattice!(
+    _, output, value, basis, ix, iy, iz, it,
+)
+    @inbounds output[basis, 1, ix, iy, iz, it] = value
+    return nothing
+end
+
+function Base.getindex(
+    x::TA_Gaugefields_4D_MPILattice,
+    basis,
+    ix,
+    iy,
+    iz,
+    it,
+)
+    indices = (basis, ix + x.a.nw, iy + x.a.nw, iz + x.a.nw, it + x.a.nw)
+    if x.a.A isa Array
+        @inbounds return x.a.A[basis, 1, indices[2:end]...]
+    end
+    output = JACC.zeros(eltype(x.a.A), 1)
+    JACC.parallel_for(
+        1,
+        kernel_getindex_TA_4D_MPILattice!,
+        output,
+        x.a.A,
+        indices...,
+    )
+    return JACC.to_host(output)[1]
+end
+
+function Base.setindex!(
+    x::TA_Gaugefields_4D_MPILattice,
+    value,
+    basis,
+    ix,
+    iy,
+    iz,
+    it,
+)
+    indices = (basis, ix + x.a.nw, iy + x.a.nw, iz + x.a.nw, it + x.a.nw)
+    if x.a.A isa Array
+        @inbounds x.a.A[basis, 1, indices[2:end]...] = value
+    else
+        JACC.parallel_for(
+            1,
+            kernel_setindex_TA_4D_MPILattice!,
+            x.a.A,
+            convert(eltype(x.a.A), value),
+            indices...,
+        )
+    end
+    mark_lattice_dirty!(x.a)
+    return value
+end
+
+get_myrank(U::TA_Gaugefields_4D_MPILattice) = MPI.Comm_rank(U.a.comm)
+get_nprocs(U::TA_Gaugefields_4D_MPILattice) = MPI.Comm_size(U.a.comm)
+
+function barrier(U::TA_Gaugefields_4D_MPILattice)
+    MPI.Barrier(U.a.comm)
+    return nothing
 end
 
 
@@ -66,24 +157,39 @@ end
 function gauss_distribution!(
     p::TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NumofBasis};
     σ=1.0,
+    seed=nothing,
+    sweep::Integer=0,
+    direction::Integer=0,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
 ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis}
-    d = Normal(0.0, σ)
-    #println(p.a.PN)
-    N1, N2, N3, N4 = p.a.PN
-    pwork = rand(d, NumofBasis, 1, N1, N2, N3, N4)
+    shared_seed = _shared_mpialattice_seed(seed, p.a.comm)
+    return _gauss_distribution_mpialattice!(
+        p,
+        shared_seed;
+        σ,
+        sweep,
+        direction,
+        rng_algorithm,
+    )
+end
 
-    n1, n2, nsize... = size(p.a.A)
-    n1A, n2A, nsizeA... = size(pwork)
-    #println(n1, "\t", n2)
-    #println(nsize)
-    #println(nsizeA)
-    #println(n1A, "\t", n2A)
-    substitute!(p.a, pwork)
-    set_halo!(p.a)
-    #PEs = get_PEs(p.a)
-
-    #a = LatticeMatrix(pwork, 4, PEs; nw=1, phases=p.a.phases, comm0=p.a.comm)
-    #substitute!(p.a, a)
+function _gauss_distribution_mpialattice!(
+    p::TA_Gaugefields_4D_MPILattice,
+    shared_seed::UInt64;
+    σ=1.0,
+    sweep::Integer=0,
+    direction::Integer=0,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
+)
+    key = RNGStreamKey(
+        shared_seed,
+        sweep,
+        direction,
+        0,
+        _GAUSSIAN_MOMENTUM_STREAM_TAG,
+    )
+    randomize_gaussian_matrix!(p.a, key; sigma=σ, rng_algorithm)
+    return nothing
 end
 
 
@@ -94,7 +200,14 @@ function exptU!(
     temps::Array{Tg,1},
 ) where {NC,NX,NY,NZ,NT,T,AT,NumofBasis,Tg<:Gaugefields_4D_MPILattice,N<:Number} #uout = exp(t*u)
 
-    expt!(uout.U, v.a, t)
+    if NC > 3
+        Uta = temps[1]
+        substitute_U!(Uta, v)
+        expt!(uout.U, Uta.U, t)
+        set_wing_U!(uout)
+    else
+        expt!(uout.U, v.a, t)
+    end
     #if NC > 3
     #    Uta = temps[1]
     #    substitute_U!(Uta, v)
@@ -108,12 +221,7 @@ end
 function substitute_U!(C::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW},
     A::TA_Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T1,AT1,NumofBasis}) where {NC,NX,NY,NZ,NT,T,AT,NDW,NumofBasis,AT1,T1}
     @assert NC > 3 "Only NC >3 is supported"
-    generators = Tuple(JACC.array.(A.generators.generator))
-
-
-    mark_lattice_dirty!(C.U)
-    JACC.parallel_for(prod(C.U.PN), kernel_lie2matrix!,
-        C.U.A, A.a.A, NC, NumofBasis, C.U.indexer, generators, C.U.nw, A.a.nw) #w,u,ww,t
+    return _sun_lie2matrix!(C, A, NC)
 end
 
 function kernel_lie2matrix!(i, uout, u, NC, NG, dindexer, generators, nw1, nw2)
@@ -122,9 +230,11 @@ function kernel_lie2matrix!(i, uout, u, NC, NG, dindexer, generators, nw1, nw2)
 
     for jc = 1:NC
         for ic = 1:NC
-            for i = 1:NG
-                uout[ic, jc, indices...] += u[i, 1, indices2...] * generators[i][ic, jc] * (im / 2)
+            value = u[1, 1, indices2...] * generators[1][ic, jc] * (im / 2)
+            for ibasis = 2:NG
+                value += u[ibasis, 1, indices2...] * generators[ibasis][ic, jc] * (im / 2)
             end
+            uout[ic, jc, indices...] = value
         end
     end
 
@@ -155,7 +265,21 @@ function Traceless_antihermitian_add!(
     factor,
     vin::Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW},
 ) where {NC,NX,NY,NZ,NT,T,AT,NDW,NumofBasis,AT1,T1}
-    traceless_antihermitian_add!(c.a, factor, vin.U)
+    if NC > 3
+        _sun_traceless_antihermitian_add!(c, factor, vin, NC)
+    else
+        traceless_antihermitian_add!(c.a, factor, vin.U)
+    end
+    return nothing
+end
+
+function Traceless_antihermitian!(
+    c::TA_Gaugefields_4D_MPILattice,
+    vin::Gaugefields_4D_MPILattice,
+)
+    clear_matrix!(c.a)
+    Traceless_antihermitian_add!(c, 1, vin)
+    return nothing
 end
 
 function clear_U!(c::TA_Gaugefields_4D_MPILattice)

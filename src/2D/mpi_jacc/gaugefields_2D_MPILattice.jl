@@ -9,16 +9,25 @@ import ..MPILattice: LatticeMatrix,
     get_PEs,
     clear_matrix!,
     add_matrix!,
+    add_matrix_evenodd!,
+    map_matrix_evenodd!,
     expt!,
     get_2Dindex,
     traceless_antihermitian_add!,
     normalize_matrix!,
     randomize_matrix!,
+    randomize_gaussian_matrix!,
+    RNGStreamKey,
+    SiteRNGAlgorithm,
+    Philox4x32,
     get_shift,
     gather_and_bcast_matrix,
     traceless_antihermitian!
-
+import LatticeMatrices: shift_L
 abstract type Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Gaugefields_2D{NC} end
+
+Base.eltype(::Type{<:Fields_2D_MPILattice{NC,NX,NY,T}}) where {NC,NX,NY,T} = T
+Base.eltype(U::Fields_2D_MPILattice) = eltype(typeof(U))
 
 struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW}
     U::LatticeMatrix{2,T,AT,NC,NC}
@@ -36,6 +45,7 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
 
     function Gaugefields_2D_MPILattice(NC, NX, NY;
         NDW=1, singleprecision=false,
+        elementtype=nothing,
         boundarycondition=ones(2),
         PEs=nothing,
         comm=MPI.COMM_WORLD,
@@ -56,8 +66,9 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
         gsize = (NX, NY)
         dim = 2
         nw = NDW
-        @assert NDW > 0 "NDW should be larger than 0. We use a halo area."
-        elementtype = ifelse(singleprecision, ComplexF32, ComplexF64)
+        @assert NDW >= 0 "NDW should be non-negative."
+        elementtype, singleprecision =
+            _resolve_mpialattice_elementtype(elementtype, singleprecision)
         phases = boundarycondition
         nprocs = MPI.Comm_size(comm)
         if isnothing(PEs)
@@ -105,8 +116,99 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
     end
 end
 
+function Base.getproperty(U::Gaugefields_2D_MPILattice, name::Symbol)
+    name === :NT && return getfield(U, :NY)
+    return getfield(U, name)
+end
+
+function Base.propertynames(U::Gaugefields_2D_MPILattice, private::Bool=false)
+    names = fieldnames(typeof(U))
+    return private ? (names..., :NT) : (names..., :NT)
+end
+
 function Base.size(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW}) where {NC,NX,NY,T,AT,NDW}
     return NC, NC, NX, NY
+end
+
+@inline function kernel_getindex_2D_MPILattice!(_, output, input, i1, i2, i3, i4)
+    @inbounds output[1] = input[i1, i2, i3, i4]
+    return nothing
+end
+
+@inline function kernel_setindex_2D_MPILattice!(_, output, value, i1, i2, i3, i4)
+    @inbounds output[i1, i2, i3, i4] = value
+    return nothing
+end
+
+function Base.getindex(x::Gaugefields_2D_MPILattice, i1, i2, i3, i4)
+    indices = (i1, i2, i3 + x.NDW, i4 + x.NDW)
+    if x.U.A isa Array
+        @inbounds return x.U.A[indices...]
+    end
+    output = JACC.zeros(eltype(x), 1)
+    JACC.parallel_for(1, kernel_getindex_2D_MPILattice!, output, x.U.A, indices...)
+    return JACC.to_host(output)[1]
+end
+
+function Base.setindex!(x::Gaugefields_2D_MPILattice, v, i1, i2, i3, i4)
+    indices = (i1, i2, i3 + x.NDW, i4 + x.NDW)
+    if x.U.A isa Array
+        @inbounds x.U.A[indices...] = v
+    else
+        JACC.parallel_for(
+            1, kernel_setindex_2D_MPILattice!, x.U.A, convert(eltype(x), v), indices...,
+        )
+    end
+    mark_lattice_dirty!(x.U)
+    return v
+end
+
+@inline function Base.getindex(x::Gaugefields_2D_MPILattice, i1, i2, ii)
+    ix, it = get_latticeindex(ii, x.NX, x.NT)
+    return x[i1, i2, ix, it]
+end
+
+function Base.setindex!(x::Gaugefields_2D_MPILattice, v, i1, i2, ii)
+    ix, it = get_latticeindex(ii, x.NX, x.NT)
+    x[i1, i2, ix, it] = v
+    return v
+end
+
+@inline function getvalue(x::Gaugefields_2D_MPILattice, i1, i2, i3, i4)
+    @inbounds return x.U.A[i1, i2, i3+x.NDW, i4+x.NDW]
+end
+
+@inline function setvalue!(x::Gaugefields_2D_MPILattice, v, i1, i2, i3, i4)
+    @inbounds x.U.A[i1, i2, i3+x.NDW, i4+x.NDW] = v
+    mark_lattice_dirty!(x.U)
+    return v
+end
+
+get_myrank(U::Gaugefields_2D_MPILattice) = MPI.Comm_rank(U.U.comm)
+get_myrank(U::Array{T,1}) where {T<:Gaugefields_2D_MPILattice} = get_myrank(U[1])
+get_nprocs(U::Gaugefields_2D_MPILattice) = MPI.Comm_size(U.U.comm)
+get_nprocs(U::Array{T,1}) where {T<:Gaugefields_2D_MPILattice} = get_nprocs(U[1])
+
+function barrier(U::Gaugefields_2D_MPILattice)
+    MPI.Barrier(U.U.comm)
+    return nothing
+end
+
+function write_to_numpyarray(U::Gaugefields_2D_MPILattice, filename)
+    global_U = gather_and_bcast_matrix(U.U)
+    if get_myrank(U) == 0
+        data = Dict{String,Any}(
+            "U" => global_U,
+            "NX" => U.NX,
+            "NT" => U.NT,
+            "NV" => U.NV,
+            "NDW" => U.NDW,
+            "NC" => U.NC,
+        )
+        npzwrite(filename, data)
+    end
+    barrier(U)
+    return nothing
 end
 
 #struct TA_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW}
@@ -114,11 +216,10 @@ end
 #end
 
 struct Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
-    U::Shifted_Lattice{L} #L<: LatticeMatrix{2,T,AT,NC,NC,nw}
+    U::Shifted_Lattice{L,2} #L<: LatticeMatrix{2,T,AT,NC,NC,nw}
 
     function Shifted_Gaugefields_2D_MPILattice(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw}, shift) where {NC,NX,NY,T,AT,nw}
-        #sU = Shifted_Lattice{typeof(U.U),shift}(U.U)
-        sU = Shifted_Lattice(U.U, shift)
+        sU = shift_L(U.U, shift)
         shiftin = get_shift(sU)
         return new{NC,NX,NY,T,AT,shiftin,nw,typeof(U.U)}(sU)
     end
@@ -130,7 +231,48 @@ struct Adjoint_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,nw,L} <: Fields_2D_MPILat
 end
 
 struct Adjoint_Shifted_Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,shift,nw,L} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,nw}
-    U::Adjoint_Lattice{Shifted_Lattice{L}} #LatticeMatrix{2,T,AT,NC,NC,nw}
+    U::Adjoint_Lattice{Shifted_Lattice{L,2}} #LatticeMatrix{2,T,AT,NC,NC,nw}
+end
+
+function Base.getindex(
+    x::Shifted_Gaugefields_2D_MPILattice,
+    i1,
+    i2,
+    i3,
+    i4,
+)
+    shift = get_shift(x.U)
+    data = x.U.data
+    indices = (
+        i1,
+        i2,
+        i3 + data.nw + shift[1],
+        i4 + data.nw + shift[2],
+    )
+    if data.A isa Array
+        @inbounds return data.A[indices...]
+    end
+    output = JACC.zeros(eltype(x), 1)
+    JACC.parallel_for(
+        1, kernel_getindex_2D_MPILattice!, output, data.A, indices...,
+    )
+    return JACC.to_host(output)[1]
+end
+
+function Base.getindex(
+    u::Staggered_Gaugefields{T,direction},
+    i1,
+    i2,
+    i3,
+    i4,
+) where {T<:Gaugefields_2D_MPILattice,direction}
+    1 <= direction <= 2 || throw(ArgumentError(
+        "staggered direction must be in 1:2",
+    ))
+    data = u.parent.U
+    global_x_zero_based = data.coords[1] * data.PN[1] + i3 - 1
+    phase = direction == 1 || iseven(global_x_zero_based) ? 1 : -1
+    return phase * u.parent[i1, i2, i3, i4]
 end
 
 @inline _release_shifted_U!(shifted::Shifted_Gaugefields_2D_MPILattice) =
@@ -156,6 +298,7 @@ function identityGaugefields_2D_MPILattice(NC, NX, NY;
     NDW=1,
     verbose_level=2,
     singleprecision=false,
+    elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
     comm=MPI.COMM_WORLD,
@@ -166,6 +309,7 @@ function identityGaugefields_2D_MPILattice(NC, NX, NY;
     U = Gaugefields_2D_MPILattice(NC, NX, NY;
         NDW,
         singleprecision,
+        elementtype,
         boundarycondition,
         PEs,
         comm,
@@ -181,10 +325,14 @@ function randomGaugefields_2D_MPILattice(NC, NX, NY;
     NDW=1,
     verbose_level=2,
     singleprecision=false,
+    elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
     comm=MPI.COMM_WORLD,
     randomnumber="Random",
+    seed=nothing,
+    rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
+    direction::Integer=0,
     #mpiinit=false
 )
 
@@ -192,20 +340,26 @@ function randomGaugefields_2D_MPILattice(NC, NX, NY;
     U = Gaugefields_2D_MPILattice(NC, NX, NY;
         NDW,
         singleprecision,
+        elementtype,
         boundarycondition,
         PEs,
         comm,
         verbose_level
     )
 
-    if randomnumber == "Random"
-    else
+    if randomnumber != "Random" && randomnumber != "Reproducible"
         error(
-            "randomnumber should be \"Random\" in accelerator version. Now randomnumber = $randomnumber",
+            "randomnumber should be \"Random\" or \"Reproducible\". Now randomnumber = $randomnumber",
         )
     end
 
-    randomize_matrix!(U.U)
+    shared_seed = _shared_mpialattice_seed(
+        seed,
+        U.U.comm;
+        reproducible=randomnumber == "Reproducible",
+    )
+    key = RNGStreamKey(shared_seed, 0, direction, 0, _HOT_START_STREAM_TAG)
+    randomize_matrix!(U.U, key; rng_algorithm)
     normalize_matrix!(U.U)
     return U
 
@@ -230,7 +384,7 @@ end
 
 function set_wing_U!(u::Array{Gaugefields_2D_MPILattice{NC},1}) where {NC}
     for i = 1:length(u)
-        set_halo!(u.U)
+        set_halo!(u[i].U)
     end
     return
 end
@@ -243,6 +397,30 @@ end
 function substitute_U!(a::Gaugefields_2D_MPILattice, b::Gaugefields_2D_MPILattice)
     substitute!(a.U, b.U)
     set_wing_U!(a)
+end
+
+function substitute_U!(a::Gaugefields_2D_MPILattice, b::Shifted_Gaugefields_2D_MPILattice)
+    substitute!(a.U, b.U)
+    set_wing_U!(a)
+end
+
+function substitute_U!(
+    a::Gaugefields_2D_MPILattice,
+    b::Adjoint_Shifted_Gaugefields_2D_MPILattice,
+)
+    substitute!(a.U, b.U)
+    set_wing_U!(a)
+end
+
+function substitute_U!(
+    a::Gaugefields_2D_MPILattice,
+    b::T,
+    target_even::Bool,
+) where {T<:Fields_2D_MPILattice}
+    clear_U!(a, target_even)
+    add_U!(a, b, target_even)
+    set_wing_U!(a)
+    return nothing
 end
 
 
@@ -315,6 +493,7 @@ function Base.similar(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT}) where {NC,NX,
         NC, NX, NY;
         NDW,
         U.singleprecision,
+        elementtype=T,
         boundarycondition,
         PEs,
         comm,
@@ -325,11 +504,29 @@ function Base.similar(U::Gaugefields_2D_MPILattice{NC,NX,NY,T,AT}) where {NC,NX,
 end
 
 function Base.similar(U::Array{T,1}) where {T<:Gaugefields_2D_MPILattice}
-    Uout = Array{T,1}(undef, 4)
+    Uout = Array{T,1}(undef, 2)
     for μ = 1:2
         Uout[μ] = similar(U[μ])
     end
     return Uout
+end
+
+function map_U_sequential!(U::Gaugefields_2D_MPILattice{NC}, f!::Function, Uin) where {NC}
+    get_nprocs(U) == 1 ||
+        error("The function map_U_sequential! can not be used with MPI")
+
+    host_U = gather_and_bcast_matrix(U.U)
+    B = Matrix{eltype(U)}(undef, NC, NC)
+    for it = 1:U.NT
+        for ix = 1:U.NX
+            @views B .= host_U[:, :, ix, it]
+            f!(B, Uin, ix, it)
+            @views host_U[:, :, ix, it] .= B
+        end
+    end
+    substitute!(U.U, host_U)
+    set_wing_U!(U)
+    return nothing
 end
 
 
@@ -384,6 +581,15 @@ function LinearAlgebra.mul!(
     mul!(c.U, a.U, b.U, α, β)
 end
 
+function LinearAlgebra.mul!(
+    c::T,
+    a::T1,
+    b::T2,
+    target_even::Bool,
+) where {T<:Gaugefields_2D_MPILattice,T1<:Fields_2D_MPILattice,T2<:Fields_2D_MPILattice}
+    mul!(c.U, a.U, b.U, target_even)
+end
+
 function LinearAlgebra.tr(a::Gaugefields_2D_MPILattice)
     tr(a.U)
 end
@@ -397,12 +603,43 @@ function clear_U!(c::Gaugefields_2D_MPILattice)
     clear_matrix!(c.U)
 end
 
+function clear_U!(c::Gaugefields_2D_MPILattice, target_even::Bool)
+    clear_matrix!(c.U, target_even)
+end
+
 function add_U!(c::Gaugefields_2D_MPILattice, t::T, a::T1) where {T1<:Fields_2D_MPILattice,T<:Number}
     add_matrix!(c.U, a.U, t)
 end
 
 function add_U!(c::Gaugefields_2D_MPILattice, a::T1) where {T1<:Fields_2D_MPILattice}
     add_matrix!(c.U, a.U)
+end
+
+function add_U!(
+    c::Gaugefields_2D_MPILattice,
+    a::T1,
+    target_even::Bool,
+) where {T1<:Fields_2D_MPILattice}
+    add_matrix_evenodd!(c.U, a.U, target_even)
+end
+
+function add_U!(
+    c::Gaugefields_2D_MPILattice,
+    α::T,
+    a::T1,
+    target_even::Bool,
+) where {T<:Number,T1<:Fields_2D_MPILattice}
+    add_matrix_evenodd!(c.U, a.U, target_even, α)
+end
+
+function map_U!(
+    U::Gaugefields_2D_MPILattice,
+    f!::Function,
+    V::Gaugefields_2D_MPILattice,
+    target_even::Bool,
+)
+    map_matrix_evenodd!(U.U, V.U, f!, target_even)
+    return nothing
 end
 
 function Traceless_antihermitian!(
@@ -412,4 +649,21 @@ function Traceless_antihermitian!(
 
     traceless_antihermitian!(vout.U, vin.U)
 
+end
+
+function exptU!(
+    uout::Tg,
+    t::N,
+    v::Gaugefields_2D_MPILattice,
+    temps::Array{Tg,1},
+) where {Tg<:Gaugefields_2D_MPILattice,N<:Number}
+    expt!(uout.U, v.U, t)
+    set_wing_U!(uout)
+    return nothing
+end
+
+function unit_U!(U::Gaugefields_2D_MPILattice)
+    makeidentity_matrix!(U.U)
+    set_wing_U!(U)
+    return nothing
 end

@@ -10,8 +10,8 @@ module Gaugefields_4D_module
 abstract type Gaugefields_4D{NC} <: AbstractGaugefields{NC,4} end
 
 
-include("./wing/gaugefields_4D_wing.jl")
-include("./wing/gaugefields_4D_wing_Bfields.jl")
+include("./deprecated/wing/gaugefields_4D_wing.jl")
+include("./deprecated/wing/gaugefields_4D_wing_Bfields.jl")
 include("./nowing/gaugefields_4D_nowing.jl")
 include("./nowing/gaugefields_4D_nowing_Bfields.jl")
 
@@ -21,10 +21,10 @@ function __init__()
     #    end
 
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        include("./kernelfunctions/gaugefields_4D_cudakernels.jl")
-        include("./kernelfunctions/TA_gaugefields_4D_cudakernels.jl")
-        include("./kernelfunctions/linearalgebra_mul_NC_cuda.jl")
-        include("./kernelfunctions/linearalgebra_mul_NC3_cuda.jl")
+        include("./deprecated/kernelfunctions/gaugefields_4D_cudakernels.jl")
+        include("./deprecated/kernelfunctions/TA_gaugefields_4D_cudakernels.jl")
+        include("./deprecated/kernelfunctions/linearalgebra_mul_NC_cuda.jl")
+        include("./deprecated/kernelfunctions/linearalgebra_mul_NC3_cuda.jl")
     end
 
     #    @require JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea" begin
@@ -34,23 +34,23 @@ end
 
 using MPI
 using JACC
-include("./mpi/gaugefields_4D_mpi.jl")
-include("./mpi/gaugefields_4D_mpi_Bfields.jl")
-include("./mpi/gaugefields_4D_mpi_nowing.jl")
-include("./mpi/gaugefields_4D_mpi_nowing_Bfields.jl")
+include("./deprecated/mpi/gaugefields_4D_mpi.jl")
+include("./deprecated/mpi/gaugefields_4D_mpi_Bfields.jl")
+include("./deprecated/mpi/gaugefields_4D_mpi_nowing.jl")
+include("./deprecated/mpi/gaugefields_4D_mpi_nowing_Bfields.jl")
 
 
 
 
 
-include("./kernelfunctions/gaugefields_4D_kernels.jl")
-include("./gaugefields_4D_accelerator.jl")
+include("./deprecated/kernelfunctions/gaugefields_4D_kernels.jl")
+include("./deprecated/gaugefields_4D_accelerator.jl")
 
-include("./kernelfunctions/gaugefields_4D_jacc.jl")
-include("./kernelfunctions/linearalgebra_mul_NC_jacc.jl")
-include("./kernelfunctions/linearalgebra_mul_NC3_jacc.jl")
+include("./deprecated/kernelfunctions/gaugefields_4D_jacc.jl")
+include("./deprecated/kernelfunctions/linearalgebra_mul_NC_jacc.jl")
+include("./deprecated/kernelfunctions/linearalgebra_mul_NC3_jacc.jl")
 
-include("./kernelfunctions/gaugefields_4D_jacckernels.jl")
+include("./deprecated/kernelfunctions/gaugefields_4D_jacckernels.jl")
 
 
 

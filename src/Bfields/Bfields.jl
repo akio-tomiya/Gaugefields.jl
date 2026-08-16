@@ -1,6 +1,7 @@
 module Bfield_module
 import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
     thooftFlux_4D_B_at_bndry,
+    Initialize_Gaugefields,
     set_wing_U!,
     calculate_Plaquette,
     shift_U,
@@ -31,10 +32,23 @@ end
     @inbounds return B.u[μ, ν]
 end
 
-Base.similar(B::Bfield) = Bfield(similar(B.u))
+function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
+    output = Matrix{T}(undef, Dim, Dim)
+    for μ in 1:Dim
+        for ν in 1:Dim
+            μ == ν && continue
+            output[μ, ν] = similar(B[μ, ν])
+        end
+    end
+    return Bfield(output)
+end
 
 function substitute_U!(a::Bfield, b::Bfield)
     substitute_U!(a.u, b.u)
+end
+
+function substitute_U!(a::Bfield, b::Bfield, iseven::Bool)
+    substitute_U!(a.u, b.u, iseven)
 end
 
 include("GaugeActions_Bfields.jl")
@@ -45,7 +59,16 @@ function substitute_U!(
     a::Array{<:AbstractGaugefields{NC,Dim},2},
     b::Array{<:AbstractGaugefields{NC,Dim},2},
 ) where {NC,Dim}
-    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+    size(a) == size(b) || throw(DimensionMismatch(
+        "B-field matrices must have the same size"
+    ))
+    for μ in axes(a, 1)
+        for ν in axes(a, 2)
+            μ == ν && continue
+            substitute_U!(a[μ, ν], b[μ, ν])
+        end
+    end
+    return nothing
 end
 
 function substitute_U!(
@@ -53,7 +76,16 @@ function substitute_U!(
     b::Array{T2,2},
     iseven::Bool,
 ) where {T1<:AbstractGaugefields,T2<:AbstractGaugefields}
-    error("substitute_U! is not implemented in type $(typeof(a)) and $(typeof(b))")
+    size(a) == size(b) || throw(DimensionMismatch(
+        "B-field matrices must have the same size"
+    ))
+    for μ in axes(a, 1)
+        for ν in axes(a, 2)
+            μ == ν && continue
+            substitute_U!(a[μ, ν], b[μ, ν], iseven)
+        end
+    end
+    return nothing
 end
 
 
@@ -72,6 +104,10 @@ function Initialize_Bfields(
     tloop_pos=[1, 1, 1, 1],
     tloop_dir=[1, 4],
     tloop_dis=1,
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(length(NN)),
+    elementtype=nothing,
 )
 
     Dim = length(NN)
@@ -88,6 +124,10 @@ function Initialize_Bfields(
             PEs=PEs,
             mpiinit=mpiinit,
             verbose_level=verbose_level,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
         u2 = B_TfluxGauges(
             NC,
@@ -100,6 +140,10 @@ function Initialize_Bfields(
             PEs=PEs,
             mpiinit=mpiinit,
             verbose_level=verbose_level,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
     elseif condition == "tloop"
         u1 = B_TloopGauges(
@@ -116,6 +160,10 @@ function Initialize_Bfields(
             tloop_pos=tloop_pos,
             tloop_dir=tloop_dir,
             tloop_dis=tloop_dis,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
         u2 = B_TloopGauges(
             NC,
@@ -131,6 +179,10 @@ function Initialize_Bfields(
             tloop_pos=tloop_pos,
             tloop_dir=tloop_dir,
             tloop_dis=tloop_dis,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
     elseif condition == "random"
         u1 = B_RandomGauges(
@@ -145,6 +197,10 @@ function Initialize_Bfields(
             mpiinit=mpiinit,
             verbose_level=verbose_level,
             randomnumber=randomnumber,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
         u2 = B_RandomGauges(
             NC,
@@ -158,6 +214,10 @@ function Initialize_Bfields(
             mpiinit=mpiinit,
             verbose_level=verbose_level,
             randomnumber=randomnumber,
+            singleprecision=singleprecision,
+            isMPILattice=isMPILattice,
+            boundarycondition=boundarycondition,
+            elementtype=elementtype,
         )
         # elseif condition == "hot"
         #     u1 = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
@@ -188,6 +248,10 @@ function Initialize_Bfields(
                         PEs=PEs,
                         mpiinit=mpiinit,
                         verbose_level=verbose_level,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                     U[ν, μ] = B_TfluxGauges(
                         NC,
@@ -200,6 +264,10 @@ function Initialize_Bfields(
                         PEs=PEs,
                         mpiinit=mpiinit,
                         verbose_level=verbose_level,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                 elseif condition == "tloop"
                     U[μ, ν] = B_TloopGauges(
@@ -216,6 +284,10 @@ function Initialize_Bfields(
                         tloop_pos=tloop_pos,
                         tloop_dir=tloop_dir,
                         tloop_dis=tloop_dis,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                     U[ν, μ] = B_TloopGauges(
                         NC,
@@ -231,6 +303,10 @@ function Initialize_Bfields(
                         tloop_pos=tloop_pos,
                         tloop_dir=tloop_dir,
                         tloop_dis=tloop_dis,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                 elseif condition == "random"
                     U[μ, ν] = B_RandomGauges(
@@ -245,6 +321,10 @@ function Initialize_Bfields(
                         mpiinit=mpiinit,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                     U[ν, μ] = B_RandomGauges(
                         NC,
@@ -258,6 +338,10 @@ function Initialize_Bfields(
                         mpiinit=mpiinit,
                         verbose_level=verbose_level,
                         randomnumber=randomnumber,
+                        singleprecision=singleprecision,
+                        isMPILattice=isMPILattice,
+                        boundarycondition=boundarycondition,
+                        elementtype=elementtype,
                     )
                     # elseif condition == "hot"
                     #     U[μ,ν] = RandomGauges(NC,NDW,NN...,mpi = mpi,PEs = PEs,mpiinit = mpiinit,verbose_level = verbose_level,randomnumber = "Random")
@@ -285,10 +369,29 @@ function B_RandomGauges(
     mpiinit=nothing,
     verbose_level=2,
     randomnumber="Random",
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(length(NN)),
+    elementtype=nothing,
 )
     dim = length(NN)
     println("Not implemented yet! In what follows, let us use B_TfluxGauges.")
-    U = B_TfluxGauges(NC, Flux, FluxNum, NDW, NN..., overallminus=overallminus, mpi=mpi, PEs=PEs, mpiinit=mpiinit, verbose_level=verbose_level)
+    U = B_TfluxGauges(
+        NC,
+        Flux,
+        FluxNum,
+        NDW,
+        NN...;
+        overallminus,
+        mpi,
+        PEs,
+        mpiinit,
+        verbose_level,
+        singleprecision,
+        isMPILattice,
+        boundarycondition,
+        elementtype,
+    )
     return U
 end
 
@@ -303,9 +406,37 @@ function B_TfluxGauges(
     PEs=nothing,
     mpiinit=nothing,
     verbose_level=2,
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(length(NN)),
+    elementtype=nothing,
 )
     dim = length(NN)
-    if mpi
+    if isMPILattice
+        dim == 4 || error("$dim dimension is not implemented yet!")
+        legacy = B_TfluxGauges(
+            NC,
+            Flux,
+            FluxNum,
+            0,
+            NN...;
+            overallminus,
+            verbose_level,
+        )
+        U = Initialize_Gaugefields(
+            NC,
+            NDW,
+            NN...;
+            condition="cold",
+            PEs,
+            verbose_level,
+            singleprecision,
+            isMPILattice=true,
+            boundarycondition,
+            elementtype,
+        )[1]
+        substitute_U!(U, legacy)
+    elseif mpi
         if PEs == nothing || mpiinit == nothing
             error("not implemented yet!")
         else
@@ -394,6 +525,10 @@ function B_TloopGauges(
     tloop_pos=[1, 1, 1, 1],
     tloop_dir=[1, 4],
     tloop_dis=1,
+    singleprecision=false,
+    isMPILattice=false,
+    boundarycondition=ones(length(NN)),
+    elementtype=nothing,
 )
     # pos = position of Polyakov loop
     # dir = [1-dir shift of anti-Polyakov loop,temporal 4-dir]
@@ -418,7 +553,34 @@ function B_TloopGauges(
     #     ----  y-z plaquette
     #
     dim = length(NN)
-    if mpi
+    if isMPILattice
+        dim == 4 || error("$dim dimension is not implemented yet!")
+        legacy = B_TloopGauges(
+            NC,
+            Flux,
+            FluxNum,
+            0,
+            NN...;
+            overallminus,
+            verbose_level,
+            tloop_pos,
+            tloop_dir,
+            tloop_dis,
+        )
+        U = Initialize_Gaugefields(
+            NC,
+            NDW,
+            NN...;
+            condition="cold",
+            PEs,
+            verbose_level,
+            singleprecision,
+            isMPILattice=true,
+            boundarycondition,
+            elementtype,
+        )[1]
+        substitute_U!(U, legacy)
+    elseif mpi
         if PEs == nothing || mpiinit == nothing
             error("not implemented yet!")
         else

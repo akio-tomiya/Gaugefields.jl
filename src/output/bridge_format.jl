@@ -130,6 +130,72 @@ function __init__()
 
         end
     end
+
+    @require JACC = "0979c8fe-16a4-4796-9b82-89a9f10403ea" begin
+        import ..AbstractGaugefields_module:
+            Gaugefields_4D_MPILattice,
+            Initialize_Gaugefields,
+            barrier,
+            get_myrank,
+            substitute_U!
+        import LatticeMatrices: gather_and_bcast_matrix
+
+        function save_textdata(
+            U::Array{T,1},
+            filename,
+        ) where {T<:Gaugefields_4D_MPILattice}
+            NX = U[1].NX
+            NY = U[1].NY
+            NZ = U[1].NZ
+            NT = U[1].NT
+            NC = U[1].NC
+            global_fields = map(field -> gather_and_bcast_matrix(field.U), U)
+
+            if get_myrank(U[1]) == 0
+                open(filename, "w") do fp
+                    for it in 1:NT
+                        for iz in 1:NZ
+                            for iy in 1:NY
+                                for ix in 1:NX
+                                    for μ in 1:4
+                                        for a in 1:NC
+                                            for b in 1:NC
+                                                value = global_fields[μ][
+                                                    a, b, ix, iy, iz, it
+                                                ]
+                                                println(fp, real(value))
+                                                println(fp, imag(value))
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            barrier(U[1])
+            return nothing
+        end
+
+        function load_BridgeText!(
+            initial,
+            U::Array{T,1},
+            L,
+            NC,
+        ) where {T<:Gaugefields_4D_MPILattice}
+            legacy = Initialize_Gaugefields(
+                NC,
+                0,
+                L...;
+                condition="cold",
+                verbose_level=U[1].verbose_print.level,
+            )
+            load_BridgeText!(initial, legacy, L, NC)
+            substitute_U!(U, legacy)
+            return nothing
+        end
+    end
 end
 
 function save_textdata(U, filename)

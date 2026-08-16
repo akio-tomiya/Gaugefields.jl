@@ -96,9 +96,11 @@ import .AbstractGaugefields_module:
     Traceless_AntiHermitian
 
 import LatticeMatrices: realtrace, nodiff, diff, Wiltinger_derivative!,
-    Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
+    Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme,
+    SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
 export nodiff, diff, realtrace, Wiltinger_derivative!,
     Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
+export SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
 
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,
@@ -154,11 +156,24 @@ import .Abstractsmearing_module:
 import .ILDG_format: ILDG, load_gaugefield!, save_binarydata
 import .heatbath_module:
     SU2update_KP!,
+    SU2update_KP_allocationfree!,
+    SU2update_KP_rng!,
+    SU3update_matrix_allocationfree!,
+    SU3update_matrix_rng!,
+    SUNupdate_matrix_rng!,
+    SUN_overrelaxation_rng!,
     SUNupdate_matrix!,
     SU3update_matrix!,
+    heatbath_su2_sites!,
+    heatbath_su3_sites!,
+    overrelaxation_su2_sites!,
+    overrelaxation_su3_sites!,
     heatbath!,
     Heatbath,
+    HeatbathColoring,
     Heatbath_update,
+    heatbath_colorings,
+    heatbath_site_color,
     overrelaxation!
 import .Bridge_format: save_textdata, load_BridgeText!
 import Wilsonloop: loops_staple
@@ -254,7 +269,19 @@ export IdentityGauges,
     calculate_Polyakov_loop
 export B_RandomGauges, B_TfluxGauges, thooftFlux_4D_B_at_bndry
 export ILDG, load_gaugefield!, save_binarydata, load_gaugefield
-export SU2update_KP!, SUNupdate_matrix!, SU3update_matrix!
+export SU2update_KP!,
+    SU2update_KP_allocationfree!,
+    SU2update_KP_rng!,
+    SU3update_matrix_allocationfree!,
+    SU3update_matrix_rng!,
+    SUNupdate_matrix_rng!,
+    SUN_overrelaxation_rng!,
+    SUNupdate_matrix!,
+    SU3update_matrix!,
+    heatbath_su2_sites!,
+    heatbath_su3_sites!,
+    overrelaxation_su2_sites!,
+    overrelaxation_su3_sites!
 export map_U!
 export evaluate_gaugelinks_evenodd!, normalize!, normalize3!, normalizeN!
 export loops_staple
@@ -262,6 +289,7 @@ export save_textdata, load_BridgeText!
 export shift_U, evaluate_gaugelinks!, Gradientflow, flow!
 export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, isLoopwithB, isStaplewithB
 export heatbath!, Heatbath
+export HeatbathColoring, heatbath_colorings, heatbath_site_color
 export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname, STOUT_Layer_fast
 export GaugeAction,
     evaluate_GaugeAction_untraced!, evaluate_GaugeAction_untraced, calc_dSdUμ, calc_dSdUμ!
@@ -307,5 +335,8 @@ export Initialize_Bfields
 export CASK_layer, zero_grad!
 
 export Traceless_AntiHermitian
+
+include("./molecular_dynamics.jl")
+include("./API.jl")
 
 end
