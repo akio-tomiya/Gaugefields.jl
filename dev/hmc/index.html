@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>HMC and custom integrators · Gaugefields.jl</title><meta name="title" content="HMC and custom integrators · Gaugefields.jl"/><meta property="og:title" content="HMC and custom integrators · Gaugefields.jl"/><meta property="twitter:title" content="HMC and custom integrators · Gaugefields.jl"/><meta name="description" content="Documentation for Gaugefields.jl."/><meta property="og:description" content="Documentation for Gaugefields.jl."/><meta property="twitter:description" content="Documentation for Gaugefields.jl."/><meta property="og:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/hmc/"/><meta property="twitter:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/hmc/"/><link rel="canonical" href="https://akio-tomiya.github.io/Gaugefields.jl/v1/hmc/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Getting started</span><ul><li><a class="tocitem" href="../tutorial4d/">Four-dimensional quick start</a></li><li><a class="tocitem" href="../dimensions/">Two and three dimensions</a></li><li><a class="tocitem" href="../randomness/">Randomness and reproducibility</a></li></ul></li><li><span class="tocitem">Guides</span><ul><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../wilsonloops_actions/">Wilson loops and gauge actions</a></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../utilities/">Utilities and I/O</a></li><li><a class="tocitem" href="../smearing/">Stout smearing</a></li><li><a class="tocitem" href="../mpi/">MPI, GPU, and multi-GPU</a></li><li class="is-active"><a class="tocitem" href>HMC and custom integrators</a><ul class="internal"><li><a class="tocitem" href="#A-complete-Wilson-action-loop"><span>A complete Wilson-action loop</span></a></li><li><a class="tocitem" href="#Writing-a-custom-integrator"><span>Writing a custom integrator</span></a></li><li><a class="tocitem" href="#Enzyme-forces"><span>Enzyme forces</span></a></li></ul></li><li><a class="tocitem" href="../autodiff/">Automatic differentiation</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../highlevelapi/">High-level API parameters</a></li><li><a class="tocitem" href="../usefulfunctions/">Public v1 API index</a></li><li><a class="tocitem" href="../howtoimplement/">Extending the v1 API</a></li></ul></li><li><span class="tocitem">Compatibility</span><ul><li><a class="tocitem" href="../legacyapi/">Legacy API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Guides</a></li><li class="is-active"><a href>HMC and custom integrators</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>HMC and custom integrators</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/hmc.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Building-HMC-on-the-MD-driver"><a class="docs-heading-anchor" href="#Building-HMC-on-the-MD-driver">Building HMC on the MD driver</a><a id="Building-HMC-on-the-MD-driver-1"></a><a class="docs-heading-anchor-permalink" href="#Building-HMC-on-the-MD-driver" title="Permalink"></a></h1><p>Gaugefields owns deterministic molecular-dynamics evolution. An application adds momentum refresh, Metropolis acceptance, rollback, and the trajectory counter. Keeping that boundary explicit makes the same MD driver usable in different HMC algorithms.</p><h2 id="A-complete-Wilson-action-loop"><a class="docs-heading-anchor" href="#A-complete-Wilson-action-loop">A complete Wilson-action loop</a><a id="A-complete-Wilson-action-loop-1"></a><a class="docs-heading-anchor-permalink" href="#A-complete-Wilson-action-loop" title="Permalink"></a></h2><p>This example runs on a serial LM backend, a GPU, or an MPI process grid. Every MPI rank must execute the same code and consume the same Metropolis random stream.</p><pre><code class="language-julia hljs">import JACC
+JACC.@init_backend
+
+using Gaugefields
+using StableRNGs
+using Random
+
+lattice = (8, 8, 8, 8)
+U = gauge_configuration(
+    lattice;
+    colors=3,
+    halo=1,
+    start=:hot,
+    seed=0x1234,
+    process_grid=(1, 1, 1, 1),
+)
+
+beta = 6.0
+action = GaugeAction(U)
+plaquettes = make_loops_fromname(&quot;plaquette&quot;, Dim=4)
+append!(plaquettes, plaquettes&#39;)
+push!(action, beta / 2, plaquettes)
+
+md = md_driver(
+    U,
+    action;
+    steps=20,
+    trajectory_length=1.0,
+    integrator=QPQ(),
+)
+
+old_U = [similar(link) for link in U]
+metropolis_rng = StableRNG(0x9abc)
+accepted = 0
+
+for trajectory in 1:100
+    p = gaussian_momenta(
+        U;
+        seed=0x5678,
+        sweep=trajectory - 1,
+    )
+    substitute_U!.(old_U, U)
+
+    result = md_trajectory!(U, p, md)
+    accept = log(rand(metropolis_rng)) &lt; min(0, -result.delta_hamiltonian)
+    if accept
+        accepted += 1
+    else
+        substitute_U!.(U, old_U)
+    end
+
+    println(
+        trajectory,
+        &quot; deltaH=&quot;, result.delta_hamiltonian,
+        &quot; accepted=&quot;, accept,
+        &quot; plaquette=&quot;, measure_plaquette(U),
+    )
+end
+
+println(&quot;acceptance = &quot;, accepted / 100)</code></pre><p>The action can contain any closed paths, not only named plaquettes. Path construction, coefficient conventions, direct action evaluation, and the raw analytic derivative are described in <a href="../wilsonloops_actions/">Wilson loops and gauge actions</a>.</p><p><code>md_driver</code> can be reused after either acceptance or rollback because its fields are workspaces, not a saved copy of the configuration. The momenta do not need to be restored after rejection when the next trajectory refreshes them.</p><p>For an exactly restartable chain, save the configuration, the next trajectory number (used as <code>sweep</code> above), and the state of <code>metropolis_rng</code>. A hot-start seed does not seed either of the later streams. Under MPI, initialize the same Metropolis RNG on every rank and consume it identically, or draw on rank zero and broadcast the decision.</p><h2 id="Writing-a-custom-integrator"><a class="docs-heading-anchor" href="#Writing-a-custom-integrator">Writing a custom integrator</a><a id="Writing-a-custom-integrator-1"></a><a class="docs-heading-anchor-permalink" href="#Writing-a-custom-integrator" title="Permalink"></a></h2><p>The elementary update functions put the mutated field first:</p><pre><code class="language-julia hljs">update_momenta!(P, U, delta_tau, driver)
+update_gaugefields!(U, P, delta_tau, driver)</code></pre><p>The first function changes only <code>P</code>; the second changes only <code>U</code>. Both return their first argument. Thus the <code>!</code>, function name, and argument order all show which field is updated.</p><p>For a one-off scheme, write a function that performs one complete MD step:</p><pre><code class="language-julia hljs">function five_update_pqp!(U, P, delta_tau, driver)
+    update_momenta!(P, U, 0.25 * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, 0.5 * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, 0.25 * delta_tau, driver)
+    return nothing
+end
+
+md = md_driver(U, action; steps=20, integrator=five_update_pqp!)</code></pre><p>For a named and parameterized scheme, define a normal Julia type in your application and extend <code>Gaugefields.md_step!</code>:</p><pre><code class="language-julia hljs">struct OmelyanPQP{T}
+    lambda::T
+end
+
+function Gaugefields.md_step!(
+    integrator::OmelyanPQP,
+    U,
+    P,
+    delta_tau,
+    driver,
+)
+    lambda = integrator.lambda
+    update_momenta!(P, U, lambda * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, (1 - 2lambda) * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, lambda * delta_tau, driver)
+    return nothing
+end
+
+omelyan = OmelyanPQP(0.1931833275037836)
+md = md_driver(U, action; steps=20, integrator=omelyan)</code></pre><p>No Gaugefields subtype is required. <code>md_trajectory!</code> calls <code>md_step!</code> exactly <code>steps</code> times, passing <code>delta_tau = trajectory_length / steps</code>. The custom method is responsible for scaling each coefficient by <code>delta_tau</code>. Negative coefficients are supported.</p><p>For standard HMC, the composition should normally be palindromic so that a negative-length trajectory reverses it. A useful test for every new integrator is to save <code>U</code> and <code>P</code>, integrate with <code>trajectory_length=tau</code>, then integrate with <code>-tau</code> and compare against the saved fields. The integrator is independent of the action provider, so no changes are needed to use it with an analytic or Enzyme force.</p><h2 id="Enzyme-forces"><a class="docs-heading-anchor" href="#Enzyme-forces">Enzyme forces</a><a id="Enzyme-forces-1"></a><a class="docs-heading-anchor-permalink" href="#Enzyme-forces" title="Permalink"></a></h2><p>Loading Enzyme activates <code>enzyme_md_action</code>:</p><pre><code class="language-julia hljs">using Enzyme
+
+function potential(U1, U2, U3, U4, coupling, temps)
+    # Calculate and return the complete real V(U), reusing `temps`.
+end
+
+ad_action = enzyme_md_action(potential, coupling; num_temps=3)
+md = md_driver(
+    U,
+    ad_action;
+    steps=20,
+    integrator=OmelyanPQP(0.1931833275037836),
+)</code></pre><p>The potential receives the four links separately, followed by constant arguments, followed by the reusable <code>temps</code> collection when <code>num_temps &gt; 0</code>. It must include its own sign and normalization and return a real scalar. The same function is used for Hamiltonian evaluation and reverse-mode differentiation. Gaugefields converts the resulting matrix gradient to the common traceless anti-Hermitian <code>dp/dtau</code> representation before the integrator sees it.</p><p>Enzyme MD currently requires a four-dimensional LatticeMatrices configuration with <code>halo &gt;= 1</code>. It supports the same CUDA and MPI LM fields as the underlying Enzyme derivative. CUDA multi-GPU use requires a CUDA-aware MPI installation and matching launcher/library selection. Use a regular <code>GaugeAction</code> for the analytic Wilson-loop force or for dimensions not yet covered by the Enzyme provider.</p><p>See <a href="../highlevelapi/#Analytic-and-Enzyme-forces">High-level API parameters</a> for the custom action-provider protocol.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../mpi/">« MPI, GPU, and multi-GPU</a><a class="docs-footer-nextpage" href="../autodiff/">Automatic differentiation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 17 August 2026 00:50">Monday 17 August 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

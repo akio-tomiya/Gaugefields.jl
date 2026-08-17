@@ -1,137 +1,50 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>How to implement new gauge fields · Gaugefields.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://github.com/akio-tomiya/Gaugefields.jl/howtoimplement/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../utilities/">Utilities</a></li><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../usefulfunctions/">Useful functions</a></li><li class="is-active"><a class="tocitem" href>How to implement new gauge fields</a><ul class="internal"><li><a class="tocitem" href="#AbstractGaugefields-and-interfaces"><span>AbstractGaugefields and interfaces</span></a></li><li><a class="tocitem" href="#matrix-field-matrix-field-product"><span>matrix-field matrix-field product</span></a></li><li><a class="tocitem" href="#Several-ways-to-treat-periodic-boundary."><span>Several ways to treat periodic boundary.</span></a></li><li><a class="tocitem" href="#halo-updates"><span>halo updates</span></a></li></ul></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../mpi/">Parallel computation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>How to implement new gauge fields</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>How to implement new gauge fields</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/howtoimplement.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="How-to-implement-new-gauge-fields"><a class="docs-heading-anchor" href="#How-to-implement-new-gauge-fields">How to implement new gauge fields</a><a id="How-to-implement-new-gauge-fields-1"></a><a class="docs-heading-anchor-permalink" href="#How-to-implement-new-gauge-fields" title="Permalink"></a></h1><p>It is easy to implement new gauge fields with different internal structures or different parallel computations. </p><h2 id="AbstractGaugefields-and-interfaces"><a class="docs-heading-anchor" href="#AbstractGaugefields-and-interfaces">AbstractGaugefields and interfaces</a><a id="AbstractGaugefields-and-interfaces-1"></a><a class="docs-heading-anchor-permalink" href="#AbstractGaugefields-and-interfaces" title="Permalink"></a></h2><p>All types of gauge fields belong <code>AbstractGaugefields{NC,Dim}</code>. </p><p>The concrete types for gauge fields should have following functions. </p><ul><li><code>LinearAlgebra.mul!(c::T,a::T1,b::T2) where {T&lt;: AbstractGaugefields,T1 &lt;: Abstractfields,T2 &lt;: Abstractfields}</code></li><li><code>LinearAlgebra.mul!(c::T,a::N,b::T2) where {T&lt;: AbstractGaugefields,N &lt;: Number ,T2 &lt;: Abstractfields}</code></li><li><code>LinearAlgebra.mul!(c::T,a::T1,b::T2,α::Ta,β::Tb) where {T&lt;: AbstractGaugefields,T1 &lt;: Abstractfields,T2 &lt;: Abstractfields,Ta &lt;: Number, Tb &lt;: Number}</code></li><li><code>substitute_U!(a::Array{T1,1},b::Array{T2,1}) where {T1 &lt;: AbstractGaugefields,T2 &lt;: AbstractGaugefields}</code></li><li><code>Base.similar(U::T) where T &lt;: AbstractGaugefields</code></li><li><code>clear_U!(U::T) where T &lt;: AbstractGaugefields</code></li><li><code>set_wing_U!(U::T) where T &lt;: AbstractGaugefields</code></li><li><code>Base.size(U::T) where T &lt;: AbstractGaugefields</code></li><li><code>add_U!(c::T,a::T1) where {T&lt;: AbstractGaugefields,T1 &lt;: Abstractfields}</code></li><li><code>add_U!(c::T,α::N,a::T1) where {T&lt;: AbstractGaugefields,T1 &lt;: Abstractfields, N&lt;:Number}</code></li><li><code>LinearAlgebra.tr(a::T) where T&lt;: Abstractfields</code></li><li><code>LinearAlgebra.tr(a::T,b::T) where T&lt;: Abstractfields</code></li><li><code>Base.setindex!(x::Gaugefields_4D_wing,v,i1,i2,i3,i4,i5,i6)</code></li><li><code>Base.getindex(x::Gaugefields_4D_wing,i1,i2,i3,i4,i5,i6)</code></li></ul><h2 id="matrix-field-matrix-field-product"><a class="docs-heading-anchor" href="#matrix-field-matrix-field-product">matrix-field matrix-field product</a><a id="matrix-field-matrix-field-product-1"></a><a class="docs-heading-anchor-permalink" href="#matrix-field-matrix-field-product" title="Permalink"></a></h2><p><code>LinearAlgebra.mul!(c::T,a::T1,b::T2) where {T&lt;: AbstractGaugefields,T1 &lt;: Abstractfields,T2 &lt;: Abstractfields}</code></p><p>This calculates the matrix-matrix multiplicaetion on each lattice site. </p><p>As a mathematical expression, for matrix-valued fields <span>$A(n), B(n)$</span>, we define &quot;matrix-field matrix-field product&quot; as,</p><p class="math-container">\[[A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}\]</p><p>for all site index n.</p><p>In our package, this is expressed as,</p><pre><code class="language-julia hljs">mul!(C,A,B)</code></pre><p>which means <code>C = A*B</code> on each lattice site.  Here <span>$A, B, C$</span> are same type of <span>$u$</span>.</p><h2 id="Several-ways-to-treat-periodic-boundary."><a class="docs-heading-anchor" href="#Several-ways-to-treat-periodic-boundary.">Several ways to treat periodic boundary.</a><a id="Several-ways-to-treat-periodic-boundary.-1"></a><a class="docs-heading-anchor-permalink" href="#Several-ways-to-treat-periodic-boundary." title="Permalink"></a></h2><p>There are several ways to treat periodic boundary.  Now, there are two kinds of methods, halo updates and direct-shift method. </p><ul><li>halo updates: wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites. If <code>NDW &gt; 0</code> is set, this update is used. </li><li>direct-shift method: In <code>shift_U!</code>  function, the data is copied. If <code>NDW = 0</code> is set, this update is used. </li></ul><p>Therefore, the important functions are </p><ul><li><code>set_wing_U!</code> : This is used in halo updates, but not used in direct-shift method (returns nothing). </li><li><code>shift_U!</code> : In this function, the data is copied in direct-shift method. This is the lazy evaluation in halo updates. </li></ul><h2 id="halo-updates"><a class="docs-heading-anchor" href="#halo-updates">halo updates</a><a id="halo-updates-1"></a><a class="docs-heading-anchor-permalink" href="#halo-updates" title="Permalink"></a></h2><p>There is a wing-buffer (so-called halo) type implementations for gauge fields. In this type, there are additional halo sites.  <code>set_wing_U!</code> function is used for updating halo sites.  If you do not want to use halo type implementations for gauge fields, you can write <code>set_wing_U!(U::Yourtype) = nothing</code>. </p><h3 id="examples"><a class="docs-heading-anchor" href="#examples">examples</a><a id="examples-1"></a><a class="docs-heading-anchor-permalink" href="#examples" title="Permalink"></a></h3><p>We have two kinds of <span>$SU(N)$</span> gauge fields in four dimension. </p><p>Serial version: </p><article class="docstring"><header><a class="docstring-binding" id="Gaugefields.AbstractGaugefields_module.Gaugefields_4D_wing" href="#Gaugefields.AbstractGaugefields_module.Gaugefields_4D_wing"><code>Gaugefields.AbstractGaugefields_module.Gaugefields_4D_wing</code></a> — <span class="docstring-category">Type</span></header><section><div><p><code>Gaugefields_4D_wing{NC} &lt;: Gaugefields_4D{NC}</code>`</p><p>SU(N) Gauge fields in four dimensional lattice. </p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/4ff33a5ed78374b0ed9cc00de3278c5eb58618b1/src/4D/wing/gaugefields_4D_wing.jl#L13-L17">source</a></section></article><pre><code class="language-julia hljs">    struct Gaugefields_4D_wing{NC} &lt;: Gaugefields_4D{NC}
-        U::Array{ComplexF64,6}
-        NX::Int64
-        NY::Int64
-        NZ::Int64
-        NT::Int64
-        NDW::Int64
-        NV::Int64
-        NC::Int64
-        mpi::Bool
-        verbose_print::Verbose_print
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Extending the v1 API · Gaugefields.jl</title><meta name="title" content="Extending the v1 API · Gaugefields.jl"/><meta property="og:title" content="Extending the v1 API · Gaugefields.jl"/><meta property="twitter:title" content="Extending the v1 API · Gaugefields.jl"/><meta name="description" content="Documentation for Gaugefields.jl."/><meta property="og:description" content="Documentation for Gaugefields.jl."/><meta property="twitter:description" content="Documentation for Gaugefields.jl."/><meta property="og:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/howtoimplement/"/><meta property="twitter:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/howtoimplement/"/><link rel="canonical" href="https://akio-tomiya.github.io/Gaugefields.jl/v1/howtoimplement/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Getting started</span><ul><li><a class="tocitem" href="../tutorial4d/">Four-dimensional quick start</a></li><li><a class="tocitem" href="../dimensions/">Two and three dimensions</a></li><li><a class="tocitem" href="../randomness/">Randomness and reproducibility</a></li></ul></li><li><span class="tocitem">Guides</span><ul><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../wilsonloops_actions/">Wilson loops and gauge actions</a></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../utilities/">Utilities and I/O</a></li><li><a class="tocitem" href="../smearing/">Stout smearing</a></li><li><a class="tocitem" href="../mpi/">MPI, GPU, and multi-GPU</a></li><li><a class="tocitem" href="../hmc/">HMC and custom integrators</a></li><li><a class="tocitem" href="../autodiff/">Automatic differentiation</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../highlevelapi/">High-level API parameters</a></li><li><a class="tocitem" href="../usefulfunctions/">Public v1 API index</a></li><li class="is-active"><a class="tocitem" href>Extending the v1 API</a><ul class="internal"><li><a class="tocitem" href="#Custom-MD-action-provider"><span>Custom MD action provider</span></a></li><li><a class="tocitem" href="#Enzyme-defined-force"><span>Enzyme-defined force</span></a></li><li><a class="tocitem" href="#Custom-integrator-function"><span>Custom integrator function</span></a></li><li><a class="tocitem" href="#Parameterized-integrator"><span>Parameterized integrator</span></a></li><li><a class="tocitem" href="#Storage-implementations"><span>Storage implementations</span></a></li></ul></li></ul></li><li><span class="tocitem">Compatibility</span><ul><li><a class="tocitem" href="../legacyapi/">Legacy API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Reference</a></li><li class="is-active"><a href>Extending the v1 API</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Extending the v1 API</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/howtoimplement.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Extending-the-v1-API"><a class="docs-heading-anchor" href="#Extending-the-v1-API">Extending the v1 API</a><a id="Extending-the-v1-API-1"></a><a class="docs-heading-anchor-permalink" href="#Extending-the-v1-API" title="Permalink"></a></h1><p>Gaugefields v1 has two intentional application extension points: MD action providers define the potential and force, and integrators define the ordering of the elementary gauge and momentum updates. A new storage backend is not required for ordinary applications; LatticeMatrices/JACC supplies the portable CPU, GPU, MPI, and multi-GPU field implementation.</p><h2 id="Custom-MD-action-provider"><a class="docs-heading-anchor" href="#Custom-MD-action-provider">Custom MD action provider</a><a id="Custom-MD-action-provider-1"></a><a class="docs-heading-anchor-permalink" href="#Custom-MD-action-provider" title="Permalink"></a></h2><p>Define a type that owns the immutable action parameters:</p><pre><code class="language-julia hljs">struct MyAction{T}
+    coupling::T
+end</code></pre><p>Then implement the three provider methods:</p><pre><code class="language-julia hljs">Gaugefields.md_action_workspace(action::MyAction, U) = MyWorkspace(U)
 
-        function Gaugefields_4D_wing(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T;verbose_level = 2) where T&lt;: Integer
-            NV = NX*NY*NZ*NT
-            U = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
-            mpi = false
-            verbose_print = Verbose_print(verbose_level )
-            #U = Array{Array{ComplexF64,6}}(undef,4)
-            #for μ=1:4
-            #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
-            #end
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,mpi,verbose_print)
-        end
-    end</code></pre><p>Usually, we do not consider local SU(N) matrix on each lattice bond. The gauge fields are manupulated like </p><pre><code class="language-julia hljs">mul!(C,A,B)
-s = tr(C)</code></pre><p>Details of <code>mul!</code> and <code>tr</code> depends on the gauge field type that we use. In other words, the details which depends on kinds of gauge fields are only in the definitions of <code>mul!</code> or <code>tr</code>.  So, we implement kind-dependent <code>mul!</code> like </p><pre><code class="language-julia hljs">    function LinearAlgebra.mul!(c::Gaugefields_4D_wing{NC},a::T1,b::T2) where {NC,T1 &lt;: Abstractfields,T2 &lt;: Abstractfields}
-        @assert NC != 2 &amp;&amp; NC != 3 &quot;This function is for NC != 2,3&quot;
-        NT = c.NT
-        NZ = c.NZ
-        NY = c.NY
-        NX = c.NX
-        @inbounds for it=1:NT
-            for iz=1:NZ
-                for iy=1:NY
-                    for ix=1:NX
-                        for k2=1:NC                            
-                            for k1=1:NC
-                                c[k1,k2,ix,iy,iz,it] = 0
+function Gaugefields.md_potential(action::MyAction, U, workspace)
+    # Return the complete real potential V(U).
+    return potential
+end
 
-                                @simd for k3=1:NC
-                                    c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        set_wing_U!(c)
-    end</code></pre><p>If we want to use MPI parallel computations, we use diffrent type of gauge fields.  The definition is </p><pre><code class="language-julia hljs">    struct Gaugefields_4D_wing_mpi{NC} &lt;: Gaugefields_4D{NC}
-        U::Array{ComplexF64,6}
-        NX::Int64
-        NY::Int64
-        NZ::Int64
-        NT::Int64
-        NDW::Int64
-        NV::Int64
-        NC::Int64
-        PEs::NTuple{4,Int64}
-        PN::NTuple{4,Int64}
-        mpiinit::Bool
-        myrank::Int64
-        nprocs::Int64
-        myrank_xyzt::NTuple{4,Int64}
-        mpi::Bool
-        verbose_print::Verbose_print
+function Gaugefields.md_force!(force, action::MyAction, U, workspace)
+    # Overwrite every force[mu] with dP[mu]/dtau.
+    # Each result must be traceless and anti-Hermitian.
+    return nothing
+end</code></pre><p><code>md_action_workspace</code> is called once by <code>md_driver</code>. Allocate reusable gauge fields and other large buffers there. <code>md_potential</code> and <code>md_force!</code> must use the same sign and normalization convention so that Hamiltonian diagnostics and the MD evolution agree.</p><p>Use the provider like a built-in <code>GaugeAction</code>:</p><pre><code class="language-julia hljs">action = MyAction(coupling)
+driver = md_driver(U, action; steps=20)
+P = gaussian_momenta(U; seed=1234, sweep=0)
+result = md_trajectory!(U, P, driver)</code></pre><h2 id="Enzyme-defined-force"><a class="docs-heading-anchor" href="#Enzyme-defined-force">Enzyme-defined force</a><a id="Enzyme-defined-force-1"></a><a class="docs-heading-anchor-permalink" href="#Enzyme-defined-force" title="Permalink"></a></h2><p>For a differentiable four-dimensional LM potential, loading Enzyme activates <code>enzyme_md_action</code>:</p><pre><code class="language-julia hljs">using Enzyme
 
-        function Gaugefields_4D_wing_mpi(NC::T,NDW::T,NX::T,NY::T,NZ::T,NT::T,PEs;mpiinit=true,
-                                                            verbose_level = 2) where T&lt;: Integer
-            NV = NX*NY*NZ*NT
-            @assert NX % PEs[1] == 0 &quot;NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs&quot;
-            @assert NY % PEs[2] == 0 &quot;NY % PEs[2] should be 0. Now NY = $NY and PEs = $PEs&quot;
-            @assert NZ % PEs[3] == 0 &quot;NZ % PEs[3] should be 0. Now NZ = $NZ and PEs = $PEs&quot;
-            @assert NT % PEs[4] == 0 &quot;NT % PEs[4] should be 0. Now NT = $NT and PEs = $PEs&quot;
+function potential(U1, U2, U3, U4, coupling, temps)
+    # Reuse temps and return the complete real V(U).
+end
 
-            PN = (NX ÷ PEs[1],
-                    NY ÷ PEs[2],
-                    NZ ÷ PEs[3],
-                    NT ÷ PEs[4],
-            )
+action = enzyme_md_action(potential, coupling; num_temps=3)
+driver = md_driver(U, action; steps=20)</code></pre><p>The current Enzyme provider requires 4D LatticeMatrices fields with <code>halo &gt;= 1</code>. CUDA multi-GPU use additionally requires CUDA-aware MPI.</p><h2 id="Custom-integrator-function"><a class="docs-heading-anchor" href="#Custom-integrator-function">Custom integrator function</a><a id="Custom-integrator-function-1"></a><a class="docs-heading-anchor-permalink" href="#Custom-integrator-function" title="Permalink"></a></h2><p>An integrator function implements one MD step. The mutated object is always the first argument of each elementary update:</p><pre><code class="language-julia hljs">function my_qpq!(U, P, delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    return nothing
+end
 
-            if mpiinit == false
-                MPI.Init()
-                mpiinit = true
-            end
+driver = md_driver(U, action; steps=20, integrator=my_qpq!)</code></pre><h2 id="Parameterized-integrator"><a class="docs-heading-anchor" href="#Parameterized-integrator">Parameterized integrator</a><a id="Parameterized-integrator-1"></a><a class="docs-heading-anchor-permalink" href="#Parameterized-integrator" title="Permalink"></a></h2><p>Define an ordinary Julia type and extend <code>Gaugefields.md_step!</code>:</p><pre><code class="language-julia hljs">struct OmelyanPQP{T}
+    lambda::T
+end
 
-            comm = MPI.COMM_WORLD
-
-            nprocs = MPI.Comm_size(comm)
-            @assert prod(PEs) == nprocs &quot;num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs&quot;
-            myrank = MPI.Comm_rank(comm)
-
-            verbose_print = Verbose_print(verbose_level,myid = myrank)
-
-            myrank_xyzt = get_myrank_xyzt(myrank,PEs)
-
-            #println(&quot;Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))&quot;)
-
-            U = zeros(ComplexF64,NC,NC,PN[1]+2NDW,PN[2]+2NDW,PN[3]+2NDW,PN[4]+2NDW)
-            #U = Array{Array{ComplexF64,6}}(undef,4)
-            #for μ=1:4
-            #    U[μ] = zeros(ComplexF64,NC,NC,NX+2NDW,NY+2NDW,NZ+2NDW,NT+2NDW)
-            #end
-            mpi = true
-            return new{NC}(U,NX,NY,NZ,NT,NDW,NV,NC,Tuple(PEs),PN,mpiinit,myrank,nprocs,myrank_xyzt,mpi,verbose_print)
-        end
-    end</code></pre><p>Its <code>mul!</code> is implemented as </p><pre><code class="language-julia hljs">    function LinearAlgebra.mul!(c::Gaugefields_4D_wing_mpi{NC},a::T1,b::T2) where {NC,T1 &lt;: Abstractfields,T2 &lt;: Abstractfields}
-        @assert NC != 2 &amp;&amp; NC != 3 &quot;This function is for NC != 2,3&quot;
-        NT = c.NT
-        NZ = c.NZ
-        NY = c.NY
-        NX = c.NX
-        PN = c.PN
-        for it=1:PN[4]
-            for iz=1:PN[3]
-                for iy=1:PN[2]
-                    for ix=1:PN[1]
-                        for k2=1:NC                            
-                            for k1=1:NC
-                                v = 0
-                                setvalue!(c,v,k1,k2,ix,iy,iz,it)
-                                #c[k1,k2,ix,iy,iz,it] = 0
-
-                                @simd for k3=1:NC
-                                    vc = getvalue(c,k1,k2,ix,iy,iz,it) + getvalue(a,k1,k3,ix,iy,iz,it)*getvalue(b,k3,k2,ix,iy,iz,it)
-                                    setvalue!(c,vc,k1,k2,ix,iy,iz,it)
-                                    #c[k1,k2,ix,iy,iz,it] += a[k1,k3,ix,iy,iz,it]*b[k3,k2,ix,iy,iz,it]
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        #set_wing_U!(c)
-    end
-</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../usefulfunctions/">« Useful functions</a><a class="docs-footer-nextpage" href="../measurements/">Measurements »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 15 August 2026 10:22">Saturday 15 August 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+function Gaugefields.md_step!(
+    integrator::OmelyanPQP,
+    U,
+    P,
+    delta_tau,
+    driver,
+)
+    lambda = integrator.lambda
+    update_momenta!(P, U, lambda * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, (1 - 2lambda) * delta_tau, driver)
+    update_gaugefields!(U, P, 0.5 * delta_tau, driver)
+    update_momenta!(P, U, lambda * delta_tau, driver)
+    return nothing
+end</code></pre><p>Subtyping a Gaugefields type is optional. The method must apply exactly one step and multiply all coefficients by <code>delta_tau</code>. HMC integrators should normally be symmetric and tested for reversibility.</p><h2 id="Storage-implementations"><a class="docs-heading-anchor" href="#Storage-implementations">Storage implementations</a><a id="Storage-implementations-1"></a><a class="docs-heading-anchor-permalink" href="#Storage-implementations" title="Permalink"></a></h2><p>The old guide for defining <code>AbstractGaugefields</code> subtypes described the pre-v1 wing, direct-shift, accelerator, and MPI storage families. Those types remain readable for compatibility, but new portable work should extend LatticeMatrices rather than add another accelerator-specific Gaugefields storage tree. The historical implementation contract is retained in <a href="../legacyapi/">Legacy API</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../usefulfunctions/">« Public v1 API index</a><a class="docs-footer-nextpage" href="../legacyapi/">Legacy API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 17 August 2026 00:50">Monday 17 August 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
