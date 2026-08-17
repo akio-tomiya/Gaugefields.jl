@@ -3,14 +3,44 @@
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
 
+🎉 **Gaugefields.jl has reached v1.0.0!** This is the first stable major
+release of the package.
+
+## What's new in v1.0.0
+
+Compared with the previous release, v0.7.3, v1.0.0 adds and stabilizes:
+
+- **A new high-level API** centered on `gauge_configuration`. It returns a
+  vector of `Dim` gauge-link fields, uses the LatticeMatrices backend by
+  default, and has a default halo width of one.
+- **Portable 2D, 3D, and 4D execution** with
+  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.1
+  and [JACC.jl](https://github.com/JuliaORNL/JACC.jl), covering threaded CPUs,
+  NVIDIA, AMD, and Intel GPUs, MPI domain decomposition, and multi-GPU jobs.
+- **Portable update and analysis workflows**, including plaquette and general
+  Wilson-loop actions, heatbath and overrelaxation, gradient flow, 4D stout
+  smearing, special initial configurations, and configuration I/O.
+- **Decomposition-independent random-number streams** for seeded LM hot
+  starts, Gaussian momenta, and heatbath updates, with explicit seeds and
+  sweep counters for reproducible simulations.
+- **A deterministic molecular-dynamics driver** with `QPQ()`, `PQP()`, and
+  user-defined integrators, plus optional Enzyme-based action derivatives.
+- **A reorganized v1 manual** with four-dimensional examples first, dedicated
+  MPI/GPU, randomness, HMC, Enzyme, and Wilson-action guides, and the complete
+  historical interface collected on one Legacy API page.
+
+**Upgrading from v0.7:** Existing programs using `Initialize_Gaugefields` and
+the historical API remain supported and retain their legacy backend and
+defaults. New programs should use `gauge_configuration`, whose default backend
+is LatticeMatrices. Gaugefields v1 requires LatticeMatrices v1.1 or later;
+Enzyme users must add `Enzyme` as a direct dependency. See the
+[high-level API](docs/src/highlevelapi.md) and
+[Legacy API migration map](docs/src/legacyapi.md#migration-map).
+
 # Abstract
 
 This is a package for lattice QCD codes.
 Treating gauge fields (links), gauge actions with MPI and autograd.
-
-Gaugefields v1.0.0 can use the LatticeMatrices v1.1.0 MPI/JACC backend for
-2D, 3D, and 4D gauge fields on NVIDIA, AMD, and Intel GPUs, including
-multi-GPU execution with one MPI rank per GPU.
 
 <img src="LQCDjl_block.png" width=300> 
 
