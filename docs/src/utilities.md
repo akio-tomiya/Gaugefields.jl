@@ -1,130 +1,132 @@
+# Utilities and configuration I/O
 
-# Utilities
+This page uses the Gaugefields v1 API. The examples work with the default
+LatticeMatrices backend and do not depend on a particular JACC execution
+backend.
 
-## File loading
-### ILDG format
-[ILDG](https://www-zeuthen.desy.de/~pleiter/ildg/ildg-file-format-1.1.pdf) format is one of standard formats for LatticeQCD configurations.
+## Create a configuration
 
-We can read ILDG format like: 
+~~~julia
+import JACC
+JACC.@init_backend
 
-```julia
-NX = 4
-NY = 4
-NZ = 4
-NT = 4
-Nwing = 1
-Dim = 4
+using Gaugefields
 
-U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+U = gauge_configuration(
+    (8, 8, 8, 16);
+    colors=3,
+    halo=1,
+    start=:cold,
+)
+~~~
 
-ildg = ILDG(filename)
-i = 1
-L = [NX,NY,NZ,NT]
-load_gaugefield!(U,i,ildg,L,NC)
-```
-Then, we can calculate the plaquette: 
+A configuration is a vector with one link field per direction:
 
-```julia
-temp1 = similar(U[1])
-temp2 = similar(U[1])
+~~~julia
+@assert length(U) == 4
+Ux, Uy, Uz, Ut = U
+~~~
 
-comb = 6
-factor = 1/(comb*U[1].NV*U[1].NC)
-@time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-println("plaq_t = $plaq_t")
-poly = calculate_Polyakov_loop(U,temp1,temp2) 
-println("polyakov loop = $(real(poly)) $(imag(poly))")
-```
+The backend array inside an individual link is an implementation detail. Use
+the public metadata functions instead of reading backend-specific fields:
 
-We can write a configuration as the ILDG format like 
+~~~julia
+gauge_backend(U)
+gauge_lattice_size(U)   # (8, 8, 8, 16)
+gauge_num_colors(U)     # 3
+gauge_halo_width(U)     # 1
+gauge_process_grid(U)   # one entry per direction
+gauge_communicator(U)   # MPI communicator for LM fields
+~~~
 
-```julia
-filename = "hoge.ildg"
-save_binarydata(U,filename)
-```
+## Temporary link fields and link algebra
 
-### Text format for Bridge++
-Gaugefields.jl also supports a text format for [Bridge++](https://bridge.kek.jp/Lattice-code/index_e.html). 
+`similar(U[1])` allocates one compatible link field on the same CPU, GPU, or
+distributed backend. Standard Gaugefields link operations therefore do not
+need backend branches:
 
-#### File loading
+~~~julia
+using LinearAlgebra
 
-```julia
-filename = "testconf.txt"
-load_BridgeText!(filename,U,L,NC)
-```
+shifted_x = shift_U(U[1], (0, 1, 0, 0))
+product = similar(U[1])
+mul!(product, U[1], shifted_x')
 
-### File saving
+summed_trace = tr(product)
+~~~
 
-```julia
-filename = "testconf.txt"
-save_textdata(U,filename)
-```
+`shift_U` and adjoint (`'`) are lazy field expressions. `mul!` evaluates the
+site-wise matrix product into the explicitly supplied destination.
+`tr(field)` includes the lattice-site and color trace and performs the
+necessary distributed reduction.
 
+For common observables, prefer `measure_plaquette` and
+`measure_polyakov_loop` over manually allocating measurement work fields.
 
-## Data structure
-We can access the gauge field defined on the bond between two neigbohr points. 
-In 4D system, the gauge field is like ```u[ic,jc,ix,iy,iz,it]```. 
-There are four directions in 4D system. Gaugefields.jl uses the array like: 
+## Conjugate momenta
 
-```julia
-NX = 4
-NY = 4
-NZ = 4
-NT = 4
-Nwing = 1
-Dim = 4
+Allocate zero-valued traceless anti-Hermitian momenta with:
 
-U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
+~~~julia
+P = gauge_momenta(U)
+~~~
 
-```
+For a reproducible Gaussian field on the LM backend:
 
-In the later exaples, we use, ```mu=1``` and ```u=U[mu]``` as an example.
+~~~julia
+P = gaussian_momenta(
+    U;
+    sigma=1.0,
+    seed=0x1234,
+    sweep=0,
+    rng=Philox4x32(),
+)
+~~~
 
-## Hermitian conjugate (Adjoint operator)
-If you want to get the hermitian conjugate of the gauge fields, you can do like 
+The seed and sweep belong to the momentum stream, not to the hot-start or
+heatbath streams. See [Randomness and reproducibility](randomness.md).
 
-```julia
-u'
-```
+## JLD2
 
-This is evaluated with the lazy evaluation. 
-So there is no memory copy. 
-This returms $U_{\mu}^{dagger}$ for all sites.
+JLD2 is the only format that currently supports allocating the destination
+from the file:
 
-## Shift operator
-If you want to shift the gauge fields, you can do like 
+~~~julia
+save_configuration("configuration.jld2", U)
+Uloaded = load_configuration("configuration.jld2")
+~~~
 
-```julia
-shifted_u = shift_U(u, shift)
-```
-This is also evaluated with the lazy evaluation. 
-Here ```shift``` is ```shift=(1,0,0,0)``` for example.
+To load into an already allocated configuration:
 
-## matrix-field matrix-field product
-If you want to calculate the matrix-matrix multiplicaetion on each lattice site, you can do like
+~~~julia
+load_configuration!(U, "configuration.jld2")
+~~~
 
-As a mathematical expression, for matrix-valued fields ``A(n), B(n)``,
-we define "matrix-field matrix-field product" as,
+The allocating form preserves the stored Gaugefields backend type. Use an
+in-place load when the application must control lattice size, process grid, or
+device allocation before reading.
 
-```math
-[A(n)B(n)]_{ij} = \sum_k [A(n)]_{ik} [B(n)]_{kj}
-```
+## Bridge text format
 
-for all site index n.
+Bridge input requires a preallocated target:
 
-In our package, this is expressed as,
+~~~julia
+load_configuration!(U, "configuration.txt"; format=:bridge)
+save_configuration("configuration.txt", U; format=:bridge)
+~~~
 
-```julia
-mul!(C,A,B)
-```
-which means ```C = A*B``` on each lattice site. 
-Here ``A, B, C`` are same type of ``u``.
+## ILDG format
 
-## Trace operation 
-If you want to calculate the trace of the gauge field, you can do like 
+ILDG input also requires a preallocated target:
 
-```julia
-tr(A)
-```
-It is useful to evaluation actions. 
-This trace operation summing up all indecis, spacetime and color.
+~~~julia
+load_configuration!(U, "configuration.ildg"; format=:ildg)
+save_configuration("configuration.ildg", U; format=:ildg)
+~~~
+
+Optional ILDG output keywords are forwarded by `save_configuration`. All
+ranks that own a distributed configuration must participate in collective
+operations required by the underlying format.
+
+The pre-v1 I/O entry points and examples are retained on the
+[Legacy API](legacyapi.md) page.

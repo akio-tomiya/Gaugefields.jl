@@ -10,17 +10,32 @@ import LatticeMatrices: LatticeMatrix,
     get_PEs,
     clear_matrix!,
     add_matrix!,
+    add_matrix_evenodd!,
+    map_matrix_evenodd!,
     expt!,
     #get_2Dindex,
     traceless_antihermitian_add!,
     normalize_matrix!,
     randomize_matrix!,
+    randomize_gaussian_matrix!,
+    RNGStreamKey,
+    SiteRNGAlgorithm,
+    PCG32,
+    Xoshiro256PlusPlus,
+    Philox4x32,
     #get_2Dindex,
     get_shift,
     gather_and_bcast_matrix,
     traceless_antihermitian!
 
-export LatticeMatrix
+export LatticeMatrix,
+    randomize_matrix!,
+    randomize_gaussian_matrix!,
+    RNGStreamKey,
+    SiteRNGAlgorithm,
+    PCG32,
+    Xoshiro256PlusPlus,
+    Philox4x32
 
 
 

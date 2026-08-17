@@ -46,11 +46,7 @@ end
 
 function STOUT_Layer(loops_smearing, ρs::Vector{<:Number}, U::Vector{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
     _, _, NN... = size(U[1])
-    if Dim == 2
-        L = [NN[1], NN[2]]
-    elseif Dim == 4
-        L = [NN[1], NN[2], NN[3], NN[4]]
-    end
+    L = collect(NN)
 
     loopset = make_loopforactions(loops_smearing, L)
     return STOUT_Layer(loopset, U, ρs)
@@ -1016,6 +1012,17 @@ function CdexpQdQ!(CdeQdQ::Union{Gaugefields_4D_nowing{2},Gaugefields_4D_wing{2}
 end
 
 export CdexpQdQ!
+
+function CdexpQdQ!(
+    CdeQdQ::Gaugefields_4D_MPILattice{NC},
+    C::Gaugefields_4D_MPILattice{NC},
+    Q::Gaugefields_4D_MPILattice{NC};
+    eps_Q=1e-18,
+) where {NC}
+    LatticeMatrices.exp_ta_pullback!(CdeQdQ.U, C.U, Q.U)
+    set_wing_U!(CdeQdQ)
+    return nothing
+end
 
 
 function CdexpQdQ!(CdeQdQ, C, Q)

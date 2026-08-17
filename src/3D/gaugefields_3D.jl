@@ -2,6 +2,7 @@ abstract type Gaugefields_3D{NC} <: AbstractGaugefields{NC,3} end
 
 
 include("./gaugefields_3D_nowing.jl")
+include("./mpi_jacc/gaugefields_3D_MPILattice.jl")
 
 function Base.size(U::Gaugefields_3D{NC}) where {NC}
     return NC, NC, U.NX, U.NY, U.NT

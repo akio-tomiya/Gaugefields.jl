@@ -1,7 +1,7 @@
 abstract type Adjoint_rep_Gaugefields{NC,Dim,NumofBasis} <: AbstractGaugefields{NC,Dim} #Traceless antihermitian matrix
 end
 
-include("./4D/Adjoint_rep/Adjoint_rep_gaugefields_4D.jl")
+include("./4D/deprecated/Adjoint_rep/Adjoint_rep_gaugefields_4D.jl")
 
 function construct_Adjoint_rep_Gaugefields(
     U::Array{<:AbstractGaugefields{NC,Dim},1},
@@ -42,4 +42,21 @@ function construct_Adjoint_rep_Gaugefields(
 
 
     end
+end
+
+function construct_Adjoint_rep_Gaugefields(
+    u::Gaugefields_4D_MPILattice{NC};
+    verbose_level=u.verbose_print.level,
+) where {NC}
+    get_nprocs(u) == 1 || error("MPI is not supported")
+    legacy = Gaugefields_4D_nowing(
+        NC,
+        u.NX,
+        u.NY,
+        u.NZ,
+        u.NT;
+        verbose_level,
+    )
+    substitute_U!(legacy, u)
+    return construct_Adjoint_rep_Gaugefields_4D_wing(legacy; verbose_level)
 end

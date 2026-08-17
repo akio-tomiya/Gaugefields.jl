@@ -1,6 +1,6 @@
 module IOmodule
 using JLD2
-import ..AbstractGaugefields_module: AbstractGaugefields, IdentityGauges
+import ..AbstractGaugefields_module: AbstractGaugefields, substitute_U!
 #using ..Gaugefields
 #import ..Gaugefields:GaugeFields,SU2GaugeFields,SU3GaugeFields,SUNGaugeFields
 #import Main.LatticeQCD.Gaugefields:GaugeFields
@@ -28,59 +28,35 @@ function saveU(filename,x::Array{T,1}) where T <: Gaugefields.GaugeFields
 end
 =#
 
-function loadU!(filename, U) #where T <: Gaugefields.GaugeFields
-    NX = load(filename, "NX")
-    NY = load(filename, "NY")
-    NZ = load(filename, "NZ")
-    NT = load(filename, "NT")
-    NC = load(filename, "NC")
-    NDW = load(filename, "NDW")
-    NV = load(filename, "NV")
+function loadU!(filename, U)
+    data = load(filename)
+    NN = if haskey(data, "NN")
+        Tuple(data["NN"])
+    else
+        (data["NX"], data["NY"], data["NZ"], data["NT"])
+    end
+    NC = data["NC"]
+    NDW = data["NDW"]
+    NV = data["NV"]
+    Unew = data["U"]
 
-    @assert NX == U[1].NX
-    @assert NY == U[1].NY
-    @assert NZ == U[1].NZ
-    @assert NT == U[1].NT
+    @assert length(U) == length(Unew)
+    @assert Tuple(size(U[1])[3:end]) == NN
     @assert NC == U[1].NC
     @assert NDW == U[1].NDW
     @assert NV == U[1].NV
 
-    #=
-    if NC == 3
-        Unew = Array{SU3GaugeFields,1}(undef,4)
-    elseif NC == 2
-        Unew = Array{SU2GaugeFields,1}(undef,4)
-    elseif NC ≥ 4
-        Unew = Array{SUNGaugeFields,1}(undef,4)
-    end
-    =#
-
-    #Unew = jldopen(filename, "r") do file
-    #    read(file, "U")
-    #end
-
-    Unew = load(filename, "U")
-    for μ = 1:4
-        U[μ] = Unew[μ]
-    end
-    return
+    substitute_U!(U, Unew)
+    return nothing
 end
 
 function loadU(filename)
-    NN = load(filename, "NN")
-    NC = load(filename, "NC")
-    Dim = load(filename, "Dim")
-    NDW = load(filename, "NDW")
-    NV = load(filename, "NV")
-
-    u = IdentityGauges(NC, NDW, NN...)
-    U = Array{typeof(u),1}(undef, Dim)
-    Uload = load(filename, "U")
-    @assert Uload[1].NV == u.NV "size mismatch!"
-    for μ = 1:Dim
-        U[μ] = Uload[μ]
-    end
-
+    data = load(filename)
+    U = data["U"]
+    @assert length(U) == data["Dim"]
+    @assert U[1].NC == data["NC"]
+    @assert U[1].NDW == data["NDW"]
+    @assert U[1].NV == data["NV"]
     return U
 
 end

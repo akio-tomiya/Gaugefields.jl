@@ -1,6 +1,6 @@
-#import CUDA
-import JACC
-JACC.@init_backend
+# CUDA is provided by the surrounding `@require CUDA` callback.  This legacy
+# backend must not re-initialize JACC, because CUDA may be loaded solely as the
+# active JACC backend for the LatticeMatrices implementation.
 
 
 function cudakernel_identityGaugefields!(U, NC)

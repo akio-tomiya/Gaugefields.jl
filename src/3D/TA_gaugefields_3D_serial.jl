@@ -433,12 +433,14 @@ function Traceless_antihermitian!(
                     matrix[k, k] = (imag(vin[k, k, ix, iy, it]) - tri) * im
                 end
 
-                @simd for k2 = k1+1:NC
-                    vv = 0.5 * (vin[k1, k2, ix, iy, it] - conj(vin[k2, k1, ix, iy, it]))
-                    #vout[k1,k2,ix,it] = vv
-                    #vout[k2,k1,ix,it] = -conj(vv)
-                    matrix[k1, k2] = vv
-                    matrix[k2, k1] = -conj(vv)
+                for k1 = 1:NC
+                    @simd for k2 = k1+1:NC
+                        vv = 0.5 * (vin[k1, k2, ix, iy, it] - conj(vin[k2, k1, ix, iy, it]))
+                        #vout[k1,k2,ix,it] = vv
+                        #vout[k2,k1,ix,it] = -conj(vv)
+                        matrix[k1, k2] = vv
+                        matrix[k2, k1] = -conj(vv)
+                    end
                 end
 
                 matrix2lie!(a, g, matrix)

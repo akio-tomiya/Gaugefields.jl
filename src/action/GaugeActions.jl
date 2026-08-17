@@ -24,6 +24,19 @@ struct GaugeAction_dataset{Dim}
     staples::Vector{Vector{Wilsonline{Dim}}}
 end
 
+"""
+    GaugeAction(U; hascovnet=false)
+
+Construct an initially empty Wilson-loop action compatible with the gauge
+configuration `U`. Add a term with
+`push!(action, coefficient, closedloops)`, where `closedloops` is a vector of
+`Wilsonline{Dim}` objects. Include the Hermitian-conjugate paths when the loop
+set is not already closed under conjugation and the action must be real.
+
+The same action object can be evaluated with [`evaluate_GaugeAction`](@ref),
+differentiated with [`calc_dSdUμ!`](@ref), and passed to `heatbath_updater` or
+`md_driver`.
+"""
 struct GaugeAction{Dim,T,Tdata}
     hascovnet::Bool
     covneuralnet::Union{Nothing,CovNeuralnet{Dim}}
@@ -55,6 +68,14 @@ function get_temporary_gaugefields(S::GaugeAction)
     return S._temp_U
 end
 
+"""
+    calc_dSdUμ(action, μ, U)
+
+Allocate and return the matrix derivative of `action` with respect to links in
+direction `μ`. This is the raw action derivative used to construct staples;
+the MD driver performs the additional link multiplication, normalization, and
+traceless anti-Hermitian projection required for `dp/dτ`.
+"""
 function calc_dSdUμ(
     S::GaugeAction,
     μ,
@@ -65,6 +86,12 @@ function calc_dSdUμ(
     return dSdUμ
 end
 
+"""
+    calc_dSdUμ!(derivative, action, μ, U)
+
+Overwrite `derivative` with the matrix derivative of `action` in direction
+`μ`. See [`calc_dSdUμ`](@ref) for the derivative convention.
+"""
 function calc_dSdUμ!(
     dSdUμ::T, # dSdUμ -> S._temp_U[end] or other-temp
     S::GaugeAction,
@@ -95,6 +122,13 @@ function calc_dSdUμ!(
 
 end
 
+"""
+    evaluate_GaugeAction(action, U)
+
+Return the traced, lattice-summed Wilson-loop expression stored in `action`.
+For the built-in MD action provider, the corresponding potential energy is
+`-real(evaluate_GaugeAction(action, U)) / U[1].NC`.
+"""
 function evaluate_GaugeAction(
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
@@ -107,6 +141,12 @@ function evaluate_GaugeAction(
     return value
 end
 
+"""
+    evaluate_GaugeAction_untraced(action, U)
+
+Allocate and return the untraced link-field sum represented by `action`.
+Taking `tr` of the result gives [`evaluate_GaugeAction`](@ref).
+"""
 function evaluate_GaugeAction_untraced(
     S::GaugeAction,
     U::Vector{<:AbstractGaugefields{NC,Dim}},
@@ -142,6 +182,11 @@ function evaluate_staple_eachindex!(
 
 end
 
+"""
+    evaluate_GaugeAction_untraced!(output, action, U)
+
+Overwrite `output` with the untraced link-field sum represented by `action`.
+"""
 function evaluate_GaugeAction_untraced!(
     uout,
     S::GaugeAction, # length(temps) > 3 + 1

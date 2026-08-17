@@ -1,5 +1,6 @@
 module Abstractsmearing_module
 using LinearAlgebra
+import LatticeMatrices
 import ..Wilsonloops_module:
     Wilson_loop_set,
     make_staples,
@@ -10,6 +11,7 @@ import ..Wilsonloops_module:
 import ..AbstractGaugefields_module:
     AbstractGaugefields,
     Abstractfields,
+    Gaugefields_4D_MPILattice,
     initialize_TA_Gaugefields,
     add_force!,
     exp_aF_U!,
@@ -44,7 +46,7 @@ using Requires
 
 function __init__()
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
-        include("./kernelfunctions/stout_cudakernels.jl")
+        include("./deprecated/kernelfunctions/stout_cudakernels.jl")
     end
 end
 
@@ -75,12 +77,18 @@ function CovNeuralnet(; Dim=4)
     return CovNeuralnet{Dim}(layers)
 end
 
-function CovNeuralnet(U::Vector{<:AbstractGaugefields{NC}}
-    ; Dim=4) where {NC}
+function CovNeuralnet(
+    U::Vector{<:AbstractGaugefields{NC,FieldDim}};
+    Dim=FieldDim,
+) where {NC,FieldDim}
     return CovNeuralnet(U[1]; Dim)
 end
 
-function CovNeuralnet(U::AbstractGaugefields; Dim=4, numtemps=16)
+function CovNeuralnet(
+    U::AbstractGaugefields{NC,FieldDim};
+    Dim=FieldDim,
+    numtemps=16,
+) where {NC,FieldDim}
     layers = CovLayer{Dim}[]
     num = numtemps
     _temp_U = Temporalfields(U; num=num)
@@ -125,7 +133,7 @@ end
 
 include("./stout.jl")
 include("./stout_fast.jl")
-include("./stout_fast_accelerator.jl")
+include("./deprecated/stout_fast_accelerator.jl")
 #include("./stout_smearing.jl")
 include("./CASK_smearing.jl")
 

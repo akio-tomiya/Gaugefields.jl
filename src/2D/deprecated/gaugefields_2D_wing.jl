@@ -63,7 +63,7 @@ end
 @inline function get_latticeindex(i, NX, NT)
     #i = (it-1)*NX + ix
     ix = (i - 1) % NX + 1
-    it = div(ii - ix, NX) + 1
+    it = div(i - ix, NX) + 1
     return ix, it
 end
 
