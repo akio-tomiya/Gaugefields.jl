@@ -56,6 +56,7 @@ For a differentiable four-dimensional LM potential, loading Enzyme activates
 using Enzyme
 
 function potential(U1, U2, U3, U4, coupling, temps)
+    # U1,...,U4 and temps are underlying LatticeMatrices objects.
     # Reuse temps and return the complete real V(U).
 end
 
@@ -64,7 +65,10 @@ driver = md_driver(U, action; steps=20)
 ~~~
 
 The current Enzyme provider requires 4D LatticeMatrices fields with
-`halo >= 1`. CUDA multi-GPU use additionally requires CUDA-aware MPI.
+`halo >= 1`. Use `mul_shifted!`, `mul_shifted_adjoint!`, and `mul_adjoint!`
+inside the potential. CUDA multi-GPU use additionally requires CUDA-aware MPI.
+The complete plaquette example is in
+[Automatic differentiation with Enzyme](autodiff.md).
 
 ## Custom integrator function
 

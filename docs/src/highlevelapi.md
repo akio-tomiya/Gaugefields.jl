@@ -225,14 +225,17 @@ action = enzyme_md_action(my_potential, coupling; num_temps=3)
 driver = md_driver(U, action; steps=20)
 ```
 
-The four links are passed as separate arguments so that Enzyme can
-differentiate them. Extra positional arguments given to `enzyme_md_action`
-are treated as constants. When `num_temps > 0`, the final argument received by
-the potential is a collection of that many reusable gauge fields; Gaugefields
-clears it before each evaluation and allocates the matching shadow workspace.
-The function must return a real scalar with the desired sign and normalization
-already included. The same function supplies both the Hamiltonian value and
-the automatically differentiated force, preventing an action/force mismatch.
+The four underlying LatticeMatrices links are passed as separate arguments so
+that Enzyme can differentiate them. The outer simulation variable is still
+the normal vector of Gaugefields links. Extra positional arguments given to
+`enzyme_md_action` are treated as constants. When `num_temps > 0`, the final
+argument received by the potential is a collection of that many reusable LM
+work fields; Gaugefields clears it before each evaluation and allocates the
+matching shadow workspace. Use `mul_shifted!`, `mul_shifted_adjoint!`, and
+`mul_adjoint!` for shifted products in differentiated code. The function must
+return a real scalar with the desired sign and normalization already included.
+The same function supplies both the Hamiltonian value and the automatically
+differentiated force, preventing an action/force mismatch.
 
 The initial Enzyme MD implementation supports four-dimensional
 LatticeMatrices configurations with `halo >= 1`, including CUDA and MPI. A
