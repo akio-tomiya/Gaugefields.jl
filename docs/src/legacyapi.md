@@ -35,6 +35,8 @@ points in the right column.
 | `cuda` and `accelerator` | select the JACC backend outside Gaugefields |
 | `calculate_Plaquette` | `measure_plaquette` |
 | `calculate_Polyakov_loop` | `measure_polyakov_loop` |
+| `Wilsonline`, `evaluate_gaugelinks!` | same path API; see the current Wilson-loop guide |
+| `GaugeAction`, `evaluate_GaugeAction`, `calc_dSdUμ!` | same action API; see the current Wilson-loop guide |
 | `initialize_TA_Gaugefields` | `gauge_momenta` |
 | `gauss_distribution!` | `gaussian_momenta` |
 | `Gradientflow` and `Gradientflow_general` | `gradient_flow` |
@@ -42,10 +44,18 @@ points in the right column.
 | `CovNeuralnet`, `STOUT_Layer`, `calc_smearedU` | `stout_smearing` and `smear` |
 | `saveU`, `loadU`, format-specific I/O | `save_configuration` and `load_configuration!` |
 | application-defined `MDstep!`, `U_update!`, `P_update!` | `md_driver`, `md_trajectory!`, and explicit v1 update functions |
+| `topological_charge_density` and site-density analysis | QCDMeasurements.jl measurement interfaces |
 
 Some advanced compatibility routines, including energy-density and
-topological-charge helpers, do not yet have v1 convenience wrappers. They
-remain callable but should not be presented as the primary v1 interface.
+topological-charge helpers, remain callable but should not be presented as the
+primary v1 interface. New topological-charge-density analysis should use
+[QCDMeasurements.jl](https://github.com/akio-tomiya/QCDMeasurements.jl); see
+the current [Measurements](measurements.md#Advanced-observables) guide.
+
+`Wilsonline`, `GaugeAction`, action evaluation, and analytic action
+derivatives remain part of the current API even though historical examples
+also appear below. Their maintained documentation is
+[Wilson loops and gauge actions](wilsonloops_actions.md).
 
 # Additional archived compatibility material
 
@@ -260,6 +270,13 @@ test()
 
 
 ### Topological charge
+
+!!! note "Recommended measurement package"
+    This section is retained to explain historical Gaugefields programs. New
+    topological-charge and topological-charge-density analyses should use
+    [QCDMeasurements.jl](https://github.com/akio-tomiya/QCDMeasurements.jl),
+    as described in [Measurements](measurements.md#Advanced-observables).
+
 We show the code to calculate the topological charge.
 We show three definitions.
 
@@ -1146,7 +1163,7 @@ using LinearAlgebra
 
 function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC # evaluate_GaugeAction(...) = tr(evaluate_GaugeAction_untraced(...))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)
@@ -2152,7 +2169,7 @@ const mpi = parse(Bool,ARGS[5])
 
 function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_Gauge_action(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC # evaluate_GaugeAction(...) = tr(evaluate_GaugeAction_untraced(...))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)
@@ -2607,8 +2624,8 @@ Some of them will be simplified in LatticeQCD.jl.
 We develop [Wilsonloop.jl](https://github.com/akio-tomiya/Wilsonloop.jl.git), which is useful to calculate Wilson loops.
 If you want to use this, please install like
 
-```
-add Wilsonloop.jl
+```julia
+pkg> add Wilsonloop
 ```
 
 For example, if you want to calculate the following quantity:
@@ -2784,7 +2801,7 @@ function test1()
 
     show(gauge_action)
 
-    Uout = evaluate_Gaugeaction_untraced(gauge_action,U)
+    Uout = evaluate_GaugeAction_untraced(gauge_action,U)
     println(tr(Uout))
 end
 
@@ -3122,7 +3139,7 @@ We define the functions as
 
 function calc_action(gauge_action,U,p)
     NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_Gaugeaction_untraced(gauge_action,U))
+    Sg = -evaluate_GaugeAction(gauge_action,U)/NC # evaluate_GaugeAction(...) = tr(evaluate_GaugeAction_untraced(...))
     Sp = p*p/2
     S = Sp + Sg
     return real(S)

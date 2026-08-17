@@ -7,6 +7,12 @@ arrays and kernels run.
 
 ## Complete MPI example
 
+The application environment must list MPI and JACC directly:
+
+~~~julia
+pkg> add Gaugefields JACC MPI
+~~~
+
 Save the following as `mpi_example.jl`:
 
 ~~~julia

@@ -65,6 +65,35 @@ measure_polyakov_loop(U; normalize=true)
 With `normalize=true`, a cold field returns one. `normalize=false` selects the
 historical summed/unnormalized convention.
 
+Topological charge, topological-charge density, energy density, and other
+physics measurements are provided by QCDMeasurements.jl; see
+[Measurements](measurements.md#Advanced-observables).
+
+## Wilson loops and gauge actions
+
+Create a coefficient-weighted action from one or more groups of closed Wilson
+paths:
+
+```julia
+action = GaugeAction(U)
+loops = make_loops_fromname("plaquette"; Dim=length(U))
+append!(loops, loops')
+push!(action, coefficient, loops)
+```
+
+| Function | Result |
+| --- | --- |
+| `evaluate_gaugelinks!(output, loops, U, temps)` | Ordered path product, summed for a loop collection |
+| `evaluate_GaugeAction(action, U)` | Coefficient-weighted traced lattice sum |
+| `evaluate_GaugeAction_untraced(action, U)` | Allocated matrix-valued action sum |
+| `evaluate_GaugeAction_untraced!(output, action, U)` | In-place matrix-valued action sum |
+| `calc_dSdUμ(action, μ, U)` | Allocated raw matrix derivative in direction `μ` |
+| `calc_dSdUμ!(output, action, μ, U)` | In-place raw matrix derivative |
+
+See [Wilson loops and gauge actions](wilsonloops_actions.md) for explicit
+`Wilsonline` paths, coefficient conventions, and reuse in heatbath, gradient
+flow, and MD.
+
 ## Heatbath and overrelaxation
 
 For a plaquette action:
@@ -210,6 +239,10 @@ LatticeMatrices configurations with `halo >= 1`, including CUDA and MPI. A
 regular `GaugeAction` remains the portable choice for Legacy fields and for
 two- or three-dimensional configurations. CUDA multi-GPU execution requires a
 CUDA-aware MPI installation, with matching `mpiexec` and `libmpi` selections.
+
+For direct access to the matrix gradient, constant-argument annotations, and
+primal/adjoint work fields, see
+[Automatic differentiation with Enzyme](autodiff.md).
 
 Other packages can implement an action provider by defining all three methods:
 

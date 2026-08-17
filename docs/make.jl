@@ -26,11 +26,13 @@ makedocs(;
         ],
         "Guides" => [
             "Applications" => "applications.md",
+            "Wilson loops and gauge actions" => "wilsonloops_actions.md",
             "Measurements" => "measurements.md",
             "Utilities and I/O" => "utilities.md",
             "Stout smearing" => "smearing.md",
             "MPI, GPU, and multi-GPU" => "mpi.md",
             "HMC and custom integrators" => "hmc.md",
+            "Automatic differentiation" => "autodiff.md",
         ],
         "Reference" => [
             "High-level API parameters" => "highlevelapi.md",

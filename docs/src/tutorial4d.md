@@ -13,6 +13,13 @@ simulation code.
 
 ## Select a backend
 
+Add both packages directly to the application environment before importing
+JACC:
+
+```julia
+pkg> add Gaugefields JACC
+```
+
 JACC uses the `"threads"` backend by default. To record a backend explicitly
 in the active Julia environment, run one of the following commands once:
 

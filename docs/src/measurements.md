@@ -69,9 +69,59 @@ MPI.Comm_rank(comm) == 0 && println("plaquette = ", plaq)
 
 ## Advanced observables
 
-The v1 convenience layer currently exposes plaquette and Polyakov loop
-measurements. Energy-density, clover, and topological-charge routines remain
-available through the compatibility-level field operations but do not yet
-have backend-neutral v1 wrappers. Their historical definitions and examples
-are kept in [Legacy API](legacyapi.md), rather than mixing them into the v1
-measurement interface.
+Gaugefields is the core field and update package. Higher-level observables,
+including energy density, Wilson-loop measurements, topological charge, and
+topological-charge-density correlations, belong in
+[QCDMeasurements.jl](https://github.com/akio-tomiya/QCDMeasurements.jl).
+Add it separately to an application environment:
+
+~~~julia
+pkg> add QCDMeasurements
+~~~
+
+Use a QCDMeasurements release whose compatibility bounds include Gaugefields
+v1. A topological-charge measurement is constructed once and reused:
+
+~~~julia
+using QCDMeasurements
+
+topology = Topological_charge_measurement(
+    U;
+    TC_methods=["plaquette", "clover"],
+    verbose_level=0,
+)
+charges = get_value(measure(topology, U))
+
+println("plaquette = ", charges["plaquette"])
+println("clover = ", charges["clover"])
+println("improved = ", charges["clover improved"])
+~~~
+
+For observables built from the site-local topological charge density, use the
+QCDMeasurements density-correlation measurement rather than building a new
+workflow around Gaugefields' compatibility-level `topological_charge_density`
+helper:
+
+~~~julia
+density_correlation =
+    QCDMeasurements.Topological_charge_density_correlation_measurement(
+        U;
+        TC_methods=["plaquette", "clover"],
+        verbose_level=0,
+    )
+
+origin = [1, 1, 1, 1]
+separation = [1, 0, 0, 0]
+correlation = get_value(measure(
+    density_correlation,
+    U,
+    origin,
+    separation,
+))
+~~~
+
+The measurement package owns the operator definitions, improved-charge
+choices, output format, and future backend-specific measurement kernels. The
+historical Gaugefields implementations remain documented in
+[Legacy API](legacyapi.md#Topological-charge) only for compatibility and
+comparison with existing programs.

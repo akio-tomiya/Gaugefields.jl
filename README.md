@@ -72,8 +72,11 @@ Autograd can be worked for general Wilson lines except for ones have overlaps.
 
 In Julia REPL in the package mode,
 ```
-add Gaugefields.jl
+add Gaugefields JACC
 ```
+
+Add `MPI` as a direct dependency for MPI applications. JACC installs or
+selects the package required by the requested GPU backend.
 
 # How to use
 
@@ -135,7 +138,10 @@ higher-level package or application.
 The manual contains the complete v1 API description and task-oriented examples:
 
 - [Four-dimensional quick start](docs/src/tutorial4d.md)
+- [Wilson loops and gauge actions](docs/src/wilsonloops_actions.md)
+- [Measurements and QCDMeasurements.jl](docs/src/measurements.md)
 - [HMC and custom integrators](docs/src/hmc.md)
+- [Automatic differentiation with Enzyme](docs/src/autodiff.md)
 - [Two- and three-dimensional fields](docs/src/dimensions.md)
 - [Randomness and reproducibility](docs/src/randomness.md)
 - [High-level API parameters](docs/src/highlevelapi.md)

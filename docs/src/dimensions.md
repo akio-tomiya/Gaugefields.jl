@@ -34,6 +34,30 @@ U2 = gauge_configuration(
 The Polyakov loop is measured in the second, final direction. With MPI and no
 explicit process grid, the default decomposition is `(1, nranks)`.
 
+### U(1) fields
+
+Set `colors=1` for a two-dimensional U(1) field. General Wilson-loop actions
+use the same interface:
+
+```julia
+U1 = gauge_configuration(
+    (32, 48);
+    colors=1,
+    start=:hot,
+    seed=1234,
+)
+
+loops = make_loops_fromname("plaquette"; Dim=2)
+append!(loops, loops')
+
+action = GaugeAction(U1)
+push!(action, 1.0, loops)
+action_value = evaluate_GaugeAction(action, U1)
+```
+
+See [Wilson loops and gauge actions](wilsonloops_actions.md) for custom U(1)
+paths and general-action gradient flow.
+
 ## Three dimensions
 
 ```julia
@@ -60,3 +84,37 @@ domain decomposition in 2D and 3D. The compatibility `LegacyBackend` has
 additional historical restrictions; in particular, its 3D configuration must
 be requested with `halo=0`.
 
+## Special initial configurations
+
+The high-level `gauge_configuration` constructor deliberately limits `start`
+to `:cold` and `:hot`. Gaugefields also retains the specialized
+`Oneinstanton` and `Oneinstanton_SUN_embedded` constructors. Their LM forms
+use `isMPILattice=true`, a positive halo, and `PEs` for the process grid:
+
+```julia
+instanton2 = Oneinstanton(
+    2,
+    1,
+    32,
+    48;
+    isMPILattice=true,
+    PEs=(1, 1),
+    verbose_level=0,
+)
+
+embedded4 = Oneinstanton_SUN_embedded(
+    3,
+    8,
+    8,
+    8,
+    16;
+    NDW=1,
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
+    verbose_level=0,
+)
+```
+
+For MPI, the product of `PEs` must equal the number of ranks. These names are
+specialized compatibility constructors rather than new `start` choices; their
+full parameter history is kept in [Legacy API](legacyapi.md).

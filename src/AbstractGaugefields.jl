@@ -1425,6 +1425,11 @@ end
 Return the site-wise topological charge density `q(x)` for a 4D gauge field.
 The scalar topological charge is `sum(topological_charge_density(U))`.
 Supported methods are `:plaquette`, `:clover`, and `:improved`.
+
+This helper is retained for compatibility and reference comparisons. New
+measurement workflows should use
+[QCDMeasurements.jl](https://github.com/akio-tomiya/QCDMeasurements.jl), which
+owns topological-charge-density observables and their measurement interface.
 """
 function topological_charge_density(U::Array{<:AbstractGaugefields{NC,Dim},1}; method=:plaquette) where {NC,Dim}
     Dim == 4 || throw(ArgumentError("topological_charge_density only supports 4D gauge fields"))

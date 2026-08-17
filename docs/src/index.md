@@ -36,6 +36,8 @@ The same API is used for two and three dimensions; see
 
 - [Applications](applications.md) combines the v1 building blocks into common
   simulation workflows.
+- [Wilson loops and gauge actions](wilsonloops_actions.md) constructs named or
+  arbitrary paths, evaluates their action, and calculates analytic derivatives.
 - [Measurements](measurements.md) documents the normalized observable API.
 - [Utilities and I/O](utilities.md) covers metadata, link-field algebra, and
   configuration formats.
@@ -43,6 +45,8 @@ The same API is used for two and three dimensions; see
   one code path.
 - [HMC and custom integrators](hmc.md) builds HMC around the deterministic MD
   driver.
+- [Automatic differentiation with Enzyme](autodiff.md) covers both direct
+  scalar differentiation and the Enzyme MD action provider.
 - [High-level API parameters](highlevelapi.md) is the parameter reference.
 - [Public API index](usefulfunctions.md) collects the v1 docstrings.
 
@@ -67,8 +71,9 @@ the serial compatibility implementation.
 In Julia package mode:
 
 ~~~julia
-pkg> add Gaugefields
+pkg> add Gaugefields JACC
 ~~~
 
 Gaugefields v1 requires LatticeMatrices v1.1 or later within the compatibility
-bounds declared by the package.
+bounds declared by the package. Add `MPI` directly to an application that
+imports it, and add the selected GPU package when requested by JACC.

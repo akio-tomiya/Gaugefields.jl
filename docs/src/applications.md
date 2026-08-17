@@ -89,6 +89,11 @@ general_updater = heatbath_updater(U, action; seed=0x9abc)
 heatbath!(U, general_updater)
 ~~~
 
+Named plaquettes are only the shortest example. See
+[Wilson loops and gauge actions](wilsonloops_actions.md) to construct an
+arbitrary `Wilsonline`, evaluate the action, and obtain its analytic
+derivative.
+
 ## Stout smearing
 
 ~~~julia

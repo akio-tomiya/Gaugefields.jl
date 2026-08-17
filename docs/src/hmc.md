@@ -74,6 +74,11 @@ end
 println("acceptance = ", accepted / 100)
 ```
 
+The action can contain any closed paths, not only named plaquettes. Path
+construction, coefficient conventions, direct action evaluation, and the raw
+analytic derivative are described in
+[Wilson loops and gauge actions](wilsonloops_actions.md).
+
 `md_driver` can be reused after either acceptance or rollback because its
 fields are workspaces, not a saved copy of the configuration. The momenta do
 not need to be restored after rejection when the next trajectory refreshes
