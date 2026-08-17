@@ -77,7 +77,10 @@ end
     enzyme_md_action(potential, arguments...; num_temps=0)
 
 Construct an Enzyme-backed MD action provider. This method becomes available
-after loading Enzyme through the Gaugefields Enzyme extension.
+after loading Enzyme through the Gaugefields Enzyme extension. `potential`
+receives the four underlying LatticeMatrices link matrices separately,
+followed by `arguments` and, when `num_temps > 0`, the LM work-field
+collection.
 """
 function enzyme_md_action end
 

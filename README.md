@@ -3,8 +3,21 @@
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
 
-🎉 **Gaugefields.jl has reached v1.0.0!** This is the first stable major
-release of the package.
+🎉 **Gaugefields.jl v1.0.1 is available!** This patch release makes
+Enzyme-backed molecular dynamics compatible with Julia 1.12 while preserving
+the v1 API and Julia 1.11 compatibility.
+
+Gaugefields.jl reached its first stable major release with v1.0.0.
+
+## What's fixed in v1.0.1
+
+- Enzyme MD differentiates the underlying LatticeMatrices links directly,
+  avoiding Julia 1.12 failures involving composite gauge-field and lazy
+  shifted/adjoint wrappers.
+- `mul_shifted!`, `mul_shifted_adjoint!`, and `mul_adjoint!` provide clear,
+  Enzyme-safe lattice-product operations for custom potentials.
+- The Enzyme guide now includes the Julia 1.12-compatible potential contract
+  and complete plaquette/HMC examples.
 
 ## What's new in v1.0.0
 

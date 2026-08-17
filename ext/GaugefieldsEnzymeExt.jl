@@ -33,6 +33,8 @@ import Gaugefields.AbstractGaugefields_module: Gaugefields_4D_MPILattice
     @inline _enzyme_workspace(x::AbstractVector) = Tuple(x)
 end
 
+@inline _lm_links(fields) = getproperty.(fields, :U)
+
 function _fold_and_zero_gradient!(field::Gaugefields_4D_MPILattice)
     for dimension in length(field.U.PN):-1:1
         fold_halo_dim_to_core_grad!(field.U, dimension)
@@ -93,11 +95,16 @@ end
 
 function md_potential(action::EnzymeMDAction, U, workspace::EnzymeMDWorkspace)
     Gaugefields.set_wing_U!.(U)
+    links = _lm_links(U)
     value = if workspace.temps === nothing
-        action.potential(U..., action.arguments...)
+        action.potential(links..., action.arguments...)
     else
         Gaugefields.clear_U!.(workspace.temps)
-        action.potential(U..., action.arguments..., workspace.temps)
+        action.potential(
+            links...,
+            action.arguments...,
+            _lm_links(workspace.temps),
+        )
     end
     value isa Real || throw(ArgumentError(
         "an Enzyme MD potential must return a real scalar; got $(typeof(value))",
@@ -117,13 +124,13 @@ function md_force!(
     Gaugefields.set_wing_U!.(U)
     Gaugefields.clear_U!.(workspace.gradient)
     constant_arguments = map(nodiff, action.arguments)
-    Enzyme_derivative!(
+    LatticeMatrices.Enzyme_derivative!(
         action.potential,
-        U...,
-        workspace.gradient...,
+        _lm_links(U)...,
+        _lm_links(workspace.gradient)...,
         constant_arguments...;
-        temp=workspace.temps,
-        dtemp=workspace.dtemps,
+        temp=workspace.temps === nothing ? nothing : _lm_links(workspace.temps),
+        dtemp=workspace.dtemps === nothing ? nothing : _lm_links(workspace.dtemps),
     )
 
     for direction in eachindex(U)

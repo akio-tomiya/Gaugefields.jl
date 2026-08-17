@@ -3503,6 +3503,12 @@ test1()
 ## HMC with Enzyme-based Force Computation
 With Enzyme.jl, Gaugefields.jl can compute this force automatically once the action is written as a Julia function.
 
+!!! warning "Legacy direct-wrapper Enzyme example"
+    This historical example passes outer Gaugefields wrapper objects directly
+    to Enzyme. Keep it for Julia 1.11 compatibility. On Julia 1.12, use the v1
+    `enzyme_md_action` interface and its raw-LatticeMatrices potential contract
+    described in [Automatic differentiation with Enzyme](autodiff.md).
+
 The following script demonstrates a full HMC trajectory where:
 	•	the gauge fields are evolved using leapfrog integration
 	•	the force is obtained via Enzyme_derivative!

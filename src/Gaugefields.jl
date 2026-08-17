@@ -97,10 +97,39 @@ import .AbstractGaugefields_module:
 
 import LatticeMatrices: realtrace, nodiff, diff, Wiltinger_derivative!,
     Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme,
-    SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
+    SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32,
+    mul_AshiftB!, mul_A_shiftBdag!, mul_ABdag!
 export nodiff, diff, realtrace, Wiltinger_derivative!,
     Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
 export SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
+
+"""
+    mul_shifted!(C, A, B, shift)
+
+Set the LatticeMatrices work field `C` to `A * B(x + shift)`. This spelling is
+the public Gaugefields alias of `LatticeMatrices.mul_AshiftB!` and is suitable
+for potentials differentiated by `enzyme_md_action`.
+"""
+const mul_shifted! = mul_AshiftB!
+
+"""
+    mul_shifted_adjoint!(C, A, B, shift)
+
+Set the LatticeMatrices work field `C` to `A * B(x + shift)'`. This operation
+has a LatticeMatrices Enzyme rule and avoids constructing a shifted-adjoint
+wrapper inside an Enzyme potential.
+"""
+const mul_shifted_adjoint! = mul_A_shiftBdag!
+
+"""
+    mul_adjoint!(C, A, B)
+
+Set the LatticeMatrices work field `C` to `A * B'`. This operation has a
+LatticeMatrices Enzyme rule and is intended for reusable work fields.
+"""
+const mul_adjoint! = mul_ABdag!
+
+export mul_shifted!, mul_shifted_adjoint!, mul_adjoint!
 
 #=
                                     import .AbstractGaugefields_module:AbstractGaugefields,identitymatrix,Abstractfields,

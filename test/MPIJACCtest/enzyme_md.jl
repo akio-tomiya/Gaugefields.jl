@@ -11,39 +11,31 @@ using Test
 MPI.Initialized() || MPI.Init()
 
 function _mpi_enzyme_plaquette_step!(C, D, E, Uμ, Uν, shift_μ, shift_ν)
-    Uμ_pν = shift_U(Uμ, shift_ν)
-    Uν_pμ = shift_U(Uν, shift_μ)
-
-    mul!(C, Uμ, Uν_pμ)
-    mul!(D, C, Uμ_pν')
-    mul!(E, D, Uν')
+    mul_shifted!(C, Uμ, Uν, shift_μ)
+    mul_shifted_adjoint!(D, C, Uμ, shift_ν)
+    mul_adjoint!(E, D, Uν)
     value = realtrace(E)
 
-    mul!(C, Uν, Uμ_pν)
-    mul!(D, C, Uν_pμ')
-    mul!(E, D, Uμ')
+    mul_shifted!(C, Uν, Uμ, shift_ν)
+    mul_shifted_adjoint!(D, C, Uν, shift_μ)
+    mul_adjoint!(E, D, Uμ)
     return value + realtrace(E)
 end
 
 function _mpi_enzyme_potential(U1, U2, U3, U4, coefficient, colors, temps)
-    U = (U1, U2, U3, U4)
-    C, D, E = temps
-    value = 0.0
-    for μ in 1:4
-        shift_μ = ntuple(i -> ifelse(i == μ, 1, 0), 4)
-        for ν in (μ + 1):4
-            shift_ν = ntuple(i -> ifelse(i == ν, 1, 0), 4)
-            value += _mpi_enzyme_plaquette_step!(
-                C,
-                D,
-                E,
-                U[μ],
-                U[ν],
-                shift_μ,
-                shift_ν,
-            )
-        end
-    end
+    C = temps[1]
+    D = temps[2]
+    E = temps[3]
+    shift_1 = (1, 0, 0, 0)
+    shift_2 = (0, 1, 0, 0)
+    shift_3 = (0, 0, 1, 0)
+    shift_4 = (0, 0, 0, 1)
+    value = _mpi_enzyme_plaquette_step!(C, D, E, U1, U2, shift_1, shift_2)
+    value += _mpi_enzyme_plaquette_step!(C, D, E, U1, U3, shift_1, shift_3)
+    value += _mpi_enzyme_plaquette_step!(C, D, E, U1, U4, shift_1, shift_4)
+    value += _mpi_enzyme_plaquette_step!(C, D, E, U2, U3, shift_2, shift_3)
+    value += _mpi_enzyme_plaquette_step!(C, D, E, U2, U4, shift_2, shift_4)
+    value += _mpi_enzyme_plaquette_step!(C, D, E, U3, U4, shift_3, shift_4)
     return -coefficient * value / colors
 end
 

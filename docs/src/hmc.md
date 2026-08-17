@@ -179,8 +179,12 @@ md = md_driver(
 ```
 
 The potential receives the four links separately, followed by constant
-arguments, followed by the reusable `temps` collection when `num_temps > 0`. It
-must include its own sign and normalization and return a real scalar. The same
+arguments, followed by the reusable `temps` collection when `num_temps > 0`.
+The links and work fields seen inside the potential are the underlying
+LatticeMatrices objects; the simulation variable `U` remains the normal vector
+of Gaugefields links. Use `mul_shifted!`, `mul_shifted_adjoint!`, and
+`mul_adjoint!` for shifted products in differentiated code. The potential must
+include its own sign and normalization and return a real scalar. The same
 function is used for Hamiltonian evaluation and reverse-mode differentiation.
 Gaugefields converts the resulting matrix gradient to the common traceless
 anti-Hermitian `dp/dtau` representation before the integrator sees it.
@@ -191,6 +195,9 @@ the underlying Enzyme derivative. CUDA multi-GPU use requires a CUDA-aware MPI
 installation and matching launcher/library selection. Use a regular
 `GaugeAction` for the analytic Wilson-loop force or for dimensions not yet
 covered by the Enzyme provider.
+
+See [Automatic differentiation with Enzyme](autodiff.md) for a complete
+plaquette potential and the supported product operations.
 
 See [High-level API parameters](highlevelapi.md#Analytic-and-Enzyme-forces) for
 the custom action-provider protocol.
