@@ -264,6 +264,7 @@ import .AbstractGaugefields_module:
     topological_charge,
     construct_Λmatrix_forSTOUT!,
     evaluate_gaugelinks_evenodd!,
+    evaluate_gaugelinks_eachsite!,
     map_U!,
     initialize_TA_Gaugefields,
     gauss_distribution!,
@@ -284,8 +285,8 @@ import .GaugeAction_module:
     get_temporary_gaugefields,
     evaluate_GaugeAction
 
-import .Temporalfields_module: Temporalfields, unused!
-export Temporalfields, unused!
+import .Temporalfields_module: Temporalfields, get_temp, unused!
+export Temporalfields, get_temp, unused!
 export clear_U!, add_U!
 
 export IdentityGauges,
@@ -315,7 +316,11 @@ export map_U!
 export evaluate_gaugelinks_evenodd!, normalize!, normalize3!, normalizeN!
 export loops_staple
 export save_textdata, load_BridgeText!
-export shift_U, evaluate_gaugelinks!, Gradientflow, flow!
+export shift_U,
+    evaluate_gaugelinks!,
+    evaluate_gaugelinks_eachsite!,
+    Gradientflow,
+    flow!
 export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, isLoopwithB, isStaplewithB
 export heatbath!, Heatbath
 export HeatbathColoring, heatbath_colorings, heatbath_site_color
