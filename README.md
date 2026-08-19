@@ -3,11 +3,17 @@
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
 
-🎉 **Gaugefields.jl v1.0.1 is available!** This patch release makes
-Enzyme-backed molecular dynamics compatible with Julia 1.12 while preserving
-the v1 API and Julia 1.11 compatibility.
+🎉 **Gaugefields.jl v1.0.3 is available!** This patch release preserves the v1
+API while fixing an ambiguity in empty-vector `similar` dispatch after loading
+Gaugefields.
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
+
+## What's fixed in v1.0.3
+
+- Empty `Vector{Union{}}` values now retain Base's normal `similar` behavior
+  instead of ambiguously matching every gauge-field-vector specialization.
+  This keeps Pkg/TOML operations usable after Gaugefields has been loaded.
 
 ## What's fixed in v1.0.1
 
