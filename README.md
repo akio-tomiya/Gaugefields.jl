@@ -3,11 +3,11 @@
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
 
-🎉 **Gaugefields.jl v1.0.3 is available!** This patch release preserves the v1
-API while fixing an ambiguity in empty-vector `similar` dispatch after loading
-Gaugefields.
+🎉 **Gaugefields.jl v1 is available!**
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
+
+Gaugefields.jl v1.0.4 improves standards-compliant ILDG I/O for 32/64-bit data and MPI/GPU execution; see [changes.md](changes.md).
 
 ## What's fixed in v1.0.3
 
