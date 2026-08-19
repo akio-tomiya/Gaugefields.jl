@@ -1,4 +1,6 @@
 @testset "High-level API" begin
+    @test similar(Union{}[]) == Union{}[]
+
     for dimensions in ((2, 2), (2, 2, 2), (2, 2, 2, 2))
         configuration = gauge_configuration(
             dimensions;

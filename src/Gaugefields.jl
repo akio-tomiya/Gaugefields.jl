@@ -25,6 +25,14 @@ include("Bfields/Bfields.jl") #Bfield extention
 include("./heatbath/heatbathmodule.jl")
 include("./smearing/gradientflow.jl")
 
+# The bottom element type `Union{}` is a subtype of every gauge-field type.
+# Consequently, an empty untyped TOML array can otherwise match all of the
+# gauge-field-vector `similar` methods below at once.  Preserve Base's normal
+# array behavior for that exact type so loading Gaugefields does not make Pkg
+# project handling ambiguous.
+Base.similar(values::Vector{Union{}}) =
+    Vector{Union{}}(undef, length(values))
+
 
 function Wiltinger_U! end
 import LatticeMatrices: diff, nodiff, toann, Wiltinger_derivative!,
