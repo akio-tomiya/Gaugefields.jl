@@ -20,6 +20,10 @@ end
     include("latticematrices_compat.jl")
 end
 
+@testset "ILDG I/O" begin
+    include("ildg_io.jl")
+end
+
 @testset "3D LatticeMatrices compatibility" begin
     include("MPIJACCtest/three_dimensional.jl")
 end

@@ -5,6 +5,82 @@ using EzXML
 using Requires
 import ..LatticeMatricesCompat: mark_lattice_dirty!
 
+const ILDG_NAMESPACE = "http://www.lqcd.org/ildg"
+const ILDG_FORMAT_VERSION = "1.2"
+
+@inline function ildg_float_type(precision::Integer)
+    precision == 32 && return Float32
+    precision == 64 && return Float64
+    throw(ArgumentError("ILDG precision must be 32 or 64, got $precision"))
+end
+
+@inline real_component_type(::Type{Complex{T}}) where {T<:AbstractFloat} = T
+@inline real_component_type(::Type{T}) where {T<:AbstractFloat} = T
+
+function resolve_ildg_precision(precision, field_element_type::Type)
+    if precision === :field
+        field_precision = 8 * sizeof(real_component_type(field_element_type))
+        field_precision in (32, 64) || throw(ArgumentError(
+            "ILDG only supports 32- or 64-bit fields, got $field_element_type"))
+        return field_precision
+    end
+    precision isa Integer || throw(ArgumentError(
+        "ILDG precision must be :field, 32, or 64, got $(repr(precision))"))
+    ildg_float_type(precision)
+    return Int(precision)
+end
+
+function ildg_format_xml(L, NC, precision)
+    ildg_float_type(precision)
+    field = "su$(NC)gauge"
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<ildgFormat xmlns="$ILDG_NAMESPACE">
+  <version>$ILDG_FORMAT_VERSION</version>
+  <field>$field</field>
+  <precision>$precision</precision>
+  <lx>$(L[1])</lx>
+  <ly>$(L[2])</ly>
+  <lz>$(L[3])</lz>
+  <lt>$(L[4])</lt>
+</ildgFormat>
+"""
+end
+
+function pack_ildg_file(filename, payload_path, filelist_path, L, NC, precision)
+    header_path = payload_path * ".ildg-format.xml"
+    try
+        open(header_path, "w") do io
+            write(io, ildg_format_xml(L, NC, precision))
+        end
+        open(filelist_path, "w") do io
+            println(io, "$header_path ildg-format")
+            println(io, "$payload_path ildg-binary-data")
+        end
+        run(`$(lime_pack()) $filelist_path $filename`)
+    finally
+        rm(header_path; force=true)
+    end
+    return nothing
+end
+
+function read_ildg_site!(bi, buffer, rawbuffer)
+    F = bi.floattype
+    expected_bytes = 2 * sizeof(F) * length(buffer)
+    length(rawbuffer) == expected_bytes || throw(DimensionMismatch(
+        "ILDG site buffer has $(length(rawbuffer)) bytes; expected $expected_bytes"))
+    Base.read!(bi.fp, rawbuffer)
+    data = reinterpret(F, rawbuffer)
+    @inbounds for i in eachindex(buffer)
+        realpart = ntoh(data[2i - 1])
+        imagpart = ntoh(data[2i])
+        buffer[i] = Complex{F}(realpart, imagpart)
+    end
+    bi.count += length(buffer)
+    return buffer
+end
+
+ildg_communicator(::Any) = nothing
+
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
         import ..AbstractGaugefields_module:
@@ -17,6 +93,9 @@ function __init__()
             comm,
             setvalue!,
             getvalue
+
+        ildg_communicator(U::Vector{T}) where {T<:Gaugefields_4D_wing_mpi} = comm
+        ildg_communicator(U::Vector{T}) where {T<:Gaugefields_4D_nowing_mpi} = U[1].comm
 
         function load_binarydata!(
             U::Array{T,1},
@@ -161,35 +240,6 @@ function __init__()
             #close(fp)
         end
 
-        @inline function read_site!(bi::Binarydata_ILDG, buf::Vector{Complex{T}}) where {T}
-            @inbounds for i in eachindex(buf)
-                r = ntoh(read(bi.fp, T))
-                i2 = ntoh(read(bi.fp, T))
-                buf[i] = Complex{T}(r, i2)
-            end
-            bi.count += length(buf)
-        end
-
-
-        @inline function read_site!(
-            bi::Binarydata_ILDG,
-            buf::Vector{Complex{T}},
-            rawbuf::Vector{UInt8},
-        ) where {T}
-
-            Base.read!(bi.fp, rawbuf)
-
-            data = reinterpret(T, rawbuf)
-
-            idx = 1
-            @inbounds for i in eachindex(buf)
-                r  = ntoh(data[idx])
-                im = ntoh(data[idx + 1])
-                buf[i] = Complex{T}(r, im)
-                idx += 2
-            end
-        end
-
         function load_binarydata!(
             U::Vector{T},
             NX, NY, NZ, NT,
@@ -198,57 +248,58 @@ function __init__()
             precision,
         ) where {T<:Gaugefields_4D_nowing_mpi}
 
-            comm = MPI.COMM_WORLD
-            PN = U[1].PN            
+            comm = U[1].comm
+            PN = U[1].PN
 
             Nfields = NC * NC * 4
             bi = Binarydata_ILDG(filename, precision)
-            
-            bytes_per_site = 2 * sizeof(bi.floattype) * Nfields
-           
-            
-            px, py, pz, pt = U[1].myrank_xyzt .* U[1].PN
-            # Assign data to local U
-            sitebuf = Vector{ComplexF64}(undef, Nfields)
-            rawbuf = Vector{UInt8}(undef, 2 * sizeof(bi.floattype) * length(sitebuf))
-            for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
-                
-                # convert local coords to global coords
-                ixg = px + ix
-                iyg = py + iy
-                izg = pz + iz
-                itg = pt + it
+            F = bi.floattype
+            bytes_per_site = 2 * sizeof(F) * Nfields
 
-                # global linear index
-                global_index =
-                    (itg - 1) * (NZ * NY * NX) +
-                    (izg - 1) * (NY * NX) +
-                    (iyg - 1) * NX +
-                    (ixg - 1)
+            px, py, pz, pt = U[1].myrank_xyzt .* PN
+            sitebuf = Vector{Complex{F}}(undef, Nfields)
+            rawbuf = Vector{UInt8}(undef, bytes_per_site)
+            try
+                for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
+                    ixg = px + ix
+                    iyg = py + iy
+                    izg = pz + iz
+                    itg = pt + it
 
-                skip = global_index * bytes_per_site
+                    global_index =
+                        (itg - 1) * (NZ * NY * NX) +
+                        (izg - 1) * (NY * NX) +
+                        (iyg - 1) * NX +
+                        (ixg - 1)
 
-                seek(bi.fp, skip)
-                read_site!(bi, sitebuf, rawbuf)
-                buf_index = 1
-                for μ = 1:4
-                    for ic2 = 1:NC
-                        for ic1 = 1:NC
-
-                            val = sitebuf[buf_index]
-                            setvalue!(U[μ], val, ic2, ic1, ix, iy, iz, it)
-                            buf_index += 1
+                    seek(bi.fp, global_index * bytes_per_site)
+                    read_ildg_site!(bi, sitebuf, rawbuf)
+                    buf_index = 1
+                    for μ = 1:4
+                        for ic2 = 1:NC
+                            for ic1 = 1:NC
+                                setvalue!(
+                                    U[μ], sitebuf[buf_index], ic2, ic1,
+                                    ix, iy, iz, it)
+                                buf_index += 1
+                            end
                         end
                     end
                 end
+            finally
+                close(bi)
             end
             update!(U)
             MPI.Barrier(comm)
+            return nothing
         end
 
         function save_binarydata(
             U::Array{T,1},
-            filename; tempfile1="testbin.dat", tempfile2="filelist.dat"
+            filename;
+            tempfile1="testbin.dat",
+            tempfile2="filelist.dat",
+            precision=:field,
         ) where {T<:Gaugefields_4D_nowing_mpi}
 
             NX = U[1].NX
@@ -256,6 +307,8 @@ function __init__()
             NZ = U[1].NZ
             NT = U[1].NT
             NC = U[1].NC
+            precision = resolve_ildg_precision(precision, ComplexF64)
+            F = ildg_float_type(precision)
 
             barrier(U[1])
 
@@ -329,8 +382,8 @@ function __init__()
                                         for ic1 = 1:NC
                                             count += 1
                                             v = recv_mesg[count]
-                                            write(fp, hton(real(v)))
-                                            write(fp, hton(imag(v)))
+                                            write(fp, hton(F(real(v))))
+                                            write(fp, hton(F(imag(v))))
                                             #Gaugefields.setvalue!(U[μ],v,ic2,ic1,ix_local,iy_local,iz_local,it_local) 
                                         end
                                     end
@@ -345,18 +398,9 @@ function __init__()
             if U[1].myrank == 0
                 close(fp)
 
-                #fp = open("filelist.dat", "w")
-                fp = open(tempfile2, "w")
-                #println(fp,"test.xml ","ildg-format")
-                #println(fp, "testbin.dat ", "ildg-binary-data")
-                println(fp, "$tempfile1 ", "ildg-binary-data")
-                close(fp)
-
-                lime_pack() do exe
-                    run(`$exe $tempfile2 $filename`)
-                    #run(`$exe filelist.dat $filename`)
-                end
-
+                pack_ildg_file(
+                    filename, tempfile1, tempfile2,
+                    (NX, NY, NZ, NT), NC, precision)
             end
             barrier(U[1])
 
@@ -375,6 +419,8 @@ function __init__()
             set_halo!
         import LatticeMatrices: delinearize, gather_and_bcast_matrix
 
+        ildg_communicator(U::Vector{T}) where {T<:Gaugefields_4D_MPILattice} = U[1].U.comm
+
         function load_binarydata!(
             U::Array{T,1},
             NX,
@@ -385,74 +431,62 @@ function __init__()
             filename,
             precision,) where {T<:Gaugefields_4D_MPILattice}
 
-            # 1. Read binary file on host
             bi = Binarydata_ILDG(filename, precision)
-            
-            PN = U[1].U.PN  
+            F = bi.floattype
+            PN = U[1].U.PN
 
             Nfields = 4 * NC * NC
             N_localsites = prod(PN)
             total_elems = N_localsites * Nfields
 
             offset_coords = U[1].U.coords .* PN
-            
-            host_data = Vector{ComplexF64}(undef, total_elems)
-                      
 
-            bytes_per_site = 2 * sizeof(bi.floattype) * Nfields
-           
-            
-            # Assign data to local U
+            host_data = Vector{Complex{F}}(undef, total_elems)
+
+            bytes_per_site = 2 * sizeof(F) * Nfields
             i = 1
-            sitebuf = Vector{ComplexF64}(undef, Nfields)
-            rawbuf = Vector{UInt8}(undef, 2 * sizeof(bi.floattype) * length(sitebuf))
-            for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
-                
-                # convert local coords to global coords
-                ixg = offset_coords[1] + ix
-                iyg = offset_coords[2] + iy
-                izg = offset_coords[3] + iz
-                itg = offset_coords[4] + it
+            sitebuf = Vector{Complex{F}}(undef, Nfields)
+            rawbuf = Vector{UInt8}(undef, bytes_per_site)
+            try
+                for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
+                    ixg = offset_coords[1] + ix
+                    iyg = offset_coords[2] + iy
+                    izg = offset_coords[3] + iz
+                    itg = offset_coords[4] + it
 
-                # global linear index
-                global_index =
-                    (itg - 1) * (NZ * NY * NX) +
-                    (izg - 1) * (NY * NX) +
-                    (iyg - 1) * NX +
-                    (ixg - 1)
-                
-                skip = global_index * bytes_per_site
+                    global_index =
+                        (itg - 1) * (NZ * NY * NX) +
+                        (izg - 1) * (NY * NX) +
+                        (iyg - 1) * NX +
+                        (ixg - 1)
 
-                seek(bi.fp, skip)
-                read_site!(bi, sitebuf, rawbuf)
-                buf_index = 1
-                for μ = 1:4
-                    for ic2 = 1:NC
-                        for ic1 = 1:NC
-
-                            host_data[i] = sitebuf[buf_index]
-                            i += 1
-                            buf_index += 1
+                    seek(bi.fp, global_index * bytes_per_site)
+                    read_ildg_site!(bi, sitebuf, rawbuf)
+                    buf_index = 1
+                    for μ = 1:4
+                        for ic2 = 1:NC
+                            for ic1 = 1:NC
+                                host_data[i] = sitebuf[buf_index]
+                                i += 1
+                                buf_index += 1
+                            end
                         end
                     end
                 end
+            finally
+                close(bi)
             end
-            #for i = 1:total_elems # can be reduce to N_localsites with modified `read!(bi)`
-            #    host_data[i] = read!(bi)
-            #end
 
-            # 2. Copy to device array
             device_data = JACC.array(host_data)
-            
-            # 3. Launch parallel kernel to assign to lattice
-            
+
             for μ = 1:4
-            
+                mark_lattice_dirty!(U[μ].U)
                 JACC.parallel_for(N_localsites, kernel_assign_configuration!,
                                 U[μ].U.A, U[μ].U.indexer, U[μ].U.nw, device_data, NC, μ)
-
+                JACC.synchronize()
                 set_halo!(U[μ].U)
             end
+            return nothing
         end
 
 
@@ -485,7 +519,10 @@ function __init__()
 
         function save_binarydata(
                     U::Array{T,1},
-                    filename; tempfile1="testbin.dat", tempfile2="filelist.dat"
+                    filename;
+                    tempfile1="testbin.dat",
+                    tempfile2="filelist.dat",
+                    precision=:field,
                 ) where {T<:Gaugefields_4D_MPILattice}
 
             # 1. Setup dimensions
@@ -495,8 +532,11 @@ function __init__()
             N_localsites = prod(PN)
             Nfields = 4 * NC * NC
             coords = U[1].U.coords
+            precision = resolve_ildg_precision(precision, eltype(U[1]))
+            F = ildg_float_type(precision)
 
-            nprocs = MPI.Comm_size(U[1].U.comm)
+            comm = U[1].U.comm
+            nprocs = MPI.Comm_size(comm)
             
             # Coordinate offset for this specific MPI rank
             offset_coords =  coords.* PN
@@ -506,13 +546,14 @@ function __init__()
 
             # 2. Extract GPU data to Host
             # We do this in parallel across all ranks first
-            host_buffer = Vector{ComplexF64}(undef, N_localsites * Nfields)
+            host_buffer = zeros(Complex{F}, N_localsites * Nfields)
             device_buffer = JACC.array(host_buffer)
 
             for μ = 1:4
                 JACC.parallel_for(N_localsites, kernel_pack_configuration!,
                                 U[μ].U.A, U[μ].U.indexer, U[μ].U.nw, device_buffer, NC, μ)
             end
+            JACC.synchronize()
             copyto!(host_buffer, device_buffer)
 
             # 3. Sequential Write (Token Passing)
@@ -523,7 +564,7 @@ function __init__()
             end
             barrier(U[1])
 
-            bytes_per_site = 2 * 8 * Nfields # 2 (complex) * 8 bytes (Float64) * Nfields
+            bytes_per_site = 2 * sizeof(F) * Nfields
 
             # Loop through all ranks; only one rank writes at a time
             for r in 0:(nprocs - 1)
@@ -563,15 +604,9 @@ function __init__()
 
             # 4. Finalize LIME packaging on Rank 0
             if U[1].U.myrank == 0
-                # Create the file list for the lime_pack utility
-                open(tempfile2, "w") do fp_list
-                    println(fp_list, "$tempfile1 ", "ildg-binary-data")
-                end
-
-                # Execute the external lime_pack tool
-                lime_pack() do exe
-                    run(`$exe $tempfile2 $filename`)
-                end
+                pack_ildg_file(
+                    filename, tempfile1, tempfile2,
+                    (NX, NY, NZ, NT), NC, precision)
             end
 
             barrier(U[1])
@@ -609,16 +644,18 @@ import ..AbstractGaugefields_module: AbstractGaugefields, set_wing_U!
 struct LIME_header
     doc::EzXML.Document
     function LIME_header(L, field, version, precision)
-        doc = XMLDocument()
-        elm = ElementNode("ildgFormat")
-        addelement!(elm, "version", "$version")
-        addelement!(elm, "field", "$field")
-        addelement!(elm, "precision", "$precision")
-        addelement!(elm, "lx", "$(L[1])")
-        addelement!(elm, "ly", "$(L[2])")
-        addelement!(elm, "lz", "$(L[3])")
-        addelement!(elm, "lt", "$(L[4])")
-        setroot!(doc, elm)
+        ildg_float_type(precision)
+        doc = parsexml("""<?xml version="1.0" encoding="UTF-8"?>
+<ildgFormat xmlns="$ILDG_NAMESPACE">
+  <version>$version</version>
+  <field>$field</field>
+  <precision>$precision</precision>
+  <lx>$(L[1])</lx>
+  <ly>$(L[2])</ly>
+  <lz>$(L[3])</lz>
+  <lt>$(L[4])</lt>
+</ildgFormat>
+""")
         return new(doc)
     end
 end
@@ -638,13 +675,22 @@ function Base.getindex(ildg::ILDG, i)
     return ildg.header[i]
 end
 
-function save_binarydata(U, filename; tempfile1="testbin.dat", tempfile2="filelist.dat")
+function save_binarydata(
+    U,
+    filename;
+    tempfile1="testbin.dat",
+    tempfile2="filelist.dat",
+    precision=:field,
+)
 
     NX = U[1].NX
     NY = U[1].NY
     NZ = U[1].NZ
     NT = U[1].NT
     NC = U[1].NC
+    field_element_type = typeof(U[1][1, 1, 1, 1, 1, 1])
+    precision = resolve_ildg_precision(precision, field_element_type)
+    F = ildg_float_type(precision)
 
 
     #li = LIME_header((NX,NY,NZ,NT),"su3gauge",1,64)
@@ -653,22 +699,18 @@ function save_binarydata(U, filename; tempfile1="testbin.dat", tempfile2="fileli
 
 
     #fp = open("testbin.dat", "w")
-    fp = open(tempfile1, "w")
-    i = 0
-    i = 0
-    for it = 1:NT
-        for iz = 1:NZ
-            for iy = 1:NY
-                for ix = 1:NX
-                    for μ = 1:4
-                        for ic2 = 1:NC
-                            for ic1 = 1:NC
-                                i += 1
-                                #rvalue = read(fp, floattype)
-                                rvalue = real(U[μ][ic2, ic1, ix, iy, iz, it])
-                                ivalue = imag(U[μ][ic2, ic1, ix, iy, iz, it])
-                                write(fp, hton(rvalue))
-                                write(fp, hton(ivalue))
+    open(tempfile1, "w") do fp
+        for it = 1:NT
+            for iz = 1:NZ
+                for iy = 1:NY
+                    for ix = 1:NX
+                        for μ = 1:4
+                            for ic2 = 1:NC
+                                for ic1 = 1:NC
+                                    value = U[μ][ic2, ic1, ix, iy, iz, it]
+                                    write(fp, hton(F(real(value))))
+                                    write(fp, hton(F(imag(value))))
+                                end
                             end
                         end
                     end
@@ -676,23 +718,12 @@ function save_binarydata(U, filename; tempfile1="testbin.dat", tempfile2="fileli
             end
         end
     end
-    close(fp)
 
-    #fp = open("filelist.dat", "w")
-    fp = open(tempfile2, "w")
-    #println(fp,"test.xml ","ildg-format")
-    #println(fp, "testbin.dat ", "ildg-binary-data")
-    println(fp, "$tempfile1 ", "ildg-binary-data")
-    close(fp)
+    pack_ildg_file(
+        filename, tempfile1, tempfile2,
+        (NX, NY, NZ, NT), NC, precision)
 
-    lime_pack() do exe
-        #run(`$exe filelist.dat $filename`)
-        run(`$exe $tempfile2 $filename`)
-    end
-
-
-    return
-
+    return nothing
 end
 
 update!(U) = set_wing!(U)
@@ -703,22 +734,23 @@ mutable struct Binarydata_ILDG
     count::Int64
     floattype::DataType
     function Binarydata_ILDG(filename, precision)
-        if precision == 32
-            floattype = Float32
-        else
-            floattype = Float64
-        end
+        floattype = ildg_float_type(precision)
         fp = open(filename, "r")
         count = 0
 
         bi = new(fp, count, floattype)
 
         finalizer(bi) do bi
-            close(bi.fp)
+            close(bi)
         end
 
         return bi
     end
+end
+
+function Base.close(bi::Binarydata_ILDG)
+    isopen(bi.fp) && close(bi.fp)
+    return nothing
 end
 
 function read!(x::Binarydata_ILDG)
@@ -731,28 +763,28 @@ end
 function load_binarydata!(U, NX, NY, NZ, NT, NC, filename, precision)
     bi = Binarydata_ILDG(filename, precision)
 
-    totalnum = NX * NY * NZ * NT * NC * NC * 2 * 4
-
-    i = 0
-    for it = 1:NT
-        for iz = 1:NZ
-            for iy = 1:NY
-                for ix = 1:NX
-                    for μ = 1:4
-                        for ic2 = 1:NC
-                            for ic1 = 1:NC
-                                U[μ][ic2, ic1, ix, iy, iz, it] = read!(bi)
+    try
+        for it = 1:NT
+            for iz = 1:NZ
+                for iy = 1:NY
+                    for ix = 1:NX
+                        for μ = 1:4
+                            for ic2 = 1:NC
+                                for ic1 = 1:NC
+                                    U[μ][ic2, ic1, ix, iy, iz, it] = read!(bi)
+                                end
                             end
                         end
                     end
                 end
             end
         end
+    finally
+        close(bi)
     end
 
     update!(U)
-
-    #close(fp)
+    return nothing
 end
 
 function load_binarydata!(U, filename)
@@ -768,7 +800,7 @@ function load_binarydata!(U, filename)
     load_gaugefield!(U, i, ildg, L, NC, NDW=NDW)
 end
 
-function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0, tmpfilename="tempconf.dat")
+function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0, tmpfilename=nothing)
     NX = L[1]
     NY = L[2]
     NZ = L[3]
@@ -791,13 +823,48 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0, tmpfilename="tempconf.
     end
 
 
-    lime_extract_record() do exe
-        run(`$exe $filename $message_no $reccord_no $tmpfilename`)
+    comm = ildg_communicator(U)
+    owns_tmpfile = isnothing(tmpfilename)
+
+    if isnothing(comm)
+        payload_path = owns_tmpfile ? tempname() : abspath(tmpfilename)
+        try
+            run(`$(lime_extract_record()) $filename $message_no $reccord_no $payload_path`)
+            load_binarydata!(U, NX, NY, NZ, NT, NC, payload_path, precision)
+        finally
+            owns_tmpfile && rm(payload_path; force=true)
+        end
+    else
+        rank = MPI.Comm_rank(comm)
+        payload_path = if rank == 0
+            owns_tmpfile ? tempname(pwd()) : abspath(tmpfilename)
+        else
+            ""
+        end
+        payload_path = MPI.bcast(payload_path, 0, comm)
+
+        extraction_error = nothing
+        if rank == 0
+            try
+                run(`$(lime_extract_record()) $filename $message_no $reccord_no $payload_path`)
+            catch err
+                extraction_error = sprint(showerror, err)
+            end
+        end
+        extraction_error = MPI.bcast(extraction_error, 0, comm)
+        extraction_error === nothing || error(
+            "failed to extract ILDG binary record: $extraction_error")
+
+        try
+            load_binarydata!(U, NX, NY, NZ, NT, NC, payload_path, precision)
+        finally
+            MPI.Barrier(comm)
+            rank == 0 && owns_tmpfile && rm(payload_path; force=true)
+            MPI.Barrier(comm)
+        end
     end
 
-    load_binarydata!(U, NX, NY, NZ, NT, NC, tmpfilename, precision)
-
-    return
+    return nothing
 end
 
 import ..AbstractGaugefields_module: Initialize_Gaugefields
@@ -881,28 +948,9 @@ end
 
 
 function read_header(filename)
-    contents_data = ""
-    header = nothing
-    lime_contents() do exe
-        contents_data = read(`$exe $filename`, String)
-        #println(contents_data)
-
-        content_dictdata = split_data(contents_data)
-        #display(content_dictdata)
-        header = extract_info_fromdict(content_dictdata)
-        #error("d")
-        #display(header)
-
-        #=
-        contents_data = split(string(contents_data), "\n")
-        println("split")
-        println(contents_data)
-        header = extract_info(contents_data)
-        =#
-
-    end
-    #println(header)
-    return header
+    contents_data = read(`$(lime_contents()) $filename`, String)
+    content_dictdata = split_data(contents_data)
+    return extract_info_fromdict(content_dictdata)
 end
 
 function split_data(contents_data)
@@ -1213,16 +1261,9 @@ function extract_info(contents_data)
 end
 
 function test()
-    contents_data = ""
-    header = nothing
-    lime_contents() do exe
-        contents_data = read(`$exe $(ARGS[1])`, String)
-        #println(contents_data)
-        contents_data = split(string(contents_data), "\n")
-        #println(contents_data)
-        header = extract_info(contents_data)
-
-    end
+    contents_data = read(`$(lime_contents()) $(ARGS[1])`, String)
+    contents_data = split(string(contents_data), "\n")
+    header = extract_info(contents_data)
     println(header)
 
     #println(contents_data)
