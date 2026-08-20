@@ -17,6 +17,7 @@ include("./output/ildg_format.jl")
 include("./output/bridge_format.jl")
 include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
+include("./gaugefixing/AbstractGaugefixing.jl")
 
 include("./action/GaugeActions.jl")
 
@@ -380,5 +381,24 @@ export Traceless_AntiHermitian
 
 include("./molecular_dynamics.jl")
 include("./API.jl")
+
+
+# functions for Gaugefixing
+import .AbstractGaugefixing_module:
+    gaugefixing!,
+    gUgshift!,
+    g_dagger!,
+    shift_g!,
+    trace_U,
+    get_Δ!,
+    trace_AAdagger
+
+export gaugefixing!,
+    gUgshift!,
+    g_dagger!,
+    shift_g!,
+    trace_U,
+    get_Δ!,
+    trace_AAdagger
 
 end
