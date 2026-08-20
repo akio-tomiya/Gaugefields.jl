@@ -1,3 +1,6 @@
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 using Test
 using Random
@@ -18,6 +21,14 @@ end
 
 @testset "LatticeMatrices compatibility" begin
     include("latticematrices_compat.jl")
+end
+
+@testset "LatticeMatrices gauge fixing" begin
+    include("gaugefixing_lm.jl")
+end
+
+@testset "Gauge-fixing backend agreement" begin
+    include("gaugefixing_backends.jl")
 end
 
 @testset "ILDG I/O" begin
