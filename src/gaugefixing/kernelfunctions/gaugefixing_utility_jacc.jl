@@ -166,95 +166,61 @@ function jacckernel_mino_method!(i, dindexer, g, Um, Up, Δ, parity::Int, overre
     # Do only even or odd parity site each time
     parity_check =  parity_check =  sum(indices) % 2 # nw is implicitly considered here
     @inbounds begin
-    if parity_check == parity
+        if parity_check == parity
 
-        for ic in 1:3
-            for jc in 1:3
-                Um_tmp[ic, jc]  = Um[ic, jc, indices...]
-                Up_tmp[ic, jc]  = Up[ic, jc, indices...]
-                Δ_tmp[ic, jc] = Δ[ic, jc, indices...]
-            end
-        end
-        
-        # Step 1: Compute tr(Δ * Um)
-        num = 0.0
-        for i in 1:3
-            for k in 1:3
-                num += real(Δ_tmp[i,k] * Um_tmp[k,i])
-            end
-        end
-
-        # Step 2: Compute Δ² = Δ * Δ
-        
-        for i in 1:3
-            for j in 1:3
-                Δ2[i,j] = 0.0 + 0.0im
-                for k in 1:3
-                    Δ2[i,j] += Δ_tmp[i,k] * Δ_tmp[k,j]
-                end
-            end
-        end
-
-        # Step 3: Compute tr(Δ² * Up)
-        denom = 0.0
-        for i in 1:3
-            for k in 1:3
-                denom += real(Δ2[i,k] * Up_tmp[k,i])
-            end
-        end
-
-        # Step 4: Compute alpha
-        α = -num / denom
-        
-        
-        # Step 5: Update G_tmp
-        for i in 1:3
-            for j in 1:3
-                G_tmp[i,j] += overrelax * α * Δ_tmp[i,j]
-            end
-        end
-        
-
-
-
-        # Step 6: Orthonormalize G_tmp (e.g., with your 3x3 Gram-Schmidt)
-        #gramschmidt!(G_tmp)
-
-        
-        for i in 1:3
-            # Step 1: Subtract projections of previous columns
-            for j in 1:i-1
-                # Compute the inner product between column i and column j (Hermitian)
-                dot_prod = 0.0 + 0.0im  # initialize complex dot product
-                for k in 1:3
-                    dot_prod += conj(G_tmp[k,j]) * G_tmp[k,i]  # Hermitian inner product
-                end
-                
-                # Subtract projection from column i
-                for k in 1:3
-                    G_tmp[k,i] -= dot_prod * G_tmp[k,j]
+            for ic in 1:3
+                for jc in 1:3
+                    Um_tmp[ic, jc]  = Um[ic, jc, indices...]
+                    Up_tmp[ic, jc]  = Up[ic, jc, indices...]
+                    Δ_tmp[ic, jc] = Δ[ic, jc, indices...]
                 end
             end
             
-            # Step 2: Normalize column i
-            norm_val = 0.0 + 0.0im  # initialize complex norm value
-            for k in 1:3
-                norm_val += conj(G_tmp[k,i]) * G_tmp[k,i]  # norm is the inner product of column with itself
+            # Step 1: Compute tr(Δ * Um)
+            num = 0.0
+            for i in 1:3
+                for k in 1:3
+                    num += real(Δ_tmp[i,k] * Um_tmp[k,i])
+                end
             end
-            norm_val = sqrt(real(norm_val))  # We use the real part of the norm
 
-            # Step 3: Normalize the column
-            for k in 1:3
-                G_tmp[k,i] /= norm_val
+            # Step 2: Compute Δ² = Δ * Δ
+            
+            for i in 1:3
+                for j in 1:3
+                    Δ2[i,j] = 0.0 + 0.0im
+                    for k in 1:3
+                        Δ2[i,j] += Δ_tmp[i,k] * Δ_tmp[k,j]
+                    end
+                end
+            end
+
+            # Step 3: Compute tr(Δ² * Up)
+            denom = 0.0
+            for i in 1:3
+                for k in 1:3
+                    denom += real(Δ2[i,k] * Up_tmp[k,i])
+                end
+            end
+
+            # Step 4: Compute alpha
+            α = -num / denom
+            
+            
+            # Step 5: Update G_tmp
+            for i in 1:3
+                for j in 1:3
+                    G_tmp[i,j] += overrelax * α * Δ_tmp[i,j]
+                end
+            end
+            
+        end
+    
+        for ic in 1:3
+            for jc in 1:3
+                g[ic, jc, indices...] = G_tmp[ic, jc]
             end
         end
-    end
-    
-    for ic in 1:3
-        for jc in 1:3
-            g[ic, jc, indices...] = G_tmp[ic, jc]
-        end
-    end
 
     end
 

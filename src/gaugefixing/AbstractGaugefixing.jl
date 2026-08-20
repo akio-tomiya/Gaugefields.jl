@@ -5,9 +5,12 @@ using ..AbstractGaugefields_module:
     AbstractGaugefields,
     clear_U!, 
     add_U!,
+    unit_U!,
     shift_U,
+    normalize_U!,
     Traceless_antihermitian!,
     set_wing_U!,
+    gramschmidt!,
     println_verbose_level1,
     println_verbose_level3
 
@@ -31,10 +34,6 @@ function __init__()
             getvalue,
             setvalue!
 
-        import ..AbstractGaugefields_module:
-            normalize_U!,
-            unit_U!
-
         include("gaugefixing_utility_4D_nowing_mpi.jl")
         include("gaugefixing_utility_4D_wing_mpi.jl")
     end
@@ -55,7 +54,8 @@ function __init__()
 
         import LatticeMatrices:
             LatticeMatrix,
-            delinearize
+            delinearize,
+            normalize_matrix!
 
         include("gaugefixing_utility_4D_MPILattice.jl")
     end
@@ -83,60 +83,6 @@ end
     end
     i2 = i1 + del_i
     return i1, i2
-end
-
-function SU2_group_hit(G::Matrix, cooling::Int, overrelax::Float64, M_tmp::Matrix)
-    N = size(G)[1]
-
-    for i in 1:cooling
-        G_tmp = Matrix{ComplexF64}(I, N, N)
-        for hit_color in 1:N*(N-1)/2
-                                
-            i1, i2 = get_SU2_index(N, hit_color)
-            A_tmp = Matrix{ComplexF64}(I, N, N)
-            su2_tmp = Matrix{ComplexF64}(I, 2, 2)
-
-            nor_factor = 1/sqrt(
-                                abs( conj(G[i1,i1]) + G[i2,i2] )^2 + 
-                                abs( conj(G[i2,i1]) - G[i1,i2] )^2 )
-            
-            su2_tmp[1, 1] =  nor_factor * ( conj(G[i1, i1])    + G[i2,i2])
-            su2_tmp[1, 2] =  nor_factor * (-G[i1, i2]          + conj(G[i2,i1]))
-            su2_tmp[2, 1] =  nor_factor * ( conj(G[i1,i2])     - G[i2, i1])
-            su2_tmp[2, 2] =  nor_factor * ( G[i1, i1]          + conj(G[i2,i2]))
-
-            ## overrelaxation
-            
-            #G_ovr = I + gamma(overrelax+1) / gamma(overrelax)   * (su2_tmp -I) + gamma(overrelax+1) / gamma(overrelax-1) * (su2_tmp - I)^2 
-                        
-            if overrelax > 1.0
-                #overrelax = BigFloat(overrelax)
-                #G_ovr = Matrix{ComplexF64}(I, 2, 2)
-                G_ovr = copy(su2_tmp) * overrelax# it is important to the Double Precision
-                for n::Int64 in 2:3
-                    G_ovr +=  gamma(overrelax + 1) / gamma(overrelax +1 - n) / factorial(n) * (su2_tmp - I)^n
-                end
-                gramschmidt!(G_ovr)
-            else
-                G_ovr = su2_tmp
-            end
-            
-            
-            # assigning SU(2) submatrix
-            A_tmp[i1, i1] =  G_ovr[1,1] #nor_factor * ( conj(G[i1, i1])    + G[i2,i2])
-            A_tmp[i1, i2] =  G_ovr[1,2] #nor_factor * (-G[i1, i2]          + conj(G[i2,i1]))
-            A_tmp[i2, i1] =  G_ovr[2,1] #nor_factor * ( conj(G[i1,i2])     - G[i2, i1])
-            A_tmp[i2, i2] =  G_ovr[2,2] #nor_factor * ( G[i1, i1]          + conj(G[i2,i2]))
-
-            #G_tmp =  A_tmp * G_tmp
-            mul!(M_tmp, A_tmp, G_tmp) 
-            copy!(G_tmp, M_tmp) 
-        end
-        #gramschmidt!(G_tmp)
-        G = copy(G_tmp)
-    end
-
-    return G
 end
 
 
@@ -168,7 +114,7 @@ end
             if overrelax > 1.0
                 #overrelax = BigFloat(overrelax)
                 #G_ovr = Matrix{ComplexF64}(I, 2, 2)
-                G_ovr = copy(su2_tmp) * overrelax# it is important to the Double Precision
+                G_ovr = copy(su2_tmp) * overrelax
                 G_ovr +=  ovr_coeff2 * (su2_tmp - I)^2
                 G_ovr +=  ovr_coeff3 * (su2_tmp - I)^3
 
@@ -313,7 +259,7 @@ function gaugefixing!(
         end
         flush(stdout)
     end
-    return U
+    #return U
 end
 
 

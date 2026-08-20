@@ -2229,6 +2229,36 @@ function normalize_U!(U::Gaugefields_4D_nowing_mpi{NC}) where {NC}
 end
 
 
+function normalize_U!(U::Gaugefields_4D_nowing_mpi{3})
+
+    A = zeros(ComplexF64, 3, 3)
+
+    for it = 1:U.PN[4]
+        for iz = 1:U.PN[3]
+            for iy = 1:U.PN[2]
+                for ix = 1:U.PN[1]
+                    for jc = 1:3
+                        @simd for ic = 1:3
+                            A[ic, jc] = getvalue(U, ic, jc, ix, iy, iz, it)
+                        end
+                    end
+                    normalize3!(A)
+
+                    for jc = 1:3
+                        @simd for ic = 1:3
+                            v = A[ic, jc]
+                            setvalue!(U, v, ic, jc, ix, iy, iz, it)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    set_wing_U!(U)
+
+end
+
+
 function Base.similar(U::T) where {T<:Gaugefields_4D_nowing_mpi}
     Uout = Gaugefields_4D_nowing_mpi(
         U.NC,

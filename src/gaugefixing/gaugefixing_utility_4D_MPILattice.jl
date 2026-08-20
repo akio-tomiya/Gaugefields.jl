@@ -88,5 +88,6 @@ end
 
 function jacc_steepest_decent!(g::LatticeMatrix{D,T,AT,NC1,NC2,nw,DI}, Um, Up, Δ, parity::Int, overrelax::Float64) where {D,T,AT,NC1,NC2,nw,DI}
     @timeit to "SD_kernel" JACC.parallel_for(prod(g.PN), jacckernel_mino_method!, g.indexer, g.A, Um.A, Up.A, Δ.A, parity, overrelax, Val(nw))
+    normalize_matrix!(g)
     @timeit to "set_halo" set_halo!(g)
 end

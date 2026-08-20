@@ -66,5 +66,6 @@ function make_g_steepest_descent!(
     else
         println_verbose_level1(U[1], "D fix = $D_fix -> not Landau nor Coulomb gauge ")
     end
+    normalize_U!(g)
 
 end

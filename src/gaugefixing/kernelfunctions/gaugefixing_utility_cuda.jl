@@ -251,40 +251,6 @@ function cudakernel_mino_method(u1, u2, u3, u4, Δ, g, parity::Int, overrelax::F
             end
         end
         
-
-
-
-        # Step 6: Orthonormalize G_tmp (e.g., with your 3x3 Gram-Schmidt)
-        #gramschmidt!(G_tmp)
-
-        
-        for i in 1:3
-            # Step 1: Subtract projections of previous columns
-            for j in 1:i-1
-                # Compute the inner product between column i and column j (Hermitian)
-                dot_prod = 0.0 + 0.0im  # initialize complex dot product
-                for k in 1:3
-                    dot_prod += conj(G_tmp[k,j]) * G_tmp[k,i]  # Hermitian inner product
-                end
-                
-                # Subtract projection from column i
-                for k in 1:3
-                    G_tmp[k,i] -= dot_prod * G_tmp[k,j]
-                end
-            end
-            
-            # Step 2: Normalize column i
-            norm_val = 0.0 + 0.0im  # initialize complex norm value
-            for k in 1:3
-                norm_val += conj(G_tmp[k,i]) * G_tmp[k,i]  # norm is the inner product of column with itself
-            end
-            norm_val = sqrt(real(norm_val))  # We use the real part of the norm
-
-            # Step 3: Normalize the column
-            for k in 1:3
-                G_tmp[k,i] /= norm_val
-            end
-        end
     end
     
     for ic in 1:3
@@ -538,40 +504,6 @@ function cudakernel_mino_method_D3(u1, u2, u3, u4, Δ, g, parity::Int, overrelax
             end
         end
         
-
-
-
-        # Step 6: Orthonormalize G_tmp (e.g., with your 3x3 Gram-Schmidt)
-        #gramschmidt!(G_tmp)
-
-        
-        for i in 1:3
-            # Step 1: Subtract projections of previous columns
-            for j in 1:i-1
-                # Compute the inner product between column i and column j (Hermitian)
-                dot_prod = 0.0 + 0.0im  # initialize complex dot product
-                for k in 1:3
-                    dot_prod += conj(G_tmp[k,j]) * G_tmp[k,i]  # Hermitian inner product
-                end
-                
-                # Subtract projection from column i
-                for k in 1:3
-                    G_tmp[k,i] -= dot_prod * G_tmp[k,j]
-                end
-            end
-            
-            # Step 2: Normalize column i
-            norm_val = 0.0 + 0.0im  # initialize complex norm value
-            for k in 1:3
-                norm_val += conj(G_tmp[k,i]) * G_tmp[k,i]  # norm is the inner product of column with itself
-            end
-            norm_val = sqrt(real(norm_val))  # We use the real part of the norm
-
-            # Step 3: Normalize the column
-            for k in 1:3
-                G_tmp[k,i] /= norm_val
-            end
-        end
     end
     
     for ic in 1:3
