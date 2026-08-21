@@ -32,6 +32,11 @@
   root packing failures collectively instead of leaving non-root ranks stuck
   at a barrier.
 
+### Tests
+
+- Skip CLIME-backed ILDG I/O tests on Windows until the upstream binary-mode
+  handling is fixed, while retaining ILDG coverage on Linux and macOS.
+
 ### Documentation
 
 - Document complete HMC loops for both the traditional composition of
