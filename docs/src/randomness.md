@@ -10,7 +10,7 @@ other operations.
 | Operation | Seed parameter | Counter/state | LM behavior |
 | --- | --- | --- | --- |
 | Hot start | `gauge_configuration(...; seed=...)` | none | Reproducible global field, independent of MPI decomposition. |
-| Gaussian momenta | `gaussian_momenta(...; seed=..., sweep=...)` | caller supplies `sweep` | Reproducible global momenta, independent of MPI decomposition. |
+| Gaussian momenta | `gaussian_momenta!` or `gaussian_momenta` with `seed` and `sweep` | caller supplies `sweep` | Reproducible global momenta, independent of MPI decomposition. |
 | Heatbath | `heatbath_updater(...; seed=..., sweep=...)` | updater increments `sweep` | Reproducible site streams and update sequence. |
 | Overrelaxation | updater `seed` and `overrelaxation_sweep` | updater increments its separate counter | Reproducible LM update sequence. |
 | MD trajectory | none | action, integrator, trajectory length, steps, input `U`, and input `p` | Deterministic; `md_driver` draws no random numbers. |

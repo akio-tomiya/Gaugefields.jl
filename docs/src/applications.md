@@ -125,7 +125,8 @@ driver = md_driver(
     integrator=QPQ(),
 )
 
-P = gaussian_momenta(U; seed=0xdef0, sweep=0)
+P = gauge_momenta(U)
+gaussian_momenta!(P; seed=0xdef0, sweep=0)
 result = md_trajectory!(U, P, driver)
 println("delta H = ", result.delta_hamiltonian)
 ~~~
@@ -138,12 +139,14 @@ shown in [HMC and custom integrators](hmc.md).
 
 ~~~julia
 save_configuration("checkpoint.jld2", U)
-U = load_configuration("checkpoint.jld2")
+load_configuration!(U, "checkpoint.jld2")
 ~~~
 
 A reproducible Markov-chain checkpoint must also store the relevant sweep
 counters and Metropolis RNG state; saving `U` alone is not sufficient.
 
-All workflows above use the same source on CPU threads, one GPU, MPI, and
-multiple GPUs. Only JACC backend selection and `process_grid` change; see
-[MPI, GPU, and multi-GPU execution](mpi.md).
+The computational workflows above use the same source on CPU threads, one
+GPU, MPI, and multiple GPUs. JLD2 checkpointing is collective: rank 0 gathers
+one global host configuration and writes it. The resulting file can be loaded
+with a different process grid or device backend. See [MPI, GPU, and multi-GPU
+execution](mpi.md).

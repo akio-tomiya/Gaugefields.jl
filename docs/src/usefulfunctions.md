@@ -16,6 +16,8 @@ gauge_num_colors
 gauge_halo_width
 gauge_process_grid
 gauge_communicator
+copy_configuration
+copy_configuration!
 ```
 
 U(1) fields and the specialized `Oneinstanton` and
@@ -27,6 +29,7 @@ U(1) fields and the specialized `Oneinstanton` and
 ```@docs
 gauge_momenta
 gaussian_momenta
+gaussian_momenta!
 measure_plaquette
 measure_polyakov_loop
 ```
@@ -67,8 +70,11 @@ load_configuration!
 AbstractMDIntegrator
 MDDriver
 md_driver
+MDActionSet
+MDForceGroup
 QPQ
 PQP
+SextonWeingarten
 md_step_size
 md_hamiltonian
 md_trajectory!

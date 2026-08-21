@@ -1,5 +1,42 @@
 # Changes
 
+## v1.0.5
+
+### Molecular dynamics
+
+- Add type-stable `MDActionSet` composition and named `MDForceGroup` updates
+  for independently implemented action providers.
+- Add the two-time-scale `SextonWeingarten` integrator with QPQ and PQP
+  orderings, runtime-configurable fast substeps, and constructor validation.
+- Cover summed potentials and forces, force scheduling, reversibility, and MPI
+  domain decomposition in the MD tests.
+- Preserve the real component precision of the gauge field in MD trajectory
+  lengths, step sizes, and built-in integrator coefficients.
+
+### High-level API
+
+- Add allocation-free `gaussian_momenta!` refresh and semantic
+  `copy_configuration`/`copy_configuration!` snapshot operations.
+- Accept explicit MPI communicators in `gauge_configuration` and add automatic
+  process-grid selection based on lattice divisibility and surface-to-volume
+  cost.
+- Preserve `Float32` step sizes in the standard and general gradient-flow
+  drivers.
+
+### Configuration I/O
+
+- Store high-level JLD2 checkpoints as backend-independent global link arrays.
+  Rank 0 gathers and writes distributed CPU/GPU fields, and loading may use a
+  different process grid, device backend, or floating-point precision.
+- Generate and clean unique ILDG save temporaries automatically, and propagate
+  root packing failures collectively instead of leaving non-root ranks stuck
+  at a barrier.
+
+### Documentation
+
+- Document complete HMC loops for both the traditional composition of
+  elementary updates and the reusable MD driver.
+
 ## v1.0.4
 
 ### ILDG I/O

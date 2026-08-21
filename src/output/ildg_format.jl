@@ -3,6 +3,7 @@ module ILDG_format
 using CLIME_jll
 using EzXML
 using Requires
+import MPI
 import ..LatticeMatricesCompat: mark_lattice_dirty!
 
 const ILDG_NAMESPACE = "http://www.lqcd.org/ildg"
@@ -294,11 +295,11 @@ function __init__()
             return nothing
         end
 
-        function save_binarydata(
+        function _save_binarydata(
             U::Array{T,1},
             filename;
-            tempfile1="testbin.dat",
-            tempfile2="filelist.dat",
+            tempfile1,
+            tempfile2,
             precision=:field,
         ) where {T<:Gaugefields_4D_nowing_mpi}
 
@@ -395,13 +396,22 @@ function __init__()
                 end
             end
 
+            packing_error = nothing
             if U[1].myrank == 0
                 close(fp)
 
-                pack_ildg_file(
-                    filename, tempfile1, tempfile2,
-                    (NX, NY, NZ, NT), NC, precision)
+                try
+                    pack_ildg_file(
+                        filename, tempfile1, tempfile2,
+                        (NX, NY, NZ, NT), NC, precision)
+                catch err
+                    packing_error = sprint(showerror, err)
+                end
             end
+            packing_error = MPI.bcast(packing_error, 0, U[1].comm)
+            packing_error === nothing || error(
+                "failed to pack ILDG output: $packing_error",
+            )
             barrier(U[1])
 
 
@@ -517,11 +527,11 @@ function __init__()
             end
         end
 
-        function save_binarydata(
+        function _save_binarydata(
                     U::Array{T,1},
                     filename;
-                    tempfile1="testbin.dat",
-                    tempfile2="filelist.dat",
+                    tempfile1,
+                    tempfile2,
                     precision=:field,
                 ) where {T<:Gaugefields_4D_MPILattice}
 
@@ -603,11 +613,20 @@ function __init__()
             end
 
             # 4. Finalize LIME packaging on Rank 0
+            packing_error = nothing
             if U[1].U.myrank == 0
-                pack_ildg_file(
-                    filename, tempfile1, tempfile2,
-                    (NX, NY, NZ, NT), NC, precision)
+                try
+                    pack_ildg_file(
+                        filename, tempfile1, tempfile2,
+                        (NX, NY, NZ, NT), NC, precision)
+                catch err
+                    packing_error = sprint(showerror, err)
+                end
             end
+            packing_error = MPI.bcast(packing_error, 0, comm)
+            packing_error === nothing || error(
+                "failed to pack ILDG output: $packing_error",
+            )
 
             barrier(U[1])
             return
@@ -675,11 +694,11 @@ function Base.getindex(ildg::ILDG, i)
     return ildg.header[i]
 end
 
-function save_binarydata(
+function _save_binarydata(
     U,
     filename;
-    tempfile1="testbin.dat",
-    tempfile2="filelist.dat",
+    tempfile1,
+    tempfile2,
     precision=:field,
 )
 
@@ -724,6 +743,86 @@ function save_binarydata(
         (NX, NY, NZ, NT), NC, precision)
 
     return nothing
+end
+
+function _ildg_save_paths(U, filename, tempfile1, tempfile2)
+    both_omitted = isnothing(tempfile1) && isnothing(tempfile2)
+    both_provided = !isnothing(tempfile1) && !isnothing(tempfile2)
+    (both_omitted || both_provided) || throw(ArgumentError(
+        "tempfile1 and tempfile2 must either both be provided or both omitted",
+    ))
+    both_provided && return (abspath(tempfile1), abspath(tempfile2), false)
+
+    output_directory = dirname(abspath(filename))
+    comm = ildg_communicator(U)
+    prefix = if isnothing(comm)
+        tempname(output_directory)
+    else
+        rank = MPI.Comm_rank(comm)
+        MPI.bcast(
+            rank == 0 ? tempname(output_directory) : "",
+            0,
+            comm,
+        )
+    end
+    return (prefix * ".payload", prefix * ".list", true)
+end
+
+function _cleanup_ildg_save_paths(U, tempfile1, tempfile2, owns_tempfiles)
+    owns_tempfiles || return nothing
+    comm = ildg_communicator(U)
+    if isnothing(comm)
+        rm(tempfile1; force=true)
+        rm(tempfile2; force=true)
+        return nothing
+    end
+
+    MPI.Barrier(comm)
+    if MPI.Comm_rank(comm) == 0
+        rm(tempfile1; force=true)
+        rm(tempfile2; force=true)
+    end
+    MPI.Barrier(comm)
+    return nothing
+end
+
+"""
+    save_binarydata(U, filename; precision=:field,
+                    tempfile1=nothing, tempfile2=nothing)
+
+Save a four-dimensional gauge configuration in ILDG format. Temporary payload
+and file-list paths are unique by default and are removed after the collective
+operation. Explicit paths are retained for compatibility and diagnostics.
+"""
+function save_binarydata(
+    U,
+    filename;
+    tempfile1=nothing,
+    tempfile2=nothing,
+    precision=:field,
+)
+    payload_path, filelist_path, owns_tempfiles = _ildg_save_paths(
+        U,
+        filename,
+        tempfile1,
+        tempfile2,
+    )
+    try
+        return _save_binarydata(
+            U,
+            filename;
+            tempfile1=payload_path,
+            tempfile2=filelist_path,
+            precision,
+        )
+    finally
+        _cleanup_ildg_save_paths(
+            U,
+            payload_path,
+            filelist_path,
+            owns_tempfiles,
+        )
+    end
 end
 
 update!(U) = set_wing!(U)

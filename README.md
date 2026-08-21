@@ -7,7 +7,7 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-Gaugefields.jl v1.0.4 improves standards-compliant ILDG I/O for 32/64-bit data and MPI/GPU execution; see [changes.md](changes.md).
+Gaugefields.jl v1.0.5 adds composable multi-time-scale molecular dynamics and portable JLD2 checkpoints across CPU, GPU, and MPI execution; see [changes.md](changes.md).
 
 ## What's fixed in v1.0.3
 
@@ -91,7 +91,10 @@ This package has following functionarities
     - Yang-Mills gradient flow
     - Yang-Mills gradient flow being subject to 't Hooft twisted b.c.
     - Gradient flow for SU(Nc)/Z(Nc) gauge theory
-- I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
+- I/O: portable JLD2 checkpoints are supported across CPU, GPU, MPI, and
+  multi-GPU execution. ILDG and Bridge++ interoperability is also supported
+  ([c-lime](https://usqcd-software.github.io/c-lime/) is installed implicitly
+  with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl)).
 - MPI parallel computation (experimental. See documents.)
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
@@ -189,7 +192,7 @@ The manual contains the complete v1 API description and task-oriented examples:
 - [Four-dimensional quick start](docs/src/tutorial4d.md)
 - [Wilson loops and gauge actions](docs/src/wilsonloops_actions.md)
 - [Measurements and QCDMeasurements.jl](docs/src/measurements.md)
-- [HMC and custom integrators](docs/src/hmc.md)
+- [HMC assembled from traditional operations and with the MD driver](docs/src/hmc.md)
 - [Automatic differentiation with Enzyme](docs/src/autodiff.md)
 - [Two- and three-dimensional fields](docs/src/dimensions.md)
 - [Randomness and reproducibility](docs/src/randomness.md)
