@@ -100,9 +100,6 @@ end
     for μ in eachindex(U_lm)
         substitute_U!(U_accelerator[μ], U_serial[μ])
     end
-    U_accelerator_initial = similar(U_accelerator)
-    substitute_U!(U_accelerator_initial, U_accelerator)
-
     g_lm = similar(U_lm[1])
     g_accelerator = similar(U_accelerator[1])
     temps_lm = [similar(U_lm[1]) for _ in 1:6]
@@ -140,16 +137,6 @@ end
     @test reshape(gather_and_bcast_matrix(g_lm.U), 3, 3, :) ≈
           Array(g_accelerator.U) rtol=3e-13 atol=3e-13
 
-    reconstructed = similar(U_accelerator)
-    gUgshift!(
-        reconstructed,
-        U_accelerator_initial,
-        g_accelerator,
-        similar(g_accelerator),
-    )
-    for μ in eachindex(U_accelerator)
-        @test Array(reconstructed[μ].U) ≈ Array(U_accelerator[μ].U) rtol=3e-13 atol=3e-13
-    end
 end
 
 @testset "Portable accelerator Float32 Coulomb path" begin

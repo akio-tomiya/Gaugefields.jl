@@ -127,7 +127,7 @@ end
     return nothing
 end
 
-function make_g_transform!(
+function make_g_los_alamos!(
     U::Array{T,1},
     g::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS},
     temp::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc,TS},
@@ -157,7 +157,6 @@ function make_g_transform!(
         D_fix,
         Val(NC),
     )
-    normalize_U!(g)
     return nothing
 end
 

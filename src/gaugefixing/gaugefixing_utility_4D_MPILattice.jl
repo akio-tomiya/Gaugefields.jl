@@ -4,7 +4,7 @@ include("./kernelfunctions/gaugefixing_utility_jacc.jl")
 gaugefixing_backend_supported(::Gaugefields_4D_MPILattice) = true
 
 
-function make_g_transform!(
+function make_g_los_alamos!(
     U::Array{T,1},
     g::Gaugefields_4D_MPILattice,
     temp::Gaugefields_4D_MPILattice,
@@ -51,7 +51,7 @@ function SU2_subgroup_hit_matrix!(
         Val(NC),
         Val(nw),
     )
-    normalize_matrix!(g)
+    NC > 3 && normalize_matrix!(g)
     set_halo!(g)
     return nothing
 end

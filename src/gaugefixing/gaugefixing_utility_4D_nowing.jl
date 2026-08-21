@@ -2,7 +2,7 @@
 # are shared with the LatticeMatrices/JACC implementation.
 gaugefixing_backend_supported(g::Gaugefields_4D_nowing) = g.NC in (2, 3)
 
-function make_g_transform!(
+function make_g_los_alamos!(
     U::Array{T,1},
     g::Gaugefields_4D_nowing{NC},
     temp::Gaugefields_4D_nowing{NC},
@@ -58,7 +58,6 @@ function make_g_transform!(
             end
         end
     end
-    normalize_U!(g)
     set_wing_U!(g)
     return nothing
 end

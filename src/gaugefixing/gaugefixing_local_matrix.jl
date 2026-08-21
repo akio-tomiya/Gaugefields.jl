@@ -53,17 +53,35 @@ end
                 m3_21 = m2_21 * m11 + m2_22 * m21
                 m3_22 = m2_21 * m12 + m2_22 * m22
 
-                su2_11 = omega * su2_11 + coeff2 * m2_11 + coeff3 * m3_11
-                su2_12 = omega * su2_12 + coeff2 * m2_12 + coeff3 * m3_12
-                su2_21 = omega * su2_21 + coeff2 * m2_21 + coeff3 * m3_21
-                su2_22 = omega * su2_22 + coeff2 * m2_22 + coeff3 * m3_22
+                su2_11 *= omega
+                su2_12 *= omega
+                su2_21 *= omega
+                su2_22 *= omega
+                su2_11 += coeff2 * m2_11
+                su2_12 += coeff2 * m2_12
+                su2_21 += coeff2 * m2_21
+                su2_22 += coeff2 * m2_22
+                su2_11 += coeff3 * m3_11
+                su2_12 += coeff3 * m3_12
+                su2_21 += coeff3 * m3_21
+                su2_22 += coeff3 * m3_22
 
-                column_norm = sqrt(abs2(su2_11) + abs2(su2_21))
-                if column_norm > eps_rt
-                    su2_11 /= column_norm
-                    su2_21 /= column_norm
-                    su2_12 = -conj(su2_21)
-                    su2_22 = conj(su2_11)
+                column_norm1 = sqrt(abs2(su2_11) + abs2(su2_21))
+                if column_norm1 > eps_rt
+                    su2_11 /= column_norm1
+                    su2_21 /= column_norm1
+                    projection =
+                        conj(su2_11) * su2_12 + conj(su2_21) * su2_22
+                    su2_12 -= projection * su2_11
+                    su2_22 -= projection * su2_21
+                    column_norm2 = sqrt(abs2(su2_12) + abs2(su2_22))
+                    if column_norm2 > eps_rt
+                        su2_12 /= column_norm2
+                        su2_22 /= column_norm2
+                    else
+                        su2_12 = -conj(su2_21)
+                        su2_22 = conj(su2_11)
+                    end
                 else
                     su2_11 = one(T)
                     su2_12 = zero(T)

@@ -157,7 +157,7 @@ function _make_g_transform_legacy_mpi!(
             end
         end
     end
-    _normalize_legacy_mpi!(g, Val(NC))
+    set_wing_U!(g)
     return nothing
 end
 
@@ -243,7 +243,7 @@ end
 
 for MPIField in (Gaugefields_4D_nowing_mpi, Gaugefields_4D_wing_mpi)
     @eval begin
-        function make_g_transform!(
+        function make_g_los_alamos!(
             U::Array{T,1},
             g::$MPIField{NC},
             temp::$MPIField{NC},

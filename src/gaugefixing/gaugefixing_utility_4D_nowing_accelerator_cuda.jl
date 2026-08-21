@@ -10,7 +10,7 @@ gaugefixing_backend_supported(
     g::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
 ) where {TU,TUv,TS} = eltype(g.U) === ComplexF64
 
-function make_g_transform!(
+function make_g_los_alamos!(
     U::Array{T,1},
     g::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TS},
     temp::Gaugefields_4D_accelerator{NC,TU,TUv,:cuda,TS},
@@ -37,7 +37,6 @@ function make_g_transform!(
                 g.blockinfo,
             )
     end
-    normalize_U!(g)
     return nothing
 end
 

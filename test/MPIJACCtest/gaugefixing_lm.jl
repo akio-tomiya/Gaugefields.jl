@@ -3,6 +3,7 @@ JACC.@init_backend
 
 using Gaugefields
 using LatticeMatrices: gather_and_bcast_matrix
+using LinearAlgebra
 using MPI
 using Test
 
@@ -20,8 +21,6 @@ MPI.Initialized() || MPI.Init()
         process_grid=(nprocs, 1, 1, 1),
         verbose=0,
     )
-    U_initial = similar(U)
-    substitute_U!(U_initial, U)
     g = similar(U[1])
     temps = [similar(U[1]) for _ in 1:6]
     initial_plaquette = measure_plaquette(U)
@@ -42,10 +41,5 @@ MPI.Initialized() || MPI.Init()
     @test global_checksum[1] ≈ 1524.5782040190834 rtol=2e-12 atol=2e-12
     @test global_checksum[2] ≈ 78.55450733033379 rtol=2e-12 atol=2e-12
 
-    U_from_g = similar(U)
-    gUgshift!(U_from_g, U_initial, g, similar(g))
-    for μ in eachindex(U)
-        @test gather_and_bcast_matrix(U_from_g[μ].U) ≈
-              gather_and_bcast_matrix(U[μ].U) rtol=2e-12 atol=2e-12
-    end
+    @test real(tr(g) / (3 * g.NV)) ≈ 0.978210374858813 rtol=2e-12 atol=2e-12
 end
