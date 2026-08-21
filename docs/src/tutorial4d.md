@@ -261,12 +261,19 @@ Ustout = smear(U, stout)
 
 ## Save and load
 
-JLD2 preserves the stored gauge-field type:
+JLD2 is the default portable checkpoint format:
 
 ```julia
 save_configuration("configuration.jld2", U)
 Uloaded = load_configuration("configuration.jld2")
 ```
+
+For MPI, GPU, and multi-GPU fields, every rank calls `save_configuration`.
+Rank 0 gathers the physical links into one global host configuration and is
+the only rank that writes the file. `load_configuration` allocates on the
+current JACC backend, while `load_configuration!` redistributes into an
+existing destination. The file does not contain a communicator, process grid,
+device array, or halo storage.
 
 Bridge and ILDG data can be loaded into a configuration whose lattice and
 color sizes have already been specified; see the I/O API for those formats.
@@ -300,6 +307,7 @@ U = gauge_configuration(
     start=:hot,
     seed=1234,
     process_grid=grid,
+    comm=comm,
 )
 
 plaq = measure_plaquette(U) # all ranks participate in the reduction
@@ -323,8 +331,8 @@ mpiexec -n 4 julia --threads=4 --project=. four_d_mpi.jl
 
 For every process grid, `prod(process_grid)` must equal the number of MPI
 ranks, and each global lattice extent must be divisible by the corresponding
-process-grid entry. If `process_grid` is omitted, the 4D default is
-`(1, 1, 1, nranks)`.
+process-grid entry. If `process_grid` is omitted or set to `:auto`, Gaugefields
+chooses a valid low-surface decomposition of `comm`.
 
 ## One GPU
 

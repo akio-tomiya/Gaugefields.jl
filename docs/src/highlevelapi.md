@@ -16,7 +16,8 @@ gauge_configuration(lattice; kwargs...)
 | `halo` | `1` | Nonnegative integer |
 | `start` | `:cold` | `:cold`, `:hot` |
 | `seed` | `nothing` | Integer seed or `nothing`; explicit seeds require LM |
-| `process_grid` | `nothing` | Positive integer tuple/vector of length `Dim`, or automatic |
+| `process_grid` | `nothing` | `nothing`/`:auto`, or a positive integer tuple/vector of length `Dim` |
+| `comm` | `nothing` | `nothing` for `MPI.COMM_WORLD`, or an explicit MPI communicator |
 | `boundary` | `:periodic` | `:periodic` or one phase per dimension |
 | `eltype` | `ComplexF64` | LM: `Float32`, `Float64`, `ComplexF32`, or `ComplexF64` |
 | `rng` | `Philox4x32()` | `Philox4x32()`, `PCG32()`, `Xoshiro256PlusPlus()` |
@@ -25,6 +26,11 @@ gauge_configuration(lattice; kwargs...)
 The supported lattice dimensionalities are 2, 3, and 4. The return value is a
 vector of length `Dim`. A 3D `LegacyBackend` configuration requires `halo=0`;
 the recommended LM backend uses the common default `halo=1`.
+
+For the LM backend, `process_grid=nothing` and `process_grid=:auto` choose a
+valid decomposition on `comm` by minimizing a surface-to-volume score. The
+application may pass a subcommunicator or `MPI.COMM_SELF`; Gaugefields never
+finalizes the communicator.
 
 ## Metadata
 
@@ -40,12 +46,17 @@ applicable:
 | `gauge_process_grid(U)` | MPI process-grid tuple |
 | `gauge_communicator(U)` | MPI communicator, or `nothing` for serial legacy storage |
 
+`copy_configuration(U)` allocates an independent backend-compatible copy.
+`copy_configuration!(destination, source)` reuses a previous allocation and
+performs the backend-specific device and halo updates needed for rollback.
+
 ## Conjugate momenta
 
 `gauge_momenta(U)` allocates zero-valued momentum fields compatible with `U`.
 
 ```julia
 gaussian_momenta(U; kwargs...)
+gaussian_momenta!(P; kwargs...)
 ```
 
 | Keyword | Default | Choices or constraints |
@@ -54,6 +65,9 @@ gaussian_momenta(U; kwargs...)
 | `seed` | `nothing` | Integer or `nothing`; explicit seed requires LM |
 | `sweep` | `0` | Nonnegative trajectory/stream counter |
 | `rng` | `Philox4x32()` | `Philox4x32()`, `PCG32()`, `Xoshiro256PlusPlus()` |
+
+The allocating form is convenient for one-off use. HMC applications should
+allocate `P = gauge_momenta(U)` once and refresh it with `gaussian_momenta!`.
 
 ## Measurements
 
@@ -163,13 +177,28 @@ named tuple containing `configuration`, `history`, and `derivative`.
 
 ```julia
 save_configuration(filename, U; format=:jld2, kwargs...)
-load_configuration(filename; format=:jld2)
+load_configuration(filename; format=:jld2, process_grid=nothing, comm=nothing,
+                   halo=nothing, boundary=nothing, eltype=nothing)
 load_configuration!(U, filename; format=:jld2)
 ```
 
 `save_configuration` and `load_configuration!` accept `:jld2`, `:bridge`, and
 `:ildg`. Allocating `load_configuration` currently accepts only `:jld2`;
 Bridge and ILDG input require a preallocated destination.
+
+JLD2 is the portable Gaugefields checkpoint format. During output, all ranks
+participate and rank 0 gathers one global configuration as ordinary host
+arrays. The file contains physical links and lattice metadata, not backend,
+device, communicator, process-grid, or halo arrays. It can therefore be loaded
+on CPU, GPU, MPI, or multi-GPU execution with a different decomposition.
+
+The allocating loader uses the current JACC backend. Its `process_grid`,
+`comm`, and `eltype` keywords may override the writer's execution layout and
+stored precision. The in-place loader uses the destination configuration's
+layout. Legacy object-serialized JLD2 files remain readable on one rank.
+
+ILDG output creates unique temporary paths in the output directory and removes
+them after packing; all ranks in `gauge_communicator(U)` must participate.
 
 ## Molecular dynamics
 
@@ -190,10 +219,14 @@ result = md_trajectory!(U, p, driver)
 | Parameter | Default | Choices or constraints |
 | --- | --- | --- |
 | `U` | required | Gauge configuration used to allocate the driver |
-| `action` | required | A `GaugeAction` or an object implementing the MD action-provider interface |
+| `action` | required | A `GaugeAction`, `MDActionSet`, or an object implementing the MD action-provider interface |
 | `steps` | required | Positive integer number of MD steps |
 | `trajectory_length` | `1.0` | Finite, nonzero number; a negative value is useful for reversibility tests |
 | `integrator` | `QPQ()` | `QPQ()`, `PQP()`, a step function, or an object implementing `md_step!` |
+
+The trajectory length and all built-in integration coefficients use the real
+component type of `U`; for example a `ComplexF32` configuration produces a
+`Float32` step size.
 
 `QPQ()` applies `Q(1/2) P(1) Q(1/2)` in each step and matches the ordering in
 the historical Gaugefields HMC examples. `PQP()` applies
@@ -260,6 +293,58 @@ end
 
 `md_action_workspace` is called once by `md_driver`; the other two methods
 must reuse it rather than allocate large work fields on every stage.
+
+### Multiple actions and time scales
+
+Use `MDActionSet` to combine independently implemented action providers. A
+type-stable `NamedTuple` stores the terms and their reusable workspaces:
+
+```julia
+actions = MDActionSet(;
+    gauge=gauge_action,
+    fermion=fermion_action,
+)
+```
+
+The ordinary `md_potential`, `md_force!`, `md_hamiltonian`, and
+`update_momenta!` operations sum all members. A custom integrator can kick a
+selected group without changing the action-provider interface:
+
+```julia
+gauge_group = MDForceGroup(:gauge)
+update_momenta!(P, U, delta_tau, driver, gauge_group)
+```
+
+The built-in two-scale Sexton--Weingarten integrator schedules named groups:
+
+```julia
+integrator = SextonWeingarten(;
+    slow=:fermion,
+    fast=:gauge,
+    n_fast=4,
+    ordering=QPQ(),
+)
+
+driver = md_driver(
+    U,
+    actions;
+    steps=10,
+    trajectory_length=1.0,
+    integrator,
+)
+```
+
+`slow` and `fast` also accept tuples such as `(:light, :strange)` or explicit
+`MDForceGroup` objects. The two groups must be disjoint and together cover
+every member of the action set. `n_fast` is a positive runtime integer, so
+changing it does not create a new driver or integrator type.
+
+With the default `QPQ()` ordering, each outer step evolves the fast
+Hamiltonian for half a step, applies one full slow-force kick, and evolves the
+fast Hamiltonian for the other half. Each half contains `n_fast` QPQ
+substeps. `ordering=PQP()` instead surrounds one full fast evolution with
+half slow-force kicks; in that ordering the full fast evolution contains
+`n_fast` substeps.
 
 ### Custom integrators
 
@@ -333,9 +418,9 @@ integrator function or object is retained as `driver.integrator`.
 
 This extension point changes only the ordering and coefficients. It is
 independent of the force source, so the same custom integrator works with a
-`GaugeAction`, `enzyme_md_action`, or another action provider. Integrators that
-need additional stage kinds, nested time scales, or multiple independently
-scheduled actions require a separate higher-level driver.
+`GaugeAction`, `enzyme_md_action`, or another action provider. For multiple
+independently scheduled actions, use `MDActionSet` and the group-selecting
+`update_momenta!` method shown above.
 
 ## HMC responsibility boundary
 

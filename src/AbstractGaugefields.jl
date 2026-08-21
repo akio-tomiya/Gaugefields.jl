@@ -447,6 +447,7 @@ function Initialize_Gaugefields(
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
     elementtype=nothing,
+    comm=MPI.COMM_WORLD,
 )
 
 
@@ -467,6 +468,7 @@ function Initialize_Gaugefields(
             isMPILattice,
             boundarycondition,
             elementtype,
+            comm,
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -487,6 +489,7 @@ function Initialize_Gaugefields(
             seed,
             rng_algorithm,
             elementtype,
+            comm,
             direction=1,
         )
     else
@@ -513,6 +516,7 @@ function Initialize_Gaugefields(
                 isMPILattice,
                 boundarycondition,
                 elementtype,
+                comm,
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -533,6 +537,7 @@ function Initialize_Gaugefields(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction=μ,
             )
         else
@@ -560,6 +565,7 @@ function RandomGauges(
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
     elementtype=nothing,
+    comm=MPI.COMM_WORLD,
     direction::Integer=0,
 )
     accelerator_g = accelerator
@@ -584,6 +590,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
                 #mpiinit
             )
@@ -602,6 +609,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
             )
         elseif dim == 2
@@ -618,6 +626,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
                 #mpiinit
             )
@@ -760,6 +769,7 @@ function IdentityGauges(
     isMPILattice=false,
     boundarycondition=ones(4),
     elementtype=nothing,
+    comm=MPI.COMM_WORLD,
 )
     accelerator_g = accelerator
     dim = length(NN)
@@ -784,6 +794,7 @@ function IdentityGauges(
                 boundarycondition,
                 PEs,
                 elementtype,
+                comm,
                 #mpiinit
             )
         elseif dim == 3
@@ -798,6 +809,7 @@ function IdentityGauges(
                 boundarycondition=boundarycondition[1:3],
                 PEs,
                 elementtype,
+                comm,
             )
         elseif dim == 2
             U = identityGaugefields_2D_MPILattice(
@@ -810,6 +822,7 @@ function IdentityGauges(
                 boundarycondition=boundarycondition[1:2],
                 PEs,
                 elementtype,
+                comm,
                 #mpiinit
             )
         else
