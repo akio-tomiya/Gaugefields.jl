@@ -1,6 +1,5 @@
 module heatbath_module
 using LinearAlgebra
-using MPI
 using StaticArrays: MMatrix
 import JACC
 import LatticeMatrices:
@@ -35,6 +34,7 @@ import ..GaugeAction_module:
     evaluate_staple_eachindex!
 using InteractiveUtils
 import ..Temporalfields_module: Temporalfields, unused!, get_temp
+import ..Communication: allreduce_sum
 
 include("portable/rng_protocol.jl")
 include("portable/kernels.jl")
@@ -1428,7 +1428,7 @@ function _overrelaxation_sites!(
 
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "overrelaxation normalization failed at $total_failures site(s)"
     )
@@ -1654,7 +1654,7 @@ function heatbath_su2_sites!(
     # host throws, preventing one failed rank from stranding its peers.
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "KP heatbath failed at $total_failures site(s) after $iteration_max tries"
     )
@@ -1712,7 +1712,7 @@ function heatbath_su2_sites!(
 
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "KP heatbath failed at $total_failures site(s) after $iteration_max tries"
     )
@@ -1838,7 +1838,7 @@ function heatbath_su3_sites!(
 
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "SU(3) heatbath failed at $total_failures site(s) after $iteration_max tries"
     )
@@ -1955,7 +1955,7 @@ function _heatbath_sun_sites!(
 
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "SU($NC) heatbath failed at $total_failures site(s) after " *
         "$iteration_max tries"
@@ -2040,7 +2040,7 @@ function heatbath_su3_sites!(
 
     set_halo!(U.U)
     local_failures = Int(JACC.to_host(failures)[1])
-    total_failures = MPI.Allreduce(local_failures, MPI.SUM, U.U.comm)
+    total_failures = allreduce_sum(local_failures, U.U.comm)
     total_failures == 0 || error(
         "SU(3) heatbath failed at $total_failures site(s) after $iteration_max tries"
     )

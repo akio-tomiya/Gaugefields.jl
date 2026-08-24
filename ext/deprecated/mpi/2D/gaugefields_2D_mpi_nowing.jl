@@ -1,4 +1,5 @@
-
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
 
 #=
 module Gaugefields_2D_mpi_module
@@ -71,12 +72,7 @@ struct Gaugefields_2D_nowing_mpi{NC} <: Gaugefields_2D{NC}
             NT ÷ PEs[2],
         )
 
-        if mpiinit == false
-            MPI.Init()
-            mpiinit = true
-        end
-
-        comm = MPI.COMM_WORLD
+        comm = prepare_communicator(MPI.COMM_WORLD)
 
         nprocs = MPI.Comm_size(comm)
         @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"

@@ -1,5 +1,34 @@
 # Changes
 
+## v1.1.0
+
+### Optional MPI support
+
+- Move MPI.jl from a required dependency to a weak dependency and load the
+  communicator implementation through a package extension.
+- Use `LatticeMatrices.SerialCommunicator` when MPI is not loaded, so serial
+  CPU and single-GPU applications can install and run Gaugefields without
+  MPI.jl.
+- Initialize MPI lazily when the first MPI-backed field is constructed, matching
+  the historical portable API while keeping `using Gaugefields` side-effect
+  free. Applications may still call `MPI.Init(...)` first to select custom
+  initialization options; Gaugefields never finalizes MPI.
+- Allow one-process applications to choose between the MPI path and the serial
+  path by passing `MPI.COMM_WORLD` or `SerialCommunicator()`.
+- Keep portable field wrappers concrete in 2D, 3D, and 4D so communicator
+  selection happens at construction and does not add dynamic dispatch to hot
+  lattice kernels.
+- Keep deprecated MPI type names available for downstream compatibility
+  without importing MPI.jl, and activate their MPI-dependent constructors only
+  after MPI.jl is loaded. Keep these removal-bound implementations isolated
+  under `ext/deprecated/mpi/`, separate from the supported MPI extension.
+
+### Compatibility and tests
+
+- Require LatticeMatrices v1.2 or later.
+- Add clean-environment serial coverage with no MPI installation, lazy MPI
+  lifecycle coverage, and one- and two-rank MPI tests.
+
 ## v1.0.5
 
 ### Molecular dynamics

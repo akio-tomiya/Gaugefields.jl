@@ -4,13 +4,11 @@ include("./TA_gaugefields_4D_serial.jl")
 
 include("./deprecated/TA_gaugefields_4D_accelerator.jl")
 
-include("./deprecated/mpi/TA_gaugefields_4D_mpi.jl")
-
 include("./mpi_jacc/TA_gaugefields_4D_MPILattice.jl")
 #=
 function __init__()
     @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin   
-        include("./deprecated/mpi/TA_gaugefields_4D_mpi.jl")
+        include("../../ext/deprecated/mpi/4D/TA_gaugefields_4D_mpi.jl")
     end
 end
 

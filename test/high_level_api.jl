@@ -1,9 +1,24 @@
-using MPI
 using JLD2
-using LatticeMatrices: gather_and_bcast_matrix
+using LatticeMatrices: SerialCommunicator, gather_and_bcast_matrix
 
 @testset "High-level API" begin
     @test similar(Union{}[]) == Union{}[]
+
+    if Base.get_extension(Gaugefields, :GaugefieldsMPIExt) === nothing
+        @test_throws ArgumentError Initialize_Gaugefields(
+            2,
+            0,
+            2,
+            2,
+            2,
+            2;
+            condition="cold",
+            mpi=true,
+            PEs=(1, 1, 1, 1),
+            mpiinit=false,
+            verbose_level=0,
+        )
+    end
 
     for dimensions in ((2, 2), (2, 2, 2), (2, 2, 2, 2))
         configuration = gauge_configuration(
@@ -86,14 +101,11 @@ using LatticeMatrices: gather_and_bcast_matrix
         colors=2,
         start=:cold,
         process_grid=:auto,
-        comm=MPI.COMM_SELF,
+        comm=SerialCommunicator(),
         verbose=0,
     )
     @test gauge_process_grid(automatic) == (1, 1)
-    @test MPI.Comm_compare(
-        gauge_communicator(automatic),
-        MPI.COMM_SELF,
-    ) in (MPI.IDENT, MPI.CONGRUENT)
+    @test gauge_communicator(automatic) isa SerialCommunicator
 
     hot1 = gauge_configuration(
         (4, 4);

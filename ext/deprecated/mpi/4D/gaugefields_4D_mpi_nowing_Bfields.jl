@@ -1,3 +1,5 @@
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
 
 #=function substitute_U!(
     a::Array{T1,2},

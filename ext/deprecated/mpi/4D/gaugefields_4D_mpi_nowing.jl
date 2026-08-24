@@ -1,4 +1,5 @@
-
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
 
 #=
 module Gaugefields_4D_mpi_module
@@ -47,7 +48,9 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
     otherranks::Vector{Int64}
     #win_other::MPI.Win
     your_ranks::Matrix{Int64}
-    comm::MPI.Comm
+    # Keep the deprecated type available for downstream compatibility without
+    # making MPI.jl a hard dependency. Constructors still require MPI.jl.
+    comm
 
 
     function Gaugefields_4D_nowing_mpi(
@@ -59,8 +62,11 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
         PEs;
         mpiinit=true,
         verbose_level=2,
-        comm=MPI.COMM_WORLD,
+        comm=nothing,
     ) where {T<:Integer}
+        isdefined(@__MODULE__, :MPI) ||
+            _legacy_mpi_unavailable("Gaugefields_4D_nowing_mpi")
+        comm = prepare_communicator(isnothing(comm) ? MPI.COMM_WORLD : comm)
         NV = NX * NY * NZ * NT
         NDW = 0
         @assert NX % PEs[1] == 0 "NX % PEs[1] should be 0. Now NX = $NX and PEs = $PEs"
@@ -69,11 +75,6 @@ struct Gaugefields_4D_nowing_mpi{NC} <: Gaugefields_4D{NC}
         @assert NT % PEs[4] == 0 "NT % PEs[4] should be 0. Now NT = $NT and PEs = $PEs"
 
         PN = (NX ÷ PEs[1], NY ÷ PEs[2], NZ ÷ PEs[3], NT ÷ PEs[4])
-
-        if mpiinit == false
-            MPI.Init()
-            mpiinit = true
-        end
 
         #comm = MPI.COMM_WORLD
 
@@ -252,7 +253,7 @@ function identityGaugefields_4D_nowing_mpi(
     mpiinit=true,
     verbose_level=2,
     randomnumber="Random",
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
 )
     U = Gaugefields_4D_nowing_mpi(
         NC,
@@ -294,7 +295,7 @@ function randomGaugefields_4D_nowing_mpi(
     mpiinit=true,
     verbose_level=2,
     randomnumber="Random",
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
 )
     U = Gaugefields_4D_nowing_mpi(
         NC,
@@ -3984,7 +3985,7 @@ function minusidentityGaugefields_4D_nowing_mpi(
     mpiinit=true,
     verbose_level=2,
     randomnumber="Random",
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
 )
     U = Gaugefields_4D_nowing_mpi(
         NC,
@@ -4031,7 +4032,7 @@ function thooftFlux_4D_B_at_bndry_nowing_mpi(
     mpiinit=true,
     verbose_level=2,
     randomnumber="Random",
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
 )
     dim = 4
     if dim == 4

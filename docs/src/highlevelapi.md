@@ -17,7 +17,7 @@ gauge_configuration(lattice; kwargs...)
 | `start` | `:cold` | `:cold`, `:hot` |
 | `seed` | `nothing` | Integer seed or `nothing`; explicit seeds require LM |
 | `process_grid` | `nothing` | `nothing`/`:auto`, or a positive integer tuple/vector of length `Dim` |
-| `comm` | `nothing` | `nothing` for `MPI.COMM_WORLD`, or an explicit MPI communicator |
+| `comm` | `nothing` | Serial without MPI; `MPI.COMM_WORLD` after `using MPI`; or an explicit serial/MPI communicator |
 | `boundary` | `:periodic` | `:periodic` or one phase per dimension |
 | `eltype` | `ComplexF64` | LM: `Float32`, `Float64`, `ComplexF32`, or `ComplexF64` |
 | `rng` | `Philox4x32()` | `Philox4x32()`, `PCG32()`, `Xoshiro256PlusPlus()` |
@@ -28,9 +28,13 @@ vector of length `Dim`. A 3D `LegacyBackend` configuration requires `halo=0`;
 the recommended LM backend uses the common default `halo=1`.
 
 For the LM backend, `process_grid=nothing` and `process_grid=:auto` choose a
-valid decomposition on `comm` by minimizing a surface-to-volume score. The
-application may pass a subcommunicator or `MPI.COMM_SELF`; Gaugefields never
-finalizes the communicator.
+valid decomposition on `comm` by minimizing a surface-to-volume score. Without
+MPI.jl, `comm=nothing` uses `SerialCommunicator()`. After `using MPI`, the
+default becomes `MPI.COMM_WORLD`; Gaugefields calls `MPI.Init()` lazily when it
+constructs the first MPI-backed field. An application may instead pass
+`SerialCommunicator()`, `MPI.COMM_SELF`, or another subcommunicator. Call
+`MPI.Init(...)` first when custom initialization options are needed.
+Gaugefields never calls `MPI.Finalize()`.
 
 ## Metadata
 
@@ -43,8 +47,8 @@ applicable:
 | `gauge_lattice_size(U)` | Global lattice-size tuple |
 | `gauge_num_colors(U)` | Number of colors |
 | `gauge_halo_width(U)` | Halo width |
-| `gauge_process_grid(U)` | MPI process-grid tuple |
-| `gauge_communicator(U)` | MPI communicator, or `nothing` for serial legacy storage |
+| `gauge_process_grid(U)` | Process-grid tuple |
+| `gauge_communicator(U)` | Serial/MPI communicator, or `nothing` for serial legacy storage |
 
 `copy_configuration(U)` allocates an independent backend-compatible copy.
 `copy_configuration!(destination, source)` reuses a previous allocation and

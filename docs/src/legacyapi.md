@@ -1,5 +1,14 @@
 # Legacy API
 
+!!! note "MPI lifecycle in Gaugefields v1.1"
+    Load MPI with `using MPI` before a portable or deprecated MPI constructor.
+    Gaugefields initializes MPI lazily on first MPI use, restoring the
+    historical behavior. Call `MPI.Init(...)` first only to select custom
+    initialization options; `mpiinit` is retained as a compatibility keyword.
+    The old `Gaugefields_*_mpi` storage implementations are scheduled for
+    removal in a future breaking release. New MPI applications should use the
+    portable LatticeMatrices backend.
+
 !!! note "Compatibility API"
     The APIs documented on this page remain available in Gaugefields v1 for
     compatibility with existing programs. They are classified as legacy APIs:

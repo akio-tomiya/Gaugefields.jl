@@ -6,8 +6,13 @@ Backend selector for the high-level Gaugefields API.
 abstract type AbstractGaugeBackend end
 
 import JLD2
-import MPI
 import LatticeMatrices: LatticeMatrix, gather_matrix, set_halo!, substitute!
+import .Communication:
+    broadcast,
+    comm_rank,
+    comm_size,
+    prepare_communicator,
+    resolve_communicator
 
 """
     LatticeMatricesBackend()
@@ -68,12 +73,7 @@ function _resolve_boundary(boundary, dim)
 end
 
 function _initialize_gauge_communicator(comm)
-    MPI.Finalized() && throw(ArgumentError(
-        "MPI has already been finalized; restart Julia before creating a " *
-        "LatticeMatrices gauge configuration",
-    ))
-    MPI.Initialized() || MPI.Init()
-    return comm === nothing ? MPI.COMM_WORLD : comm
+    return prepare_communicator(resolve_communicator(comm))
 end
 
 function _automatic_process_grid(lattice, nprocs)
@@ -121,7 +121,7 @@ end
 
 function _resolve_process_grid(process_grid, lattice, comm)
     dim = length(lattice)
-    nprocs = MPI.Comm_size(comm)
+    nprocs = comm_size(comm)
     if process_grid === nothing || process_grid === :auto
         return _automatic_process_grid(lattice, nprocs)
     end
@@ -168,8 +168,9 @@ to request the serial compatibility implementation explicitly.
 - `halo=1`: halo width.
 - `start=:cold`: either `:cold` or `:hot`.
 - `seed=nothing`: reproducible global-site seed for a LatticeMatrices hot start.
-- `process_grid=nothing`: MPI process grid for LatticeMatrices.
-- `comm=nothing`: MPI communicator; `nothing` selects `MPI.COMM_WORLD`.
+- `process_grid=nothing`: process grid for LatticeMatrices.
+- `comm=nothing`: serial without MPI.jl; after `using MPI`, selects
+  `MPI.COMM_WORLD`. Pass `SerialCommunicator()` to force serial execution.
 - `boundary=:periodic`: boundary phases or `:periodic`.
 - `eltype=ComplexF64`: element type.
 - `rng=Philox4x32()`: site-local RNG algorithm for LatticeMatrices.
@@ -279,7 +280,7 @@ gauge_halo_width(U::AbstractGaugefields) = U.NDW
 gauge_halo_width(U::AbstractVector{<:AbstractGaugefields}) =
     gauge_halo_width(_first_gauge_link(U))
 
-"""Return the MPI process grid as a tuple."""
+"""Return the process grid as a tuple."""
 gauge_process_grid(U::_LatticeMatricesGaugefield) = Tuple(U.U.dims)
 function gauge_process_grid(U::AbstractGaugefields)
     hasproperty(U, :PEs) && return Tuple(getproperty(U, :PEs))
@@ -288,7 +289,7 @@ end
 gauge_process_grid(U::AbstractVector{<:AbstractGaugefields}) =
     gauge_process_grid(_first_gauge_link(U))
 
-"""Return the MPI communicator, or `nothing` for a serial legacy field."""
+"""Return the serial/MPI communicator, or `nothing` for serial legacy storage."""
 gauge_communicator(U::_LatticeMatricesGaugefield) = U.U.comm
 function gauge_communicator(U::AbstractGaugefields)
     hasproperty(U, :comm) && return getproperty(U, :comm)
@@ -533,7 +534,7 @@ function _portable_jld2_links(U)
         return [gather_matrix(link.U; root=0) for link in U]
     end
     communicator = gauge_communicator(U)
-    if communicator !== nothing && MPI.Comm_size(communicator) > 1
+    if communicator !== nothing && comm_size(communicator) > 1
         throw(ArgumentError(
             "portable JLD2 for distributed fields requires the " *
             "LatticeMatrices backend",
@@ -545,7 +546,7 @@ end
 function _portable_jld2_root_operation(operation, communicator)
     error_message = nothing
     result = nothing
-    rank = isnothing(communicator) ? 0 : MPI.Comm_rank(communicator)
+    rank = isnothing(communicator) ? 0 : comm_rank(communicator)
     if rank == 0
         try
             result = operation()
@@ -554,7 +555,7 @@ function _portable_jld2_root_operation(operation, communicator)
         end
     end
     if !isnothing(communicator)
-        error_message = MPI.bcast(error_message, 0, communicator)
+        error_message = broadcast(error_message, 0, communicator)
     end
     error_message === nothing || error(error_message)
     return result
@@ -609,7 +610,7 @@ function _collective_portable_jld2_metadata(filename, communicator)
         _read_portable_jld2_metadata(filename)
     end
     if !isnothing(communicator)
-        metadata = MPI.bcast(metadata, 0, communicator)
+        metadata = broadcast(metadata, 0, communicator)
     end
     return metadata
 end
@@ -661,7 +662,7 @@ function _validate_portable_jld2_target(U, metadata)
 end
 
 function _load_portable_jld2_lm!(U, links, metadata, communicator)
-    rank = MPI.Comm_rank(communicator)
+    rank = comm_rank(communicator)
     expected_size = (
         metadata.colors,
         metadata.colors,
@@ -750,7 +751,7 @@ function load_configuration(
         _initialize_gauge_communicator(comm) : nothing
     metadata = _collective_portable_jld2_metadata(filename, communicator)
     if metadata === nothing
-        isnothing(communicator) || MPI.Comm_size(communicator) == 1 || throw(
+        isnothing(communicator) || comm_size(communicator) == 1 || throw(
             ArgumentError(
                 "legacy object-serialized JLD2 files can only be loaded on " *
                 "one rank; rewrite the file with save_configuration",
@@ -783,7 +784,7 @@ function load_configuration!(U, filename; format::Symbol=:jld2)
         communicator = gauge_communicator(U)
         metadata = _collective_portable_jld2_metadata(filename, communicator)
         if metadata === nothing
-            isnothing(communicator) || MPI.Comm_size(communicator) == 1 || throw(
+            isnothing(communicator) || comm_size(communicator) == 1 || throw(
                 ArgumentError(
                     "legacy object-serialized JLD2 files can only be loaded " *
                     "on one rank",
@@ -794,7 +795,7 @@ function load_configuration!(U, filename; format::Symbol=:jld2)
         end
         _validate_portable_jld2_target(U, metadata)
         if !(gauge_backend(U) isa LatticeMatricesBackend) &&
-           !isnothing(communicator) && MPI.Comm_size(communicator) > 1
+           !isnothing(communicator) && comm_size(communicator) > 1
             throw(ArgumentError(
                 "distributed portable JLD2 input requires the " *
                 "LatticeMatrices backend",
