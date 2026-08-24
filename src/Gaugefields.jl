@@ -2,6 +2,7 @@ module Gaugefields
 
 using Requires
 
+include("./communication.jl")
 include("./LatticeMatricesCompat.jl")
 include("./MPILattice/MPILattice.jl")
 #include("./MPILattice/src/MPILattice.jl")
@@ -39,29 +40,20 @@ import LatticeMatrices: diff, nodiff, toann, Wiltinger_derivative!,
     Wiltinger!, Wiltinger_numerical_derivative, Enzyme_derivative!
 export Wiltinger_derivative!, Wiltinger_numerical_derivative, Enzyme_derivative!
 
-#function __init__()
-#    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
 import .AbstractGaugefields_module:
-    identityGaugefields_4D_wing_mpi,
-    identityGaugefields_4D_nowing_mpi,
-    minusidentityGaugefields_4D_wing_mpi,
-    minusidentityGaugefields_4D_nowing_mpi,
-    thooftFlux_4D_B_at_bndry_wing_mpi,
-    thooftFlux_4D_B_at_bndry_nowing_mpi,
-    Gaugefields_4D_wing_mpi,
     Gaugefields_4D_nowing_mpi,
     calc_rank_and_indices,
     barrier,
-    comm,
     setvalue!
-#    end
+
+# Retain the deprecated binding imported by older downstream packages. It is
+# replaced with the historical `MPI.COMM_WORLD` binding when MPI.jl is loaded.
+comm = nothing
 
 #@require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
 #    import .AbstractGaugefields_module:
 ##        Gaugefields_4D_accelerator
 #end
-#end
-
 import .AbstractGaugefields_module:
     Gaugefields_4D_accelerator
 
@@ -110,6 +102,8 @@ import LatticeMatrices: realtrace, nodiff, diff, Wiltinger_derivative!,
 export nodiff, diff, realtrace, Wiltinger_derivative!,
     Wiltinger_numerical_derivative, mul_AtransB!, Numerical_derivative_Enzyme
 export SiteRNGAlgorithm, PCG32, Xoshiro256PlusPlus, Philox4x32
+import LatticeMatrices: SerialCommunicator
+export SerialCommunicator
 
 """
     mul_shifted!(C, A, B, shift)

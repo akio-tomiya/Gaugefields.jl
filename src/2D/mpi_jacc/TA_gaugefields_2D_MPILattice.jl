@@ -130,11 +130,11 @@ function Base.propertynames(U::TA_Gaugefields_2D_MPILattice, private::Bool=false
     return private ? (names..., :NT) : (names..., :NT)
 end
 
-get_myrank(U::TA_Gaugefields_2D_MPILattice) = MPI.Comm_rank(U.a.comm)
-get_nprocs(U::TA_Gaugefields_2D_MPILattice) = MPI.Comm_size(U.a.comm)
+get_myrank(U::TA_Gaugefields_2D_MPILattice) = comm_rank(U.a.comm)
+get_nprocs(U::TA_Gaugefields_2D_MPILattice) = comm_size(U.a.comm)
 
 function barrier(U::TA_Gaugefields_2D_MPILattice)
-    MPI.Barrier(U.a.comm)
+    barrier(U.a.comm)
     return nothing
 end
 

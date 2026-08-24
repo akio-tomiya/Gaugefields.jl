@@ -5,6 +5,12 @@ There is no separate MPI constructor and no accelerator flag in the v1 API.
 The simulation source is selected by `process_grid`; JACC determines where its
 arrays and kernels run.
 
+MPI.jl is optional. Ordinary serial CPU and single-GPU programs do not need it.
+MPI applications must load MPI before constructing an MPI-backed field.
+Gaugefields calls `MPI.Init()` lazily on first MPI use and never calls
+`MPI.Finalize()`. Call `MPI.Init(...)` explicitly first when custom
+initialization options such as the thread level are needed.
+
 ## Complete MPI example
 
 The application environment must list MPI and JACC directly:
@@ -67,6 +73,10 @@ factorization of the communicator size that respects lattice divisibility and
 minimizes a surface-to-volume score. Pass an explicit tuple when a particular
 topology is required. `comm` may be `MPI.COMM_SELF`, `MPI.COMM_WORLD`, or a
 subcommunicator; Gaugefields does not call `MPI.Finalize()`.
+
+Even with one MPI rank, the communicator choice remains explicit. Omitting
+`comm` after `using MPI` uses `MPI.COMM_WORLD`; pass
+`comm=SerialCommunicator()` to use the serial communication path instead.
 
 ## CPU execution
 

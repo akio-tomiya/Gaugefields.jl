@@ -7,7 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-Gaugefields.jl v1.0.5 adds composable multi-time-scale molecular dynamics and portable JLD2 checkpoints across CPU, GPU, and MPI execution; see [changes.md](changes.md).
+Gaugefields.jl v1.1.0 makes MPI.jl optional while preserving serial, GPU, MPI,
+and multi-GPU execution; see [changes.md](changes.md).
 
 ## What's fixed in v1.0.3
 
@@ -51,7 +52,7 @@ Compared with the previous release, v0.7.3, v1.0.0 adds and stabilizes:
 **Upgrading from v0.7:** Existing programs using `Initialize_Gaugefields` and
 the historical API remain supported and retain their legacy backend and
 defaults. New programs should use `gauge_configuration`, whose default backend
-is LatticeMatrices. Gaugefields v1 requires LatticeMatrices v1.1 or later;
+is LatticeMatrices. Gaugefields v1.1 requires LatticeMatrices v1.2 or later;
 Enzyme users must add `Enzyme` as a direct dependency. See the
 [high-level API](docs/src/highlevelapi.md) and
 [Legacy API migration map](docs/src/legacyapi.md#migration-map).
@@ -99,7 +100,7 @@ This package has following functionarities
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
 - Portable GPU and multi-GPU computation through
-  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.1.0
+  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.2.0
   and [JACC.jl](https://github.com/JuliaORNL/JACC.jl). See the
   [GPU and multi-GPU tutorial](docs/src/tutorial4d.md#multiple-gpus-with-mpi).
     - NVIDIA GPUs through CUDA.jl
@@ -129,6 +130,19 @@ add Gaugefields JACC
 
 Add `MPI` as a direct dependency for MPI applications. JACC installs or
 selects the package required by the requested GPU backend.
+
+Serial CPU and single-GPU applications do not need MPI.jl. Loading MPI selects
+the MPI path, and Gaugefields initializes MPI lazily when the first MPI-backed
+field is constructed:
+
+```julia
+using MPI
+using Gaugefields
+```
+
+Call `MPI.Init(...)` explicitly before constructing a field only when custom
+initialization options such as the thread level are needed. Gaugefields never
+calls `MPI.Finalize()`.
 
 # How to use
 

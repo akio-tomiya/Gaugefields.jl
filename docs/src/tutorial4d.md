@@ -280,6 +280,12 @@ color sizes have already been specified; see the I/O API for those formats.
 
 ## MPI execution on CPUs
 
+MPI support is optional. Add MPI.jl to the application environment and load it
+with `using MPI` before constructing a distributed field. Gaugefields calls
+`MPI.Init()` lazily on first MPI use and never calls `MPI.Finalize()`. The
+explicit `MPI.Init()` in the example below is optional, but remains useful when
+an application wants to make MPI initialization visible or pass custom options.
+
 The following complete script makes the process grid explicit. Save it as
 `four_d_mpi.jl`:
 
@@ -334,6 +340,10 @@ ranks, and each global lattice extent must be divisible by the corresponding
 process-grid entry. If `process_grid` is omitted or set to `:auto`, Gaugefields
 chooses a valid low-surface decomposition of `comm`.
 
+For a one-process run after MPI has been loaded, omit `comm` to use
+`MPI.COMM_WORLD`, or pass `comm=SerialCommunicator()` to select the serial path
+explicitly.
+
 ## One GPU
 
 Select the GPU backend once and restart Julia. For example, on NVIDIA:
@@ -346,7 +356,7 @@ JACC.set_backend("cuda")
 The ordinary single-process code at the beginning of this tutorial then
 allocates its LM fields on the GPU. No `cuda=true` or accelerator-specific
 Gaugefields constructor keyword is used. Those keywords belong to the legacy
-storage implementations.
+storage implementations. MPI.jl is not required for this single-GPU path.
 
 The same procedure uses `"amdgpu"` for AMD GPUs and `"oneapi"` for Intel
 GPUs.

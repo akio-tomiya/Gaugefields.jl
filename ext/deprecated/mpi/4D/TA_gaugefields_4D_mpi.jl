@@ -1,3 +1,5 @@
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
 struct TA_Gaugefields_4D_mpi{NC,NumofBasis} <: TA_Gaugefields_4D{NC}
     a::Array{Float64,5}
     NX::Int64

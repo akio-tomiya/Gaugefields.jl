@@ -3,8 +3,8 @@ module ILDG_format
 using CLIME_jll
 using EzXML
 using Requires
-import MPI
 import ..LatticeMatricesCompat: mark_lattice_dirty!
+import ..Communication
 
 const ILDG_NAMESPACE = "http://www.lqcd.org/ildg"
 const ILDG_FORMAT_VERSION = "1.2"
@@ -546,7 +546,7 @@ function __init__()
             F = ildg_float_type(precision)
 
             comm = U[1].U.comm
-            nprocs = MPI.Comm_size(comm)
+            nprocs = Communication.comm_size(comm)
             
             # Coordinate offset for this specific MPI rank
             offset_coords =  coords.* PN
@@ -623,7 +623,7 @@ function __init__()
                     packing_error = sprint(showerror, err)
                 end
             end
-            packing_error = MPI.bcast(packing_error, 0, comm)
+            packing_error = Communication.broadcast(packing_error, 0, comm)
             packing_error === nothing || error(
                 "failed to pack ILDG output: $packing_error",
             )
@@ -758,8 +758,8 @@ function _ildg_save_paths(U, filename, tempfile1, tempfile2)
     prefix = if isnothing(comm)
         tempname(output_directory)
     else
-        rank = MPI.Comm_rank(comm)
-        MPI.bcast(
+        rank = Communication.comm_rank(comm)
+        Communication.broadcast(
             rank == 0 ? tempname(output_directory) : "",
             0,
             comm,
@@ -777,12 +777,12 @@ function _cleanup_ildg_save_paths(U, tempfile1, tempfile2, owns_tempfiles)
         return nothing
     end
 
-    MPI.Barrier(comm)
-    if MPI.Comm_rank(comm) == 0
+    Communication.barrier(comm)
+    if Communication.comm_rank(comm) == 0
         rm(tempfile1; force=true)
         rm(tempfile2; force=true)
     end
-    MPI.Barrier(comm)
+    Communication.barrier(comm)
     return nothing
 end
 
@@ -934,13 +934,13 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0, tmpfilename=nothing)
             owns_tmpfile && rm(payload_path; force=true)
         end
     else
-        rank = MPI.Comm_rank(comm)
+        rank = Communication.comm_rank(comm)
         payload_path = if rank == 0
             owns_tmpfile ? tempname(pwd()) : abspath(tmpfilename)
         else
             ""
         end
-        payload_path = MPI.bcast(payload_path, 0, comm)
+        payload_path = Communication.broadcast(payload_path, 0, comm)
 
         extraction_error = nothing
         if rank == 0
@@ -950,16 +950,16 @@ function load_gaugefield!(U, i, ildg::ILDG, L, NC; NDW=0, tmpfilename=nothing)
                 extraction_error = sprint(showerror, err)
             end
         end
-        extraction_error = MPI.bcast(extraction_error, 0, comm)
+        extraction_error = Communication.broadcast(extraction_error, 0, comm)
         extraction_error === nothing || error(
             "failed to extract ILDG binary record: $extraction_error")
 
         try
             load_binarydata!(U, NX, NY, NZ, NT, NC, payload_path, precision)
         finally
-            MPI.Barrier(comm)
+            Communication.barrier(comm)
             rank == 0 && owns_tmpfile && rm(payload_path; force=true)
-            MPI.Barrier(comm)
+            Communication.barrier(comm)
         end
     end
 

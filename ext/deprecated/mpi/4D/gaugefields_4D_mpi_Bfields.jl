@@ -1,3 +1,6 @@
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
+
 const comm = MPI.COMM_WORLD
 
 function substitute_U!(

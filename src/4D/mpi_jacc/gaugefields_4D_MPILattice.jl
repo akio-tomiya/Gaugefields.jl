@@ -50,20 +50,11 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,
         elementtype=nothing,
         boundarycondition=ones(4),
         PEs=nothing,
-        comm=MPI.COMM_WORLD,
+        comm=nothing,
         #mpiinit=false,
         verbose_level=2
     )
-        if MPI.Initialized() == false
-            MPI.Init()
-            mpiinit = true
-        end
-
-        #if mpiinit == false
-        #    MPI.Init()
-        #    mpiinit = true
-        #end
-        comm0 = comm
+        comm0 = prepare_communicator(resolve_communicator(comm))
 
         gsize = (NX, NY, NZ, NT)
         dim = 4
@@ -72,7 +63,7 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,
         elementtype, singleprecision =
             _resolve_mpialattice_elementtype(elementtype, singleprecision)
         phases = boundarycondition
-        nprocs = MPI.Comm_size(comm)
+        nprocs = comm_size(comm0)
         if isnothing(PEs)
             PEs_in = (1, 1, 1, nprocs)
         else
@@ -90,7 +81,7 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,
         @assert NT % PEs_in[4] == 0 "NT % PEs[4] should be 0. Now NT = $NT and PEs = $PEs_in"
 
         @assert prod(PEs_in) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
-        myrank = MPI.Comm_rank(comm)
+        myrank = comm_rank(comm0)
 
         verbose_print = Verbose_print(verbose_level, myid=myrank)
 
@@ -120,13 +111,13 @@ struct Gaugefields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI,TU<:LatticeMatrix{4,
     end
 end
 
-get_myrank(U::Gaugefields_4D_MPILattice) = MPI.Comm_rank(U.U.comm)
+get_myrank(U::Gaugefields_4D_MPILattice) = comm_rank(U.U.comm)
 get_myrank(U::Array{T,1}) where {T<:Gaugefields_4D_MPILattice} = get_myrank(U[1])
-get_nprocs(U::Gaugefields_4D_MPILattice) = MPI.Comm_size(U.U.comm)
+get_nprocs(U::Gaugefields_4D_MPILattice) = comm_size(U.U.comm)
 get_nprocs(U::Array{T,1}) where {T<:Gaugefields_4D_MPILattice} = get_nprocs(U[1])
 
 function barrier(U::Gaugefields_4D_MPILattice)
-    MPI.Barrier(U.U.comm)
+    barrier(U.U.comm)
     return nothing
 end
 
@@ -407,7 +398,7 @@ function identityGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
     elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
     #mpiinit=false
 )
 
@@ -434,7 +425,7 @@ function randomGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
     elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
     randomnumber="Random",
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),

@@ -15,10 +15,30 @@ include("./deprecated/wing/gaugefields_4D_wing_Bfields.jl")
 include("./nowing/gaugefields_4D_nowing.jl")
 include("./nowing/gaugefields_4D_nowing_Bfields.jl")
 
-function __init__()
-    #    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+# This deprecated type name is still imported by LatticeDiracOperators v1.
+# Its communicator field is deliberately untyped, so defining the type does
+# not load MPI.jl; calls into this implementation still require the MPI
+# extension, which initializes MPI lazily on first use.
+include("../../ext/deprecated/mpi/4D/gaugefields_4D_mpi_nowing.jl")
 
-    #    end
+function __init__()
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        include("../../ext/deprecated/mpi/2D/gaugefields_2D_mpi_nowing.jl")
+        include("../../ext/deprecated/mpi/4D/gaugefields_4D_mpi.jl")
+        include("../../ext/deprecated/mpi/4D/gaugefields_4D_mpi_Bfields.jl")
+        include("../../ext/deprecated/mpi/4D/gaugefields_4D_mpi_nowing_Bfields.jl")
+        include("../../ext/deprecated/mpi/2D/TA_gaugefields_2D_mpi.jl")
+        include("../../ext/deprecated/mpi/4D/TA_gaugefields_4D_mpi.jl")
+
+        Core.eval(parentmodule(@__MODULE__), quote
+            import .AbstractGaugefields_module:
+                Gaugefields_4D_wing_mpi,
+                calc_rank_and_indices,
+                barrier,
+                setvalue!
+            comm = AbstractGaugefields_module.comm
+        end)
+    end
 
     @require CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba" begin
         include("./deprecated/kernelfunctions/gaugefields_4D_cudakernels.jl")
@@ -32,12 +52,7 @@ function __init__()
     #    end
 end
 
-using MPI
 using JACC
-include("./deprecated/mpi/gaugefields_4D_mpi.jl")
-include("./deprecated/mpi/gaugefields_4D_mpi_Bfields.jl")
-include("./deprecated/mpi/gaugefields_4D_mpi_nowing.jl")
-include("./deprecated/mpi/gaugefields_4D_mpi_nowing_Bfields.jl")
 
 
 

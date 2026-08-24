@@ -1,3 +1,6 @@
+# Deprecated MPI compatibility implementation. Scheduled for removal in a
+# future breaking release; new code must use the portable LatticeMatrices path.
+
 #=
 module Gaugefields_4D_mpi_module
     using LinearAlgebra
@@ -54,12 +57,7 @@ struct Gaugefields_4D_wing_mpi{NC} <: Gaugefields_4D{NC}
 
         PN = (NX ÷ PEs[1], NY ÷ PEs[2], NZ ÷ PEs[3], NT ÷ PEs[4])
 
-        if mpiinit == false
-            MPI.Init()
-            mpiinit = true
-        end
-
-        comm = MPI.COMM_WORLD
+        comm = prepare_communicator(MPI.COMM_WORLD)
 
         nprocs = MPI.Comm_size(comm)
         @assert prod(PEs) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
@@ -2644,4 +2642,3 @@ function minusidentityGaugefields_4D_wing_mpi(
 
     return U
 end
-
