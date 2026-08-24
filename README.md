@@ -176,28 +176,182 @@ Use `backend=LegacyBackend()` to request the serial compatibility backend.
 The existing `Initialize_Gaugefields` API and its legacy default remain
 unchanged.
 
-Gaugefields also provides a deterministic, preallocated MD driver. `QPQ()` is
-the default; `PQP()` and custom integrators are supported:
+## Two ways to construct HMC
+
+Gaugefields supports both the traditional construction from elementary
+operations and a deterministic, preallocated MD driver. The examples below
+use the same Wilson gauge action and QPQ integrator. First define the shared
+system:
 
 ```julia
-action = GaugeAction(U)
-plaquettes = make_loops_fromname("plaquette", Dim=4)
-append!(plaquettes, plaquettes')
-push!(action, 6.0 / 2, plaquettes)
-p = gaussian_momenta(U; seed=3000, sweep=0)
+function wilson_hmc_system()
+    U = gauge_configuration(
+        (4, 4, 4, 4);
+        colors=3,
+        halo=1,
+        start=:hot,
+        seed=0x1234,
+        process_grid=(1, 1, 1, 1),
+    )
+    action = GaugeAction(U)
+    plaquettes = make_loops_fromname("plaquette", Dim=4)
+    append!(plaquettes, plaquettes')
+    push!(action, 6.0 / 2, plaquettes)
+    return U, action
+end
+```
+
+### Traditional HMC from elementary operations
+
+This is the historical style. The application explicitly assembles the link
+update, analytic gauge force, QPQ integrator, Hamiltonian, Metropolis test, and
+rollback:
+
+```julia
+using LinearAlgebra
+
+function traditional_workspace(U)
+    return (
+        derivative=similar(U[1]),
+        force_product=similar(U[1]),
+        exponential=similar(U[1]),
+        link_product=similar(U[1]),
+        exponential_temps=[similar(U[1]), similar(U[1])],
+    )
+end
+
+function traditional_hamiltonian(action, U, momenta)
+    potential = -real(evaluate_GaugeAction(action, U)) / U[1].NC
+    kinetic = real(momenta * momenta) / 2
+    return potential + kinetic
+end
+
+function traditional_link_update!(U, momenta, step_size, workspace)
+    for direction in eachindex(U)
+        exptU!(
+            workspace.exponential,
+            step_size,
+            momenta[direction],
+            workspace.exponential_temps,
+        )
+        mul!(
+            workspace.link_product,
+            workspace.exponential,
+            U[direction],
+        )
+        substitute_U!(U[direction], workspace.link_product)
+    end
+    return nothing
+end
+
+function traditional_momentum_update!(
+    momenta,
+    U,
+    action,
+    step_size,
+    workspace,
+)
+    factor = -step_size / U[1].NC
+    for direction in eachindex(U)
+        calc_dSdUμ!(workspace.derivative, action, direction, U)
+        mul!(
+            workspace.force_product,
+            U[direction],
+            workspace.derivative,
+        )
+        Traceless_antihermitian_add!(
+            momenta[direction],
+            factor,
+            workspace.force_product,
+        )
+    end
+    return nothing
+end
+
+function traditional_hmc!(
+    U,
+    action;
+    steps=4,
+    trajectory_length=0.02,
+    accept_uniform=0.5,
+)
+    momenta = gaussian_momenta(
+        U;
+        seed=0x5678,
+        sweep=0,
+    )
+    old_U = copy_configuration(U)
+    workspace = traditional_workspace(U)
+    initial_hamiltonian = traditional_hamiltonian(action, U, momenta)
+
+    step_size = trajectory_length / steps
+    for _ in 1:steps
+        traditional_link_update!(U, momenta, step_size / 2, workspace)
+        traditional_momentum_update!(
+            momenta,
+            U,
+            action,
+            step_size,
+            workspace,
+        )
+        traditional_link_update!(U, momenta, step_size / 2, workspace)
+    end
+
+    final_hamiltonian = traditional_hamiltonian(action, U, momenta)
+    delta_hamiltonian = final_hamiltonian - initial_hamiltonian
+    probability = exp(-max(0, delta_hamiltonian))
+    accepted = accept_uniform < probability
+    accepted || copy_configuration!(U, old_U)
+    return (; accepted, delta_hamiltonian)
+end
+
+U, action = wilson_hmc_system()
+traditional_result = traditional_hmc!(U, action)
+println(traditional_result)
+```
+
+### HMC using the MD driver
+
+With the driver, Gaugefields owns the deterministic QPQ evolution and its
+workspaces. The application still owns momentum refresh, the Metropolis
+decision, configuration backup, and rollback:
+
+```julia
+U, action = wilson_hmc_system()
+momenta = gaussian_momenta(
+    U;
+    seed=0x5678,
+    sweep=0,
+)
+old_U = copy_configuration(U)
 
 md = md_driver(
     U,
     action;
-    steps=20,
-    trajectory_length=1.0,
+    steps=4,
+    trajectory_length=0.02,
     integrator=QPQ(),
 )
-result = md_trajectory!(U, p, md)
+diagnostics = md_trajectory!(U, momenta, md)
+
+accept_uniform = 0.5
+probability = exp(-max(0, diagnostics.delta_hamiltonian))
+accepted = accept_uniform < probability
+accepted || copy_configuration!(U, old_U)
+
+driver_result = (
+    accepted=accepted,
+    delta_hamiltonian=diagnostics.delta_hamiltonian,
+)
+println(driver_result)
 ```
 
-Momentum refresh and HMC accept/reject policy remain the responsibility of a
-higher-level package or application.
+The fixed `accept_uniform` makes the two short examples reproducible. A
+production HMC loop should refresh the momenta with a new `sweep` and draw a
+uniform random number for every trajectory. `PQP()` and custom integrators are
+also supported. See the complete [HMC guide](docs/src/hmc.md) for production
+loops, MPI acceptance policy, restartable random streams, and
+Sexton--Weingarten time-scale separation.
 
 ## Documentation
 
