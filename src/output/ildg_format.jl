@@ -64,20 +64,154 @@ function pack_ildg_file(filename, payload_path, filelist_path, L, NC, precision)
     return nothing
 end
 
-function read_ildg_site!(bi, buffer, rawbuffer)
-    F = bi.floattype
-    expected_bytes = 2 * sizeof(F) * length(buffer)
-    length(rawbuffer) == expected_bytes || throw(DimensionMismatch(
-        "ILDG site buffer has $(length(rawbuffer)) bytes; expected $expected_bytes"))
-    Base.read!(bi.fp, rawbuffer)
-    data = reinterpret(F, rawbuffer)
-    @inbounds for i in eachindex(buffer)
-        realpart = ntoh(data[2i - 1])
-        imagpart = ntoh(data[2i])
-        buffer[i] = Complex{F}(realpart, imagpart)
+const ILDG_READ_CHUNK_BYTES = 64 * 1024 * 1024
+
+function read_ildg_run!(
+    bi,
+    destination,
+    destination_index,
+    global_site_index,
+    number_of_sites,
+    fields_per_site,
+    rawbuffer,
+    ::Type{F},
+) where {F<:AbstractFloat}
+    bytes_per_complex = 2 * sizeof(F)
+    seek(bi.fp, global_site_index * fields_per_site * bytes_per_complex)
+
+    remaining = number_of_sites * fields_per_site
+    while remaining > 0
+        number_to_read = min(remaining, length(rawbuffer) ÷ bytes_per_complex)
+        number_of_bytes = number_to_read * bytes_per_complex
+        bytes = @view rawbuffer[1:number_of_bytes]
+        Base.read!(bi.fp, bytes)
+        data = reinterpret(F, bytes)
+        @inbounds for i = 1:number_to_read
+            realpart = ntoh(data[2i - 1])
+            imagpart = ntoh(data[2i])
+            destination[destination_index] = Complex{F}(realpart, imagpart)
+            destination_index += 1
+        end
+        remaining -= number_to_read
+        bi.count += number_to_read
     end
-    bi.count += length(buffer)
-    return buffer
+    return destination_index
+end
+
+"""
+Read a rectangular local lattice volume from an ILDG payload into site-major
+storage. The file is x-major, so adjacent local sites are combined into the
+largest contiguous runs permitted by the process decomposition. Large runs are
+read in bounded chunks to avoid allocating a second full-volume host buffer.
+"""
+function read_ildg_local_volume!(
+    destination,
+    bi,
+    global_size,
+    local_size,
+    offset,
+    fields_per_site;
+    chunk_bytes=ILDG_READ_CHUNK_BYTES,
+)
+    return _read_ildg_local_volume!(
+        destination,
+        bi,
+        global_size,
+        local_size,
+        offset,
+        fields_per_site,
+        bi.floattype;
+        chunk_bytes,
+    )
+end
+
+function _read_ildg_local_volume!(
+    destination,
+    bi,
+    global_size,
+    local_size,
+    offset,
+    fields_per_site,
+    ::Type{F};
+    chunk_bytes,
+) where {F<:AbstractFloat}
+    global_size = ntuple(i -> Int(global_size[i]), 4)
+    local_size = ntuple(i -> Int(local_size[i]), 4)
+    offset = ntuple(i -> Int(offset[i]), 4)
+    fields_per_site = Int(fields_per_site)
+
+    all(>(0), global_size) || throw(ArgumentError(
+        "global ILDG lattice extents must be positive, got $global_size"))
+    all(>(0), local_size) || throw(ArgumentError(
+        "local ILDG lattice extents must be positive, got $local_size"))
+    all(>=(0), offset) || throw(ArgumentError(
+        "local ILDG offsets must be nonnegative, got $offset"))
+    all(offset[i] + local_size[i] <= global_size[i] for i = 1:4) ||
+        throw(DimensionMismatch(
+            "local ILDG volume $local_size at offset $offset exceeds $global_size"))
+    fields_per_site > 0 || throw(ArgumentError(
+        "fields_per_site must be positive, got $fields_per_site"))
+    expected_length = prod(local_size) * fields_per_site
+    length(destination) == expected_length || throw(DimensionMismatch(
+        "ILDG destination has length $(length(destination)); expected $expected_length"))
+
+    bytes_per_complex = 2 * sizeof(F)
+    complexes_per_chunk = max(1, Int(chunk_bytes) ÷ bytes_per_complex)
+    maximum_run_sites = if local_size[1] != global_size[1]
+        local_size[1]
+    elseif local_size[2] != global_size[2]
+        local_size[1] * local_size[2]
+    elseif local_size[3] != global_size[3]
+        local_size[1] * local_size[2] * local_size[3]
+    else
+        prod(local_size)
+    end
+    buffer_complexes = min(
+        complexes_per_chunk,
+        maximum_run_sites * fields_per_site,
+    )
+    rawbuffer = Vector{UInt8}(undef, buffer_complexes * bytes_per_complex)
+
+    NX, NY, NZ, _ = global_size
+    px, py, pz, pt = offset
+    destination_index = 1
+
+    if local_size[1] != NX
+        for it = 0:(local_size[4] - 1), iz = 0:(local_size[3] - 1),
+            iy = 0:(local_size[2] - 1)
+            global_site_index =
+                (((pt + it) * NZ + (pz + iz)) * NY + (py + iy)) * NX + px
+            destination_index = read_ildg_run!(
+                bi, destination, destination_index, global_site_index,
+                local_size[1], fields_per_site, rawbuffer, F)
+        end
+    elseif local_size[2] != NY
+        run_sites = local_size[1] * local_size[2]
+        for it = 0:(local_size[4] - 1), iz = 0:(local_size[3] - 1)
+            global_site_index =
+                (((pt + it) * NZ + (pz + iz)) * NY + py) * NX
+            destination_index = read_ildg_run!(
+                bi, destination, destination_index, global_site_index,
+                run_sites, fields_per_site, rawbuffer, F)
+        end
+    elseif local_size[3] != NZ
+        run_sites = local_size[1] * local_size[2] * local_size[3]
+        for it = 0:(local_size[4] - 1)
+            global_site_index = ((pt + it) * NZ + pz) * NY * NX
+            destination_index = read_ildg_run!(
+                bi, destination, destination_index, global_site_index,
+                run_sites, fields_per_site, rawbuffer, F)
+        end
+    else
+        global_site_index = pt * NZ * NY * NX
+        destination_index = read_ildg_run!(
+            bi, destination, destination_index, global_site_index,
+            prod(local_size), fields_per_site, rawbuffer, F)
+    end
+
+    destination_index == expected_length + 1 || error(
+        "internal ILDG read error: filled $(destination_index - 1) of $expected_length values")
+    return destination
 end
 
 ildg_communicator(::Any) = nothing
@@ -255,40 +389,22 @@ function __init__()
             Nfields = NC * NC * 4
             bi = Binarydata_ILDG(filename, precision)
             F = bi.floattype
-            bytes_per_site = 2 * sizeof(F) * Nfields
 
             px, py, pz, pt = U[1].myrank_xyzt .* PN
-            sitebuf = Vector{Complex{F}}(undef, Nfields)
-            rawbuf = Vector{UInt8}(undef, bytes_per_site)
+            host_data = Vector{Complex{F}}(undef, prod(PN) * Nfields)
             try
-                for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
-                    ixg = px + ix
-                    iyg = py + iy
-                    izg = pz + iz
-                    itg = pt + it
-
-                    global_index =
-                        (itg - 1) * (NZ * NY * NX) +
-                        (izg - 1) * (NY * NX) +
-                        (iyg - 1) * NX +
-                        (ixg - 1)
-
-                    seek(bi.fp, global_index * bytes_per_site)
-                    read_ildg_site!(bi, sitebuf, rawbuf)
-                    buf_index = 1
-                    for μ = 1:4
-                        for ic2 = 1:NC
-                            for ic1 = 1:NC
-                                setvalue!(
-                                    U[μ], sitebuf[buf_index], ic2, ic1,
-                                    ix, iy, iz, it)
-                                buf_index += 1
-                            end
-                        end
-                    end
-                end
+                read_ildg_local_volume!(
+                    host_data, bi, (NX, NY, NZ, NT), PN,
+                    (px, py, pz, pt), Nfields)
             finally
                 close(bi)
+            end
+            i = 1
+            for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
+                for μ = 1:4, ic2 = 1:NC, ic1 = 1:NC
+                    setvalue!(U[μ], host_data[i], ic2, ic1, ix, iy, iz, it)
+                    i += 1
+                end
             end
             update!(U)
             MPI.Barrier(comm)
@@ -453,36 +569,10 @@ function __init__()
 
             host_data = Vector{Complex{F}}(undef, total_elems)
 
-            bytes_per_site = 2 * sizeof(F) * Nfields
-            i = 1
-            sitebuf = Vector{Complex{F}}(undef, Nfields)
-            rawbuf = Vector{UInt8}(undef, bytes_per_site)
             try
-                for it = 1:PN[4], iz = 1:PN[3], iy = 1:PN[2], ix = 1:PN[1]
-                    ixg = offset_coords[1] + ix
-                    iyg = offset_coords[2] + iy
-                    izg = offset_coords[3] + iz
-                    itg = offset_coords[4] + it
-
-                    global_index =
-                        (itg - 1) * (NZ * NY * NX) +
-                        (izg - 1) * (NY * NX) +
-                        (iyg - 1) * NX +
-                        (ixg - 1)
-
-                    seek(bi.fp, global_index * bytes_per_site)
-                    read_ildg_site!(bi, sitebuf, rawbuf)
-                    buf_index = 1
-                    for μ = 1:4
-                        for ic2 = 1:NC
-                            for ic1 = 1:NC
-                                host_data[i] = sitebuf[buf_index]
-                                i += 1
-                                buf_index += 1
-                            end
-                        end
-                    end
-                end
+                read_ildg_local_volume!(
+                    host_data, bi, (NX, NY, NZ, NT), PN,
+                    offset_coords, Nfields)
             finally
                 close(bi)
             end

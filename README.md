@@ -7,8 +7,12 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-Gaugefields.jl v1.1.0 makes MPI.jl optional while preserving serial, GPU, MPI,
-and multi-GPU execution; see [changes.md](changes.md).
+Gaugefields.jl v1.1.1 adds Landau and Coulomb gauge fixing, improves
+LatticeMatrices updates, and restores fast local-volume ILDG loading; see
+[changes.md](changes.md).
+
+Gaugefields.jl v1.1.0 made MPI.jl optional while preserving serial, GPU, MPI,
+and multi-GPU execution.
 
 ## What's fixed in v1.0.3
 
@@ -92,6 +96,7 @@ This package has following functionarities
     - Yang-Mills gradient flow
     - Yang-Mills gradient flow being subject to 't Hooft twisted b.c.
     - Gradient flow for SU(Nc)/Z(Nc) gauge theory
+- Landau and Coulomb gauge fixing with Los Alamos and steepest-descent updates
 - I/O: portable JLD2 checkpoints are supported across CPU, GPU, MPI, and
   multi-GPU execution. ILDG and Bridge++ interoperability is also supported
   ([c-lime](https://usqcd-software.github.io/c-lime/) is installed implicitly
