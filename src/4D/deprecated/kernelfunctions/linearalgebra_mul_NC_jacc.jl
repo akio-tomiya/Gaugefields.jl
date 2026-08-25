@@ -1,7 +1,9 @@
 
 function LinearAlgebra.tr(a::Gaugefields_4D_accelerator{NC,TU,TUv,:jacc}) where {NC,TU,TUv}
     N = a.NX * a.NY * a.NZ * a.NT
-    s = JACC.parallel_reduce(N, +, jacckernel_tr!, a.U, NC; init=zero(eltype(a.U)))#, c.U, A.U, B.U, NC)
+    s = JACC.parallel_reduce(
+        N, jacckernel_tr!, a.U, NC; init=zero(eltype(a.U)), op=+,
+    )
     return s
     #CUDA.@sync begin
     #    CUDA.@cuda threads = a.blockinfo.blocksize blocks = a.blockinfo.rsize cudakernel_tr!(a.temp_volume, a.U, NC)
@@ -892,7 +894,6 @@ function LinearAlgebra.mul!(
         c.U, A.parent.parent.Ushifted, B.parent.Ushifted, α, β, NC)
 
 end
-
 
 
 

@@ -28,10 +28,9 @@ MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 GaugefieldsEnzymeExt = "Enzyme"
 GaugefieldsMPIExt = "MPI"
 
-
 [compat]
-Enzyme = "0.13"
 Distributions = "0.25"
+Enzyme = "0.13"
 EzXML = "1"
 InteractiveUtils = "1"
 JACC = "0.5,0.6,1.0"
