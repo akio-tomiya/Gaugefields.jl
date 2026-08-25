@@ -71,7 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         latticematrices:
-          - "1.2.0"
+          - "1.2.1"
     steps:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
@@ -173,5 +173,7 @@ jobs:
         run: |
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/high_level_api.jl
           GAUGEFIELDS_TEST_MPI=true mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/three_dimensional.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/heatbath_full_sweep.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/heatbath_full_sweep_su3.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/ildg_io.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_legacy_backends.jl

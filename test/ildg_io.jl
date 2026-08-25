@@ -25,6 +25,71 @@ function physical_ildg_values(U)
     ]
 end
 
+@testset "ILDG contiguous local-volume reader" begin
+    global_size = (4, 4, 4, 4)
+    fields_per_site = 3
+    decompositions = (
+        ((4, 4, 4, 4), (0, 0, 0, 0)),
+        ((4, 4, 4, 2), (0, 0, 0, 2)),
+        ((4, 4, 2, 2), (0, 0, 2, 1)),
+        ((4, 2, 2, 2), (0, 1, 1, 1)),
+        ((2, 2, 2, 2), (1, 1, 1, 1)),
+    )
+
+    mktempdir() do dir
+        for precision in (64, 32)
+            F = precision == 64 ? Float64 : Float32
+            number_of_sites = prod(global_size)
+            values = Complex{F}[
+                Complex{F}(site + field / 10, -site - field / 20)
+                for site = 0:(number_of_sites - 1) for field = 1:fields_per_site
+            ]
+            payload = joinpath(dir, "local-volume-$precision.dat")
+            open(payload, "w") do io
+                for value in values
+                    write(io, hton(real(value)))
+                    write(io, hton(imag(value)))
+                end
+            end
+
+            for (local_size, offset) in decompositions
+                expected = Complex{F}[]
+                NX, NY, NZ, _ = global_size
+                px, py, pz, pt = offset
+                for it = 0:(local_size[4] - 1), iz = 0:(local_size[3] - 1),
+                    iy = 0:(local_size[2] - 1), ix = 0:(local_size[1] - 1)
+                    global_site =
+                        (((pt + it) * NZ + (pz + iz)) * NY + (py + iy)) * NX +
+                        (px + ix)
+                    first_value = global_site * fields_per_site + 1
+                    append!(
+                        expected,
+                        @view(values[first_value:(first_value + fields_per_site - 1)]),
+                    )
+                end
+
+                result = Vector{Complex{F}}(undef, length(expected))
+                bi = Gaugefields.ILDG_format.Binarydata_ILDG(payload, precision)
+                try
+                    Gaugefields.ILDG_format.read_ildg_local_volume!(
+                        result,
+                        bi,
+                        global_size,
+                        local_size,
+                        offset,
+                        fields_per_site;
+                        chunk_bytes=3 * 2 * sizeof(F),
+                    )
+                    @test bi.count == length(result)
+                finally
+                    close(bi)
+                end
+                @test result == expected
+            end
+        end
+    end
+end
+
 @testset "ILDG precision and metadata" begin
     L = (2, 2, 2, 2)
     NC = 3
