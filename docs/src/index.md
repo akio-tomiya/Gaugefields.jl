@@ -38,6 +38,8 @@ The same API is used for two and three dimensions; see
   simulation workflows.
 - [Wilson loops and gauge actions](wilsonloops_actions.md) constructs named or
   arbitrary paths, evaluates their action, and calculates analytic derivatives.
+- [Gauge fixing](gaugefixing.md) covers portable Landau and Coulomb gauge
+  fixing, convergence parameters, diagnostics, and backend selection.
 - [Measurements](measurements.md) documents the normalized observable API.
 - [Utilities and I/O](utilities.md) covers metadata, link-field algebra, and
   configuration formats.
