@@ -4,7 +4,6 @@ abstract type Gaugefields_2D{NC} <: AbstractGaugefields{NC,2} end
 include("./deprecated/gaugefields_2D_wing.jl")
 include("./gaugefields_2D_nowing.jl")
 include("./Isingfields_2D.jl")
-include("./deprecated/gaugefields_2D_mpi_nowing.jl")
 
 include("mpi_jacc/gaugefields_2D_MPILattice.jl")
 

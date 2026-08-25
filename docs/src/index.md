@@ -74,6 +74,6 @@ In Julia package mode:
 pkg> add Gaugefields JACC
 ~~~
 
-Gaugefields v1 requires LatticeMatrices v1.1 or later within the compatibility
+Gaugefields v1.1 requires LatticeMatrices v1.2 or later within the compatibility
 bounds declared by the package. Add `MPI` directly to an application that
 imports it, and add the selected GPU package when requested by JACC.

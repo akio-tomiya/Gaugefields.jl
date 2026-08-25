@@ -4,10 +4,19 @@ JACC.@init_backend
 using Gaugefields
 using LatticeMatrices
 using LinearAlgebra
-using MPI
 using Test
 
-MPI.Initialized() || MPI.Init()
+const GAUGEFIELDS_TEST_MPI = lowercase(get(
+    ENV, "GAUGEFIELDS_TEST_MPI", "false")) in
+    ("1", "true", "yes", "on")
+
+if GAUGEFIELDS_TEST_MPI
+    @eval using MPI
+    MPI.Initialized() || MPI.Init()
+    test_comm_size() = MPI.Comm_size(MPI.COMM_WORLD)
+else
+    test_comm_size() = 1
+end
 
 function local_storage(field)
     return JACC.to_host(field.U.A)
@@ -22,7 +31,7 @@ function plaquette_action(U)
 end
 
 @testset "3D LatticeMatrices compatibility" begin
-    nprocs = MPI.Comm_size(MPI.COMM_WORLD)
+    nprocs = test_comm_size()
     nprocs <= 2 || error("this regression test supports at most two MPI ranks")
     global_size = (2 * nprocs, 2, 2)
     process_grid = (nprocs, 1, 1)

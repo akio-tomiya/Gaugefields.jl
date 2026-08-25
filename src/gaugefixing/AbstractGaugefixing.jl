@@ -11,7 +11,6 @@ using ..AbstractGaugefields_module:
     Gaugefields_4D_MPILattice,
     Gaugefields_4D_nowing,
     Gaugefields_4D_nowing_mpi,
-    Gaugefields_4D_wing_mpi,
     Traceless_antihermitian!,
     add_U!,
     clear_U!,
@@ -49,6 +48,13 @@ include("gaugefixing_utility_4D_legacy_mpi.jl")
 include("gaugefixing_utility_4D_nowing_accelerator.jl")
 
 function __init__()
+    # The deprecated winged MPI type is defined only after MPI.jl is loaded.
+    # Register its adapter at the same time so MPI remains an optional
+    # dependency of Gaugefields.
+    @require MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195" begin
+        include("gaugefixing_utility_4D_wing_mpi.jl")
+    end
+
     # Keep the original direct-CUDA accelerator backend available without
     # making CUDA a hard dependency.  The portable `accelerator="JACC"` path
     # above remains backend independent.

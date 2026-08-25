@@ -7,7 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-Gaugefields.jl v1.0.4 improves standards-compliant ILDG I/O for 32/64-bit data and MPI/GPU execution; see [changes.md](changes.md).
+Gaugefields.jl v1.1.0 makes MPI.jl optional while preserving serial, GPU, MPI,
+and multi-GPU execution; see [changes.md](changes.md).
 
 ## What's fixed in v1.0.3
 
@@ -51,7 +52,7 @@ Compared with the previous release, v0.7.3, v1.0.0 adds and stabilizes:
 **Upgrading from v0.7:** Existing programs using `Initialize_Gaugefields` and
 the historical API remain supported and retain their legacy backend and
 defaults. New programs should use `gauge_configuration`, whose default backend
-is LatticeMatrices. Gaugefields v1 requires LatticeMatrices v1.1 or later;
+is LatticeMatrices. Gaugefields v1.1 requires LatticeMatrices v1.2 or later;
 Enzyme users must add `Enzyme` as a direct dependency. See the
 [high-level API](docs/src/highlevelapi.md) and
 [Legacy API migration map](docs/src/legacyapi.md#migration-map).
@@ -91,12 +92,15 @@ This package has following functionarities
     - Yang-Mills gradient flow
     - Yang-Mills gradient flow being subject to 't Hooft twisted b.c.
     - Gradient flow for SU(Nc)/Z(Nc) gauge theory
-- I/O: ILDG and Bridge++ formats are supported ([c-lime](https://usqcd-software.github.io/c-lime/) will be installed implicitly with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl) )
+- I/O: portable JLD2 checkpoints are supported across CPU, GPU, MPI, and
+  multi-GPU execution. ILDG and Bridge++ interoperability is also supported
+  ([c-lime](https://usqcd-software.github.io/c-lime/) is installed implicitly
+  with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl)).
 - MPI parallel computation (experimental. See documents.)
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
 - Portable GPU and multi-GPU computation through
-  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.1.0
+  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.2.0
   and [JACC.jl](https://github.com/JuliaORNL/JACC.jl). See the
   [GPU and multi-GPU tutorial](docs/src/tutorial4d.md#multiple-gpus-with-mpi).
     - NVIDIA GPUs through CUDA.jl
@@ -126,6 +130,19 @@ add Gaugefields JACC
 
 Add `MPI` as a direct dependency for MPI applications. JACC installs or
 selects the package required by the requested GPU backend.
+
+Serial CPU and single-GPU applications do not need MPI.jl. Loading MPI selects
+the MPI path, and Gaugefields initializes MPI lazily when the first MPI-backed
+field is constructed:
+
+```julia
+using MPI
+using Gaugefields
+```
+
+Call `MPI.Init(...)` explicitly before constructing a field only when custom
+initialization options such as the thread level are needed. Gaugefields never
+calls `MPI.Finalize()`.
 
 # How to use
 
@@ -159,28 +176,182 @@ Use `backend=LegacyBackend()` to request the serial compatibility backend.
 The existing `Initialize_Gaugefields` API and its legacy default remain
 unchanged.
 
-Gaugefields also provides a deterministic, preallocated MD driver. `QPQ()` is
-the default; `PQP()` and custom integrators are supported:
+## Two ways to construct HMC
+
+Gaugefields supports both the traditional construction from elementary
+operations and a deterministic, preallocated MD driver. The examples below
+use the same Wilson gauge action and QPQ integrator. First define the shared
+system:
 
 ```julia
-action = GaugeAction(U)
-plaquettes = make_loops_fromname("plaquette", Dim=4)
-append!(plaquettes, plaquettes')
-push!(action, 6.0 / 2, plaquettes)
-p = gaussian_momenta(U; seed=3000, sweep=0)
+function wilson_hmc_system()
+    U = gauge_configuration(
+        (4, 4, 4, 4);
+        colors=3,
+        halo=1,
+        start=:hot,
+        seed=0x1234,
+        process_grid=(1, 1, 1, 1),
+    )
+    action = GaugeAction(U)
+    plaquettes = make_loops_fromname("plaquette", Dim=4)
+    append!(plaquettes, plaquettes')
+    push!(action, 6.0 / 2, plaquettes)
+    return U, action
+end
+```
+
+### Traditional HMC from elementary operations
+
+This is the historical style. The application explicitly assembles the link
+update, analytic gauge force, QPQ integrator, Hamiltonian, Metropolis test, and
+rollback:
+
+```julia
+using LinearAlgebra
+
+function traditional_workspace(U)
+    return (
+        derivative=similar(U[1]),
+        force_product=similar(U[1]),
+        exponential=similar(U[1]),
+        link_product=similar(U[1]),
+        exponential_temps=[similar(U[1]), similar(U[1])],
+    )
+end
+
+function traditional_hamiltonian(action, U, momenta)
+    potential = -real(evaluate_GaugeAction(action, U)) / U[1].NC
+    kinetic = real(momenta * momenta) / 2
+    return potential + kinetic
+end
+
+function traditional_link_update!(U, momenta, step_size, workspace)
+    for direction in eachindex(U)
+        exptU!(
+            workspace.exponential,
+            step_size,
+            momenta[direction],
+            workspace.exponential_temps,
+        )
+        mul!(
+            workspace.link_product,
+            workspace.exponential,
+            U[direction],
+        )
+        substitute_U!(U[direction], workspace.link_product)
+    end
+    return nothing
+end
+
+function traditional_momentum_update!(
+    momenta,
+    U,
+    action,
+    step_size,
+    workspace,
+)
+    factor = -step_size / U[1].NC
+    for direction in eachindex(U)
+        calc_dSdUμ!(workspace.derivative, action, direction, U)
+        mul!(
+            workspace.force_product,
+            U[direction],
+            workspace.derivative,
+        )
+        Traceless_antihermitian_add!(
+            momenta[direction],
+            factor,
+            workspace.force_product,
+        )
+    end
+    return nothing
+end
+
+function traditional_hmc!(
+    U,
+    action;
+    steps=4,
+    trajectory_length=0.02,
+    accept_uniform=0.5,
+)
+    momenta = gaussian_momenta(
+        U;
+        seed=0x5678,
+        sweep=0,
+    )
+    old_U = copy_configuration(U)
+    workspace = traditional_workspace(U)
+    initial_hamiltonian = traditional_hamiltonian(action, U, momenta)
+
+    step_size = trajectory_length / steps
+    for _ in 1:steps
+        traditional_link_update!(U, momenta, step_size / 2, workspace)
+        traditional_momentum_update!(
+            momenta,
+            U,
+            action,
+            step_size,
+            workspace,
+        )
+        traditional_link_update!(U, momenta, step_size / 2, workspace)
+    end
+
+    final_hamiltonian = traditional_hamiltonian(action, U, momenta)
+    delta_hamiltonian = final_hamiltonian - initial_hamiltonian
+    probability = exp(-max(0, delta_hamiltonian))
+    accepted = accept_uniform < probability
+    accepted || copy_configuration!(U, old_U)
+    return (; accepted, delta_hamiltonian)
+end
+
+U, action = wilson_hmc_system()
+traditional_result = traditional_hmc!(U, action)
+println(traditional_result)
+```
+
+### HMC using the MD driver
+
+With the driver, Gaugefields owns the deterministic QPQ evolution and its
+workspaces. The application still owns momentum refresh, the Metropolis
+decision, configuration backup, and rollback:
+
+```julia
+U, action = wilson_hmc_system()
+momenta = gaussian_momenta(
+    U;
+    seed=0x5678,
+    sweep=0,
+)
+old_U = copy_configuration(U)
 
 md = md_driver(
     U,
     action;
-    steps=20,
-    trajectory_length=1.0,
+    steps=4,
+    trajectory_length=0.02,
     integrator=QPQ(),
 )
-result = md_trajectory!(U, p, md)
+diagnostics = md_trajectory!(U, momenta, md)
+
+accept_uniform = 0.5
+probability = exp(-max(0, diagnostics.delta_hamiltonian))
+accepted = accept_uniform < probability
+accepted || copy_configuration!(U, old_U)
+
+driver_result = (
+    accepted=accepted,
+    delta_hamiltonian=diagnostics.delta_hamiltonian,
+)
+println(driver_result)
 ```
 
-Momentum refresh and HMC accept/reject policy remain the responsibility of a
-higher-level package or application.
+The fixed `accept_uniform` makes the two short examples reproducible. A
+production HMC loop should refresh the momenta with a new `sweep` and draw a
+uniform random number for every trajectory. `PQP()` and custom integrators are
+also supported. See the complete [HMC guide](docs/src/hmc.md) for production
+loops, MPI acceptance policy, restartable random streams, and
+Sexton--Weingarten time-scale separation.
 
 ## Documentation
 
@@ -189,7 +360,7 @@ The manual contains the complete v1 API description and task-oriented examples:
 - [Four-dimensional quick start](docs/src/tutorial4d.md)
 - [Wilson loops and gauge actions](docs/src/wilsonloops_actions.md)
 - [Measurements and QCDMeasurements.jl](docs/src/measurements.md)
-- [HMC and custom integrators](docs/src/hmc.md)
+- [HMC assembled from traditional operations and with the MD driver](docs/src/hmc.md)
 - [Automatic differentiation with Enzyme](docs/src/autodiff.md)
 - [Two- and three-dimensional fields](docs/src/dimensions.md)
 - [Randomness and reproducibility](docs/src/randomness.md)

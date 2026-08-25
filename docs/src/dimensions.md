@@ -32,7 +32,7 @@ U2 = gauge_configuration(
 
 `U2[1]` and `U2[2]` contain the links in the first and second directions.
 The Polyakov loop is measured in the second, final direction. With MPI and no
-explicit process grid, the default decomposition is `(1, nranks)`.
+explicit process grid, Gaugefields chooses a valid automatic decomposition.
 
 ### U(1) fields
 
@@ -76,7 +76,7 @@ U3 = gauge_configuration(
 
 `U3[1]`, `U3[2]`, and `U3[3]` contain the links in the three directions. The
 Polyakov loop is measured in the third, final direction. With MPI and no
-explicit process grid, the default decomposition is `(1, 1, nranks)`.
+explicit process grid, Gaugefields chooses a valid automatic decomposition.
 
 The LM backend supports the same reproducible hot starts, measurements,
 heatbath updates, gradient flow, stout smearing, I/O, GPU execution, and MPI

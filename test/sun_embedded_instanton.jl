@@ -377,8 +377,22 @@ end
     accelerator_field = Initialize_Gaugefields(3, 0, L...; condition="cold", cuda=true)
     test_topological_charge_storage_guard(accelerator_field)
 
-    mpi_field = Initialize_Gaugefields(3, 0, L...; condition="cold", mpi=true, PEs=(1, 1, 1, 1), mpiinit=false)
-    test_topological_charge_storage_guard(mpi_field)
+    mpi_extension = Base.get_extension(Gaugefields, :GaugefieldsMPIExt)
+    mpi_ready = mpi_extension !== nothing &&
+        Gaugefields.Communication.communicator_ready(
+            Gaugefields.Communication.default_communicator())
+    if mpi_ready
+        mpi_field = Initialize_Gaugefields(
+            3,
+            0,
+            L...;
+            condition="cold",
+            mpi=true,
+            PEs=(1, 1, 1, 1),
+            mpiinit=false,
+        )
+        test_topological_charge_storage_guard(mpi_field)
+    end
 
     cold_wing = Initialize_Gaugefields(3, 1, 2, 3, 4, 5; condition="cold")
     test_topological_charge_density_contract(cold_wing)

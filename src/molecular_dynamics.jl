@@ -42,6 +42,199 @@ function md_force!(force, action, U, workspace)
     ))
 end
 
+"""
+    MDActionSet(; name=action, ...)
+    MDActionSet(actions::NamedTuple)
+
+Collect independently scheduled MD action providers in a type-stable named
+tuple. Every member implements [`md_action_workspace`](@ref),
+[`md_potential`](@ref), and [`md_force!`](@ref). The combined potential and
+force are the sums of the member contributions.
+
+Names are also used by [`MDForceGroup`](@ref) and
+[`SextonWeingarten`](@ref) to select time scales.
+"""
+struct MDActionSet{T<:NamedTuple}
+    terms::T
+
+    function MDActionSet(terms::T) where {T<:NamedTuple}
+        isempty(terms) && throw(ArgumentError(
+            "an MDActionSet must contain at least one action provider",
+        ))
+        return new{T}(terms)
+    end
+end
+
+MDActionSet(; terms...) = MDActionSet((; terms...))
+
+"""
+    MDForceGroup(names...)
+
+Select named members of an [`MDActionSet`](@ref) for a momentum update. The
+names are stored in the group type so the selected action providers remain
+type-stable in the integration loop.
+"""
+struct MDForceGroup{Names} end
+
+function MDForceGroup(names::Symbol...)
+    isempty(names) && throw(ArgumentError(
+        "an MDForceGroup must contain at least one action name",
+    ))
+    length(unique(names)) == length(names) || throw(ArgumentError(
+        "an MDForceGroup must not contain duplicate action names: $names",
+    ))
+    return MDForceGroup{names}()
+end
+
+MDForceGroup(names::Tuple{Vararg{Symbol}}) = MDForceGroup(names...)
+
+_md_force_group(group::MDForceGroup) = group
+_md_force_group(name::Symbol) = MDForceGroup(name)
+_md_force_group(names::Tuple{Vararg{Symbol}}) = MDForceGroup(names)
+
+struct _MDActionSetWorkspace{W,F}
+    terms::W
+    force::F
+end
+
+function md_action_workspace(actions::MDActionSet, U)
+    workspaces = map(
+        action -> md_action_workspace(action, U),
+        actions.terms,
+    )
+    return _MDActionSetWorkspace(
+        workspaces,
+        initialize_TA_Gaugefields(U),
+    )
+end
+
+function md_potential(
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+)
+    potentials = map(
+        (action, term_workspace) -> md_potential(
+            action,
+            U,
+            term_workspace,
+        ),
+        actions.terms,
+        workspace.terms,
+    )
+    return sum(values(potentials))
+end
+
+function _md_add_named_forces!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+    ::Val{()},
+)
+    return nothing
+end
+
+function _md_add_named_forces!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+    ::Val{Names},
+) where {Names}
+    name = first(Names)
+    md_force!(
+        workspace.force,
+        getproperty(actions.terms, name),
+        U,
+        getproperty(workspace.terms, name),
+    )
+    add_U!(force, 1, workspace.force)
+    return _md_add_named_forces!(
+        force,
+        actions,
+        U,
+        workspace,
+        Val(Base.tail(Names)),
+    )
+end
+
+function _md_write_named_forces!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+    ::Val{Names},
+) where {Names}
+    name = first(Names)
+    md_force!(
+        force,
+        getproperty(actions.terms, name),
+        U,
+        getproperty(workspace.terms, name),
+    )
+    return _md_add_named_forces!(
+        force,
+        actions,
+        U,
+        workspace,
+        Val(Base.tail(Names)),
+    )
+end
+
+function _md_accumulate_forces!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+    names,
+)
+    return _md_write_named_forces!(
+        force,
+        actions,
+        U,
+        workspace,
+        Val(names),
+    )
+end
+
+function md_force!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+)
+    return _md_accumulate_forces!(
+        force,
+        actions,
+        U,
+        workspace,
+        keys(actions.terms),
+    )
+end
+
+"""
+    md_force!(force, actions, U, workspace, group::MDForceGroup)
+
+Write the sum of only the selected action forces to `force`. This is the
+force-selection operation used by multiple-time-scale integrators.
+"""
+function md_force!(
+    force,
+    actions::MDActionSet,
+    U,
+    workspace::_MDActionSetWorkspace,
+    ::MDForceGroup{Names},
+) where {Names}
+    return _md_accumulate_forces!(
+        force,
+        actions,
+        U,
+        workspace,
+        Names,
+    )
+end
+
 struct _GaugeActionMDWorkspace{T}
     derivative::T
     force_work::T
@@ -59,7 +252,7 @@ function md_force!(force, action::GaugeAction, U, workspace)
     length(force) == length(U) || throw(ArgumentError(
         "force and U must have the same number of directions",
     ))
-    factor = -1 / U[1].NC
+    factor = -one(_md_real_scalar_type(U)) / U[1].NC
     for direction in eachindex(U)
         calc_dSdUμ!(workspace.derivative, action, direction, U)
         mul!(workspace.force_work, U[direction], workspace.derivative)
@@ -102,6 +295,113 @@ used by the historical Gaugefields HMC examples and is the default of
 struct QPQ <: AbstractMDIntegrator end
 
 """
+    SextonWeingarten(; slow, fast, n_fast, ordering=QPQ())
+
+Second-order Sexton--Weingarten integrator for two force time scales. `slow`
+and `fast` are action names, tuples of action names, or [`MDForceGroup`](@ref)
+objects selecting members of an [`MDActionSet`](@ref). `n_fast` is a positive
+runtime integer and is deliberately not a type parameter.
+
+With the default `QPQ()` ordering, a half-duration evolution of the fast
+Hamiltonian is applied on each side of one full slow-force update. Each half
+is divided into `n_fast` QPQ substeps. With `PQP()` ordering, half slow-force
+updates surround one full fast evolution divided into `n_fast` QPQ substeps.
+"""
+struct SextonWeingarten{
+    S<:MDForceGroup,
+    F<:MDForceGroup,
+    O<:AbstractMDIntegrator,
+} <: AbstractMDIntegrator
+    slow::S
+    fast::F
+    n_fast::Int
+    ordering::O
+
+    function SextonWeingarten(
+        slow::S,
+        fast::F,
+        n_fast::Integer,
+        ordering::O,
+    ) where {
+        S<:MDForceGroup,
+        F<:MDForceGroup,
+        O<:AbstractMDIntegrator,
+    }
+        n_fast > 0 || throw(ArgumentError(
+            "n_fast must be positive; got $n_fast",
+        ))
+        (ordering isa PQP || ordering isa QPQ) || throw(ArgumentError(
+            "SextonWeingarten ordering must be PQP() or QPQ(); " *
+            "got $(typeof(ordering))",
+        ))
+        return new{S,F,O}(slow, fast, Int(n_fast), ordering)
+    end
+end
+
+function SextonWeingarten(;
+    slow,
+    fast,
+    n_fast::Integer,
+    ordering=QPQ(),
+)
+    n_fast > 0 || throw(ArgumentError(
+        "n_fast must be positive; got $n_fast",
+    ))
+    (ordering isa PQP || ordering isa QPQ) || throw(ArgumentError(
+        "SextonWeingarten ordering must be PQP() or QPQ(); " *
+        "got $(typeof(ordering))",
+    ))
+    return SextonWeingarten(
+        _md_force_group(slow),
+        _md_force_group(fast),
+        Int(n_fast),
+        ordering,
+    )
+end
+
+_md_force_group_names(::MDForceGroup{Names}) where {Names} = Names
+
+function _validate_md_integrator(integrator, action)
+    return nothing
+end
+
+function _validate_md_integrator(
+    integrator::SextonWeingarten,
+    actions::MDActionSet,
+)
+    available = keys(actions.terms)
+    slow = _md_force_group_names(integrator.slow)
+    fast = _md_force_group_names(integrator.fast)
+    selected = (slow..., fast...)
+
+    overlap = intersect(slow, fast)
+    isempty(overlap) || throw(ArgumentError(
+        "slow and fast force groups overlap: $(Tuple(overlap))",
+    ))
+
+    unknown = setdiff(selected, available)
+    isempty(unknown) || throw(ArgumentError(
+        "SextonWeingarten selects unknown actions $(Tuple(unknown)); " *
+        "available names are $available",
+    ))
+
+    omitted = setdiff(available, selected)
+    isempty(omitted) || throw(ArgumentError(
+        "SextonWeingarten does not schedule actions $(Tuple(omitted))",
+    ))
+    return nothing
+end
+
+function _validate_md_integrator(
+    ::SextonWeingarten,
+    action,
+)
+    throw(ArgumentError(
+        "SextonWeingarten requires an MDActionSet; got $(typeof(action))",
+    ))
+end
+
+"""
     MDDriver
 
 Preallocated, deterministic molecular-dynamics driver. Construct one with
@@ -110,16 +410,22 @@ Preallocated, deterministic molecular-dynamics driver. Construct one with
 The driver does not generate momenta, draw random numbers, or perform an
 accept/reject decision.
 """
-struct MDDriver{A,I,T,W,F}
+struct MDDriver{A,I,R<:AbstractFloat,T,W,F}
     action::A
     integrator::I
-    trajectory_length::Float64
+    trajectory_length::R
     steps::Int
     exponential_temps::Vector{T}
     exponential::T
     link_work::T
     action_workspace::W
     force::F
+end
+
+function _md_real_scalar_type(U)
+    element_type = eltype(first(U))
+    element_type <: Number || return Float64
+    return typeof(real(zero(element_type)))
 end
 
 """
@@ -148,6 +454,15 @@ function md_driver(
     iszero(trajectory_length) && throw(ArgumentError(
         "trajectory_length must not be zero",
     ))
+    _validate_md_integrator(integrator, action)
+    scalar_type = _md_real_scalar_type(U)
+    converted_trajectory_length = convert(scalar_type, trajectory_length)
+    isfinite(converted_trajectory_length) || throw(ArgumentError(
+        "trajectory_length is not finite after conversion to $scalar_type",
+    ))
+    iszero(converted_trajectory_length) && throw(ArgumentError(
+        "trajectory_length becomes zero after conversion to $scalar_type",
+    ))
 
     exponential_temps = [similar(U[1]), similar(U[1])]
     exponential = similar(U[1])
@@ -157,7 +472,7 @@ function md_driver(
     return MDDriver(
         action,
         integrator,
-        Float64(trajectory_length),
+        converted_trajectory_length,
         Int(steps),
         exponential_temps,
         exponential,
@@ -236,6 +551,39 @@ function update_momenta!(P, U, step_size, driver::MDDriver)
 end
 
 """
+    update_momenta!(P, U, step_size, driver, group::MDForceGroup)
+
+Update the momenta with only the named members selected from the driver's
+[`MDActionSet`](@ref). This is the elementary kick used by
+[`SextonWeingarten`](@ref) and custom multiple-time-scale integrators.
+"""
+function update_momenta!(
+    P,
+    U,
+    step_size,
+    driver::MDDriver,
+    group::MDForceGroup,
+)
+    length(P) == length(U) || throw(ArgumentError(
+        "P and U must have the same number of directions",
+    ))
+    isfinite(step_size) || throw(ArgumentError(
+        "the momentum step size must be finite; got $step_size",
+    ))
+    md_force!(
+        driver.force,
+        driver.action,
+        U,
+        driver.action_workspace,
+        group,
+    )
+    for direction in eachindex(P)
+        add_U!(P[direction], step_size, driver.force[direction])
+    end
+    return P
+end
+
+"""
     md_step!(integrator, U, P, step_size, driver)
 
 Apply one molecular-dynamics integration step, mutating `U` and `P` in place.
@@ -254,17 +602,101 @@ function md_step!(integrator::Function, U, P, step_size, driver::MDDriver)
 end
 
 function md_step!(::PQP, U, P, step_size, driver::MDDriver)
-    update_momenta!(P, U, 0.5 * step_size, driver)
+    update_momenta!(P, U, step_size / 2, driver)
     update_gaugefields!(U, P, step_size, driver)
-    update_momenta!(P, U, 0.5 * step_size, driver)
+    update_momenta!(P, U, step_size / 2, driver)
     return nothing
 end
 
 function md_step!(::QPQ, U, P, step_size, driver::MDDriver)
-    update_gaugefields!(U, P, 0.5 * step_size, driver)
+    update_gaugefields!(U, P, step_size / 2, driver)
     update_momenta!(P, U, step_size, driver)
-    update_gaugefields!(U, P, 0.5 * step_size, driver)
+    update_gaugefields!(U, P, step_size / 2, driver)
     return nothing
+end
+
+function _md_fast_qpq!(
+    U,
+    P,
+    duration,
+    nsteps,
+    driver,
+    fast::MDForceGroup,
+)
+    step_size = duration / nsteps
+    update_gaugefields!(U, P, step_size / 2, driver)
+    for step in 1:nsteps
+        update_momenta!(P, U, step_size, driver, fast)
+        link_step = step == nsteps ? step_size / 2 : step_size
+        update_gaugefields!(U, P, link_step, driver)
+    end
+    return nothing
+end
+
+function _md_step_sexton_weingarten!(
+    ::QPQ,
+    integrator::SextonWeingarten,
+    U,
+    P,
+    step_size,
+    driver,
+)
+    _md_fast_qpq!(
+        U,
+        P,
+        step_size / 2,
+        integrator.n_fast,
+        driver,
+        integrator.fast,
+    )
+    update_momenta!(P, U, step_size, driver, integrator.slow)
+    _md_fast_qpq!(
+        U,
+        P,
+        step_size / 2,
+        integrator.n_fast,
+        driver,
+        integrator.fast,
+    )
+    return nothing
+end
+
+function _md_step_sexton_weingarten!(
+    ::PQP,
+    integrator::SextonWeingarten,
+    U,
+    P,
+    step_size,
+    driver,
+)
+    update_momenta!(P, U, step_size / 2, driver, integrator.slow)
+    _md_fast_qpq!(
+        U,
+        P,
+        step_size,
+        integrator.n_fast,
+        driver,
+        integrator.fast,
+    )
+    update_momenta!(P, U, step_size / 2, driver, integrator.slow)
+    return nothing
+end
+
+function md_step!(
+    integrator::SextonWeingarten,
+    U,
+    P,
+    step_size,
+    driver::MDDriver,
+)
+    return _md_step_sexton_weingarten!(
+        integrator.ordering,
+        integrator,
+        U,
+        P,
+        step_size,
+        driver,
+    )
 end
 
 """
@@ -301,11 +733,14 @@ export AbstractMDIntegrator,
     md_action_workspace,
     md_potential,
     md_force!,
+    MDActionSet,
+    MDForceGroup,
     update_momenta!,
     update_gaugefields!,
     enzyme_md_action,
     PQP,
     QPQ,
+    SextonWeingarten,
     md_step!,
     MDDriver,
     md_driver,

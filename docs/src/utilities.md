@@ -39,6 +39,15 @@ gauge_process_grid(U)   # one entry per direction
 gauge_communicator(U)   # MPI communicator for LM fields
 ~~~
 
+For an independent configuration snapshot on the same backend:
+
+~~~julia
+Uold = copy_configuration(U)
+copy_configuration!(Uold, U) # refresh an existing snapshot
+~~~
+
+These operations are preferred to `deepcopy` for MPI and device fields.
+
 ## Temporary link fields and link algebra
 
 `similar(U[1])` allocates one compatible link field on the same CPU, GPU, or
@@ -83,6 +92,13 @@ P = gaussian_momenta(
 )
 ~~~
 
+To avoid allocating on every trajectory:
+
+~~~julia
+P = gauge_momenta(U)
+gaussian_momenta!(P; seed=0x1234, sweep=0)
+~~~
+
 The seed and sweep belong to the momentum stream, not to the hot-start or
 heatbath streams. See [Randomness and reproducibility](randomness.md).
 
@@ -102,9 +118,26 @@ To load into an already allocated configuration:
 load_configuration!(U, "configuration.jld2")
 ~~~
 
-The allocating form preserves the stored Gaugefields backend type. Use an
-in-place load when the application must control lattice size, process grid, or
-device allocation before reading.
+The high-level JLD2 format stores only global physical link arrays plus lattice
+metadata. It does not serialize Gaugefields, MPI, or device objects. For a
+distributed configuration every rank participates; rank 0 gathers the links
+and writes the file.
+
+An allocating load uses the current JACC backend and may select a new
+communicator, process grid, or precision:
+
+~~~julia
+Uloaded = load_configuration(
+    "configuration.jld2";
+    comm=MPI.COMM_WORLD,
+    process_grid=:auto,
+    eltype=ComplexF32,
+)
+~~~
+
+An in-place load uses the backend, device placement, communicator, and process
+grid already owned by `U`. Thus a file written on multiple GPUs can be read on
+one CPU core, and the reverse direction uses the same file.
 
 ## Bridge text format
 
@@ -126,7 +159,12 @@ save_configuration("configuration.ildg", U; format=:ildg)
 
 Optional ILDG output keywords are forwarded by `save_configuration`. All
 ranks that own a distributed configuration must participate in collective
-operations required by the underlying format.
+operations required by the underlying format. Temporary payload and file-list
+paths are unique and automatically removed unless both `tempfile1` and
+`tempfile2` are supplied explicitly.
+
+ILDG remains available for interoperability with external lattice-QCD
+software; it is not required for Gaugefields checkpoints.
 
 The pre-v1 I/O entry points and examples are retained on the
 [Legacy API](legacyapi.md) page.

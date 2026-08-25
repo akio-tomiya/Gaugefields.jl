@@ -6,21 +6,21 @@ using LatticeMatrices
 using MPI
 using Test
 
-MPI.Initialized() || MPI.Init()
-
 @testset "High-level API with MPI" begin
-    nprocs = MPI.Comm_size(MPI.COMM_WORLD)
-    nprocs <= 2 || error("this test supports at most two MPI ranks")
-
-    dimensions = (2 * nprocs, 2, 2)
-    grid = (nprocs, 1, 1)
+    @test !MPI.Initialized()
+    dimensions = (4, 2, 2)
     U = gauge_configuration(
         dimensions;
         colors=2,
         start=:cold,
-        process_grid=grid,
+        process_grid=:auto,
         verbose=0,
     )
+    @test MPI.Initialized()
+
+    nprocs = MPI.Comm_size(MPI.COMM_WORLD)
+    nprocs <= 2 || error("this test supports at most two MPI ranks")
+    grid = (nprocs, 1, 1)
 
     @test length(U) == 3
     @test gauge_backend(U) isa LatticeMatricesBackend
@@ -29,6 +29,19 @@ MPI.Initialized() || MPI.Init()
     @test gauge_communicator(U) == MPI.COMM_WORLD
     @test measure_plaquette(U) ≈ 1
     @test measure_polyakov_loop(U) ≈ 1
+
+    if nprocs == 1
+        serial = gauge_configuration(
+            dimensions;
+            colors=2,
+            start=:cold,
+            process_grid=(1, 1, 1),
+            comm=SerialCommunicator(),
+            verbose=0,
+        )
+        @test gauge_communicator(serial) isa SerialCommunicator
+        @test measure_plaquette(serial) ≈ 1
+    end
 
     hot1 = gauge_configuration(
         dimensions;

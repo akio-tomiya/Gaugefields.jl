@@ -2,13 +2,14 @@ import JACC
 JACC.@init_backend
 
 using Gaugefields
+using JLD2
 using LatticeMatrices: gather_and_bcast_matrix, halo_epochs
 using MPI
 using Test
 
 MPI.Initialized() || MPI.Init()
 
-@testset "MPI LatticeMatrices ILDG round-trip" begin
+@testset "MPI portable JLD2 and ILDG round-trip" begin
     comm = MPI.COMM_WORLD
     rank = MPI.Comm_rank(comm)
     nprocs = MPI.Comm_size(comm)
@@ -80,4 +81,119 @@ MPI.Initialized() || MPI.Init()
         end
         MPI.Barrier(comm)
     end
+
+
+    automatic_prefix = MPI.bcast(
+        rank == 0 ? tempname(pwd()) : "",
+        0,
+        comm,
+    )
+    automatic_filename = automatic_prefix * ".ildg"
+    automatic_grid = first(process_grids)
+    automatic_source = gauge_configuration(
+        global_size;
+        colors=3,
+        start=:hot,
+        seed=UInt64(0x1234),
+        process_grid=automatic_grid,
+        comm,
+        verbose=0,
+    )
+    automatic_target = gauge_configuration(
+        global_size;
+        colors=3,
+        start=:cold,
+        process_grid=automatic_grid,
+        comm,
+        verbose=0,
+    )
+
+    portable_filename = automatic_prefix * ".jld2"
+    @test_throws ErrorException save_configuration(
+        joinpath(automatic_prefix * ".missing", "configuration.jld2"),
+        automatic_source,
+    )
+    save_configuration(portable_filename, automatic_source)
+    MPI.Barrier(comm)
+    if rank == 0
+        portable_data = JLD2.load(portable_filename)
+        @test portable_data["gaugefields_format"] ==
+              "Gaugefields.jl portable gauge configuration"
+        @test all(link isa Array for link in portable_data["links"])
+        @test portable_data["lattice_size"] == collect(global_size)
+    end
+    MPI.Barrier(comm)
+
+    portable_target = gauge_configuration(
+        global_size;
+        colors=3,
+        start=:cold,
+        process_grid=last(process_grids),
+        comm,
+        verbose=0,
+    )
+    load_configuration!(portable_target, portable_filename)
+    allocated_target = load_configuration(
+        portable_filename;
+        process_grid=last(process_grids),
+        comm,
+        verbose=0,
+    )
+    one_rank_target = load_configuration(
+        portable_filename;
+        process_grid=(1, 1, 1, 1),
+        comm=MPI.COMM_SELF,
+        verbose=0,
+    )
+    for direction in eachindex(automatic_source)
+        original = gather_and_bcast_matrix(automatic_source[direction].U)
+        @test gather_and_bcast_matrix(portable_target[direction].U) == original
+        @test gather_and_bcast_matrix(allocated_target[direction].U) == original
+        @test gather_and_bcast_matrix(one_rank_target[direction].U) == original
+    end
+    MPI.Barrier(comm)
+    rank == 0 && rm(portable_filename; force=true)
+    MPI.Barrier(comm)
+
+    failure_prefix = MPI.bcast(
+        rank == 0 ? tempname(pwd()) : "",
+        0,
+        comm,
+    )
+    failure_payload = failure_prefix * ".payload"
+    failure_filelist = failure_prefix * ".list"
+    failure_filename = joinpath(
+        failure_prefix * ".missing",
+        "configuration.ildg",
+    )
+    @test_throws ErrorException save_binarydata(
+        automatic_source,
+        failure_filename;
+        precision=32,
+        tempfile1=failure_payload,
+        tempfile2=failure_filelist,
+    )
+    MPI.Barrier(comm)
+    if rank == 0
+        rm(failure_payload; force=true)
+        rm(failure_filelist; force=true)
+    end
+    MPI.Barrier(comm)
+
+    save_configuration(
+        automatic_filename,
+        automatic_source;
+        format=:ildg,
+        precision=32,
+    )
+    load_configuration!(automatic_target, automatic_filename; format=:ildg)
+    for direction in eachindex(automatic_source)
+        original = gather_and_bcast_matrix(automatic_source[direction].U)
+        loaded = gather_and_bcast_matrix(automatic_target[direction].U)
+        @test maximum(abs, loaded .- ComplexF64.(ComplexF32.(original))) <=
+              eps(Float32)
+    end
+    MPI.Barrier(comm)
+    rank == 0 && rm(automatic_filename; force=true)
+    MPI.Barrier(comm)
 end

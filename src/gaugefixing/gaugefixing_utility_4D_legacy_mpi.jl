@@ -2,34 +2,6 @@
 # storage-specific iteration pattern; the checkerboard and one-site matrix
 # operations here are shared with the LM and serial adapters.
 gaugefixing_backend_supported(g::Gaugefields_4D_nowing_mpi) = g.NC in (2, 3)
-gaugefixing_backend_supported(g::Gaugefields_4D_wing_mpi) = g.NC in (2, 3)
-
-function unit_U!(g::Gaugefields_4D_wing_mpi{NC}) where {NC}
-    @inbounds for nt in 1:g.PN[4]
-        for nz in 1:g.PN[3]
-            for ny in 1:g.PN[2]
-                for nx in 1:g.PN[1]
-                    for jc in 1:NC
-                        for ic in 1:NC
-                            setvalue!(
-                                g,
-                                ic == jc ? 1.0 + 0.0im : 0.0 + 0.0im,
-                                ic,
-                                jc,
-                                nx,
-                                ny,
-                                nz,
-                                nt,
-                            )
-                        end
-                    end
-                end
-            end
-        end
-    end
-    set_wing_U!(g)
-    return nothing
-end
 
 function _normalize_legacy_mpi!(g, ::Val{NC}) where {NC}
     matrix = Matrix{ComplexF64}(undef, NC, NC)
@@ -241,43 +213,39 @@ function _make_g_steepest_descent_legacy_mpi!(
     return nothing
 end
 
-for MPIField in (Gaugefields_4D_nowing_mpi, Gaugefields_4D_wing_mpi)
-    @eval begin
-        function make_g_los_alamos!(
-            U::Array{T,1},
-            g::$MPIField{NC},
-            temp::$MPIField{NC},
-            parity::Int,
-            overrelax::Float64,
-            ovr_coeff2::Float64,
-            ovr_coeff3::Float64,
-            D_fix::Int=4,
-        ) where {NC,T<:$MPIField}
-            return _make_g_transform_legacy_mpi!(
-                U,
-                g,
-                temp,
-                parity,
-                overrelax,
-                ovr_coeff2,
-                ovr_coeff3,
-                D_fix,
-                Val(NC),
-            )
-        end
+function make_g_los_alamos!(
+    U::Array{T,1},
+    g::Gaugefields_4D_nowing_mpi{NC},
+    temp::Gaugefields_4D_nowing_mpi{NC},
+    parity::Int,
+    overrelax::Float64,
+    ovr_coeff2::Float64,
+    ovr_coeff3::Float64,
+    D_fix::Int=4,
+) where {NC,T<:Gaugefields_4D_nowing_mpi}
+    return _make_g_transform_legacy_mpi!(
+        U,
+        g,
+        temp,
+        parity,
+        overrelax,
+        ovr_coeff2,
+        ovr_coeff3,
+        D_fix,
+        Val(NC),
+    )
+end
 
-        function make_g_steepest_descent!(
-            U::Array{T,1},
-            g::$MPIField{NC},
-            Δ::$MPIField{NC},
-            parity::Int,
-            overrelax::Float64,
-            temps::Array{T,1},
-            D_fix::Int=4,
-        ) where {NC,T<:$MPIField}
-            return _make_g_steepest_descent_legacy_mpi!(
-                U, g, Δ, parity, overrelax, temps, D_fix, Val(NC),
-            )
-        end
-    end
+function make_g_steepest_descent!(
+    U::Array{T,1},
+    g::Gaugefields_4D_nowing_mpi{NC},
+    Δ::Gaugefields_4D_nowing_mpi{NC},
+    parity::Int,
+    overrelax::Float64,
+    temps::Array{T,1},
+    D_fix::Int=4,
+) where {NC,T<:Gaugefields_4D_nowing_mpi}
+    return _make_g_steepest_descent_legacy_mpi!(
+        U, g, Δ, parity, overrelax, temps, D_fix, Val(NC),
+    )
 end

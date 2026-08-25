@@ -228,10 +228,10 @@ end
                 verbose=0,
             )
             constructor = storage == :nowing_mpi ?
-                (() -> Gaugefields.identityGaugefields_4D_nowing_mpi(
+                (() -> Gaugefields.AbstractGaugefields_module.identityGaugefields_4D_nowing_mpi(
                     3, dims..., process_grid; verbose_level=0,
                 )) :
-                (() -> Gaugefields.identityGaugefields_4D_wing_mpi(
+                (() -> Gaugefields.AbstractGaugefields_module.identityGaugefields_4D_wing_mpi(
                     3, dims..., 1, process_grid; verbose_level=0,
                 ))
             U_legacy = [constructor() for _ in 1:4]

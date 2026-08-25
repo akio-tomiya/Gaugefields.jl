@@ -5,6 +5,12 @@ There is no separate MPI constructor and no accelerator flag in the v1 API.
 The simulation source is selected by `process_grid`; JACC determines where its
 arrays and kernels run.
 
+MPI.jl is optional. Ordinary serial CPU and single-GPU programs do not need it.
+MPI applications must load MPI before constructing an MPI-backed field.
+Gaugefields calls `MPI.Init()` lazily on first MPI use and never calls
+`MPI.Finalize()`. Call `MPI.Init(...)` explicitly first when custom
+initialization options such as the thread level are needed.
+
 ## Complete MPI example
 
 The application environment must list MPI and JACC directly:
@@ -38,6 +44,7 @@ U = gauge_configuration(
     start=:hot,
     seed=0x1234,
     process_grid=process_grid,
+    comm=world,
 )
 
 comm = gauge_communicator(U)
@@ -61,8 +68,15 @@ The process grid has one entry per lattice direction. It must satisfy:
 - every global extent is divisible by the corresponding grid entry;
 - local extents must be large enough for the selected halo and operation.
 
-When `process_grid` is omitted in 4D, the default decomposition places all
-ranks in the final direction.
+When `process_grid` is omitted or set to `:auto`, Gaugefields chooses a valid
+factorization of the communicator size that respects lattice divisibility and
+minimizes a surface-to-volume score. Pass an explicit tuple when a particular
+topology is required. `comm` may be `MPI.COMM_SELF`, `MPI.COMM_WORLD`, or a
+subcommunicator; Gaugefields does not call `MPI.Finalize()`.
+
+Even with one MPI rank, the communicator choice remains explicit. Omitting
+`comm` after `using MPI` uses `MPI.COMM_WORLD`; pass
+`comm=SerialCommunicator()` to use the serial communication path instead.
 
 ## CPU execution
 
@@ -119,11 +133,17 @@ and multi-GPU:
 - `gradient_flow` and `flow!`;
 - `heatbath_updater`, `heatbath!`, and `overrelaxation!`;
 - `stout_smearing` and `smear`;
-- `gaussian_momenta`, `md_driver`, and `md_trajectory!`;
+- `gaussian_momenta`, `gaussian_momenta!`, `md_driver`, and `md_trajectory!`;
 - `save_configuration` and in-place `load_configuration!` where supported by
   the selected file format.
 
 All ranks must execute collective algorithms in the same order.
+
+JLD2 is the portable checkpoint format for serial, MPI, GPU, and multi-GPU
+fields. Saving is collective: rank 0 reconstructs the global physical links
+on host memory and writes one file. Loading reconstructs the destination on
+its current devices and process grid. All ranks must call save and load in the
+same order.
 
 ## Reproducibility across decompositions
 

@@ -119,11 +119,11 @@ function Base.setindex!(x::TA_Gaugefields_3D_MPILattice, value, basis, ix, iy, i
     return value
 end
 
-get_myrank(U::TA_Gaugefields_3D_MPILattice) = MPI.Comm_rank(U.a.comm)
-get_nprocs(U::TA_Gaugefields_3D_MPILattice) = MPI.Comm_size(U.a.comm)
+get_myrank(U::TA_Gaugefields_3D_MPILattice) = comm_rank(U.a.comm)
+get_nprocs(U::TA_Gaugefields_3D_MPILattice) = comm_size(U.a.comm)
 
 function barrier(U::TA_Gaugefields_3D_MPILattice)
-    MPI.Barrier(U.a.comm)
+    barrier(U.a.comm)
     return nothing
 end
 

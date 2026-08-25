@@ -35,6 +35,29 @@ import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
 abstract type Abstractfields end
 
+function _legacy_mpi_unavailable(name)
+    throw(ArgumentError(
+        "$name requires MPI.jl; add MPI to the application, load it with " *
+        "`using MPI`, and try again"))
+end
+
+for name in (
+    :identityGaugefields_2D_nowing_mpi,
+    :randomGaugefields_2D_nowing_mpi,
+    :identityGaugefields_4D_wing_mpi,
+    :randomGaugefields_4D_wing_mpi,
+    :minusidentityGaugefields_4D_wing_mpi,
+    :identityGaugefields_4D_nowing_mpi,
+    :randomGaugefields_4D_nowing_mpi,
+    :minusidentityGaugefields_4D_nowing_mpi,
+    :thooftFlux_4D_B_at_bndry_wing_mpi,
+    :thooftFlux_4D_B_at_bndry_nowing_mpi,
+)
+    @eval function $(name)(args...; kwargs...)
+        _legacy_mpi_unavailable($(String(name)))
+    end
+end
+
 
 abstract type AbstractGaugefields{NC,Dim} <: Abstractfields end
 
@@ -115,8 +138,14 @@ mutable struct Data_sent{NC} #data format for MPI
     end
 end
 
-using MPI
 using JACC
+import ..Communication:
+    barrier,
+    broadcast!,
+    comm_rank,
+    comm_size,
+    prepare_communicator,
+    resolve_communicator
 
 const _REPRODUCIBLE_MPILATTICE_SEED = UInt64(0x12345678abcdef01)
 const _HOT_START_STREAM_TAG = UInt32(0x00484f54)
@@ -132,8 +161,8 @@ function _resolve_mpialattice_elementtype(elementtype, singleprecision::Bool)
     return T, T === Float32 || T === ComplexF32
 end
 
-function _shared_mpialattice_seed(seed, comm::MPI.Comm; reproducible::Bool=false)
-    root_seed = if MPI.Comm_rank(comm) == 0
+function _shared_mpialattice_seed(seed, comm; reproducible::Bool=false)
+    root_seed = if comm_rank(comm) == 0
         if seed !== nothing
             UInt64(seed)
         elseif reproducible
@@ -145,7 +174,7 @@ function _shared_mpialattice_seed(seed, comm::MPI.Comm; reproducible::Bool=false
         UInt64(0)
     end
     seed_buffer = Ref(root_seed)
-    MPI.Bcast!(seed_buffer, 0, comm)
+    broadcast!(seed_buffer, 0, comm)
     return seed_buffer[]
 end
 
@@ -447,6 +476,7 @@ function Initialize_Gaugefields(
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
     elementtype=nothing,
+    comm=nothing,
 )
 
 
@@ -467,6 +497,7 @@ function Initialize_Gaugefields(
             isMPILattice,
             boundarycondition,
             elementtype,
+            comm,
         )
     elseif condition == "hot"
         u1 = RandomGauges(
@@ -487,6 +518,7 @@ function Initialize_Gaugefields(
             seed,
             rng_algorithm,
             elementtype,
+            comm,
             direction=1,
         )
     else
@@ -513,6 +545,7 @@ function Initialize_Gaugefields(
                 isMPILattice,
                 boundarycondition,
                 elementtype,
+                comm,
             )
         elseif condition == "hot"
             U[μ] = RandomGauges(
@@ -533,6 +566,7 @@ function Initialize_Gaugefields(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction=μ,
             )
         else
@@ -560,6 +594,7 @@ function RandomGauges(
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),
     elementtype=nothing,
+    comm=nothing,
     direction::Integer=0,
 )
     accelerator_g = accelerator
@@ -584,6 +619,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
                 #mpiinit
             )
@@ -602,6 +638,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
             )
         elseif dim == 2
@@ -618,6 +655,7 @@ function RandomGauges(
                 seed,
                 rng_algorithm,
                 elementtype,
+                comm,
                 direction,
                 #mpiinit
             )
@@ -760,6 +798,7 @@ function IdentityGauges(
     isMPILattice=false,
     boundarycondition=ones(4),
     elementtype=nothing,
+    comm=nothing,
 )
     accelerator_g = accelerator
     dim = length(NN)
@@ -784,6 +823,7 @@ function IdentityGauges(
                 boundarycondition,
                 PEs,
                 elementtype,
+                comm,
                 #mpiinit
             )
         elseif dim == 3
@@ -798,6 +838,7 @@ function IdentityGauges(
                 boundarycondition=boundarycondition[1:3],
                 PEs,
                 elementtype,
+                comm,
             )
         elseif dim == 2
             U = identityGaugefields_2D_MPILattice(
@@ -810,6 +851,7 @@ function IdentityGauges(
                 boundarycondition=boundarycondition[1:2],
                 PEs,
                 elementtype,
+                comm,
                 #mpiinit
             )
         else

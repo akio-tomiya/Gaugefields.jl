@@ -71,7 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         latticematrices:
-          - "1.1.0"
+          - "1.2.0"
     steps:
       - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
@@ -98,3 +98,80 @@ jobs:
           Pkg.add(PackageSpec(name="LatticeMatrices", version=version));
           Pkg.status()'
       - uses: julia-actions/julia-runtest@latest
+
+  serial-without-mpi:
+    name: Serial without MPI.jl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.11"
+          arch: x64
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-x64-serial-no-mpi-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-x64-serial-no-mpi-${{ env.cache-name }}-
+            ${{ runner.os }}-x64-
+            ${{ runner.os }}-
+      - name: Install without MPI and run a serial smoke test
+        env:
+          JULIA_LOAD_PATH: "@:@stdlib"
+        run: >-
+          julia --startup-file=no -e '
+          using Pkg;
+          Pkg.activate("serial-test");
+          Pkg.develop(path=pwd());
+          Pkg.add("JACC");
+          @assert Base.find_package("MPI") === nothing;
+          import JACC;
+          JACC.@init_backend;
+          using Gaugefields;
+          @assert Base.get_extension(Gaugefields, :GaugefieldsMPIExt) === nothing;
+          U = gauge_configuration((4, 4); colors=2, start=:cold, process_grid=(1, 1));
+          @assert gauge_communicator(U) isa SerialCommunicator;
+          @assert measure_plaquette(U) ≈ 1'
+
+  mpi:
+    name: MPI extension (1 and 2 ranks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.11"
+          arch: x64
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-x64-mpi-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-x64-mpi-${{ env.cache-name }}-
+            ${{ runner.os }}-x64-
+            ${{ runner.os }}-
+      - name: Install MPI test dependencies
+        run: >-
+          julia --startup-file=no -e '
+          using Pkg;
+          Pkg.activate("mpi-test");
+          Pkg.develop(path=pwd());
+          Pkg.add(["JACC", "JLD2", "LatticeMatrices", "MPI"]);
+          using MPI;
+          MPI.install_mpiexecjl(destdir="mpi-test/bin")'
+      - name: Check lazy MPI lifecycle
+        run: |
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 1 julia --startup-file=no --project=mpi-test test/MPIJACCtest/mpi_lifecycle.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 1 julia --startup-file=no --project=mpi-test test/MPIJACCtest/mpi_legacy_lifecycle.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 1 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_legacy_backends.jl
+      - name: Run two-rank API tests
+        run: |
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/high_level_api.jl
+          GAUGEFIELDS_TEST_MPI=true mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/three_dimensional.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/ildg_io.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_legacy_backends.jl

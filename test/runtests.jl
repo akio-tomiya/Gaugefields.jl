@@ -31,8 +31,12 @@ end
     include("gaugefixing_backends.jl")
 end
 
-@testset "ILDG I/O" begin
-    include("ildg_io.jl")
+if Sys.iswindows()
+    @info "Skipping ILDG I/O tests on Windows pending a CLIME binary-mode fix"
+else
+    @testset "ILDG I/O" begin
+        include("ildg_io.jl")
+    end
 end
 
 @testset "3D LatticeMatrices compatibility" begin

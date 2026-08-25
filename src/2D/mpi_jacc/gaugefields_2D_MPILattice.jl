@@ -29,8 +29,8 @@ abstract type Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Gaugefields_2D{NC} end
 Base.eltype(::Type{<:Fields_2D_MPILattice{NC,NX,NY,T}}) where {NC,NX,NY,T} = T
 Base.eltype(U::Fields_2D_MPILattice) = eltype(typeof(U))
 
-struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW}
-    U::LatticeMatrix{2,T,AT,NC,NC}
+struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW,TU<:LatticeMatrix{2,T,AT,NC,NC}} <: Fields_2D_MPILattice{NC,NX,NY,T,AT,NDW}
+    U::TU
     mpi::Bool
     verbose_print::Verbose_print
     singleprecision::Bool
@@ -48,20 +48,11 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
         elementtype=nothing,
         boundarycondition=ones(2),
         PEs=nothing,
-        comm=MPI.COMM_WORLD,
+        comm=nothing,
         #mpiinit=false,
         verbose_level=2
     )
-        if MPI.Initialized() == false
-            MPI.Init()
-            mpiinit = true
-        end
-
-        #if mpiinit == false
-        #    MPI.Init()
-        #    mpiinit = true
-        #end
-        comm0 = comm
+        comm0 = prepare_communicator(resolve_communicator(comm))
 
         gsize = (NX, NY)
         dim = 2
@@ -70,7 +61,7 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
         elementtype, singleprecision =
             _resolve_mpialattice_elementtype(elementtype, singleprecision)
         phases = boundarycondition
-        nprocs = MPI.Comm_size(comm)
+        nprocs = comm_size(comm0)
         if isnothing(PEs)
             PEs_in = (1, nprocs)
         else
@@ -88,7 +79,7 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
         #@assert NT % PEs_in[4] == 0 "NT % PEs[4] should be 0. Now NT = $NT and PEs = $PEs_in"
 
         @assert prod(PEs_in) == nprocs "num. of MPI process should be prod(PEs). Now nprocs = $nprocs and PEs = $PEs"
-        myrank = MPI.Comm_rank(comm)
+        myrank = comm_rank(comm0)
 
         verbose_print = Verbose_print(verbose_level, myid=myrank)
 
@@ -97,12 +88,13 @@ struct Gaugefields_2D_MPILattice{NC,NX,NY,T,AT,NDW} <: Fields_2D_MPILattice{NC,N
             nw, elementtype, phases, comm0)
         T = elementtype
         AT = typeof(U.A)
+        TU = typeof(U)
 
         mpi = true
 
         NV = NX * NY# * NZ * NT
 
-        return new{NC,NX,NY,T,AT,NDW}(
+        return new{NC,NX,NY,T,AT,NDW,TU}(
             U, mpi, verbose_print, singleprecision,
             NX,
             NY,
@@ -184,13 +176,13 @@ end
     return v
 end
 
-get_myrank(U::Gaugefields_2D_MPILattice) = MPI.Comm_rank(U.U.comm)
+get_myrank(U::Gaugefields_2D_MPILattice) = comm_rank(U.U.comm)
 get_myrank(U::Array{T,1}) where {T<:Gaugefields_2D_MPILattice} = get_myrank(U[1])
-get_nprocs(U::Gaugefields_2D_MPILattice) = MPI.Comm_size(U.U.comm)
+get_nprocs(U::Gaugefields_2D_MPILattice) = comm_size(U.U.comm)
 get_nprocs(U::Array{T,1}) where {T<:Gaugefields_2D_MPILattice} = get_nprocs(U[1])
 
 function barrier(U::Gaugefields_2D_MPILattice)
-    MPI.Barrier(U.U.comm)
+    barrier(U.U.comm)
     return nothing
 end
 
@@ -301,7 +293,7 @@ function identityGaugefields_2D_MPILattice(NC, NX, NY;
     elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
     #mpiinit=false
 )
 
@@ -328,7 +320,7 @@ function randomGaugefields_2D_MPILattice(NC, NX, NY;
     elementtype=nothing,
     boundarycondition=ones(4),
     PEs=nothing,
-    comm=MPI.COMM_WORLD,
+    comm=nothing,
     randomnumber="Random",
     seed=nothing,
     rng_algorithm::SiteRNGAlgorithm=Philox4x32(),

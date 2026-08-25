@@ -261,17 +261,30 @@ Ustout = smear(U, stout)
 
 ## Save and load
 
-JLD2 preserves the stored gauge-field type:
+JLD2 is the default portable checkpoint format:
 
 ```julia
 save_configuration("configuration.jld2", U)
 Uloaded = load_configuration("configuration.jld2")
 ```
 
+For MPI, GPU, and multi-GPU fields, every rank calls `save_configuration`.
+Rank 0 gathers the physical links into one global host configuration and is
+the only rank that writes the file. `load_configuration` allocates on the
+current JACC backend, while `load_configuration!` redistributes into an
+existing destination. The file does not contain a communicator, process grid,
+device array, or halo storage.
+
 Bridge and ILDG data can be loaded into a configuration whose lattice and
 color sizes have already been specified; see the I/O API for those formats.
 
 ## MPI execution on CPUs
+
+MPI support is optional. Add MPI.jl to the application environment and load it
+with `using MPI` before constructing a distributed field. Gaugefields calls
+`MPI.Init()` lazily on first MPI use and never calls `MPI.Finalize()`. The
+explicit `MPI.Init()` in the example below is optional, but remains useful when
+an application wants to make MPI initialization visible or pass custom options.
 
 The following complete script makes the process grid explicit. Save it as
 `four_d_mpi.jl`:
@@ -300,6 +313,7 @@ U = gauge_configuration(
     start=:hot,
     seed=1234,
     process_grid=grid,
+    comm=comm,
 )
 
 plaq = measure_plaquette(U) # all ranks participate in the reduction
@@ -323,8 +337,12 @@ mpiexec -n 4 julia --threads=4 --project=. four_d_mpi.jl
 
 For every process grid, `prod(process_grid)` must equal the number of MPI
 ranks, and each global lattice extent must be divisible by the corresponding
-process-grid entry. If `process_grid` is omitted, the 4D default is
-`(1, 1, 1, nranks)`.
+process-grid entry. If `process_grid` is omitted or set to `:auto`, Gaugefields
+chooses a valid low-surface decomposition of `comm`.
+
+For a one-process run after MPI has been loaded, omit `comm` to use
+`MPI.COMM_WORLD`, or pass `comm=SerialCommunicator()` to select the serial path
+explicitly.
 
 ## One GPU
 
@@ -338,7 +356,7 @@ JACC.set_backend("cuda")
 The ordinary single-process code at the beginning of this tutorial then
 allocates its LM fields on the GPU. No `cuda=true` or accelerator-specific
 Gaugefields constructor keyword is used. Those keywords belong to the legacy
-storage implementations.
+storage implementations. MPI.jl is not required for this single-GPU path.
 
 The same procedure uses `"amdgpu"` for AMD GPUs and `"oneapi"` for Intel
 GPUs.

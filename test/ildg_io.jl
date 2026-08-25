@@ -65,6 +65,31 @@ end
             tempfile1=joinpath(dir, "invalid.dat"),
             tempfile2=joinpath(dir, "invalid.list"),
         )
+        @test_throws ArgumentError save_binarydata(
+            U,
+            joinpath(dir, "one-temporary.ildg");
+            tempfile1=joinpath(dir, "one-temporary.dat"),
+        )
+
+        automatic_dir = joinpath(dir, "automatic")
+        mkdir(automatic_dir)
+        automatic_file = joinpath(automatic_dir, "configuration.ildg")
+        save_configuration(
+            automatic_file,
+            U;
+            format=:ildg,
+            precision=32,
+        )
+        @test readdir(automatic_dir) == ["configuration.ildg"]
+        automatic_restored = Initialize_Gaugefields(
+            NC,
+            0,
+            L...;
+            condition="cold",
+        )
+        load_configuration!(automatic_restored, automatic_file; format=:ildg)
+        @test physical_ildg_values(automatic_restored) ==
+              ComplexF64.(ComplexF32.(original))
     end
 
     xml = Gaugefields.ILDG_format.ildg_format_xml(L, NC, 32)
