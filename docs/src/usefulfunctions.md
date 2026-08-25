@@ -57,6 +57,7 @@ in [Wilson loops and gauge actions](wilsonloops_actions.md).
 ```@docs
 gradient_flow
 heatbath_updater
+gaugefixing!
 stout_smearing
 smear
 save_configuration

@@ -390,6 +390,65 @@ function evaluate_gaugelinks!(
     return
 end
 
+function evaluate_gaugelinks_evenodd!(
+    uout::T,
+    w::Wilsonline{Dim},
+    U::Vector{T},
+    temps::Vector{T},
+    target_even::Bool,
+) where {T<:Gaugefields_4D_MPILattice,Dim}
+    glinks = w
+    numlinks = length(glinks)
+
+    if numlinks == 0
+        unit_U!(uout)
+        return nothing
+    end
+
+    accumulator = temps[1]
+    work = temps[2]
+    first_link = glinks[1]
+    first_is_adjoint = isdag(first_link)
+    first_shifted = shift_U(
+        U[get_direction(first_link)], get_position(first_link))
+
+    if numlinks == 1
+        clear_U!(uout, target_even)
+        add_U!(
+            uout, first_is_adjoint ? first_shifted' : first_shifted,
+            target_even)
+        _release_shifted_U!(first_shifted)
+        return nothing
+    end
+
+    second_link = glinks[2]
+    second_shifted = shift_U(
+        U[get_direction(second_link)], get_position(second_link))
+    multiply_12!(
+        accumulator, first_shifted, second_shifted, 2,
+        isdag(second_link), first_is_adjoint, target_even)
+    _release_shifted_U!(second_shifted)
+    _release_shifted_U!(first_shifted)
+
+    accumulated = accumulator
+    for link_index in 3:numlinks
+        link = glinks[link_index]
+        accumulated_shifted = shift_U(accumulated, (0, 0, 0, 0))
+        shifted = shift_U(U[get_direction(link)], get_position(link))
+        multiply_12!(
+            work, accumulated_shifted, shifted, link_index,
+            isdag(link), false, target_even)
+        _release_shifted_U!(shifted)
+        _release_shifted_U!(accumulated_shifted)
+        accumulator, work = work, accumulator
+        accumulated = accumulator
+    end
+
+    clear_U!(uout, target_even)
+    add_U!(uout, accumulated, target_even)
+    return nothing
+end
+
 
 function identityGaugefields_4D_MPILattice(NC, NX, NY, NZ, NT;
     NDW=1,

@@ -10,7 +10,7 @@ import LatticeMatrices:
     delinearize,
     global_site_coordinates,
     global_site_id,
-    mark_halo_dirty!,
+    parallel_for_mutating!,
     rand_bounded,
     rand_uniform,
     rand_uniform_open,
@@ -1408,8 +1408,8 @@ function _overrelaxation_sites!(
         _OVERRELAXATION_RNG_TAG,
     )
     failures = JACC.zeros(Int32, 1)
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_overrelaxation_sites!,
         U.U.A,
@@ -1631,8 +1631,8 @@ function heatbath_su2_sites!(
 
     key = RNGStreamKey(seed, sweep, direction, color, subgroup)
     failures = JACC.zeros(Int32, 1)
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_heatbath_su2_sites!,
         U.U.A,
@@ -1691,8 +1691,8 @@ function heatbath_su2_sites!(
     key = RNGStreamKey(seed, sweep, direction, target_color, 0)
     failures = JACC.zeros(Int32, 1)
     target = _LinearHeatbathTarget(coloring, Int64(target_color))
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_heatbath_su2_sites!,
         U.U.A,
@@ -1817,8 +1817,8 @@ function heatbath_su3_sites!(
         3,
     )
     failures = JACC.zeros(Int32, 1)
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_heatbath_su3_sites!,
         U.U.A,
@@ -1933,8 +1933,8 @@ function _heatbath_sun_sites!(
 
     key = RNGStreamKey(seed, sweep, direction, color, 0)
     failures = JACC.zeros(Int32, 1)
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_heatbath_sun_sites!,
         U.U.A,
@@ -2019,8 +2019,8 @@ function heatbath_su3_sites!(
     )
     failures = JACC.zeros(Int32, 1)
     target = _LinearHeatbathTarget(coloring, Int64(target_color))
-    mark_halo_dirty!(U.U)
-    JACC.parallel_for(
+    parallel_for_mutating!(
+        U.U,
         prod(U.U.PN),
         kernel_heatbath_su3_sites!,
         U.U.A,

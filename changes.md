@@ -1,5 +1,68 @@
 # Changes
 
+## v1.1.1
+
+### Gauge fixing
+
+- Add `gaugefixing!` for four-dimensional Landau (`D_fix=4`) and Coulomb
+  (`D_fix=3`) gauge fixing, with Los Alamos and steepest-descent checkerboard
+  updates, overrelaxation, residual-based stopping, and configurable minimum
+  iteration counts.
+- Provide shared gauge-fixing diagnostics for the normalized link trace and
+  gauge-condition residual, while preserving the plaquette under gauge
+  transformations.
+- Use generic SU(N) normalization on the LatticeMatrices backend, including
+  tested SU(4) support, and preserve component precision on the portable
+  `ComplexF32` path.
+- Support LatticeMatrices, serial nowing, portable JACC accelerator, and
+  deprecated MPI storage paths while retaining the optional direct-CUDA
+  implementation for legacy CUDA storage.
+- Correct the SU(3) projection used by the deprecated nowing-MPI
+  normalization path.
+
+### Portable update performance
+
+- Require LatticeMatrices v1.2.1 and use its concrete, Adapt-compatible
+  mutating-kernel launcher in heatbath and overrelaxation updates. This removes
+  the per-site argument boxing seen on the JACC Threads backend without adding
+  CUDA-, AMDGPU-, oneAPI-, or Threads-specific branches.
+- Specialize four-dimensional LatticeMatrices even/odd Wilson-line evaluation
+  so accumulated products stay in reusable ping-pong fields. Intermediate
+  products no longer trigger repeated whole-field copies and eager halo
+  exchanges; halo synchronization remains lazy and is performed when a later
+  shifted read actually needs it.
+- In one-thread CPU benchmarks, the LatticeMatrices backend is 4--38% faster
+  than `Gaugefields.LegacyBackend()` across SU(2)/SU(3) heatbath, heatbath with
+  overrelaxation, and gauge-only HMC cases. See the LatticeQCD benchmark record
+  for the full conditions and allocation counts.
+
+### Configuration I/O
+
+- Restore fast ILDG loading for LatticeMatrices and deprecated nowing-MPI
+  fields by coalescing per-site seeks and reads into maximal contiguous local
+  blocks, using bounded chunks without reverting to full-volume reads on every
+  MPI rank.
+
+### Validation
+
+- Add deterministic Landau and Coulomb trajectories, including a converged
+  8^4 Coulomb regression with gauge functional `0.6755459192810215` for the
+  documented seed and parameters.
+- Check gauge-fixing agreement between LatticeMatrices and the serial, JACC
+  accelerator, and deprecated MPI implementations, including one- and
+  two-rank MPI domain decompositions.
+- Test SU(N) unitarity and unit determinant, plaquette preservation,
+  convergence behavior, input validation, Float32 execution, and the optional
+  direct-CUDA path.
+- Compare complete SU(2) and SU(3) heatbath sweeps element by element with the
+  legacy storage implementation while sharing identical site-based random
+  streams. Add both comparisons to the two-rank MPI CI job.
+- Verify the optimized SU(3) heatbath path on an NVIDIA H100. After 13 seeded
+  sweeps, CPU and CUDA both give the same normalized plaquette,
+  `0.5589393945177883`.
+- Cover ILDG local-volume reads for Float32 and Float64 payloads with x-, y-,
+  z-, and t-direction process decompositions.
+
 ## v1.1.0
 
 ### Optional MPI support
