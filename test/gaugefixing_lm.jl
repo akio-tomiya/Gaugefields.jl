@@ -108,6 +108,51 @@ end
     @test U_global[:, :, 1, 1, 1, 1] ≈ expected_link rtol=5e-13 atol=5e-13
 end
 
+@testset "Coulomb gauge-fixing regression at convergence" begin
+    # This is an implementation-specific regression value, not a unique
+    # gauge-fixing result: another update algorithm may reach a different
+    # Gribov copy. The fixed seed and parameters reproduce the comparison
+    # made for PR #155 across the supported Gaugefields backends.
+    U = gauge_configuration(
+        (8, 8, 8, 8);
+        colors=3,
+        start=:hot,
+        seed=UInt64(1234),
+        process_grid=(1, 1, 1, 1),
+        verbose=0,
+    )
+    g = similar(U[1])
+    temps = [similar(U[1]) for _ in 1:6]
+    initial_plaquette = measure_plaquette(U)
+    initial_trace, _ = Gaugefields.AbstractGaugefixing_module.validate_training(
+        U, temps; D_fix=3,
+    )
+
+    @test initial_trace ≈ 0.002085448143734312 rtol=5e-13 atol=5e-13
+
+    gaugefixing!(
+        U,
+        g,
+        1.0,
+        200,
+        1.99,
+        10_000,
+        1e-14,
+        1234,
+        temps;
+        D_fix=3,
+    )
+
+    final_trace, final_residual =
+        Gaugefields.AbstractGaugefixing_module.validate_training(
+            U, temps; D_fix=3,
+        )
+
+    @test final_trace ≈ 0.6755459192810215 rtol=5e-13 atol=5e-13
+    @test final_residual < 1e-14
+    @test measure_plaquette(U) ≈ initial_plaquette rtol=5e-12 atol=5e-12
+end
+
 @testset "Configurable minimum gauge-fixing iterations" begin
     U_seed = gauge_configuration(
         (2, 2, 2, 2);
