@@ -1,4 +1,5 @@
 import LatticeMatrices
+using Logging
 
 const LMCompat = Gaugefields.LatticeMatricesCompat
 
@@ -462,6 +463,29 @@ end
     pullback_lm_host = similar(Ulegacy[1])
     substitute_U!(pullback_lm_host, pullback_lm)
     @test maximum(abs.(pullback_lm_host.U .- pullback_legacy.U)) < 1e-11
+
+    # Rectangle staples can require a shift wider than the configured halo.
+    # LatticeMatrices materializes such shifts in pooled storage, which the
+    # stout pullback must release deterministically instead of waiting for GC.
+    nn_rectangle = CovNeuralnet(Ulm)
+    push!(
+        nn_rectangle,
+        STOUT_Layer(["plaquette", "rectangular"], [0.1, 0.1], Ulm),
+    )
+    dSdU_rectangle = similar(Ulm)
+    substitute_U!(dSdU_rectangle, Ulm)
+    # Permit the pool to grow once for this wider-than-halo workload. A
+    # released materialized shift is then reusable by every later pullback.
+    with_logger(NullLogger()) do
+        _, history_rectangle, _ = calc_smearedU(Ulm, nn_rectangle)
+        back_prop(dSdU_rectangle, nn_rectangle, history_rectangle, Ulm)
+    end
+    pullback_rectangle = @test_logs min_level=Logging.Warn begin
+        _, history_rectangle, _ = calc_smearedU(Ulm, nn_rectangle)
+        back_prop(dSdU_rectangle, nn_rectangle, history_rectangle, Ulm)
+    end
+    @test length(pullback_rectangle) == 4
+    @test isfinite(real(pullback_rectangle[1][1, 1, 1, 1, 1, 1]))
 end
 
 @testset "4D legacy-compatible API" begin

@@ -3,6 +3,15 @@ import ..AbstractGaugefields_module: clear_U!, add_U!, Gaugefields_4D_nowing, su
 import ..AbstractGaugefields_module: calc_coefficients_Q, calc_Bmatrix!
 import ..Temporalfields_module: Temporalfields, unused!, get_temp
 
+# LatticeMatrices v1 may materialize a shift that extends beyond the halo and
+# attach a pooled-storage lease to it. MPILattice shifted gauge fields expose
+# `close` for deterministic lease release; legacy non-owning shifted fields do
+# not need any cleanup.
+@inline function release_stout_shift!(shifted)
+    applicable(close, shifted) && close(shifted)
+    return nothing
+end
+
 mutable struct STOUT_Layer{T,Dim,TN} <: CovLayer{Dim}
     ρs::TN
     const dataset::Vector{STOUT_dataset{Dim}}
@@ -729,27 +738,30 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             position = dCμdUν_j.position
             m = Tuple(-collect(position))
             dSdCμm = shift_U(dSdCμ, m)
+            try
+                leftlinks = get_leftlinks(dCμdUν_j)
+                rightlinks = get_rightlinks(dCμdUν_j)
 
-            leftlinks = get_leftlinks(dCμdUν_j)
-            rightlinks = get_rightlinks(dCμdUν_j)
+                #A = temp3
+                A, it_A = get_temp(temps_g)
+                #A = temps_g[3+dng]
+                temps, its_temps = get_temp(temps_g, 4)
+                evaluate_gaugelinks!(A, leftlinks, Us, temps)
+                unused!(temps_g, its_temps)
 
-            #A = temp3
-            A, it_A = get_temp(temps_g)
-            #A = temps_g[3+dng]
-            temps, its_temps = get_temp(temps_g, 4)
-            evaluate_gaugelinks!(A, leftlinks, Us, temps)
-            unused!(temps_g, its_temps)
-
-            #B = temp4
-            #B = temps_g[4+dng]
-            B, it_B = get_temp(temps_g)
-            temps, its_temps = get_temp(temps_g, 4)
-            evaluate_gaugelinks!(B, rightlinks, Us, temps)
-            unused!(temps_g, its_temps)
-            LdCdU_i_add!(dSdU, dSdCμm, A, B, ρi, temps_g)
-            #unused!(temps_g, its_temps)
-            unused!(temps_g, it_A)
-            unused!(temps_g, it_B)
+                #B = temp4
+                #B = temps_g[4+dng]
+                B, it_B = get_temp(temps_g)
+                temps, its_temps = get_temp(temps_g, 4)
+                evaluate_gaugelinks!(B, rightlinks, Us, temps)
+                unused!(temps_g, its_temps)
+                LdCdU_i_add!(dSdU, dSdCμm, A, B, ρi, temps_g)
+                #unused!(temps_g, its_temps)
+                unused!(temps_g, it_A)
+                unused!(temps_g, it_B)
+            finally
+                release_stout_shift!(dSdCμm)
+            end
         end
 
         numdCμdagdUν = length(dCμdagdUν[μ, ν])
@@ -759,25 +771,29 @@ function calc_dSdUν_fromdSCμ_add!(dSdU, dataset::Vector{STOUT_dataset{Dim}}, d
             position = dCμdagdUν_j.position
             m = Tuple(-collect(position))
             dSdCμm = shift_U(dSdCμ, m)
-            leftlinks = get_leftlinks(dCμdagdUν_j)
-            rightlinks = get_rightlinks(dCμdagdUν_j)
+            try
+                leftlinks = get_leftlinks(dCμdagdUν_j)
+                rightlinks = get_rightlinks(dCμdagdUν_j)
 
-            #barA = temp3
-            #barA = temps_g[3+dng]
-            barA, it_barA = get_temp(temps_g)
-            temps, its_temps = get_temp(temps_g, 4)
-            evaluate_gaugelinks!(barA, leftlinks, Us, temps)
-            unused!(temps_g, its_temps)
-            #barB = temp4
-            #barB = temps_g[4+dng]
-            barB, it_barB = get_temp(temps_g)
-            temps, its_temps = get_temp(temps_g, 4)
-            evaluate_gaugelinks!(barB, rightlinks, Us, temps)
-            unused!(temps_g, its_temps)
-            LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
+                #barA = temp3
+                #barA = temps_g[3+dng]
+                barA, it_barA = get_temp(temps_g)
+                temps, its_temps = get_temp(temps_g, 4)
+                evaluate_gaugelinks!(barA, leftlinks, Us, temps)
+                unused!(temps_g, its_temps)
+                #barB = temp4
+                #barB = temps_g[4+dng]
+                barB, it_barB = get_temp(temps_g)
+                temps, its_temps = get_temp(temps_g, 4)
+                evaluate_gaugelinks!(barB, rightlinks, Us, temps)
+                unused!(temps_g, its_temps)
+                LdCdU_i_add!(dSdU, dSdCμm', barA, barB, ρi, temps_g)
 
-            unused!(temps_g, it_barA)
-            unused!(temps_g, it_barB)
+                unused!(temps_g, it_barA)
+                unused!(temps_g, it_barB)
+            finally
+                release_stout_shift!(dSdCμm)
+            end
         end
         #end
 

@@ -1,5 +1,13 @@
 # Changes
 
+## v1.1.2
+
+### Stout smearing
+
+- Release materialized wider-than-halo shifts immediately in the stout
+  pullback, preventing the temporary-field pool from growing on every force
+  evaluation when rectangular loops are used.
+
 ## v1.1.1
 
 ### Gauge fixing
