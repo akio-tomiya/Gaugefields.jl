@@ -5,6 +5,7 @@ using EzXML
 using Requires
 import ..LatticeMatricesCompat: mark_lattice_dirty!
 import ..Communication
+using ..AbstractGaugefields_module: Gaugefields_4D_nowing
 
 const ILDG_NAMESPACE = "http://www.lqcd.org/ildg"
 const ILDG_FORMAT_VERSION = "1.2"
@@ -949,30 +950,37 @@ function read!(x::Binarydata_ILDG)
     return rvalue + im * ivalue
 end
 
-function load_binarydata!(U, NX, NY, NZ, NT, NC, filename, precision)
-    bi = Binarydata_ILDG(filename, precision)
+function load_binarydata!(U::Vector{T},
+    NX, NY, NZ, NT, NC,
+    filename,
+    precision
+) where {T<:Gaugefields_4D_nowing}
+    PN = (NX, NY, NZ, NT)
 
+    Nfields = NC * NC * 4
+    bi = Binarydata_ILDG(filename, precision)
+    F = bi.floattype
+
+    px, py, pz, pt = 0,0,0,0
+    host_data = Vector{Complex{F}}(undef, prod(PN) * Nfields)
     try
-        for it = 1:NT
-            for iz = 1:NZ
-                for iy = 1:NY
-                    for ix = 1:NX
-                        for μ = 1:4
-                            for ic2 = 1:NC
-                                for ic1 = 1:NC
-                                    U[μ][ic2, ic1, ix, iy, iz, it] = read!(bi)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
+        read_ildg_local_volume!(
+            host_data, bi, (NX, NY, NZ, NT), PN,
+            (px, py, pz, pt), Nfields)
     finally
         close(bi)
     end
-
+        
+    host_data = reshape(host_data,NC, NC, 4, NX, NY, NZ, NT)
+           
+    for μ = 1:4
+        @views U[μ][:,:,:,:,:,:] = permutedims(
+            host_data[:, :, μ, :, :, :, :],
+            (2, 1, 3, 4, 5, 6)
+        )
+    end
     update!(U)
+            
     return nothing
 end
 
