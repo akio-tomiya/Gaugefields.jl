@@ -23,7 +23,8 @@ import ..MPILattice:
     traceless_antihermitian!
 import LatticeMatrices: LatticeMatrix,
     Shifted_Lattice,
-    Adjoint_Lattice, delinearize, shift_L, Traceless_AntiHermitian
+    Adjoint_Lattice, delinearize, shift_L, Traceless_AntiHermitian,
+    construct_Λmatrix_forSTOUT_matrix!
 
 
 abstract type Fields_4D_MPILattice{NC,NX,NY,NZ,NT,T,AT,NDW,DI} <: Gaugefields_4D{NC} end
@@ -890,3 +891,26 @@ function Antihermitian!(
     set_wing_U!(vout)
     return nothing
 end
+
+
+function normalize_U!(U::Gaugefields_4D_MPILattice)
+    normalize_matrix!(U.U)
+    return nothing
+end
+
+"""
+M = (U*δ_prev) star (dexp(Q)/dQ)
+Λ = TA(M)
+"""
+function construct_Λmatrix_forSTOUT!(
+    Λ::Gaugefields_4D_MPILattice,
+    δ_current::Gaugefields_4D_MPILattice,
+    Q::Gaugefields_4D_MPILattice,
+    u::Gaugefields_4D_MPILattice,
+)
+
+    construct_Λmatrix_forSTOUT_matrix!(Λ.U, δ_current.U, Q.U, u.U)
+    return nothing
+end
+
+
