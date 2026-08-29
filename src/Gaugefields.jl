@@ -85,6 +85,7 @@ import .AbstractGaugefields_module:
     clear_U!,
     set_wing_U!,
     Traceless_antihermitian!,
+    normalize_U!,
     initialize_TA_Gaugefields,
     substitute_U!,
     Traceless_antihermitian!,
@@ -317,6 +318,7 @@ export SU2update_KP!,
     overrelaxation_su3_sites!
 export map_U!
 export evaluate_gaugelinks_evenodd!, normalize!, normalize3!, normalizeN!
+export normalize_U!, construct_Λmatrix_forSTOUT!
 export loops_staple
 export save_textdata, load_BridgeText!
 export shift_U,

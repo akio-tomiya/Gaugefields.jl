@@ -55,11 +55,12 @@ function kernel_CdexpQdQ_NC3!(b, r, CdeQdQin, Cin, Qin, temp1, temp2, temp3; eps
         #    end
         #end
     else
-        #println("abs(trQ2) < eps_Q")
-        #for jc = 1:NC
-        #    for ic = 1:NC
-        #        #CdeQdQ[ic, jc, b,r] = C[ic, jc, b,r]
-        #    end
-        #end
+        # The Fréchet derivative of exp(Q) is the identity map at Q = 0.
+        # Copy the cotangent instead of leaving the output uninitialized.
+        for jc = 1:NC
+            for ic = 1:NC
+                CdeQdQ[ic, jc] = Cn[ic, jc]
+            end
+        end
     end
 end

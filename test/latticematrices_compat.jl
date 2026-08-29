@@ -1,5 +1,6 @@
 import LatticeMatrices
 using Logging
+using LinearAlgebra
 
 const LMCompat = Gaugefields.LatticeMatricesCompat
 
@@ -464,6 +465,26 @@ end
     substitute_U!(pullback_lm_host, pullback_lm)
     @test maximum(abs.(pullback_lm_host.U .- pullback_legacy.U)) < 1e-11
 
+    dSdQ_expected = similar(Ulm[1])
+    lambda_expected = similar(Ulm[1])
+    lambda_compat = similar(Ulm[1])
+    workspace = similar(Ulm[1])
+    Gaugefields.Abstractsmearing_module.calc_dSdQ!(
+        dSdQ_expected,
+        cotangent_lm,
+        Q_lm,
+        Ulm[1],
+        workspace,
+    )
+    Gaugefields.Abstractsmearing_module.calc_dSdΩ!(lambda_expected, dSdQ_expected)
+    construct_Λmatrix_forSTOUT!(lambda_compat, cotangent_lm, Q_lm, Ulm[1])
+
+    lambda_expected_host = similar(Ulegacy[1])
+    lambda_compat_host = similar(Ulegacy[1])
+    substitute_U!(lambda_expected_host, lambda_expected)
+    substitute_U!(lambda_compat_host, lambda_compat)
+    @test maximum(abs.(lambda_compat_host.U .- lambda_expected_host.U)) < 1e-11
+
     # Rectangle staples can require a shift wider than the configured halo.
     # LatticeMatrices materializes such shifts in pooled storage, which the
     # stout pullback must release deterministically instead of waiting for GC.
@@ -486,6 +507,81 @@ end
     end
     @test length(pullback_rectangle) == 4
     @test isfinite(real(pullback_rectangle[1][1, 1, 1, 1, 1, 1]))
+end
+
+@testset "4D MPILattice normalize_U!" begin
+    for elementtype in (ComplexF32, ComplexF64), NC in (2, 3, 4)
+        U = Initialize_Gaugefields(
+            NC,
+            1,
+            2,
+            2,
+            2,
+            2;
+            condition="hot",
+            randomnumber="Reproducible",
+            isMPILattice=true,
+            PEs=(1, 1, 1, 1),
+            elementtype,
+            verbose_level=0,
+        )
+        U[1][1, 1, 1, 1, 1, 1] += convert(elementtype, 0.25)
+        normalize_U!(U[1])
+
+        site_matrix = [
+            U[1][ic, jc, 1, 1, 1, 1]
+            for ic = 1:NC, jc = 1:NC
+        ]
+        identity_matrix = Matrix{elementtype}(I, NC, NC)
+        tolerance = elementtype == ComplexF32 ? 2e-5 : 2e-11
+        @test isapprox(
+            site_matrix' * site_matrix,
+            identity_matrix;
+            atol=tolerance,
+            rtol=tolerance,
+        )
+        @test isapprox(
+            det(site_matrix),
+            one(elementtype);
+            atol=tolerance,
+            rtol=tolerance,
+        )
+        if LMCompat.HAS_HALO_EPOCHS
+            @test !LatticeMatrices.halo_is_dirty(U[1].U)
+        end
+    end
+end
+
+@testset "Legacy accelerator STOUT compatibility at Q = 0" begin
+    constructor = () ->
+        Gaugefields.AbstractGaugefields_module.identityGaugefields_4D_accelerator(
+            3,
+            2,
+            2,
+            2,
+            2,
+            (1, 1, 1, 1);
+            accelerator="none",
+            verbose_level=0,
+        )
+    u = constructor()
+    δ_current = similar(u)
+    Q = similar(u)
+    dSdQ = similar(u)
+    lambda_expected = similar(u)
+    lambda_compat = similar(u)
+
+    clear_U!(δ_current)
+    clear_U!(Q)
+    δ_current.U[1, 2, :, :] .= 1 + 2im
+    δ_current.U[2, 1, :, :] .= -0.25 + 0.5im
+
+    Gaugefields.Abstractsmearing_module.CdexpQdQ!(dSdQ, δ_current, Q)
+    @test dSdQ.U == δ_current.U
+
+    Traceless_antihermitian!(lambda_expected, δ_current)
+    construct_Λmatrix_forSTOUT!(lambda_compat, δ_current, Q, u)
+    @test lambda_compat.U ≈ lambda_expected.U
 end
 
 @testset "4D legacy-compatible API" begin
