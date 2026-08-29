@@ -121,6 +121,17 @@ end
             result = physical_ildg_values(restored)
             expected = precision == 64 ? original : ComplexF64.(ComplexF32.(original))
             @test result == expected
+
+            restored_wing = [
+                Gaugefields.AbstractGaugefields_module.identityGaugefields_4D_wing(
+                    NC,
+                    L...,
+                    1;
+                    verbose_level=0,
+                ) for _ = 1:4
+            ]
+            load_gaugefield!(restored_wing, 1, ildg, L, NC; NDW=1)
+            @test physical_ildg_values(restored_wing) == expected
         end
 
         @test_throws ArgumentError save_binarydata(

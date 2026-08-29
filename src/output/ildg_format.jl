@@ -950,37 +950,74 @@ function read!(x::Binarydata_ILDG)
     return rvalue + im * ivalue
 end
 
-function load_binarydata!(U::Vector{T},
-    NX, NY, NZ, NT, NC,
+function load_binarydata!(
+    U::Vector{T},
+    NX,
+    NY,
+    NZ,
+    NT,
+    NC,
     filename,
-    precision
+    precision,
 ) where {T<:Gaugefields_4D_nowing}
-    PN = (NX, NY, NZ, NT)
+    local_size = (NX, NY, NZ, NT)
 
-    Nfields = NC * NC * 4
+    fields_per_site = NC * NC * 4
     bi = Binarydata_ILDG(filename, precision)
     F = bi.floattype
 
-    px, py, pz, pt = 0,0,0,0
-    host_data = Vector{Complex{F}}(undef, prod(PN) * Nfields)
+    host_data = Vector{Complex{F}}(undef, prod(local_size) * fields_per_site)
     try
         read_ildg_local_volume!(
-            host_data, bi, (NX, NY, NZ, NT), PN,
-            (px, py, pz, pt), Nfields)
+            host_data,
+            bi,
+            local_size,
+            local_size,
+            (0, 0, 0, 0),
+            fields_per_site,
+        )
     finally
         close(bi)
     end
-        
-    host_data = reshape(host_data,NC, NC, 4, NX, NY, NZ, NT)
-           
+
+    reshaped_data = reshape(host_data, NC, NC, 4, NX, NY, NZ, NT)
     for μ = 1:4
-        @views U[μ][:,:,:,:,:,:] = permutedims(
-            host_data[:, :, μ, :, :, :, :],
-            (2, 1, 3, 4, 5, 6)
+        @views U[μ].U .= PermutedDimsArray(
+            reshaped_data[:, :, μ, :, :, :, :],
+            (2, 1, 3, 4, 5, 6),
         )
     end
     update!(U)
-            
+
+    return nothing
+end
+
+# Preserve the scalar fallback for serial field types with halo storage.  The
+# bulk method above is specialized for no-wing fields whose arrays match the
+# complete ILDG volume exactly.
+function load_binarydata!(U, NX, NY, NZ, NT, NC, filename, precision)
+    bi = Binarydata_ILDG(filename, precision)
+    try
+        for it = 1:NT
+            for iz = 1:NZ
+                for iy = 1:NY
+                    for ix = 1:NX
+                        for μ = 1:4
+                            for ic2 = 1:NC
+                                for ic1 = 1:NC
+                                    U[μ][ic2, ic1, ix, iy, iz, it] = read!(bi)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    finally
+        close(bi)
+    end
+
+    update!(U)
     return nothing
 end
 
