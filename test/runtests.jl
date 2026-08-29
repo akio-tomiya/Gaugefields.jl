@@ -63,6 +63,10 @@ end
     include("Btest/gradientflow_general_B.jl")
 end
 
+@testset "Bfield physical invariants" begin
+    include("Btest/physical_invariants.jl")
+end
+
 @testset "Initialization" begin
     println("Initialization")
     include("init.jl")
