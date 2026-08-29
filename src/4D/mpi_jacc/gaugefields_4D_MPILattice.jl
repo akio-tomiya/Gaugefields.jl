@@ -890,3 +890,15 @@ function Antihermitian!(
     set_wing_U!(vout)
     return nothing
 end
+
+
+"""
+    normalize_U!(U::Gaugefields_4D_MPILattice)
+
+Project every local link matrix in `U` onto SU(N) and refresh its halo.
+"""
+function normalize_U!(U::Gaugefields_4D_MPILattice)
+    normalize_matrix!(U.U)
+    set_wing_U!(U)
+    return nothing
+end

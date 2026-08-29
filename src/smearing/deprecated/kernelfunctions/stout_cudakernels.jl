@@ -14,6 +14,15 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
 
 end
 
+function construct_Λmatrix_forSTOUT!(
+    Λ::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
+    δ_current::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
+    Q::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
+    u::Gaugefields_4D_accelerator{3,TU,TUv,:cuda,TS},
+) where {TU,TUv,TS}
+    return _construct_Λmatrix_forSTOUT_with_pullback!(Λ, δ_current, Q, u)
+end
+
 
 
 function cudakernel_CdexpQdQ_NC3!(CdeQdQin, Cin, Qin, temp1, temp2, temp3,eps_Q)

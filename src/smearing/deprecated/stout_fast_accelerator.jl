@@ -17,3 +17,12 @@ function CdexpQdQ!(CdeQdQ::Gaugefields_4D_accelerator{3,TU,TUv,:none,TS},
     end
 
 end
+
+function construct_Λmatrix_forSTOUT!(
+    Λ::Gaugefields_4D_accelerator{3,TU,TUv,:none,TS},
+    δ_current::Gaugefields_4D_accelerator{3,TU,TUv,:none,TS},
+    Q::Gaugefields_4D_accelerator{3,TU,TUv,:none,TS},
+    u::Gaugefields_4D_accelerator{3,TU,TUv,:none,TS},
+) where {TU,TUv,TS}
+    return _construct_Λmatrix_forSTOUT_with_pullback!(Λ, δ_current, Q, u)
+end

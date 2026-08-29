@@ -693,6 +693,30 @@ function calc_dSdΩ!(dSdΩ, dSdQ)
 end
 export calc_dSdΩ!
 
+"""
+    construct_Λmatrix_forSTOUT!(Λ, δ_current, Q, u)
+
+Compatibility wrapper for the legacy low-level STOUT pullback API. It follows
+the same `calc_dSdQ!` and `calc_dSdΩ!` path as the active STOUT implementation
+instead of maintaining a second matrix-exponential derivative.
+"""
+function _construct_Λmatrix_forSTOUT_with_pullback!(Λ, δ_current, Q, u)
+    temp = similar(Λ)
+    calc_dSdQ!(Λ, δ_current, Q, u, temp)
+    calc_dSdΩ!(temp, Λ)
+    substitute_U!(Λ, temp)
+    return nothing
+end
+
+function construct_Λmatrix_forSTOUT!(
+    Λ::Gaugefields_4D_MPILattice{NC},
+    δ_current::Gaugefields_4D_MPILattice{NC},
+    Q::Gaugefields_4D_MPILattice{NC},
+    u::Gaugefields_4D_MPILattice{NC},
+) where {NC}
+    return _construct_Λmatrix_forSTOUT_with_pullback!(Λ, δ_current, Q, u)
+end
+
 function calc_dSdC!(dSdC, dSdΩ, Uμ)
     mul!(dSdC, Uμ', dSdΩ)
 end
