@@ -1,5 +1,37 @@
 # Changes
 
+## v1.1.3
+
+### Stout smearing
+
+- Add the public `construct_Λmatrix_forSTOUT!` compatibility API for legacy
+  direct-CUDA accelerator and `Gaugefields_4D_MPILattice` fields. The wrappers
+  reuse the active `calc_dSdQ!`/`calc_dSdΩ!` pullback path, including
+  LatticeMatrices' matrix-exponential pullback, instead of maintaining a
+  separate SU(3) derivative implementation.
+- Correct the legacy accelerator matrix-exponential pullback at `Q = 0`, where
+  the Frechet derivative is the identity map and must copy the incoming
+  cotangent.
+
+### Configuration I/O
+
+- Add a bulk ILDG loader for `Gaugefields_4D_nowing` that uses the existing
+  contiguous local-volume reader and avoids an extra permuted allocation,
+  while preserving the generic scalar fallback for fields with wings or
+  halos.
+
+### Normalization
+
+- Export `normalize_U!` from the public API and add a
+  `Gaugefields_4D_MPILattice` wrapper that normalizes its LatticeMatrices
+  storage and refreshes the wing/halo data.
+
+### Validation
+
+- Compare the legacy CUDA STOUT pullback with its CPU implementation for zero
+  and nonzero `Q` in `ComplexF64` and `ComplexF32`, including direct execution
+  on an NVIDIA H100.
+
 ## v1.1.2
 
 ### Stout smearing

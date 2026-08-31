@@ -7,6 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+Gaugefields.jl v1.1.3 adds shared STOUT pullbacks for legacy CUDA and MPI fields, faster serial ILDG loading, and public MPI-safe `normalize_U!`; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.2 fixes rectangle-stout temporary storage; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.1 adds Landau and Coulomb gauge fixing, improves
