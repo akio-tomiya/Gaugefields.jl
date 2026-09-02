@@ -61,6 +61,11 @@ end
     include("g2_momentum_test.jl")
 end
 
+@testset "G2 high-level API" begin
+    println("G2 high-level API")
+    include("g2_high_level_api_test.jl")
+end
+
 @testset "G2 projection and update" begin
     println("G2 projection and update")
     include("g2_projection_update_test.jl")

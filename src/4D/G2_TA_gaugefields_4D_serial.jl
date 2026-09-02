@@ -38,26 +38,13 @@ function clear_U!(Uμ::G2TA_Gaugefields_4D_serial)
     return nothing
 end
 
-function gauss_distribution!(p::G2TA_Gaugefields_4D_serial; σ = 1.0)
-    d = Normal(0.0, σ)
-    NT = p.NT
-    NZ = p.NZ
-    NY = p.NY
-    NX = p.NX
-    pwork = rand(d, NX * NY * NZ * NT * G2_ALGEBRA_DIM)
-    icount = 0
-    @inbounds for it in 1:NT
-        for iz in 1:NZ
-            for iy in 1:NY
-                for ix in 1:NX
-                    for k in 1:G2_ALGEBRA_DIM
-                        icount += 1
-                        p[k, ix, iy, iz, it] = pwork[icount]
-                    end
-                end
-            end
-        end
-    end
+function gauss_distribution!(
+    p::G2TA_Gaugefields_4D_serial;
+    σ = 1.0,
+    rng = Random.default_rng(),
+)
+    randn!(rng, p.a)
+    p.a .*= σ
     return nothing
 end
 

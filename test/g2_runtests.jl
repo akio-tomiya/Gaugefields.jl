@@ -4,6 +4,7 @@ const G2_TEST_FILES = (
     "g2_algebra_test.jl",
     "g2_gaugefields_test.jl",
     "g2_momentum_test.jl",
+    "g2_high_level_api_test.jl",
     "g2_interface_test.jl",
     "g2_projection_update_test.jl",
     "g2_gauge_action_test.jl",

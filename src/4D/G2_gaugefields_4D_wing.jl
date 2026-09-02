@@ -170,9 +170,21 @@ function identityG2Gaugefields_4D_wing(NX, NY, NZ, NT, NDW; verbose_level = 2)
     return U
 end
 
-function randomG2Gaugefields_4D_wing(NX, NY, NZ, NT, NDW; verbose_level = 2, randomnumber = "Random", scale = 0.2)
+function randomG2Gaugefields_4D_wing(
+    NX,
+    NY,
+    NZ,
+    NT,
+    NDW;
+    verbose_level = 2,
+    randomnumber = "Random",
+    scale = 0.2,
+    seed = nothing,
+)
     U = G2Gaugefields_4D_wing(NDW, NX, NY, NZ, NT; verbose_level = verbose_level)
-    rng = if randomnumber == "Random"
+    rng = if seed !== nothing
+        StableRNG(seed)
+    elseif randomnumber == "Random"
         MersenneTwister()
     elseif randomnumber == "Reproducible"
         StableRNG(123)

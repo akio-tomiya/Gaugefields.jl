@@ -19,7 +19,7 @@ function _fill_diagonal_field!(U, values)
     return U
 end
 
-function _site_matrix(U, ix, iy, iz, it)
+function _g2_interface_site_matrix(U, ix, iy, iz, it)
     return [U[i, j, ix, iy, iz, it] for i in 1:7, j in 1:7]
 end
 
@@ -53,13 +53,13 @@ end
     @test W.U == V.U
 
     mul!(W, 2.0, V)
-    @test _site_matrix(W, 1, 1, 1, 1) == 2.0 .* _site_matrix(V, 1, 1, 1, 1)
+    @test _g2_interface_site_matrix(W, 1, 1, 1, 1) == 2.0 .* _g2_interface_site_matrix(V, 1, 1, 1, 1)
 
     mul!(W, U, V, 3.0, 0.0)
-    @test _site_matrix(W, 1, 1, 1, 1) == 3.0 .* _site_matrix(V, 1, 1, 1, 1)
+    @test _g2_interface_site_matrix(W, 1, 1, 1, 1) == 3.0 .* _g2_interface_site_matrix(V, 1, 1, 1, 1)
 
     mul!(W, U, V, 2.0, -1.0)
-    @test _site_matrix(W, 1, 1, 1, 1) == -1.0 .* _site_matrix(V, 1, 1, 1, 1)
+    @test _g2_interface_site_matrix(W, 1, 1, 1, 1) == -1.0 .* _g2_interface_site_matrix(V, 1, 1, 1, 1)
 end
 
 @testset "G2 shifted and adjoint mul" begin

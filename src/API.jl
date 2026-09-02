@@ -6,6 +6,8 @@ Backend selector for the high-level Gaugefields API.
 abstract type AbstractGaugeBackend end
 
 import JLD2
+import Random
+import StableRNGs: StableRNG
 import LatticeMatrices: LatticeMatrix, gather_matrix, set_halo!, substitute!
 import .Communication:
     broadcast,
@@ -30,6 +32,20 @@ The historical [`Initialize_Gaugefields`](@ref) entry point keeps its existing
 default independently of the new API.
 """
 struct LegacyBackend <: AbstractGaugeBackend end
+
+"""
+    G2Backend()
+
+Select the serial four-dimensional G₂ implementation. G₂ links use the
+seven-dimensional fundamental representation and G₂ momenta use fourteen
+real algebra coefficients per site.
+
+This backend currently supports only `colors=7`, `eltype=ComplexF64`, periodic
+gauge boundaries, and one serial process. It is distinct from
+[`LegacyBackend`](@ref), whose `colors=7` configuration would describe SU(7),
+not G₂.
+"""
+struct G2Backend <: AbstractGaugeBackend end
 
 import .AbstractGaugefields_module:
     Gaugefields_2D_MPILattice,
@@ -70,6 +86,24 @@ function _resolve_boundary(boundary, dim)
         "boundary must have length $dim; got $(length(boundary))",
     ))
     return collect(boundary)
+end
+
+function _g2_seed(seed, name="seed")
+    seed isa Integer || throw(ArgumentError(
+        "G2Backend $name must be a nonnegative integer; got $(typeof(seed))",
+    ))
+    0 <= seed <= typemax(UInt64) || throw(ArgumentError(
+        "G2Backend $name must lie in 0:$(typemax(UInt64)); got $seed",
+    ))
+    return UInt64(seed)
+end
+
+@inline function _g2_stream_seed(
+    seed::UInt64,
+    direction::Integer,
+    sweep::UInt64=UInt64(0),
+)
+    return seed + UInt64(direction - 1) + UInt64(4) * sweep
 end
 
 function _initialize_gauge_communicator(comm)
@@ -160,7 +194,9 @@ is the existing `Vector` representation and therefore has length
 
 The new API defaults to [`LatticeMatricesBackend`](@ref), while the historical
 `Initialize_Gaugefields` default is unchanged. Use `backend=LegacyBackend()`
-to request the serial compatibility implementation explicitly.
+to request the serial compatibility implementation explicitly, or
+`backend=G2Backend()` for four-dimensional G₂ links in the seven-dimensional
+fundamental representation.
 
 # Keywords
 
@@ -199,6 +235,57 @@ function gauge_configuration(
     halo_width >= 0 || throw(ArgumentError("halo must be nonnegative; got $halo_width"))
     boundary_phases = _resolve_boundary(boundary, Dim)
     condition = String(start)
+
+    if backend isa G2Backend
+        Dim == 4 || throw(ArgumentError(
+            "G2Backend supports four-dimensional lattices; got $Dim dimensions",
+        ))
+        colors == G2_FUNDAMENTAL_DIM || throw(ArgumentError(
+            "G2Backend requires colors=$G2_FUNDAMENTAL_DIM; got $colors",
+        ))
+        eltype == ComplexF64 || throw(ArgumentError(
+            "G2Backend currently supports eltype=ComplexF64; got $eltype",
+        ))
+        all(==(1), boundary_phases) || throw(ArgumentError(
+            "G2Backend currently supports periodic gauge boundaries only",
+        ))
+        if !(process_grid === nothing || process_grid === :auto)
+            (process_grid isa AbstractVector || process_grid isa Tuple) ||
+                throw(ArgumentError(
+                    "G2Backend process_grid must be :auto or (1, 1, 1, 1)",
+                ))
+            length(process_grid) == 4 && all(==(1), process_grid) ||
+                throw(ArgumentError(
+                    "G2Backend is serial and requires process_grid=(1, 1, 1, 1)",
+                ))
+        end
+        (comm === nothing || comm isa SerialCommunicator) || throw(ArgumentError(
+            "G2Backend is serial and accepts only comm=nothing or SerialCommunicator()",
+        ))
+        base_seed = seed === nothing ? nothing : _g2_seed(seed)
+
+        configuration = Vector{G2Gaugefields_4D_wing}(undef, 4)
+        for direction in 1:4
+            configuration[direction] = if start === :cold
+                identityG2Gaugefields_4D_wing(
+                    dimensions...,
+                    halo_width;
+                    verbose_level=Int(verbose),
+                )
+            else
+                direction_seed = base_seed === nothing ? nothing :
+                    _g2_stream_seed(base_seed, direction)
+                randomG2Gaugefields_4D_wing(
+                    dimensions...,
+                    halo_width;
+                    verbose_level=Int(verbose),
+                    randomnumber=seed === nothing ? "Random" : "Reproducible",
+                    seed=direction_seed,
+                )
+            end
+        end
+        return configuration
+    end
 
     if backend isa LatticeMatricesBackend
         communicator = _initialize_gauge_communicator(comm)
@@ -263,6 +350,7 @@ end
 """Return the backend used by a gauge link or gauge configuration."""
 gauge_backend(::AbstractGaugefields) = LegacyBackend()
 gauge_backend(::_LatticeMatricesGaugefield) = LatticeMatricesBackend()
+gauge_backend(::G2Gaugefields_4D_wing) = G2Backend()
 gauge_backend(U::AbstractVector{<:AbstractGaugefields}) = gauge_backend(_first_gauge_link(U))
 
 """Return the global lattice size as a tuple."""
@@ -336,8 +424,9 @@ gauge_momenta(U) = initialize_TA_Gaugefields(U)
                       rng=Philox4x32())
 
 Fill preallocated conjugate momenta in place. Explicit seeds and site-local
-RNG algorithms require LatticeMatrices-backed momenta. The momentum array is
-returned.
+RNG algorithms are available for LatticeMatrices-backed momenta. G₂ momenta
+support deterministic StableRNG streams selected by `seed`, direction, and
+`sweep`. The momentum array is returned.
 """
 function gaussian_momenta!(
     momenta::AbstractVector;
@@ -356,6 +445,17 @@ function gaussian_momenta!(
             sweep,
             rng_algorithm=rng,
         )
+    elseif first(momenta) isa G2TA_Gaugefields_4D_serial
+        base_seed = seed === nothing ? nothing : _g2_seed(seed)
+        seed === nothing && sweep != 0 && throw(ArgumentError(
+            "G2Backend momentum sweep requires an explicit seed",
+        ))
+        sweep_seed = seed === nothing ? UInt64(0) : _g2_seed(sweep, "sweep")
+        for direction in eachindex(momenta)
+            momentum_rng = base_seed === nothing ? Random.default_rng() :
+                StableRNG(_g2_stream_seed(base_seed, direction, sweep_seed))
+            gauss_distribution!(momenta[direction]; σ=sigma, rng=momentum_rng)
+        end
     else
         seed === nothing || throw(ArgumentError(
             "legacy momenta cannot honor an explicit momentum seed",
@@ -372,8 +472,9 @@ end
     gaussian_momenta(U; sigma=1, seed=nothing, sweep=0, rng=Philox4x32())
 
 Allocate conjugate momenta compatible with `U` and fill them from a Gaussian
-distribution. Explicit seeds and site-local RNG algorithms require the
-LatticeMatrices backend.
+distribution. LatticeMatrices momenta support site-local RNG algorithms; G₂
+momenta support deterministic StableRNG streams selected by `seed`, direction,
+and `sweep`.
 """
 function gaussian_momenta(
     U;
@@ -829,6 +930,7 @@ end
 export AbstractGaugeBackend,
     LatticeMatricesBackend,
     LegacyBackend,
+    G2Backend,
     gauge_configuration,
     gauge_backend,
     gauge_lattice_size,

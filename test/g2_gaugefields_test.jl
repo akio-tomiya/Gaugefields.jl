@@ -2,7 +2,7 @@ using Gaugefields
 using LinearAlgebra
 using Test
 
-function _site_matrix(U, ix, iy, iz, it)
+function _g2_gaugefield_site_matrix(U, ix, iy, iz, it)
     return [U[i, j, ix, iy, iz, it] for i in 1:7, j in 1:7]
 end
 
@@ -19,7 +19,7 @@ end
         for iz in 1:2
             for iy in 1:2
                 for ix in 1:2
-                    @test _site_matrix(U, ix, iy, iz, it) == identity7
+                    @test _g2_gaugefield_site_matrix(U, ix, iy, iz, it) == identity7
                 end
             end
         end
@@ -67,7 +67,7 @@ end
         for iz in 1:2
             for iy in 1:2
                 for ix in 1:2
-                    @test is_g2_link(_site_matrix(U, ix, iy, iz, it); atol = 1.0e-10)
+                    @test is_g2_link(_g2_gaugefield_site_matrix(U, ix, iy, iz, it); atol = 1.0e-10)
                 end
             end
         end
