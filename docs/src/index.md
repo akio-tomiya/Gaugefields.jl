@@ -36,6 +36,8 @@ The same API is used for two and three dimensions; see
 
 - [Applications](applications.md) combines the v1 building blocks into common
   simulation workflows.
+- [G₂ gauge fields](g2.md) documents the serial G₂ backend, algebra, and
+  validation boundary.
 - [Wilson loops and gauge actions](wilsonloops_actions.md) constructs named or
   arbitrary paths, evaluates their action, and calculates analytic derivatives.
 - [Gauge fixing](gaugefixing.md) covers portable Landau and Coulomb gauge

@@ -26,6 +26,7 @@ makedocs(;
         ],
         "Guides" => [
             "Applications" => "applications.md",
+            "G₂ gauge fields" => "g2.md",
             "Wilson loops and gauge actions" => "wilsonloops_actions.md",
             "Gauge fixing" => "gaugefixing.md",
             "Measurements" => "measurements.md",

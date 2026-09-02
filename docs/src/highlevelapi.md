@@ -11,11 +11,11 @@ gauge_configuration(lattice; kwargs...)
 
 | Keyword | Default | Choices or constraints |
 | --- | --- | --- |
-| `backend` | `LatticeMatricesBackend()` | `LatticeMatricesBackend()` or `LegacyBackend()` |
+| `backend` | `LatticeMatricesBackend()` | `LatticeMatricesBackend()`, `LegacyBackend()`, or serial four-dimensional `G2Backend()` |
 | `colors` | `3` | Positive integer |
 | `halo` | `1` | Nonnegative integer |
 | `start` | `:cold` | `:cold`, `:hot` |
-| `seed` | `nothing` | Integer seed or `nothing`; explicit seeds require LM |
+| `seed` | `nothing` | Integer seed or `nothing`; explicit seeds require LM or G₂ |
 | `process_grid` | `nothing` | `nothing`/`:auto`, or a positive integer tuple/vector of length `Dim` |
 | `comm` | `nothing` | Serial without MPI; `MPI.COMM_WORLD` after `using MPI`; or an explicit serial/MPI communicator |
 | `boundary` | `:periodic` | `:periodic` or one phase per dimension |
@@ -26,6 +26,11 @@ gauge_configuration(lattice; kwargs...)
 The supported lattice dimensionalities are 2, 3, and 4. The return value is a
 vector of length `Dim`. A 3D `LegacyBackend` configuration requires `halo=0`;
 the recommended LM backend uses the common default `halo=1`.
+
+`G2Backend()` is a distinct serial four-dimensional backend with `colors=7`,
+`eltype=ComplexF64`, and periodic gauge boundaries. It constructs G₂ links;
+`colors=7` on either of the other backends constructs SU(7). See
+[G₂ gauge fields](g2.md) for its validation and execution boundaries.
 
 For the LM backend, `process_grid=nothing` and `process_grid=:auto` choose a
 valid decomposition on `comm` by minimizing a surface-to-volume score. Without
@@ -43,7 +48,7 @@ applicable:
 
 | Function | Result |
 | --- | --- |
-| `gauge_backend(U)` | `LatticeMatricesBackend()` or `LegacyBackend()` |
+| `gauge_backend(U)` | `LatticeMatricesBackend()`, `LegacyBackend()`, or `G2Backend()` |
 | `gauge_lattice_size(U)` | Global lattice-size tuple |
 | `gauge_num_colors(U)` | Number of colors |
 | `gauge_halo_width(U)` | Halo width |
@@ -66,12 +71,14 @@ gaussian_momenta!(P; kwargs...)
 | Keyword | Default | Choices or constraints |
 | --- | --- | --- |
 | `sigma` | `1.0` | Gaussian standard deviation |
-| `seed` | `nothing` | Integer or `nothing`; explicit seed requires LM |
+| `seed` | `nothing` | Integer or `nothing`; explicit seed requires LM or G₂ |
 | `sweep` | `0` | Nonnegative trajectory/stream counter |
 | `rng` | `Philox4x32()` | `Philox4x32()`, `PCG32()`, `Xoshiro256PlusPlus()` |
 
 The allocating form is convenient for one-off use. HMC applications should
 allocate `P = gauge_momenta(U)` once and refresh it with `gaussian_momenta!`.
+For G₂ momenta, a nonzero `sweep` requires an explicit seed; direction and
+sweep then select independent deterministic StableRNG streams.
 
 ## Measurements
 
