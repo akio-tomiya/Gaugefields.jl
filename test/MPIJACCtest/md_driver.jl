@@ -79,9 +79,17 @@ end
         process_grid,
         verbose=0,
     )
-    momenta = gaussian_momenta(hot; seed=UInt64(0x5678))
+    momenta = gaussian_momenta(
+        hot;
+        sigma=sqrt(2.0),
+        seed=UInt64(0x5678),
+    )
     refreshed_momenta = gauge_momenta(hot)
-    gaussian_momenta!(refreshed_momenta; seed=UInt64(0x5678))
+    gaussian_momenta!(
+        refreshed_momenta;
+        sigma=sqrt(2.0),
+        seed=UInt64(0x5678),
+    )
     @test _mpi_md_difference(
         gather_and_bcast_matrix.(getproperty.(refreshed_momenta, :a)),
         gather_and_bcast_matrix.(getproperty.(momenta, :a)),
@@ -101,6 +109,7 @@ end
         steps=3,
         trajectory_length=0.1,
         integrator=QPQ(),
+        momentum_denominator=2.0,
     )
     result = md_trajectory!(hot, momenta, forward)
     @test isfinite(result.delta_hamiltonian)
@@ -111,6 +120,7 @@ end
         steps=3,
         trajectory_length=-0.1,
         integrator=QPQ(),
+        momentum_denominator=2.0,
     )
     md_trajectory!(hot, momenta, backward; diagnostics=false)
     final_links = gather_and_bcast_matrix.(getproperty.(hot, :U))
@@ -126,7 +136,11 @@ end
         process_grid,
         verbose=0,
     )
-    split_momenta = gaussian_momenta(split_hot; seed=UInt64(0xdef0))
+    split_momenta = gaussian_momenta(
+        split_hot;
+        sigma=sqrt(2.0),
+        seed=UInt64(0xdef0),
+    )
     split_initial_links = gather_and_bcast_matrix.(
         getproperty.(split_hot, :U),
     )
@@ -148,6 +162,7 @@ end
         steps=2,
         trajectory_length=0.1,
         integrator=split_integrator,
+        momentum_denominator=2.0,
     )
     split_result = md_trajectory!(split_hot, split_momenta, split_forward)
     @test isfinite(split_result.delta_hamiltonian)
@@ -158,6 +173,7 @@ end
         steps=2,
         trajectory_length=-0.1,
         integrator=split_integrator,
+        momentum_denominator=2.0,
     )
     md_trajectory!(
         split_hot,

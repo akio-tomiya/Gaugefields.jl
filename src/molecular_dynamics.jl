@@ -414,6 +414,7 @@ struct MDDriver{A,I,R<:AbstractFloat,T,W,F}
     action::A
     integrator::I
     trajectory_length::R
+    momentum_denominator::R
     steps::Int
     exponential_temps::Vector{T}
     exponential::T
@@ -429,13 +430,19 @@ function _md_real_scalar_type(U)
 end
 
 """
-    md_driver(U, action; steps, trajectory_length=1.0, integrator=QPQ())
+    md_driver(U, action; steps, trajectory_length=1.0, integrator=QPQ(),
+              momentum_denominator=1.0)
 
 Construct a reusable molecular-dynamics driver for `U` and `action`.
 
 `steps` is required. `trajectory_length` may be negative, which is useful for
 reversibility checks, but must be finite and nonzero. `integrator` may be
 `PQP()`, `QPQ()`, or any custom object implementing [`md_step!`](@ref).
+`momentum_denominator` selects the momentum/MD-time normalization: the
+kinetic energy is `p*p/(2*momentum_denominator)`, and momentum kicks are
+multiplied by `momentum_denominator`. The default `1` preserves the historical
+Gaugefields/LTK convention; `2` is the Grid/Bridge++ convention and requires
+Gaussian momentum coefficients with standard deviation `sqrt(2)`.
 """
 function md_driver(
     U::Vector{T},
@@ -443,6 +450,7 @@ function md_driver(
     steps::Integer,
     trajectory_length::Real=1.0,
     integrator=QPQ(),
+    momentum_denominator::Real=1.0,
 ) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
     length(U) == Dim || throw(ArgumentError(
         "the gauge configuration has length $(length(U)); expected $Dim",
@@ -454,6 +462,12 @@ function md_driver(
     iszero(trajectory_length) && throw(ArgumentError(
         "trajectory_length must not be zero",
     ))
+    isfinite(momentum_denominator) || throw(ArgumentError(
+        "momentum_denominator must be finite; got $momentum_denominator",
+    ))
+    momentum_denominator > 0 || throw(ArgumentError(
+        "momentum_denominator must be positive; got $momentum_denominator",
+    ))
     _validate_md_integrator(integrator, action)
     scalar_type = _md_real_scalar_type(U)
     converted_trajectory_length = convert(scalar_type, trajectory_length)
@@ -462,6 +476,13 @@ function md_driver(
     ))
     iszero(converted_trajectory_length) && throw(ArgumentError(
         "trajectory_length becomes zero after conversion to $scalar_type",
+    ))
+    converted_momentum_denominator = convert(scalar_type, momentum_denominator)
+    isfinite(converted_momentum_denominator) || throw(ArgumentError(
+        "momentum_denominator is not finite after conversion to $scalar_type",
+    ))
+    converted_momentum_denominator > 0 || throw(ArgumentError(
+        "momentum_denominator is not positive after conversion to $scalar_type",
     ))
 
     exponential_temps = [similar(U[1]), similar(U[1])]
@@ -473,6 +494,7 @@ function md_driver(
         action,
         integrator,
         converted_trajectory_length,
+        converted_momentum_denominator,
         Int(steps),
         exponential_temps,
         exponential,
@@ -489,7 +511,8 @@ md_step_size(driver::MDDriver) = driver.trajectory_length / driver.steps
     md_hamiltonian(U, p, driver)
 
 Calculate the Hamiltonian used by the MD driver. The potential comes from the
-driver's action provider and the kinetic term is `p*p/2`.
+driver's action provider and the kinetic term is
+`p*p/(2*driver.momentum_denominator)`.
 """
 function md_hamiltonian(U, p, driver::MDDriver)
     length(U) == length(p) || throw(ArgumentError(
@@ -500,7 +523,7 @@ function md_hamiltonian(U, p, driver::MDDriver)
         U,
         driver.action_workspace,
     )
-    kinetic = real(p * p) / 2
+    kinetic = real(p * p) / (2 * driver.momentum_denominator)
     return potential + kinetic
 end
 
@@ -533,8 +556,9 @@ end
 """
     update_momenta!(P, U, step_size, driver)
 
-Update only the conjugate momenta as `P ← P + step_size * force(U)`. The
-mutated momenta `P` are the first argument and are also returned.
+Update only the conjugate momenta as
+`P ← P + momentum_denominator * step_size * force(U)`. The mutated momenta
+`P` are the first argument and are also returned.
 """
 function update_momenta!(P, U, step_size, driver::MDDriver)
     length(P) == length(U) || throw(ArgumentError(
@@ -544,8 +568,9 @@ function update_momenta!(P, U, step_size, driver::MDDriver)
         "the momentum step size must be finite; got $step_size",
     ))
     md_force!(driver.force, driver.action, U, driver.action_workspace)
+    kick_size = step_size * driver.momentum_denominator
     for direction in eachindex(P)
-        add_U!(P[direction], step_size, driver.force[direction])
+        add_U!(P[direction], kick_size, driver.force[direction])
     end
     return P
 end
@@ -577,8 +602,9 @@ function update_momenta!(
         driver.action_workspace,
         group,
     )
+    kick_size = step_size * driver.momentum_denominator
     for direction in eachindex(P)
-        add_U!(P[direction], step_size, driver.force[direction])
+        add_U!(P[direction], kick_size, driver.force[direction])
     end
     return P
 end

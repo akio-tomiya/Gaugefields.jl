@@ -283,6 +283,34 @@ integrate with `-tau` and compare against the saved fields. The integrator is
 independent of the action provider, so no changes are needed to use it with an
 analytic or Enzyme force.
 
+## Momentum normalization
+
+The driver defaults to the historical Gaugefields/LTK convention: Gaussian
+Lie-algebra coefficients have width one, the kinetic energy is `p*p/2`, and
+momentum kicks use the step size unchanged. To use the Grid/Bridge++
+convention, change the momentum refresh and driver together:
+
+```julia
+gaussian_momenta!(
+    p;
+    sigma=sqrt(2.0),
+    seed=0x5678,
+    sweep=trajectory - 1,
+)
+md = md_driver(
+    U,
+    action;
+    steps=20,
+    trajectory_length=1.0,
+    momentum_denominator=2.0,
+)
+```
+
+This uses kinetic energy `p*p/4` and doubles every momentum kick, including
+grouped Sexton--Weingarten kicks. For an otherwise identical MD path,
+`trajectory_length_grid = trajectory_length_ltk / sqrt(2)`. Changing only the
+Gaussian width is not a consistent convention change.
+
 ## Sexton--Weingarten time-scale separation
 
 Expensive and inexpensive forces can be integrated at different time scales
