@@ -20,6 +20,12 @@
   `nhyp_pullback` and `nhyp_pullback!`. They return the unconstrained
   thin-link cotangent; projection onto the gauge Lie algebra remains the HMC
   integrator's responsibility.
+- Add `NHYPSmearedGaugeAction`, an `md_driver` action provider that evaluates
+  a `GaugeAction` on nHYP-smeared links, converts its raw matrix derivative to
+  the LatticeMatrices cotangent convention, pulls it back to the thin links,
+  and performs the standard traceless anti-Hermitian force projection. Its
+  workspace reuses the smeared configuration, nHYP cache, cotangents, and
+  force temporaries across trajectories.
 - Restrict this interface to four-link, four-dimensional
   `Gaugefields_4D_MPILattice` configurations with `NDW >= 1`. Legacy storage
   and non-4D fields fail with an explicit `ArgumentError`. CPU, MPI, and GPU
@@ -38,6 +44,17 @@
 - Run the complete wrapper suite on an NVIDIA H100 NVL (compute capability
   9.0). The input, smeared output, and pullback output remain
   `CuArray{ComplexF64}` throughout, and all 34 tests pass.
+- Check the nHYP MD provider against the ordinary `GaugeAction` potential and
+  force at zero smearing coefficients, then evolve a fixed-seed hot SU(3)
+  field and verify finite Hamiltonian diagnostics and forward/backward
+  reversibility. On CPU, halving the QPQ step from 1/100 to 1/200 and 1/400
+  reduces `|delta_hamiltonian|` from `1.60e-4` to `3.95e-5` and `9.85e-6`,
+  respectively, as expected for a second-order integrator.
+- Run the hot-field nHYP MD trajectory on an NVIDIA H100 NVL. A four-step
+  trajectory gives `delta_hamiltonian = -3.95e-5`; the forward/backward link
+  and momentum errors are `1.11e-15` and `8.88e-16`, and the thin links,
+  smeared links, and pullback fields all remain in `CuArray{ComplexF64}`
+  storage.
 
 ## v1.1.4
 

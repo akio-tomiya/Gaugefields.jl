@@ -7,7 +7,7 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-The development version adds QEX-compatible nHYP smearing and its analytic HMC pullback for LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
+The development version adds QEX-compatible nHYP smearing, its analytic pullback, and an nHYP-smeared GaugeAction provider for HMC on LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.4 adds an opt-in Grid/Bridge++ momentum normalization to
 the MD driver while preserving the historical default; see [changes.md](changes.md).
@@ -360,7 +360,45 @@ driver_result = (
 println(driver_result)
 ```
 
-The fixed `accept_uniform` makes the two short examples reproducible. A
+### nHYP-smeared HMC using the MD driver
+
+Wrap the same thin-link Wilson action in `NHYPSmearedGaugeAction`. The driver
+then evaluates the potential on nHYP-smeared links and analytically pulls its
+force back to the thin links:
+
+```julia
+U, thin_link_action = wilson_hmc_system()  # hot start from the example above
+action = NHYPSmearedGaugeAction(
+    thin_link_action;
+    alpha_outer=0.5,
+    alpha_middle=0.5,
+    alpha_inner=0.4,
+)
+
+momenta = gaussian_momenta(U; seed=0x4e485950, sweep=0)
+old_U = copy_configuration(U)
+md = md_driver(
+    U,
+    action;
+    steps=4,
+    trajectory_length=0.02,
+    integrator=QPQ(),
+)
+diagnostics = md_trajectory!(U, momenta, md)
+
+accept_uniform = 0.5
+probability = exp(-max(0, diagnostics.delta_hamiltonian))
+accepted = accept_uniform < probability
+accepted || copy_configuration!(U, old_U)
+
+println((; accepted, diagnostics.delta_hamiltonian))
+```
+
+`NHYPSmearedGaugeAction` and its driver workspace reuse the smeared fields,
+the three-level nHYP cache, and all force fields. As in the preceding example,
+the application owns momentum refresh, the Metropolis draw, and rollback.
+
+The fixed `accept_uniform` makes the short examples reproducible. A
 production HMC loop should refresh the momenta with a new `sweep` and draw a
 uniform random number for every trajectory. `PQP()` and custom integrators are
 also supported. See the complete [HMC guide](docs/src/hmc.md) for production

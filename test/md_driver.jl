@@ -61,6 +61,72 @@ function _md_global_momenta(p)
     return gather_and_bcast_matrix.(getproperty.(p, :a))
 end
 
+@testset "nHYP-smeared GaugeAction provider" begin
+    lattice = (2, 2, 2, 2)
+    configuration_arguments = (
+        colors=3,
+        halo=1,
+        start=:hot,
+        seed=UInt64(0x4e485950),
+        process_grid=(1, 1, 1, 1),
+        verbose=0,
+    )
+
+    # At zero smearing coefficients the projected links and their tangent
+    # pullback reduce to the original SU(3) links and GaugeAction force.
+    U_plain = gauge_configuration(lattice; configuration_arguments...)
+    plain_action = _md_test_action(U_plain; coupling=5.7)
+    zero_nhyp_action = NHYPSmearedGaugeAction(
+        plain_action;
+        alpha_outer=0,
+        alpha_middle=0,
+        alpha_inner=0,
+    )
+    plain_workspace = md_action_workspace(plain_action, U_plain)
+    nhyp_workspace = md_action_workspace(zero_nhyp_action, U_plain)
+    plain_force = gauge_momenta(U_plain)
+    nhyp_force = gauge_momenta(U_plain)
+    md_force!(plain_force, plain_action, U_plain, plain_workspace)
+    md_force!(nhyp_force, zero_nhyp_action, U_plain, nhyp_workspace)
+    @test md_potential(plain_action, U_plain, plain_workspace) ≈
+          md_potential(zero_nhyp_action, U_plain, nhyp_workspace) atol=2e-11
+    @test _md_maximum_difference(
+        _md_global_momenta(plain_force),
+        _md_global_momenta(nhyp_force),
+    ) < 2e-10
+
+    # Exercise a real nHYP molecular-dynamics trajectory from a hot field.
+    U = gauge_configuration(lattice; configuration_arguments...)
+    initial_links = _md_global_links(U)
+    p = gaussian_momenta(U; seed=UInt64(0x484d43))
+    initial_momenta = _md_global_momenta(p)
+    action = NHYPSmearedGaugeAction(_md_test_action(U; coupling=5.7))
+    forward = md_driver(
+        U,
+        action;
+        steps=4,
+        trajectory_length=0.02,
+        integrator=QPQ(),
+    )
+    result = md_trajectory!(U, p, forward)
+    @test isfinite(result.delta_hamiltonian)
+    @test _md_maximum_difference(_md_global_links(U), initial_links) > 1e-8
+
+    backward = md_driver(
+        U,
+        action;
+        steps=4,
+        trajectory_length=-0.02,
+        integrator=QPQ(),
+    )
+    md_trajectory!(U, p, backward; diagnostics=false)
+    @test _md_maximum_difference(_md_global_links(U), initial_links) < 5e-10
+    @test _md_maximum_difference(
+        _md_global_momenta(p),
+        initial_momenta,
+    ) < 5e-10
+end
+
 @testset "Explicit integrator interface" begin
     @test PQP() isa AbstractMDIntegrator
     @test QPQ() isa AbstractMDIntegrator
