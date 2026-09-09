@@ -1,5 +1,20 @@
 # Changes
 
+## v1.1.4
+
+### Molecular dynamics
+
+- Add the backend-neutral `momentum_denominator` keyword to `md_driver`. The
+  kinetic term is `p*p/(2*momentum_denominator)`, and all momentum kicks,
+  including grouped Sexton--Weingarten kicks, use the same denominator.
+- Keep the default denominator at one for exact compatibility with the
+  historical Gaugefields/LTK convention. A denominator of two together with
+  Gaussian coefficient width `sqrt(2)` implements the Grid/Bridge++
+  convention without CPU, MPI, or GPU-specific branches.
+- Verify that the two conventions give identical discrete MD trajectories,
+  momenta, Hamiltonians, and `delta_hamiltonian` after the corresponding
+  `1/sqrt(2)` MD-time conversion.
+
 ## v1.1.3
 
 ### Stout smearing

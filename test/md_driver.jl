@@ -46,6 +46,13 @@ function _md_maximum_difference(left, right)
     )
 end
 
+function _md_scaled_maximum_difference(left, right, scale)
+    return maximum(
+        maximum(abs, left[direction] .- scale .* right[direction])
+        for direction in eachindex(left)
+    )
+end
+
 function _md_global_links(U)
     return gather_and_bcast_matrix.(getproperty.(U, :U))
 end
@@ -63,6 +70,78 @@ end
         n_fast=2,
     ) isa AbstractMDIntegrator
     @test _test_custom_qpq! isa Function
+end
+
+@testset "Momentum normalization conventions" begin
+    lattice = (2, 2, 2, 2)
+    configuration_arguments = (
+        colors=3,
+        start=:hot,
+        seed=UInt64(0x1234),
+        process_grid=(1, 1, 1, 1),
+        verbose=0,
+    )
+    U_ltk = gauge_configuration(lattice; configuration_arguments...)
+    U_grid = gauge_configuration(lattice; configuration_arguments...)
+    action_ltk = _md_test_action(U_ltk)
+    action_grid = _md_test_action(U_grid)
+    p_ltk = gaussian_momenta(
+        U_ltk;
+        sigma=1.0,
+        seed=UInt64(0x5678),
+    )
+    p_grid = gaussian_momenta(
+        U_grid;
+        sigma=sqrt(2.0),
+        seed=UInt64(0x5678),
+    )
+    ltk_driver = md_driver(
+        U_ltk,
+        action_ltk;
+        steps=4,
+        trajectory_length=0.04,
+        momentum_denominator=1.0,
+    )
+    grid_driver = md_driver(
+        U_grid,
+        action_grid;
+        steps=4,
+        trajectory_length=0.04 / sqrt(2.0),
+        momentum_denominator=2.0,
+    )
+
+    initial_ltk_momenta = _md_global_momenta(p_ltk)
+    initial_grid_momenta = _md_global_momenta(p_grid)
+    @test _md_scaled_maximum_difference(
+        initial_grid_momenta,
+        initial_ltk_momenta,
+        sqrt(2.0),
+    ) < 2e-12
+    @test md_hamiltonian(U_grid, p_grid, grid_driver) ≈
+          md_hamiltonian(U_ltk, p_ltk, ltk_driver)
+
+    ltk_result = md_trajectory!(U_ltk, p_ltk, ltk_driver)
+    grid_result = md_trajectory!(U_grid, p_grid, grid_driver)
+    @test _md_maximum_difference(
+        _md_global_links(U_grid),
+        _md_global_links(U_ltk),
+    ) < 3e-12
+    @test _md_scaled_maximum_difference(
+        _md_global_momenta(p_grid),
+        _md_global_momenta(p_ltk),
+        sqrt(2.0),
+    ) < 3e-12
+    @test grid_result.delta_hamiltonian ≈ ltk_result.delta_hamiltonian atol=2e-11
+
+    zero_ltk = gauge_momenta(U_ltk)
+    zero_grid = gauge_momenta(U_grid)
+    update_momenta!(zero_ltk, U_ltk, 0.01, ltk_driver)
+    update_momenta!(zero_grid, U_grid, 0.01, grid_driver)
+    @test _md_scaled_maximum_difference(
+        _md_global_momenta(zero_grid),
+        _md_global_momenta(zero_ltk),
+        2.0,
+    ) < 3e-12
 end
 
 @testset "Multiple MD actions and time scales" begin
@@ -306,6 +385,24 @@ end
         steps=1,
         trajectory_length=Inf,
     )
+    @test_throws ArgumentError md_driver(
+        U,
+        action;
+        steps=1,
+        momentum_denominator=0,
+    )
+    @test_throws ArgumentError md_driver(
+        U,
+        action;
+        steps=1,
+        momentum_denominator=-1,
+    )
+    @test_throws ArgumentError md_driver(
+        U,
+        action;
+        steps=1,
+        momentum_denominator=Inf,
+    )
     invalid_driver = md_driver(
         U,
         action;
@@ -411,6 +508,7 @@ end
         trajectory_length=0.2,
     )
     @test driver32.trajectory_length isa Float32
+    @test driver32.momentum_denominator isa Float32
     @test md_step_size(driver32) isa Float32
     @test isfinite(md_trajectory!(U32, p32, driver32).delta_hamiltonian)
 
