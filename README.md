@@ -7,6 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+The development version adds QEX-compatible nHYP smearing and its analytic HMC pullback for LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.4 adds an opt-in Grid/Bridge++ momentum normalization to
 the MD driver while preserving the historical default; see [changes.md](changes.md).
 

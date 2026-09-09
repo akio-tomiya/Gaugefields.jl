@@ -480,6 +480,27 @@ function smear(U, smearing; record::Bool=false, calcdSdU::Bool=false, temps=noth
     return record ? (; configuration, history, derivative) : configuration
 end
 
+function smear(
+    U,
+    smearing::NHYPSmearing;
+    record::Bool=false,
+    calcdSdU::Bool=false,
+    temps=nothing,
+)
+    calcdSdU && throw(ArgumentError(
+        "nHYP derivatives require an output cotangent; call " *
+        "nhyp_pullback! after smear(...; record=true)",
+    ))
+    temps === nothing || throw(ArgumentError(
+        "nHYP manages its workspace through NHYPSmearingCache; " *
+        "the temps keyword is not supported",
+    ))
+    configuration, cache = nhyp_smear(U, smearing)
+    return record ?
+        (; configuration, history=cache, derivative=nothing) :
+        configuration
+end
+
 const _PORTABLE_JLD2_FORMAT = "Gaugefields.jl portable gauge configuration"
 const _PORTABLE_JLD2_VERSION = 1
 
@@ -846,6 +867,13 @@ export AbstractGaugeBackend,
     gradient_flow,
     heatbath_updater,
     stout_smearing,
+    NHYPSmearing,
+    NHYPSmearingCache,
+    nhyp_smearing,
+    nhyp_smear,
+    nhyp_smear!,
+    nhyp_pullback,
+    nhyp_pullback!,
     smear,
     save_configuration,
     load_configuration,

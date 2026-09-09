@@ -1,5 +1,44 @@
 # Changes
 
+## Unreleased
+
+### Normalized HYP smearing
+
+- Add `NHYPSmearing` and the `nhyp_smearing(U; alpha_outer,
+  alpha_middle, alpha_inner)` builder for QEX-compatible normalized HYP
+  smearing. QEX's `(alpha1, alpha2, alpha3)` coefficient order corresponds to
+  `(alpha_inner, alpha_middle, alpha_outer)`.
+- Add allocating and preallocated interfaces through `nhyp_smear` and
+  `nhyp_smear!`. The existing high-level `smear` API accepts an
+  `NHYPSmearing`; `record=true` returns the smeared configuration together
+  with the cache required by the reverse pass.
+- Add `NHYPSmearingCache` as the Gaugefields wrapper around
+  LatticeMatrices' reusable nHYP workspace. It retains the three-level
+  forward intermediates, detects thin links changed after the forward pass,
+  and controls allocations across repeated HMC trajectories.
+- Add allocating and preallocated analytic reverse passes through
+  `nhyp_pullback` and `nhyp_pullback!`. They return the unconstrained
+  thin-link cotangent; projection onto the gauge Lie algebra remains the HMC
+  integrator's responsibility.
+- Restrict this interface to four-link, four-dimensional
+  `Gaugefields_4D_MPILattice` configurations with `NDW >= 1`. Legacy storage
+  and non-4D fields fail with an explicit `ArgumentError`. CPU, MPI, and GPU
+  execution are delegated to LatticeMatrices and JACC without copying links
+  through host storage.
+- Require LatticeMatrices v1.2.4 for the nHYP forward and pullback kernels.
+
+### Validation
+
+- Compare the Gaugefields allocating, preallocated, high-level, and pullback
+  APIs with direct LatticeMatrices results on fixed-seed hot SU(3) fields.
+  The serial wrapper suite passes 34/34 tests with one and four CPU threads.
+- Compare two-rank MPI forward and pullback results with an undecomposed
+  calculation of the same global hot field; all eight distributed checks
+  pass on both ranks.
+- Run the complete wrapper suite on an NVIDIA H100 NVL (compute capability
+  9.0). The input, smeared output, and pullback output remain
+  `CuArray{ComplexF64}` throughout, and all 34 tests pass.
+
 ## v1.1.4
 
 ### Molecular dynamics
