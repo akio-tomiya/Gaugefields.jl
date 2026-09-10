@@ -380,6 +380,26 @@ smeared = smear(U, ape)
 recorded = smear(U, stout; record=true)
 ```
 
+Every specification is applied in the same way, and `iterations` repeats the
+complete smearing step. `smear` leaves `U` unchanged and returns a newly
+allocated configuration:
+
+```julia
+Uape   = smear(U, APESmearing(alpha=0.6, iterations=10))
+Uhyp   = smear(U, HYPSmearing(iterations=3))
+Ustout = smear(U, StoutSmearing(rho=0.1, iterations=2))
+Uhex   = smear(U, HEXSmearing(iterations=2))
+Unhyp  = smear(U, NHYPSmearing(iterations=2))
+```
+
+For repeated calls, allocate the output and workspace once and reuse them:
+
+```julia
+V = similar(U)
+cache = LinkSmearingCache(U, stout)
+link_smear!(V, U, cache)
+```
+
 The explicit allocating interface returns the cache needed by an analytic
 reverse pass:
 
