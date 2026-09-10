@@ -448,7 +448,9 @@ heatbath_updater(U, action; kwargs...) = Heatbath_update(U, action; kwargs...)
     stout_smearing(U; loops=:plaquette, rho=0.1)
 
 Construct a one-layer stout-smearing pipeline without exposing the internal
-`CovNeuralnet` terminology.
+`CovNeuralnet` terminology. This compatibility API supports arbitrary loop
+sets. For the native plaquette-only implementation with an analytic pullback,
+use `StoutSmearing` (or its `EXPSmearing` alias) with [`smear`](@ref).
 """
 function stout_smearing(U; loops=:plaquette, rho=0.1)
     loop_names = loops isa Union{Symbol,AbstractString} ?
@@ -478,6 +480,30 @@ function smear(U, smearing; record::Bool=false, calcdSdU::Bool=false, temps=noth
         temps,
     )
     return record ? (; configuration, history, derivative) : configuration
+end
+
+function smear(
+    U,
+    smearing::NativeLinkSmearing;
+    record::Bool=false,
+    calcdSdU::Bool=false,
+    temps=nothing,
+)
+    if calcdSdU
+        message = has_smearing_pullback(smearing) ?
+            "native link-smearing derivatives require an output cotangent; " *
+            "call link_smear_pullback! after smear(...; record=true)" :
+            _smearing_pullback_error(smearing)
+        throw(ArgumentError(message))
+    end
+    temps === nothing || throw(ArgumentError(
+        "native link smearing manages its workspace through LinkSmearingCache; " *
+        "the temps keyword is not supported",
+    ))
+    configuration, cache = link_smear(U, smearing)
+    return record ?
+        (; configuration, history=cache, derivative=nothing) :
+        configuration
 end
 
 const _PORTABLE_JLD2_FORMAT = "Gaugefields.jl portable gauge configuration"
@@ -846,6 +872,30 @@ export AbstractGaugeBackend,
     gradient_flow,
     heatbath_updater,
     stout_smearing,
+    NativeLinkSmearing,
+    NHYPSmearing,
+    StoutSmearing,
+    EXPSmearing,
+    HEXSmearing,
+    APESmearing,
+    HYPSmearing,
+    NHYPSmearingCache,
+    LinkSmearingCache,
+    has_smearing_pullback,
+    nhyp_smearing,
+    stout_link_smearing,
+    exp_smearing,
+    hex_smearing,
+    ape_smearing,
+    hyp_smearing,
+    link_smear,
+    link_smear!,
+    link_smear_pullback,
+    link_smear_pullback!,
+    nhyp_smear,
+    nhyp_smear!,
+    nhyp_pullback,
+    nhyp_pullback!,
     smear,
     save_configuration,
     load_configuration,

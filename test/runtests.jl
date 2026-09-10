@@ -10,6 +10,14 @@ import Wilsonloop: loops_staple
     include("high_level_api.jl")
 end
 
+@testset "Normalized HYP smearing" begin
+    include("nhyp_smearing.jl")
+end
+
+@testset "Native UV smearing" begin
+    include("uv_smearing.jl")
+end
+
 @testset "Molecular dynamics driver" begin
     include("md_driver.jl")
 end

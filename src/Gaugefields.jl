@@ -18,6 +18,7 @@ include("./output/ildg_format.jl")
 include("./output/bridge_format.jl")
 include("./autostaples/Loops.jl")
 include("./smearing/Abstractsmearing.jl")
+include("./smearing/nhyp.jl")
 include("./gaugefixing/AbstractGaugefixing.jl")
 
 include("./action/GaugeActions.jl")

@@ -267,6 +267,226 @@ function md_force!(force, action::GaugeAction, U, workspace)
 end
 
 """
+    NHYPSmearedGaugeAction(action, smearing)
+    NHYPSmearedGaugeAction(action; alpha_outer=0.5, alpha_middle=0.5,
+                           alpha_inner=0.4, iterations=1)
+
+Wrap a [`GaugeAction`](@ref) so its molecular-dynamics potential is evaluated
+on nHYP-smeared links and its force is pulled back analytically to the thin
+links. The wrapper can be passed directly to [`md_driver`](@ref).
+
+Only four-dimensional LatticeMatrices-backed gauge configurations with a
+nonzero halo are supported, matching [`NHYPSmearing`](@ref).
+"""
+struct NHYPSmearedGaugeAction{A<:GaugeAction,S<:NHYPSmearing}
+    action::A
+    smearing::S
+end
+
+function NHYPSmearedGaugeAction(
+    action::GaugeAction;
+    alpha_outer::Real=0.5,
+    alpha_middle::Real=0.5,
+    alpha_inner::Real=0.4,
+    iterations::Integer=1,
+)
+    return NHYPSmearedGaugeAction(
+        action,
+        NHYPSmearing(;
+            alpha_outer,
+            alpha_middle,
+            alpha_inner,
+            iterations,
+        ),
+    )
+end
+
+struct _NHYPSmearedGaugeActionMDWorkspace{V,C,T}
+    smeared::V
+    smearing_cache::C
+    derivative::T
+    smeared_cotangent::V
+    thin_cotangent::V
+    force_work::T
+end
+
+function md_action_workspace(action::NHYPSmearedGaugeAction, U)
+    return _NHYPSmearedGaugeActionMDWorkspace(
+        similar(U),
+        NHYPSmearingCache(U, action.smearing),
+        similar(U[1]),
+        similar(U),
+        similar(U),
+        similar(U[1]),
+    )
+end
+
+function md_potential(
+    action::NHYPSmearedGaugeAction,
+    U,
+    workspace::_NHYPSmearedGaugeActionMDWorkspace,
+)
+    nhyp_smear!(workspace.smeared, U, workspace.smearing_cache)
+    return -real(evaluate_GaugeAction(action.action, workspace.smeared)) /
+           U[1].NC
+end
+
+function md_force!(
+    force,
+    action::NHYPSmearedGaugeAction,
+    U,
+    workspace::_NHYPSmearedGaugeActionMDWorkspace,
+)
+    length(force) == length(U) || throw(ArgumentError(
+        "force and U must have the same number of directions",
+    ))
+    nhyp_smear!(workspace.smeared, U, workspace.smearing_cache)
+
+    # calc_dSdUμ! uses delta S = Re tr(delta U * derivative), whereas the
+    # LatticeMatrices pullback uses Re tr(cotangent' * delta U). Convert the
+    # raw GaugeAction derivative to that cotangent convention before pulling
+    # it back through nHYP.
+    for direction in eachindex(U)
+        calc_dSdUμ!(
+            workspace.derivative,
+            action.action,
+            direction,
+            workspace.smeared,
+        )
+        clear_U!(workspace.smeared_cotangent[direction])
+        add_U!(
+            workspace.smeared_cotangent[direction],
+            workspace.derivative',
+        )
+    end
+    set_wing_U!(workspace.smeared_cotangent)
+    nhyp_pullback!(
+        workspace.thin_cotangent,
+        workspace.smeared_cotangent,
+        U,
+        workspace.smearing_cache,
+    )
+
+    factor = -one(_md_real_scalar_type(U)) / U[1].NC
+    for direction in eachindex(U)
+        mul!(
+            workspace.force_work,
+            U[direction],
+            workspace.thin_cotangent[direction]',
+        )
+        clear_U!(force[direction])
+        Traceless_antihermitian_add!(
+            force[direction],
+            factor,
+            workspace.force_work,
+        )
+    end
+    return nothing
+end
+
+"""
+    SmearedGaugeAction(action, smearing)
+
+Evaluate a gauge action on analytically smeared links and pull its
+molecular-dynamics force back to the thin links. APE and HYP must select
+`projection=:polar`; their standard `:max_retr` projection is forward-only.
+"""
+struct SmearedGaugeAction{A<:GaugeAction,S<:NativeLinkSmearing}
+    action::A
+    smearing::S
+
+    function SmearedGaugeAction(
+        action::A,
+        smearing::S,
+    ) where {A<:GaugeAction,S<:NativeLinkSmearing}
+        has_smearing_pullback(smearing) || throw(ArgumentError(
+            _smearing_pullback_error(smearing) *
+            "; molecular dynamics requires a smearing with a pullback",
+        ))
+        return new{A,S}(action, smearing)
+    end
+end
+
+struct _SmearedGaugeActionMDWorkspace{V,C,T}
+    smeared::V
+    smearing_cache::C
+    derivative::T
+    smeared_cotangent::V
+    thin_cotangent::V
+    force_work::T
+end
+
+function md_action_workspace(action::SmearedGaugeAction, U)
+    return _SmearedGaugeActionMDWorkspace(
+        similar(U),
+        LinkSmearingCache(U, action.smearing),
+        similar(U[1]),
+        similar(U),
+        similar(U),
+        similar(U[1]),
+    )
+end
+
+function md_potential(
+    action::SmearedGaugeAction,
+    U,
+    workspace::_SmearedGaugeActionMDWorkspace,
+)
+    link_smear!(workspace.smeared, U, workspace.smearing_cache)
+    return -real(evaluate_GaugeAction(action.action, workspace.smeared)) /
+           U[1].NC
+end
+
+function md_force!(
+    force,
+    action::SmearedGaugeAction,
+    U,
+    workspace::_SmearedGaugeActionMDWorkspace,
+)
+    length(force) == length(U) || throw(ArgumentError(
+        "force and U must have the same number of directions",
+    ))
+    link_smear!(workspace.smeared, U, workspace.smearing_cache)
+
+    for direction in eachindex(U)
+        calc_dSdUμ!(
+            workspace.derivative,
+            action.action,
+            direction,
+            workspace.smeared,
+        )
+        clear_U!(workspace.smeared_cotangent[direction])
+        add_U!(
+            workspace.smeared_cotangent[direction],
+            workspace.derivative',
+        )
+    end
+    set_wing_U!(workspace.smeared_cotangent)
+    link_smear_pullback!(
+        workspace.thin_cotangent,
+        workspace.smeared_cotangent,
+        U,
+        workspace.smearing_cache,
+    )
+
+    factor = -one(_md_real_scalar_type(U)) / U[1].NC
+    for direction in eachindex(U)
+        mul!(
+            workspace.force_work,
+            U[direction],
+            workspace.thin_cotangent[direction]',
+        )
+        clear_U!(force[direction])
+        Traceless_antihermitian_add!(
+            force[direction],
+            factor,
+            workspace.force_work,
+        )
+    end
+    return nothing
+end
+
+"""
     enzyme_md_action(potential, arguments...; num_temps=0)
 
 Construct an Enzyme-backed MD action provider. This method becomes available
@@ -759,6 +979,8 @@ export AbstractMDIntegrator,
     md_action_workspace,
     md_potential,
     md_force!,
+    NHYPSmearedGaugeAction,
+    SmearedGaugeAction,
     MDActionSet,
     MDForceGroup,
     update_momenta!,

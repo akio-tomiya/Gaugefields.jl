@@ -1,5 +1,89 @@
 # Changes
 
+## v1.1.5
+
+### Native UV smearing and analytic HMC
+
+- Add the common `NativeLinkSmearing` interface with `StoutSmearing`
+  (`EXPSmearing`), `HEXSmearing`, `APESmearing`, and `HYPSmearing` alongside
+  `NHYPSmearing`. Each specification supports complete-step iteration and
+  the allocating/preallocated `link_smear`, `link_smear!`,
+  `link_smear_pullback`, and `link_smear_pullback!` APIs.
+- Make APE/HYP `projection=:max_retr` the default for Bridge++ compatibility,
+  with configurable iteration limit and convergence tolerance. Add
+  `projection=:polar` as the explicit differentiable choice; stout/EXP, HEX,
+  nHYP, and polar APE/HYP provide analytic pullbacks, while MaxReTr pullback
+  requests fail explicitly.
+- Extend the high-level `smear` API to every native specification and add the
+  `stout_link_smearing`, `exp_smearing`, `hex_smearing`, `ape_smearing`, and
+  `hyp_smearing` builders. The existing arbitrary-loop `stout_smearing`
+  compatibility API is unchanged.
+- Add `SmearedGaugeAction` for evaluating any analytically smeared gauge
+  action and pulling its force back to the thin links. APE/HYP molecular
+  dynamics requires `projection=:polar` and is rejected at construction when
+  the default MaxReTr choice is used.
+- Require LatticeMatrices v1.2.5. Its external comparisons agree with
+  Bridge++ 2.1.3 for APE, HYP, and HEX to maximum absolute differences
+  `1.78e-15`, `1.78e-15`, and `4.85e-12`; stout forward and pullback agree
+  with QEX to `5.90e-16` and `1.89e-15`.
+
+### Normalized HYP smearing
+
+- Add `NHYPSmearing` and the `nhyp_smearing(U; alpha_outer,
+  alpha_middle, alpha_inner)` builder for QEX-compatible normalized HYP
+  smearing. QEX's `(alpha1, alpha2, alpha3)` coefficient order corresponds to
+  `(alpha_inner, alpha_middle, alpha_outer)`.
+- Add allocating and preallocated interfaces through `nhyp_smear` and
+  `nhyp_smear!`. The existing high-level `smear` API accepts an
+  `NHYPSmearing`; `record=true` returns the smeared configuration together
+  with the cache required by the reverse pass.
+- Add `NHYPSmearingCache` as the Gaugefields wrapper around
+  LatticeMatrices' reusable nHYP workspace. It retains the three-level
+  forward intermediates, detects thin links changed after the forward pass,
+  and controls allocations across repeated HMC trajectories.
+- Add allocating and preallocated analytic reverse passes through
+  `nhyp_pullback` and `nhyp_pullback!`. They return the unconstrained
+  thin-link cotangent; projection onto the gauge Lie algebra remains the HMC
+  integrator's responsibility.
+- Add `NHYPSmearedGaugeAction`, an `md_driver` action provider that evaluates
+  a `GaugeAction` on nHYP-smeared links, converts its raw matrix derivative to
+  the LatticeMatrices cotangent convention, pulls it back to the thin links,
+  and performs the standard traceless anti-Hermitian force projection. Its
+  workspace reuses the smeared configuration, nHYP cache, cotangents, and
+  force temporaries across trajectories.
+- Restrict this interface to four-link, four-dimensional
+  `Gaugefields_4D_MPILattice` configurations with `NDW >= 1`. Legacy storage
+  and non-4D fields fail with an explicit `ArgumentError`. CPU, MPI, and GPU
+  execution are delegated to LatticeMatrices and JACC without copying links
+  through host storage.
+- Use the LatticeMatrices v1.2.5 native smearing kernels; nHYP itself remains
+  compatible with the v1.2.4 definition and coefficient convention.
+
+### Validation
+
+- Compare the Gaugefields allocating, preallocated, high-level, and pullback
+  APIs with direct LatticeMatrices results on fixed-seed hot SU(3) fields.
+  The serial wrapper suite passes 34/34 tests with one and four CPU threads.
+- Compare two-rank MPI forward and pullback results with an undecomposed
+  calculation of the same global hot field; all eight distributed checks
+  pass on both ranks.
+- Run the complete wrapper suite on an NVIDIA H100 NVL (compute capability
+  9.0). The input, smeared output, and pullback output remain
+  `CuArray{ComplexF64}` throughout, and all 34 tests pass.
+- Check the nHYP MD provider against the ordinary `GaugeAction` potential and
+  force at zero smearing coefficients, then evolve a fixed-seed hot SU(3)
+  field and verify finite Hamiltonian diagnostics and forward/backward
+  reversibility. On CPU, halving the QPQ step from 1/100 to 1/200 and 1/400
+  reduces `|delta_hamiltonian|` from `1.60e-4` to `3.95e-5` and `9.85e-6`,
+  respectively, as expected for a second-order integrator.
+- Run the hot-field nHYP MD trajectory on an NVIDIA H100 NVL. A four-step
+  trajectory gives `delta_hamiltonian = -3.95e-5`; the forward/backward link
+  and momentum errors are `1.11e-15` and `8.88e-16`, and the thin links,
+  smeared links, and pullback fields all remain in `CuArray{ComplexF64}`
+  storage.
+- Pass 39 native-smearing wrapper checks and four finite-difference gauge
+  action force checks for stout/EXP, HEX, polar APE, and polar HYP on CPU.
+
 ## v1.1.4
 
 ### Molecular dynamics
