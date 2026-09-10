@@ -7,7 +7,7 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-The development version adds QEX-compatible nHYP smearing, its analytic pullback, and an nHYP-smeared GaugeAction provider for HMC on LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
+The development version adds native APE, stout/EXP, HYP, HEX, and QEX-compatible nHYP smearing, analytic pullbacks, and smeared GaugeAction providers for HMC on LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.4 adds an opt-in Grid/Bridge++ momentum normalization to
 the MD driver while preserving the historical default; see [changes.md](changes.md).
@@ -358,6 +358,59 @@ driver_result = (
     delta_hamiltonian=diagnostics.delta_hamiltonian,
 )
 println(driver_result)
+```
+
+### Native APE, stout/EXP, HYP, HEX, and nHYP smearing
+
+On a four-dimensional LatticeMatrices-backed configuration, construct a
+smearing specification and use the ordinary high-level `smear` API:
+
+```julia
+# APE/HYP default to Bridge++-compatible iterative MaxReTr projection.
+ape = APESmearing(alpha=0.6)
+hyp = HYPSmearing(
+    alpha_outer=0.75, alpha_middle=0.6, alpha_inner=0.3)
+stout = StoutSmearing(rho=0.1, iterations=2) # EXPSmearing is an alias
+hex = HEXSmearing(
+    alpha_outer=0.125, alpha_middle=0.15, alpha_inner=0.15)
+nhyp = NHYPSmearing(
+    alpha_outer=0.5, alpha_middle=0.5, alpha_inner=0.4)
+
+smeared = smear(U, ape)
+recorded = smear(U, stout; record=true)
+```
+
+The explicit allocating interface returns the cache needed by an analytic
+reverse pass:
+
+```julia
+polar_hyp = HYPSmearing(
+    alpha_outer=0.75, alpha_middle=0.6, alpha_inner=0.3,
+    projection=:polar)
+V, cache = link_smear(U, polar_hyp)
+
+# Fill dV with the cotangent with respect to V.
+dU = link_smear_pullback(dV, U, cache)
+```
+
+MaxReTr is the natural choice for comparison with conventional lattice-QCD
+software. It is forward-only here. For APE/HYP HMC or another differentiable
+calculation, request `projection=:polar`; stout/EXP, HEX, nHYP, and polar
+APE/HYP have analytic pullbacks. `ape_smearing(U; ...)`, `hyp_smearing`,
+`stout_link_smearing`, `exp_smearing`, `hex_smearing`, and `nhyp_smearing`
+are configuration-validating convenience builders. The existing
+`stout_smearing` name remains the arbitrary-loop `CovNeuralnet` compatibility
+API, so use `stout_link_smearing` for this native plaquette-only path.
+
+For HMC, wrap a thin-link action with `SmearedGaugeAction`; APE and HYP must
+use the polar choice:
+
+```julia
+action = SmearedGaugeAction(
+    thin_link_action,
+    APESmearing(alpha=0.6, projection=:polar),
+)
+md = md_driver(U, action; steps=4, trajectory_length=0.02, integrator=QPQ())
 ```
 
 ### nHYP-smeared HMC using the MD driver
