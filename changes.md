@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## v1.1.5
 
 ### Native UV smearing and analytic HMC
 
@@ -81,7 +81,7 @@
   and momentum errors are `1.11e-15` and `8.88e-16`, and the thin links,
   smeared links, and pullback fields all remain in `CuArray{ComplexF64}`
   storage.
-- Pass 36 native-smearing wrapper checks and four finite-difference gauge
+- Pass 39 native-smearing wrapper checks and four finite-difference gauge
   action force checks for stout/EXP, HEX, polar APE, and polar HYP on CPU.
 
 ## v1.1.4
