@@ -255,6 +255,20 @@ function layer_pullback!(
     return
 end
 
+function layer_pullback_links_only!(
+    δ_prev::Array{<:AbstractGaugefields{NC,Dim},1},
+    δ_current,
+    layer::STOUT_Layer{T,Dim},
+    Uprev,
+    temps,
+    tempf,
+) where {NC,Dim,T}
+    clear_U!(δ_prev)
+    backward_dSdUαUβ_add!(layer, δ_prev, δ_current)
+    set_wing_U!(δ_prev)
+    return nothing
+end
+
 
 function forward!(s::STOUT_Layer{T,Dim}, Uout, ρs::Vector{TN}, Uin) where {T,Dim,TN<:Number} #Uout = exp(Q(Uin,ρs))*Uinα
     isαβsame = true
@@ -415,6 +429,45 @@ function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim,TN}, dSdU, dSdρ, dSdUou
     unused!(s.temps)
 end
 export backward_dSdUαUβρ_add!
+
+# Link-only reverse pass used by HMC. The rho derivative is a parameter
+# observable and is not part of the molecular-dynamics gauge force.
+function backward_dSdUαUβ_add!(
+    s::STOUT_Layer{T,Dim,TN}, dSdU, dSdUout,
+) where {T,Dim,TN}
+    @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"
+    dSdCs, it_dSdCs = get_temp(s.temps, Dim)
+    Uin = s.Uin
+
+    for μ = 1:Dim
+        temp1, it_1 = get_temp(s.temps)
+        calc_dSdu1!(temp1, dSdUout[μ], s.eQs[μ])
+        add_U!(dSdU[μ], temp1)
+        unused!(s.temps, it_1)
+
+        dSdQ, it_dSdQ = get_temp(s.temps)
+        dSdΩ, it_dSdΩ = get_temp(s.temps)
+        temp1, it_1 = get_temp(s.temps)
+        calc_dSdQ!(dSdQ, dSdUout[μ], s.Qs[μ], s.Uin[μ], temp1)
+        unused!(s.temps, it_1)
+        calc_dSdΩ!(dSdΩ, dSdQ)
+        unused!(s.temps, it_dSdQ)
+        calc_dSdC!(dSdCs[μ], dSdΩ, Uin[μ])
+
+        dSdUdag, it_dSdUdag = get_temp(s.temps)
+        calc_dSdUdag!(dSdUdag, dSdΩ, s.Cs[μ])
+        unused!(s.temps, it_dSdΩ)
+        add_U!(dSdU[μ], dSdUdag')
+        unused!(s.temps, it_dSdUdag)
+    end
+
+    for ν = 1:Dim, μ = 1:Dim
+        calc_dSdUν_fromdSCμ_add!(
+            dSdU[ν], s.dataset, dSdCs[μ], s.ρs, Uin, μ, ν, s.temps)
+    end
+    unused!(s.temps, it_dSdCs)
+    return nothing
+end
 
 function backward_dSdUαUβρ_add!(s::STOUT_Layer{T,Dim}, dSdUα, dSdUβ, dSdρ, dSdUout) where {T,Dim}
     @assert Dim == 4 "Dim = $Dim is not supported yet. Use Dim = 4"

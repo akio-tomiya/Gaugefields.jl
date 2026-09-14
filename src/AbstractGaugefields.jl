@@ -2767,8 +2767,8 @@ function add_force!(
         if plaqonly
 
             construct_double_staple!(V, U, μ, temps14)
-
-            mul!(temp1, U[μ], V') #U U*V
+            Traceless_antihermitian_product_add!(
+                F[μ], factor, U[μ], V', temp1)
         else
             clear_U!(V)
             for i = 1:gparam.numactions
@@ -2777,10 +2777,9 @@ function add_force!(
                 add_U!(V, staplefactors[i], temp3)
                 #add_U!(V,gparam.βs[i]/gparam.β,temp3)
             end
-            mul!(temp1, U[μ], V) #U U*V
+            Traceless_antihermitian_product_add!(
+                F[μ], factor, U[μ], V, temp1)
         end
-
-        Traceless_antihermitian_add!(F[μ], factor, temp1)
         #add_U!(F[μ],factor,temp2)
     end
     unused!(temps, it_V)

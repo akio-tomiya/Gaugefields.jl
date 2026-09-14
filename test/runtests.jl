@@ -22,6 +22,8 @@ end
     include("md_driver.jl")
 end
 
+include("performance_feedback.jl")
+
 @testset "Enzyme molecular dynamics" begin
     include("enzyme_md.jl")
 end

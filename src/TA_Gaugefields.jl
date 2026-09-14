@@ -1,5 +1,5 @@
 import ..SUN_generator: Generator, lie2matrix!, matrix2lie!
-import LatticeMatrices: delinearize
+import LatticeMatrices: delinearize, traceless_antihermitian_product_add!
 
 abstract type TA_Gaugefields{NC,Dim} <: AbstractGaugefields{NC,Dim} #Traceless antihermitian matrix
 end
@@ -123,6 +123,51 @@ end
 include("./4D/TA_gaugefields_4D.jl")
 include("./2D/TA_gaugefields_2D.jl")
 include("./3D/TA_gaugefields_3D.jl")
+
+for (ta_type, field_type, adjoint_type) in (
+    (
+        :TA_Gaugefields_2D_MPILattice,
+        :Gaugefields_2D_MPILattice,
+        :Adjoint_Gaugefields_2D_MPILattice,
+    ),
+    (
+        :TA_Gaugefields_3D_MPILattice,
+        :Gaugefields_3D_MPILattice,
+        :Adjoint_Gaugefields_3D_MPILattice,
+    ),
+    (
+        :TA_Gaugefields_4D_MPILattice,
+        :Gaugefields_4D_MPILattice,
+        :Adjoint_Gaugefields_4D_MPILattice,
+    ),
+)
+    for left_type in (field_type, adjoint_type)
+        for right_type in (field_type, adjoint_type)
+            @eval function Traceless_antihermitian_product_add!(
+                output::$ta_type,
+                factor,
+                left::$left_type,
+                right::$right_type,
+            )
+                traceless_antihermitian_product_add!(
+                    output.a, factor, left.U, right.U,
+                )
+                return nothing
+            end
+            @eval function Traceless_antihermitian_product_add!(
+                output::$ta_type,
+                factor,
+                left::$left_type,
+                right::$right_type,
+                temporary,
+            )
+                return Traceless_antihermitian_product_add!(
+                    output, factor, left, right,
+                )
+            end
+        end
+    end
+end
 
 function Base.:*(
     x::Array{<:TA_Gaugefields{NC,Dim},1},
@@ -264,6 +309,22 @@ end
 
 function Traceless_antihermitian_add!(U::T, factor, temp1) where {T<:TA_Gaugefields}
     error("Traceless_antihermitian_add! is not implemented in type $(typeof(U)) ")
+end
+
+function Traceless_antihermitian_product_add!(
+    U::T, factor, left, right,
+) where {T<:TA_Gaugefields}
+    error(
+        "Traceless_antihermitian_product_add! is not implemented for " *
+        "$(typeof(U)), $(typeof(left)), and $(typeof(right))",
+    )
+end
+
+function Traceless_antihermitian_product_add!(
+    U::T, factor, left, right, temporary,
+) where {T<:TA_Gaugefields}
+    mul!(temporary, left, right)
+    return Traceless_antihermitian_add!(U, factor, temporary)
 end
 
 function Traceless_antihermitian!(vout::T, vin::T) where {T<:TA_Gaugefields}

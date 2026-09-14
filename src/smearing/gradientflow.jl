@@ -9,7 +9,7 @@ import ..AbstractGaugefields_module:
     add_U!,
     evaluate_wilson_loops!,
     exptU!,
-    Traceless_antihermitian_add!,
+    Traceless_antihermitian_product_add!,
     set_wing_U!,
     Traceless_antihermitian,
     evaluate_gaugelinks!,
@@ -326,8 +326,8 @@ function F_update!(F, U, factor, Dim, gauge_action) # F -> F +factor*U*dSdUμ
 
     for μ = 1:Dim
         calc_dSdUμ!(dSdUμ, gauge_action, μ, U)
-        mul!(temp1, U[μ], dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(F[μ], factor, temp1)
+        Traceless_antihermitian_product_add!(
+            F[μ], factor, U[μ], dSdUμ, temp1)
     end
     unused!(temps, it_temp1)
     unused!(temps, it_dSdUμ)
