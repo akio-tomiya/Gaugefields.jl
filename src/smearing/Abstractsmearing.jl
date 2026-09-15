@@ -20,6 +20,7 @@ import ..AbstractGaugefields_module:
     evaluate_wilson_loops!,
     exptU!,
     Traceless_antihermitian_add!,
+    Traceless_antihermitian_product_add!,
     set_wing_U!,
     Traceless_antihermitian,
     evaluate_gaugelinks!,
@@ -80,8 +81,9 @@ end
 function CovNeuralnet(
     U::Vector{<:AbstractGaugefields{NC,FieldDim}};
     Dim=FieldDim,
+    numtemps=16,
 ) where {NC,FieldDim}
-    return CovNeuralnet(U[1]; Dim)
+    return CovNeuralnet(U[1]; Dim, numtemps)
 end
 
 function CovNeuralnet(
@@ -349,7 +351,14 @@ function back_prop(δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
     =#
 end
 
-function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) where {Dim}
+function back_prop!(
+    δ_current,
+    δL,
+    net::CovNeuralnet{Dim},
+    Uout_multi,
+    Uin;
+    calculate_parameter_derivatives::Bool=true,
+) where {Dim}
     #temps = similar(Uout_multi[1])
     #temps, its_temps = get_temp(net._temp_U, Dim)
     #tempf, its_tempf = get_temp(net._temp_UA, 1)
@@ -377,7 +386,13 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
         temps, its_temps = get_temp(net._temp_U, Dim)
         tempf, its_tempf = get_temp(net._temp_UA, 1)
         #layer_pullback!(δ_prev, δ_current, layer, Uout_multi[i-1], temps, tempf)
-        layer_pullback!(δ_prev, δ_prev2, layer, Uout_multi[i-1], temps, tempf)
+        if calculate_parameter_derivatives
+            layer_pullback!(
+                δ_prev, δ_prev2, layer, Uout_multi[i-1], temps, tempf)
+        else
+            layer_pullback_links_only!(
+                δ_prev, δ_prev2, layer, Uout_multi[i-1], temps, tempf)
+        end
         #display(δ_prev[1].U[:, :, 1, 1])
         #display(δ_prev2[1].U[:, :, 1, 1])
 
@@ -393,7 +408,11 @@ function back_prop!(δ_current, δL, net::CovNeuralnet{Dim}, Uout_multi, Uin) wh
     temps, its_temps = get_temp(net._temp_U, Dim)
     tempf, its_tempf = get_temp(net._temp_UA, 1)
     #layer_pullback!(δ_prev, δ_current, layer, Uin, temps, tempf)
-    layer_pullback!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
+    if calculate_parameter_derivatives
+        layer_pullback!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
+    else
+        layer_pullback_links_only!(δ_prev, δ_prev2, layer, Uin, temps, tempf)
+    end
     #display(δ_prev[1].U[:, :, 1, 1])
     #display(δ_prev2[1].U[:, :, 1, 1])
 
@@ -502,6 +521,14 @@ function layer_pullback!(δ_prev, δ_next, layer::T, Uprev, temps, tempf) where 
     )
 end
 
+# HMC needs only the link cotangent. Layers without a specialized link-only
+# reverse pass keep the established behavior.
+function layer_pullback_links_only!(
+    δ_prev, δ_next, layer::T, Uprev, temps, tempf,
+) where {T<:CovLayer}
+    return layer_pullback!(δ_prev, δ_next, layer, Uprev, temps, tempf)
+end
+
 function parameter_derivatives(δ_current, layer::T, U_current, temps) where {T<:CovLayer}
     error(
         "parameter_derivatives(δ_current,layer::T,U_current,temps) is not implemented with type $(typeof(layer)) of layer.",
@@ -602,9 +629,8 @@ function apply_stout_smearing!(
             evaluate_wilson_loops!(temp3, loops, U, [temp1, temp2])
             add_U!(V, ρs[i], temp3)
         end
-        mul!(temp1, V, U[μ]') #U U*V
         clear_U!(F0)
-        Traceless_antihermitian_add!(F0, 1, temp1)
+        Traceless_antihermitian_product_add!(F0, 1, V, U[μ]', temp1)
 
         exptU!(temp3, 1, F0, [temp1, temp2])
 

@@ -367,24 +367,24 @@ end
         forward = md_driver(
             U,
             split_actions;
-            steps=1,
+            steps=2,
             trajectory_length=0.1,
             integrator,
         )
         md_trajectory!(U, momenta, forward; diagnostics=false)
 
         if ordering isa QPQ
-            @test slow_calls[] == 1
-            @test fast_calls[] == 6
-        else
             @test slow_calls[] == 2
-            @test fast_calls[] == 3
+            @test fast_calls[] == 12
+        else
+            @test slow_calls[] == 3
+            @test fast_calls[] == 6
         end
 
         backward = md_driver(
             U,
             split_actions;
-            steps=1,
+            steps=2,
             trajectory_length=-0.1,
             integrator,
         )

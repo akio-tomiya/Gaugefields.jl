@@ -255,11 +255,12 @@ function md_force!(force, action::GaugeAction, U, workspace)
     factor = -one(_md_real_scalar_type(U)) / U[1].NC
     for direction in eachindex(U)
         calc_dSdUμ!(workspace.derivative, action, direction, U)
-        mul!(workspace.force_work, U[direction], workspace.derivative)
         clear_U!(force[direction])
-        Traceless_antihermitian_add!(
+        Traceless_antihermitian_product_add!(
             force[direction],
             factor,
+            U[direction],
+            workspace.derivative,
             workspace.force_work,
         )
     end
@@ -369,15 +370,12 @@ function md_force!(
 
     factor = -one(_md_real_scalar_type(U)) / U[1].NC
     for direction in eachindex(U)
-        mul!(
-            workspace.force_work,
-            U[direction],
-            workspace.thin_cotangent[direction]',
-        )
         clear_U!(force[direction])
-        Traceless_antihermitian_add!(
+        Traceless_antihermitian_product_add!(
             force[direction],
             factor,
+            U[direction],
+            workspace.thin_cotangent[direction]',
             workspace.force_work,
         )
     end
@@ -471,15 +469,12 @@ function md_force!(
 
     factor = -one(_md_real_scalar_type(U)) / U[1].NC
     for direction in eachindex(U)
-        mul!(
-            workspace.force_work,
-            U[direction],
-            workspace.thin_cotangent[direction]',
-        )
         clear_U!(force[direction])
-        Traceless_antihermitian_add!(
+        Traceless_antihermitian_product_add!(
             force[direction],
             factor,
+            U[direction],
+            workspace.thin_cotangent[direction]',
             workspace.force_work,
         )
     end
@@ -961,10 +956,13 @@ function md_trajectory!(U, P, driver::MDDriver; diagnostics::Bool=true)
     ))
     initial_hamiltonian = diagnostics ? md_hamiltonian(U, P, driver) : nothing
 
-    step_size = md_step_size(driver)
-    for _ in 1:driver.steps
-        md_step!(driver.integrator, U, P, step_size, driver)
-    end
+    _md_trajectory_steps!(
+        driver.integrator,
+        U,
+        P,
+        md_step_size(driver),
+        driver,
+    )
 
     diagnostics || return nothing
     final_hamiltonian = md_hamiltonian(U, P, driver)
@@ -973,6 +971,48 @@ function md_trajectory!(U, P, driver::MDDriver; diagnostics::Bool=true)
         final_hamiltonian=final_hamiltonian,
         delta_hamiltonian=final_hamiltonian - initial_hamiltonian,
     )
+end
+
+function _md_trajectory_steps!(integrator, U, P, step_size, driver)
+    for _ in 1:driver.steps
+        md_step!(integrator, U, P, step_size, driver)
+    end
+    return nothing
+end
+
+# Adjacent half momentum kicks at a trajectory-step boundary see the same U,
+# so their coefficients can be added and the force evaluated only once.
+function _md_trajectory_steps!(::PQP, U, P, step_size, driver)
+    update_momenta!(P, U, step_size / 2, driver)
+    for step in 1:driver.steps
+        update_gaugefields!(U, P, step_size, driver)
+        kick_size = step == driver.steps ? step_size / 2 : step_size
+        update_momenta!(P, U, kick_size, driver)
+    end
+    return nothing
+end
+
+function _md_trajectory_steps!(
+    integrator::SextonWeingarten{S,F,PQP},
+    U,
+    P,
+    step_size,
+    driver,
+) where {S,F}
+    update_momenta!(P, U, step_size / 2, driver, integrator.slow)
+    for step in 1:driver.steps
+        _md_fast_qpq!(
+            U,
+            P,
+            step_size,
+            integrator.n_fast,
+            driver,
+            integrator.fast,
+        )
+        kick_size = step == driver.steps ? step_size / 2 : step_size
+        update_momenta!(P, U, kick_size, driver, integrator.slow)
+    end
+    return nothing
 end
 
 export AbstractMDIntegrator,

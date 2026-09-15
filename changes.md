@@ -1,5 +1,37 @@
 # Changes
 
+## v1.1.6
+
+### Force and smearing performance
+
+- Add `Traceless_antihermitian_product_add!` and use it in gauge-action,
+  smeared-action, gradient-flow, and compatibility force paths. Modern
+  LatticeMatrices-backed fields fuse the product and projection into one
+  kernel; legacy serial and nowing fields retain the established two-stage
+  calculation through a workspace-backed fallback.
+- Add a link-only `back_prop!` mode for molecular dynamics. The STOUT
+  specialization skips the unused smearing-parameter derivative while
+  preserving the link cotangent exactly; other layer types fall back to their
+  complete pullback.
+- Forward `numtemps` through the vector form of `CovNeuralnet` so callers can
+  size the reusable temporary pool consistently with the scalar-field form.
+
+### Molecular-dynamics integration
+
+- Combine adjacent half momentum kicks at boundaries between trajectory-level
+  `PQP` steps, reducing force calls from `2N` to `N+1` without changing the
+  discrete trajectory. Apply the same optimization to the slow-force part of
+  a `SextonWeingarten` integrator with `PQP` ordering; custom integrators keep
+  the original step loop.
+
+### Validation and performance
+
+- Compare full and link-only STOUT pullbacks, fused and separate projections
+  for SU(2), SU(3), and SU(4), and optimized/reference PQP trajectories.
+- On an otherwise idle NVIDIA H100 NVL, a six-layer STOUT pullback is 1.14x
+  faster. A 32-step `16^4` SU(3) Wilson-gauge PQP trajectory is 2.11x faster,
+  with maximum link and momentum differences of `3.51e-16` and `7.99e-15`.
+
 ## v1.1.5
 
 ### Native UV smearing and analytic HMC
