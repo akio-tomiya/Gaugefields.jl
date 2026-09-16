@@ -484,60 +484,110 @@ also supported. See the complete [HMC guide](docs/src/hmc.md) for production
 loops, MPI acceptance policy, restartable random streams, and
 Sexton--Weingarten time-scale separation.
 
-### L-CNN models and learned link smearing
+### L-CNN: gauge-equivariant models and learned link smearing
 
-`Gaugefields.LCNN` builds a model from an explicit feature stack and output
-head. Dimension and plaquette input-channel count are inferred from `U`:
+`Gaugefields.LCNN` implements configurable lattice gauge-equivariant neural
+networks for 2D, 3D, and 4D SU(N) gauge fields. A model has a common
+gauge-covariant feature backbone and one of two output heads:
+
+```text
+U -> Plaq -> LCB -> ... -> LCB -> Trace -> gauge-invariant scalar
+                                 `-> LExp  -> updated gauge links
+```
+
+Here is a complete small scalar example. The dimension, number of colors,
+lattice shape, backend, and number of plaquette input channels are inferred
+from `U`; users do not need to pass `Val(2)` or `Val(4)`.
 
 ```julia
-using Random
+import JACC
+JACC.@init_backend
+
+using Gaugefields, Random
 const LCNN = Gaugefields.LCNN
 
-features = LCNN.LCNNFeatureModel(
-    U, 4, 2; kernel_size=2, shifts=:both,
+U = gauge_configuration(
+    (8, 8);
+    colors=2,
+    start=:hot,
+    seed=0x1234,
 )
+
+# Plaq -> LCB(1 => 4) -> LCB(4 => 2) for this two-dimensional U.
+features = LCNN.LCNNFeatureModel(
+    U, 4, 2;
+    kernel_size=2,
+    shifts=:both,
+    identity=true,
+    adjoints=true,
+)
+
+# Trace the two output channels and reduce the site-local values by their mean.
 action = LCNN.LCNNAction(
-    features; component=:both, reduction=:mean,
+    features;
+    component=:both,
+    reduction=:mean,
 )
 parameters = LCNN.initial_parameters(
     MersenneTwister(1234), action, Float32,
 )
+
+local_values = LCNN.site_predictions(action, U, parameters)
 value = action(U, parameters)
+
+println("trainable parameters = ", LCNN.parameter_count(action))
+println(LCNN.parameter_shapes(action))
 ```
 
-Feature-only models are evaluated with `forward_features` and are not exposed
-as Gaugefields smearings. Attach `LExp` through `LCNNLinkModel` to obtain a
-true link map with the ordinary smearing API:
+The channel-width arguments (`4, 2` above) determine the number and widths of
+the LCB layers. Kernel size, dilation, positive/bidirectional shifts, identity
+channels, and adjoint channels are configurable. Every trainable value is an
+explicit real array in the returned nested `NamedTuple`; no parameter is
+hidden in the model object. Individual layers can also be constructed with
+`LCNN.LCB` when they need different settings.
+
+To use the same kind of feature backbone as an actual Gaugefields smearing,
+attach an `LExp` link-update head through `LCNNLinkModel`:
 
 ```julia
 link_model = LCNN.LCNNLinkModel(features)
-link_parameters = LCNN.initial_parameters(Random.default_rng(), link_model)
-learned = lcnn_smearing(link_model, link_parameters)
-Unew = smear(U, learned)
+link_parameters = LCNN.initial_parameters(
+    MersenneTwister(5678), link_model, Float32,
+)
+learned_smearing = lcnn_smearing(link_model, link_parameters)
+Unew = smear(U, learned_smearing)
 ```
 
-With Enzyme loaded, `smear(U, learned; record=true, calcdSdU=true)` returns a
-callable link VJP. `LCNN.link_model_pullback` additionally returns cotangents
-for every LCB and LExp parameter; scalar `LCNNAction` parameters use
-`LCNN.parameter_gradient`.
+Only a link model ending in `LExp` is a smearing. A feature-only model returns
+site-covariant matrices, while `LCNNAction` returns gauge-invariant site values
+or a scalar; neither is presented through the smearing API.
 
-The [L-CNN manual](docs/src/lcnn.md) begins with general model construction,
-then documents the exact Favoni et al. 1 by 2 Wilson-loop experiment, both
-released layer conventions, portable PyTorch checkpoint interchange, and
-short cross-framework training comparisons. The regular test suite never
-executes Python; it compares against frozen official-PyTorch outputs under
-[`test/data/lcnn`](test/data/lcnn/README.md).
+Enzyme supplies derivatives with respect to both links and all parameters:
 
-The opt-in [`test/lcnn_backend_smoke.jl`](test/lcnn_backend_smoke.jl) checks
-2D SU(2) and 4D SU(3) forward evaluation, parameter gradients, and `dS/dU` on
-JACC CPU, CUDA, MPI, and CUDA-aware MPI configurations. See the
-[L-CNN manual](docs/src/lcnn.md#gpu-and-mpi-smoke-tests) for the
-backend-specific launch commands.
+```julia
+using Enzyme
 
-The same manual also documents the optional HDF5 + Enzyme + Optimisers
-training path: paper-layout datasets, site-local MSE, PyTorch-compatible
-AdamW/AMSGrad, validation early stopping, and restoration of the best weights.
-This is a Gaugefields extension, not a separate training package.
+dS_dU = LCNN.dSdu(action, U, parameters)
+dS_dparameters = LCNN.parameter_gradient(action, U, parameters)
+
+recorded = smear(U, learned_smearing; record=true, calcdSdU=true)
+# For an output-link cotangent dUnew:
+dU = recorded.derivative(dUnew)
+full_pullback = LCNN.link_model_pullback(dUnew, U, recorded.history)
+```
+
+The user-selected sequence of LCB layers remains ordinary differentiable
+Julia composition; custom Enzyme rules are used only at the lower-level
+JACC/LatticeMatrices operation boundaries. Thus changing the layer count or
+channel widths does not require writing a new adjoint.
+
+The [L-CNN manual](docs/src/lcnn.md) covers per-layer model construction,
+LuxCore integration, optional HDF5 + Enzyme + Optimisers training, site-local
+MSE, AdamW/AMSGrad, early stopping, GPU/MPI execution, and checkpointing. It
+also reproduces the Favoni--Ipp--Müller--Schuh 1 by 2 Wilson-loop model, keeps
+the arXiv-table and released-PRL conventions distinct, and documents portable
+PyTorch checkpoint interchange. Julia tests use frozen PyTorch outputs under
+[`test/data/lcnn`](test/data/lcnn/README.md); Python is not run by CI.
 
 ## Documentation
 
