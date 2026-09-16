@@ -1,5 +1,48 @@
 # Changes
 
+## v1.1.7
+
+### Lattice gauge-equivariant neural networks
+
+- Add `Gaugefields.LCNN` with plaquette input features, configurable sequential
+  `LCB` stacks, real gauge-invariant `Trace` readouts, and `LExp` link-update
+  heads. Public constructors infer dimension and backend from `U`, support 2D,
+  3D, and 4D SU(N) fields, and expose every real trainable parameter in a
+  nested `NamedTuple`.
+- Add a direct LuxCore adapter while keeping model execution independent of
+  full Lux. Layer count, channel widths, transport kernel, dilation, shift
+  directions, identity channels, adjoint channels, scalar reduction, and
+  parameter initialization remain explicit Julia configuration.
+- Integrate models ending in `LExp` with the ordinary `smear` interface.
+  Feature-only models remain distinct from link smearing, and scalar
+  `LCNNAction` models remain distinct from both.
+
+### Differentiation and training
+
+- Add Enzyme reverse rules at the JACC/LatticeMatrices plaquette, transport,
+  bilinear, trace, Lie projection, and exponential boundaries. Scalar models
+  provide complete parameter gradients and `dS/dU`; link-valued models provide
+  link and parameter vector--Jacobian products, including recorded
+  `calcdSdU=true` smearing calls.
+- Add optional HDF5 dataset loading and Enzyme + Optimisers training with
+  site-local MSE, minibatch accumulation, AdamW or PyTorch-compatible AMSGrad,
+  validation early stopping, and restoration of the best parameters. LuxCore
+  is a direct lightweight dependency; HDF5, Enzyme, and Optimisers remain
+  optional extensions.
+
+### Reproduction and validation
+
+- Reproduce the Favoni--Ipp--Müller--Schuh 2D SU(2) 1 by 2 Wilson-loop model,
+  distinguishing the 35-parameter arXiv-table convention from the
+  47-parameter released-PRL-checkpoint convention. Add portable NPZ checkpoint
+  loading, export helpers, and frozen official-PyTorch outputs without making
+  Python part of the Julia test suite.
+- Check intermediate gauge equivariance, scalar invariance, translations,
+  known Wilson loops, finite-difference gradients, Float32/Float64, SU(2),
+  SU(3), 2D, and 4D. Opt-in backend tests cover CUDA and MPI execution.
+- Require LatticeMatrices v1.2.7 for the corresponding JACC and Enzyme
+  coefficient-gradient primitives.
+
 ## v1.1.6
 
 ### Force and smearing performance

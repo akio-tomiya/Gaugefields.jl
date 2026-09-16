@@ -30,10 +30,11 @@ makedocs(;
             "Gauge fixing" => "gaugefixing.md",
             "Measurements" => "measurements.md",
             "Utilities and I/O" => "utilities.md",
-            "Stout smearing" => "smearing.md",
+            "Link smearing" => "smearing.md",
             "MPI, GPU, and multi-GPU" => "mpi.md",
             "HMC and custom integrators" => "hmc.md",
             "Automatic differentiation" => "autodiff.md",
+            "L-CNN" => "lcnn.md",
         ],
         "Reference" => [
             "High-level API parameters" => "highlevelapi.md",

@@ -161,7 +161,7 @@ gradient_flow(U, loops, coefficients; steps=1, step_size=0.01)
 general-action flow from explicit loops and coefficients. Apply the resulting
 integrator with `flow!(U, flow)`.
 
-## Stout smearing
+## Smearing
 
 ```julia
 stout_smearing(U; loops=:plaquette, rho=0.1)
@@ -176,6 +176,18 @@ smear(U, smearing; record=false, calcdSdU=false, temps=nothing)
 
 The default return value is the smeared configuration. `record=true` returns a
 named tuple containing `configuration`, `history`, and `derivative`.
+For `LCNNLinkSmearing`, `calcdSdU=true` records an Enzyme-backed callable VJP;
+its output cotangent determines both link and model-parameter cotangents.
+
+For learned link smearing, construct an `LCNN.LCNNLinkModel` ending in `LExp`
+and bind its parameters with:
+
+```julia
+lcnn_smearing(link_model, parameters)
+```
+
+Feature-only `LCNNFeatureModel` and scalar `LCNNAction` objects are not
+smearing specifications.
 
 ## Configuration I/O
 

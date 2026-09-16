@@ -59,6 +59,7 @@ gradient_flow
 heatbath_updater
 gaugefixing!
 stout_smearing
+lcnn_smearing
 smear
 save_configuration
 load_configuration
