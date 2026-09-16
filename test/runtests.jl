@@ -62,7 +62,7 @@ end
 end
 
 
-const eps = 1e-1
+const GAUGEFIELDS_TEST_TOLERANCE = 1e-1
 
 #=
 @testset "Ising field" begin

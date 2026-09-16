@@ -4,7 +4,7 @@ using Random
 import Wilsonloop: loops_staple
 
 
-const eps = 1e-1
+const GAUGEFIELDS_TEST_TOLERANCE = 1e-1
 
 #=
 @testset "Ising field" begin
@@ -57,7 +57,6 @@ end
 @testset "Gaugefields.jl" begin
     # Write your tests here.
 end
-
 
 
 

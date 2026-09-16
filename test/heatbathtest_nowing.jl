@@ -139,8 +139,8 @@ println("2D system")
         val = 0.47686969885505276
         #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
     @testset "NC=3" begin
@@ -151,8 +151,8 @@ println("2D system")
         val = 0.40215145054471996
         #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
     @testset "NC=4" begin
@@ -163,8 +163,8 @@ println("2D system")
         val = 0.1763164690262148
         #@time plaq_t = heatbathtest_2D(NX,NT,β,NC)
         @time plaq_ave = heatbathtest_2D(NX,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
 
@@ -186,8 +186,8 @@ println("4D system")
         #val = 0.6023531251990353
         val = 0.60876803568248
         @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
     @testset "NC=3" begin
@@ -197,8 +197,8 @@ println("4D system")
         #val = 0.5779454661484242
         val = 0.5618833345986648
         @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
     @testset "NC=4" begin
@@ -208,12 +208,11 @@ println("4D system")
         #val  =0.19127260002797497
         val = 0.19494730324923296
         @time plaq_ave = heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-        @test abs(plaq_ave-val)/abs(val) < eps
-        #@test abs(plaq_t-val)/abs(val) < eps
+        @test abs(plaq_ave-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
+        #@test abs(plaq_t-val)/abs(val) < GAUGEFIELDS_TEST_TOLERANCE
     end
 
 
 
 end
-
 
