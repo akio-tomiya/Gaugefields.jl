@@ -7,6 +7,10 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+Gaugefields.jl v1.1.7 adds configurable lattice gauge-equivariant neural
+networks, learned `LExp` link smearing, Enzyme link/parameter differentiation,
+and optional HDF5 + Optimisers training; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.6 adds fused force projection, link-only stout pullback, and trajectory-level PQP kick fusion; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.5 adds native APE, stout/EXP, HYP, HEX, and QEX-compatible nHYP smearing, analytic pullbacks, and smeared GaugeAction providers for HMC on LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
@@ -480,6 +484,61 @@ also supported. See the complete [HMC guide](docs/src/hmc.md) for production
 loops, MPI acceptance policy, restartable random streams, and
 Sexton--Weingarten time-scale separation.
 
+### L-CNN models and learned link smearing
+
+`Gaugefields.LCNN` builds a model from an explicit feature stack and output
+head. Dimension and plaquette input-channel count are inferred from `U`:
+
+```julia
+using Random
+const LCNN = Gaugefields.LCNN
+
+features = LCNN.LCNNFeatureModel(
+    U, 4, 2; kernel_size=2, shifts=:both,
+)
+action = LCNN.LCNNAction(
+    features; component=:both, reduction=:mean,
+)
+parameters = LCNN.initial_parameters(
+    MersenneTwister(1234), action, Float32,
+)
+value = action(U, parameters)
+```
+
+Feature-only models are evaluated with `forward_features` and are not exposed
+as Gaugefields smearings. Attach `LExp` through `LCNNLinkModel` to obtain a
+true link map with the ordinary smearing API:
+
+```julia
+link_model = LCNN.LCNNLinkModel(features)
+link_parameters = LCNN.initial_parameters(Random.default_rng(), link_model)
+learned = lcnn_smearing(link_model, link_parameters)
+Unew = smear(U, learned)
+```
+
+With Enzyme loaded, `smear(U, learned; record=true, calcdSdU=true)` returns a
+callable link VJP. `LCNN.link_model_pullback` additionally returns cotangents
+for every LCB and LExp parameter; scalar `LCNNAction` parameters use
+`LCNN.parameter_gradient`.
+
+The [L-CNN manual](docs/src/lcnn.md) begins with general model construction,
+then documents the exact Favoni et al. 1 by 2 Wilson-loop experiment, both
+released layer conventions, portable PyTorch checkpoint interchange, and
+short cross-framework training comparisons. The regular test suite never
+executes Python; it compares against frozen official-PyTorch outputs under
+[`test/data/lcnn`](test/data/lcnn/README.md).
+
+The opt-in [`test/lcnn_backend_smoke.jl`](test/lcnn_backend_smoke.jl) checks
+2D SU(2) and 4D SU(3) forward evaluation, parameter gradients, and `dS/dU` on
+JACC CPU, CUDA, MPI, and CUDA-aware MPI configurations. See the
+[L-CNN manual](docs/src/lcnn.md#gpu-and-mpi-smoke-tests) for the
+backend-specific launch commands.
+
+The same manual also documents the optional HDF5 + Enzyme + Optimisers
+training path: paper-layout datasets, site-local MSE, PyTorch-compatible
+AdamW/AMSGrad, validation early stopping, and restoration of the best weights.
+This is a Gaugefields extension, not a separate training package.
+
 ## Documentation
 
 The manual contains the complete v1 API description and task-oriented examples:
@@ -489,6 +548,7 @@ The manual contains the complete v1 API description and task-oriented examples:
 - [Measurements and QCDMeasurements.jl](docs/src/measurements.md)
 - [HMC assembled from traditional operations and with the MD driver](docs/src/hmc.md)
 - [Automatic differentiation with Enzyme](docs/src/autodiff.md)
+- [L-CNN and PyTorch checkpoint interchange](docs/src/lcnn.md)
 - [Two- and three-dimensional fields](docs/src/dimensions.md)
 - [Randomness and reproducibility](docs/src/randomness.md)
 - [High-level API parameters](docs/src/highlevelapi.md)

@@ -10,6 +10,14 @@ import Wilsonloop: loops_staple
     include("high_level_api.jl")
 end
 
+@testset "LCNN reference implementation" begin
+    include("lcnn_reference.jl")
+end
+
+include("lcnn_luxcore.jl")
+include("lcnn_enzyme.jl")
+include("lcnn_training.jl")
+
 @testset "Normalized HYP smearing" begin
     include("nhyp_smearing.jl")
 end

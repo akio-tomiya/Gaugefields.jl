@@ -380,6 +380,11 @@ export Traceless_AntiHermitian
 
 include("./molecular_dynamics.jl")
 include("./API.jl")
+include("./lcnn/LCNN.jl")
+
+const LCNNLinkSmearing = LCNN.LCNNLinkSmearing
+const lcnn_smearing = LCNN.lcnn_smearing
+export LCNN, LCNNLinkSmearing, lcnn_smearing
 
 
 # functions for Gaugefixing
