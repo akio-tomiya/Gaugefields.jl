@@ -1,39 +1,336 @@
 # L-CNN
 
-`Gaugefields.LCNN` provides lattice-gauge-equivariant feature maps, scalar
-models, and learned link smearings for 2D, 3D, and 4D
-`LatticeMatrices`-backed gauge fields. The ordinary Julia API does not require
-Python or PyTorch. `LuxCore` is a lightweight direct dependency; full Lux is
-not required to construct or evaluate a model.
+Lattice Gauge Equivariant Convolutional Neural Networks (L-CNNs) were
+introduced by Favoni, Ipp, Müller, and Schuh in
+[*Physical Review Letters* **128**, 032003 (2022)](https://doi.org/10.1103/PhysRevLett.128.032003)
+([arXiv:2012.12901](https://arxiv.org/abs/2012.12901)). Their
+[reference implementation](https://gitlab.com/openpixi/lge-cnn) is written in
+PyTorch. `Gaugefields.LCNN` implements the same gauge-equivariant construction
+for `LatticeMatrices`-backed gauge fields and connects it to Gaugefields link
+smearing, Enzyme differentiation, and Julia training tools.
 
-## What an LCNN computes
+The paper formulates the layers for SU(`N_c`) in arbitrary lattice dimension.
+Its numerical experiments use SU(2) configurations in 1+1 and 3+1 dimensions.
+The implementation described here supports two-, three-, and four-dimensional
+SU(`N_c`) fields; the test suite covers SU(2) and SU(3).
 
-Gauge links and site features transform differently:
+## Definition of the implemented model
+
+Let `d = length(U)` be the number of lattice directions. The link fields and
+the `N_\ell` feature channels at layer `\ell` transform as
 
 ```math
-U_{x,\mu}\longmapsto
-\Omega_xU_{x,\mu}\Omega^\dagger_{x+\hat\mu},\qquad
-W_{x,i}\longmapsto\Omega_xW_{x,i}\Omega_x^\dagger.
+U_{x,\mu}\mapsto
+\Omega_xU_{x,\mu}\Omega^\dagger_{x+\hat\mu},
+\qquad
+W^{(\ell)}_{x,j}\mapsto
+\Omega_xW^{(\ell)}_{x,j}\Omega_x^\dagger.
 ```
 
-An LCNN transports neighboring features to a common site before combining
-them. In this package a model is assembled as
+Below, values passed to constructors such as `kernel_size` and `component`
+are called **structural arguments**. They select an equation or tensor shape
+but are not optimized. **Trainable parameters** means only the real arrays in
+the `NamedTuple` returned by `LCNN.initial_parameters`.
+
+### Plaquette input
+
+`LCNNFeatureModel` begins with `Plaq()`. It constructs one positively oriented
+untraced plaquette for every `\mu<\nu`,
+
+```math
+W^{(0)}_{x,(\mu,\nu)}=
+U_{x,\mu}U_{x+\hat\mu,\nu}
+U^\dagger_{x+\hat\nu,\mu}U^\dagger_{x,\nu}.
+```
+
+Thus the initial width is
+
+```math
+N_0=\binom{d}{2}.
+```
+
+`Plaq` has no trainable parameters. The first `LCB` must accept `N_0` input
+channels.
+
+### One LCB layer
+
+Favoni et al. define separate L-Conv and L-Bilin operations in Eqs. (5) and
+(6). Their released code combines them into L-CB (Supplementary Material,
+Eqs. (11)--(12)); L-CB means the combined lattice gauge-equivariant
+convolution-bilinear layer. `LCNN.LCB` implements this parametrization.
+
+For an input channel `j` and a path descriptor `p=(\mu,k)`, define
+
+```math
+\widetilde W^{(\ell-1)}_{x,j,p}
+=P_{x,\mu,k}W^{(\ell-1)}_{x+k\hat\mu,j}
+ P^\dagger_{x,\mu,k},
+```
+
+where `P_{x,\mu,k}` is the straight Wilson line from `x+k\hat\mu` to `x`.
+The set of descriptors `\mathcal P_\ell` is determined exactly by the LCB
+constructor arguments.
+
+For `convention=:favoni_prl`, let `K = kernel_size`,
+`\delta = dilation`, and let `\Sigma=\{+1\}` for `shifts=:positive` or
+`\Sigma=\{-1,+1\}` for `shifts=:both`. Then
+
+```math
+\mathcal P_\ell=
+\{(0,0)\}\cup
+\{(\mu,\sigma r\delta):
+  \mu=1,\ldots,d;\ r=1,\ldots,K-1;\ \sigma\in\Sigma\}.
+```
+
+The `(0,0)` descriptor is the centered transported term. For
+`convention=:favoni_arxiv`, only positive shifts are allowed, the centered
+term is omitted, and
+
+```math
+\mathcal P_\ell=
+\{(\mu,r(\delta+1)):
+  \mu=1,\ldots,d;\ r=1,\ldots,K-1\}.
+```
+
+Write `a=1` when `adjoints=true` and `a=0` otherwise, and similarly write
+`u=1` when `identity=true`. The local basis and transported basis are ordered
+as
+
+```math
+\begin{aligned}
+\mathcal B_x={}&
+(W_{x,1},\ldots,W_{x,N_{\ell-1}},
+  W^\dagger_{x,1},\ldots,W^\dagger_{x,N_{\ell-1}},
+  \mathbf 1),\\
+\widetilde{\mathcal B}_x={}&
+(\widetilde W_{x,j,p},
+  \widetilde W^\dagger_{x,j,p},
+  \mathbf 1),
+\end{aligned}
+```
+
+with the adjoint and identity parts omitted when their options are false. In
+the transported basis, paths are ordered as returned by
+`LCNN.displacements(layer, d)`, and the channel index `j` varies inside each
+path.
+
+The layer evaluates
+
+```math
+W^{(\ell)}_{x,i}
+=\sum_{A=1}^{N_{\mathrm{local}}}
+ \sum_{B=1}^{N_{\mathrm{transport}}}
+ \theta^{(\ell)}_{iAB}\,
+ \mathcal B_{x,A}\widetilde{\mathcal B}_{x,B},
+\qquad i=1,\ldots,N_\ell,
+```
+
+where
+
+```math
+N_{\mathrm{local}}=(1+a)N_{\ell-1}+u,
+\qquad
+N_{\mathrm{transport}}=(1+a)N_{\ell-1}
+|\mathcal P_\ell|+u.
+```
+
+The coefficients `\theta^{(\ell)}_{iAB}` are the trainable LCB parameters:
+
+```julia
+parameters.layers[ell].weight[i, A, B]
+```
+
+Consequently,
+
+```julia
+size(parameters.layers[ell].weight) ==
+    (N_out, N_local, N_transport)
+```
+
+and the layer contains
+`N_out * N_local * N_transport` independently stored real parameters. There
+is no separate trainable L-Conv tensor in `LCNN.LCB`; the path label is already
+part of the transported-basis index `B`.
+
+The constructor is
+
+```julia
+LCNN.LCB(
+    N_in => N_out;
+    convention=:favoni_prl,
+    kernel_size=2,
+    dilation=nothing,
+    shifts=nothing,
+    identity=true,
+    adjoints=true,
+    init_weight_factor=1.0,
+)
+```
+
+With `dilation=nothing`, `\delta` is 1 for `:favoni_prl` and 0 for
+`:favoni_arxiv`. With `shifts=nothing`, the defaults are `:both` and
+`:positive`, respectively. The constructor arguments map to the definition as
+follows:
+
+| Julia argument | symbol or role in the equations | trainable? |
+|---|---|---|
+| `LCB(N_in => N_out)` | `N_{\ell-1}` and `N_\ell` | no |
+| `kernel_size=K` | path radii `r=1,\ldots,K-1`; default `K=2` | no |
+| `dilation=delta` | path spacing `\delta`; convention-dependent default above | no |
+| `shifts=:positive` or `:both` | sign set `\Sigma`; convention-dependent default above | no |
+| `identity=true` | includes `\mathbf 1`, setting `u=1` | no |
+| `adjoints=true` | includes daggered channels, setting `a=1` | no |
+| `convention=:favoni_prl` | definition of the path set | no |
+| `parameters.layers[ell].weight` | `\theta^{(\ell)}_{iAB}` | yes |
+| `init_weight_factor=f` | initialization scale only | no |
+
+`initial_parameters` samples each LCB weight with standard deviation
+
+```math
+\frac{f}{\sqrt{N_{\mathrm{local}}N_{\mathrm{transport}}}}.
+```
+
+Changing `init_weight_factor` changes the random initialization, not the
+forward equation after parameters have been created.
+
+### Stack of LCB layers
+
+In
+
+```julia
+feature_model = LCNN.LCNNFeatureModel(U, N1, N2, ...; lcb_options...)
+```
+
+the integers `N1, N2, ...` are `N_1,N_2,\ldots`, the output widths of the
+successive LCB layers. All layers receive the same `lcb_options`. Passing an
+explicit tuple of `LCB` objects allows a different path set and basis in every
+layer. The complete feature parameter tree is
+
+```julia
+(layers=(
+    (weight=theta1,),
+    (weight=theta2,),
+    # ...
+),)
+```
+
+The constructor arguments have the following roles:
+
+| Julia argument | role | trainable? |
+|---|---|---|
+| `U` | supplies the lattice dimension `d` used to set `N_0` and validate the model | no |
+| `N1, N2, ...` | layer widths `N_1,N_2,\ldots` | no |
+| `input=Plaq()` | defines `W^{(0)}` | no |
+| `lcb_options...` | common path set, bases, and initializer for every LCB | no |
+| `parameters.layers[ell].weight` | coefficients `\theta^{(\ell)}_{iAB}` | yes |
+
+### Scalar head: `LCNNAction`
+
+Let the last feature layer have `N_L` channels. `component` defines a real
+trace vector `z_x`:
+
+```math
+\begin{array}{ll}
+\texttt{:real}: & z_x=(\operatorname{ReTr}W_{x,1},\ldots,
+                         \operatorname{ReTr}W_{x,N_L}),\\
+\texttt{:imag}: & z_x=(\operatorname{ImTr}W_{x,1},\ldots,
+                         \operatorname{ImTr}W_{x,N_L}),\\
+\texttt{:both}: & z_x=(\operatorname{ReTr}W_{x,1},
+                         \operatorname{ImTr}W_{x,1},\ldots,
+                         \operatorname{ReTr}W_{x,N_L},
+                         \operatorname{ImTr}W_{x,N_L}).
+\end{array}
+```
+
+The site-local prediction is
+
+```math
+\widehat y_x=b+\sum_c q_c z_{x,c},
+```
+
+where the trace is not divided by `N_c`, matching the reference
+implementation. The exact parameter correspondence is
+
+```julia
+parameters.readout.weight[c] == q[c]
+parameters.readout.bias[1]   == b
+```
+
+For `component=:real` or `:imag`, `q` has length `N_L`; for `:both` it has
+length `2N_L`. `site_predictions(action, U, parameters)` returns
+`\widehat y_x`. Calling `action(U, parameters)` first applies `reduction=:sum`
+or `:mean` to each component of `z_x`, then applies the same `q` and adds `b`.
+Neither `component` nor `reduction` is trainable.
+
+| Julia argument or parameter | role | trainable? |
+|---|---|---|
+| `feature_model` | supplies the final channels `W^{(L)}` | no |
+| `component` | defines the ordering and length of `z_x` | no |
+| `reduction` | chooses the site sum or mean in the scalar call | no |
+| `parameters.readout.weight` | coefficients `q_c` | yes |
+| `parameters.readout.bias` | scalar bias `b` | yes |
+
+If `C` is the length of `z_x`, `initial_parameters` samples `q_c` with
+standard deviation `1/\sqrt{C}` and initializes `b=0`. The scalar head has
+`C+1` parameters, so the complete action contains
+
+```math
+\sum_{\ell=1}^{L}
+N_\ell N_{\mathrm{local},\ell}N_{\mathrm{transport},\ell}
++C+1
+```
+
+trainable real numbers.
+
+### Link head: `LCNNLinkModel` and `LExp`
+
+For a link model, the trainable LExp weights are
+
+```julia
+parameters.lexp.weight[mu, i] == beta[mu, i]
+```
+
+with shape `(d, N_L)`. The link update is
+
+```math
+A_{x,\mu}=\sum_{i=1}^{N_L}\beta_{\mu i}W^{(L)}_{x,i},
+\qquad
+U'_{x,\mu}=\exp\!\left([A_{x,\mu}]_{\mathrm{TA}}\right)U_{x,\mu},
+```
+
+where `[\cdot]_{\mathrm{TA}}` is Gaugefields' traceless anti-Hermitian
+projection. This is the L-Exp operation in Eqs. (8)--(9) of Favoni et al.
+`LExp` has `dN_L` real trainable parameters and no bias.
+`LExp(channels; init_weight_factor=f)` initializes `\beta` with standard
+deviation `f/\sqrt{N_L}`; `f` is not itself trainable.
+
+| Julia argument or parameter | role | trainable? |
+|---|---|---|
+| `feature_model` | supplies `W^{(L)}` and `N_L` | no |
+| `LExp(N_L; init_weight_factor=f)` | selects the input width and initializer scale | no |
+| `parameters.lexp.weight[mu, i]` | coefficient `\beta_{\mu i}` | yes |
+
+The complete link model therefore contains
+
+```math
+\sum_{\ell=1}^{L}
+N_\ell N_{\mathrm{local},\ell}N_{\mathrm{transport},\ell}
++dN_L
+```
+
+trainable real numbers.
+
+The resulting parameter trees are therefore
 
 ```text
-U -> Plaq -> LCB -> ... -> LCB -> site-covariant features
-                                      |-> Trace -> real scalar
-                                      `-> LExp  -> updated gauge links
+LCNNAction:    (layers=(...), readout=(weight=..., bias=...))
+LCNNLinkModel: (layers=(...), lexp=(weight=...))
 ```
 
-`Plaq` creates the initial matrix-valued site features. Each `LCB` performs a
-gauge-equivariant convolution and bilinear channel mixing. The final head
-determines whether the network is a gauge-invariant scalar model or a genuine
-link smearing.
+## Build and run a first scalar model
 
-## Build and run a first model
-
-The following example constructs a small network directly from its layer
-widths. It does not use a paper-specific preset:
+The following example constructs a two-layer network on an `8 x 8` SU(2)
+configuration:
 
 ~~~julia
 import JACC
@@ -49,7 +346,7 @@ U = gauge_configuration(
     seed=0x1234,
 )
 
-# Plaq -> LCB(1 => 4) -> LCB(4 => 2) in two dimensions.
+# Plaq(1 channel) -> LCB(1 => 4) -> LCB(4 => 2)
 feature_model = LCNN.LCNNFeatureModel(
     U, 4, 2;
     kernel_size=2,
@@ -58,7 +355,6 @@ feature_model = LCNN.LCNNFeatureModel(
     adjoints=true,
 )
 
-# Trace the two final channels and learn a real linear readout.
 model = LCNN.LCNNAction(
     feature_model; component=:both, reduction=:mean,
 )
@@ -66,23 +362,28 @@ parameters = LCNN.initial_parameters(
     MersenneTwister(1234), model, Float32,
 )
 
-# One real prediction at every lattice site.
+# Gauge-invariant prediction at every lattice site.
 local_prediction = LCNN.site_predictions(model, U, parameters)
 
-# The same predictions reduced to one scalar by the selected mean reduction.
+# Mean of the site predictions.
 scalar_prediction = model(U, parameters)
 ~~~
 
-`U` determines the dimension, color count, lattice shape, and backend, so
-users do not pass `Val(2)` or `Val(4)`. The same construction works for SU(N).
-For example, a 4D field automatically gives the first `LCB` six plaquette
-input channels instead of one.
+The dimensions of `U` determine the plaquette input width. The same
+constructor applied to a four-dimensional configuration begins with six
+plaquette channels. The integers `4, 2` are the output widths of the two LCB
+layers.
 
 Parameters are ordinary nested `NamedTuple`s containing real arrays:
 
 ~~~julia
 LCNN.parameter_shapes(model)
+# (layers=((weight=(4, 3, 11),), (weight=(2, 9, 41),)),
+#  readout=(weight=(4,), bias=(1,)))
+
 LCNN.parameter_count(model)
+# 875
+
 LCNN.validate_parameters(model, parameters)
 
 parameters.layers[1].weight
@@ -91,12 +392,12 @@ parameters.readout.weight
 parameters.readout.bias
 ~~~
 
-Every trainable scalar is visible and may be initialized, loaded, or replaced
-without an ML framework.
+The model object describes the architecture; all fitted values live in the
+parameter tree.
 
-## Define your own network
+## Define the feature network
 
-An LCNN is specified in three independent parts:
+An LCNN is specified by three parts:
 
 1. a plaquette input and a sequential tuple of `LCB` feature layers;
 2. either a scalar `Trace` readout or an `LExp` link-update head;
@@ -104,8 +405,8 @@ An LCNN is specified in three independent parts:
 
 ### Choose the depth and the settings of every layer
 
-The short constructor accepts any number of channel widths. The same keyword
-settings are then used by every `LCB`:
+The compact constructor accepts any number of output widths and applies the
+same LCB options to each layer:
 
 ~~~julia
 feature_model = LCNN.LCNNFeatureModel(
@@ -120,9 +421,8 @@ feature_model = LCNN.LCNNFeatureModel(
 )
 ~~~
 
-To configure the layers independently, construct the tuple explicitly. The
-number of plaquette input channels is `binomial(length(U), 2)`: one in 2D and
-six in 4D. Thus this same code works for both dimensions and for any SU(N):
+To give the layers different path ranges or channel bases, construct the tuple
+explicitly. The plaquette input has `binomial(length(U), 2)` channels:
 
 ~~~julia
 nplaq = binomial(length(U), 2)
@@ -155,31 +455,23 @@ layers = (
 feature_model = LCNN.LCNNFeatureModel(U, layers)
 ~~~
 
-The constructor checks every channel boundary immediately. For example, the
-second layer above must accept the eight channels produced by the first.
+Each layer's input width must equal the preceding stage's output width. In the
+example above the second LCB therefore accepts the eight channels produced by
+the first.
 
-The `LCB` keywords have the following meanings. `convention` exists primarily
-for exact upstream compatibility; most new models can leave its default
-unchanged and consult [Two released layer conventions](#two-released-layer-conventions)
-only when reproducing those results.
+The exact mapping from every LCB option to its path set, bases, and weight
+tensor is given under [One LCB layer](#one-lcb-layer).
 
-| keyword | choices | effect |
-|---|---|---|
-| `convention` | `:favoni_prl`, `:favoni_arxiv` | Selects the released centered-term/dilation convention or the arXiv-table convention. |
-| `kernel_size` | integer at least 2 | Uses nonzero path distances `1:(kernel_size - 1)`. |
-| `dilation` | positive integer for `:favoni_prl` | Sets the spacing between path distances. The arXiv convention uses its original zero-based dilation. |
-| `shifts` | `:positive`, `:both` | Uses positive axes only or positive and negative axes. `:favoni_arxiv` requires `:positive`. |
-| `identity` | `true`, `false` | Includes or removes the identity from the bilinear basis. |
-| `adjoints` | `true`, `false` | Includes or removes Hermitian-conjugate feature channels. |
-| `init_weight_factor` | finite real | Scales only the random initializer; it does not alter evaluation. |
+`LCNN.displacements(layer, length(U))` returns the ordered `(direction, step)`
+descriptors used by the transported basis, while
+`LCNN.parameter_shape(layer, length(U))` returns the corresponding
+`(N_out, N_local, N_transport)` weight shape.
 
-This API currently describes a sequential `Plaq -> LCB -> ...` backbone.
-Arbitrary depth, widths, and per-layer options are supported, but arbitrary
-Lux layers, skip connections, and branching DAGs are not silently accepted as
-LCNN layers. Standalone `LConv`, `LBilin`, `LAct`, and `Poly` composition is
-listed under [Remaining layer work](#remaining-layer-work).
+`LCNNFeatureModel` represents a sequential `Plaq -> LCB -> ...` backbone. Its
+depth, widths, and per-layer LCB options are freely selectable within that
+structure.
 
-### Choose the output head
+## Attach an output head
 
 For a gauge-invariant scalar or site-local regression model, attach
 `LCNNAction`. `component` chooses the real and/or imaginary trace components;
@@ -200,8 +492,7 @@ local_values = LCNN.site_predictions(action, U, parameters)
 scalar_value = action(U, parameters)
 ~~~
 
-For a genuine learned smearing, attach `LExp` instead. This produces links,
-not a scalar:
+For a learned link transformation, attach `LExp` instead:
 
 ~~~julia
 link_model = LCNN.LCNNLinkModel(
@@ -219,15 +510,13 @@ Unew = LCNN.forward_links(link_model, U, link_parameters)
 Unew_via_smearing = smear(U, lcnn_smearing(link_model, link_parameters))
 ~~~
 
-The backbone may be shared conceptually, but the two complete parameter trees
-have different heads: `readout` for `LCNNAction` and `lexp` for
-`LCNNLinkModel`.
+The two complete parameter trees have different heads: `readout` for an
+`LCNNAction` and `lexp` for an `LCNNLinkModel`.
 
-### Inspect, replace, or specify every parameter
+## Inspect or specify every parameter
 
-No parameter is hidden in the model object. `parameter_shapes` is the schema
-for the complete parameter tree, and `validate_parameters` checks names,
-shapes, and real element types:
+`parameter_shapes` gives the schema of the complete parameter tree, and
+`validate_parameters` checks its names, shapes, and real element types:
 
 ~~~julia
 shapes = LCNN.parameter_shapes(action)
@@ -250,16 +539,17 @@ manual_parameters = (
 LCNN.validate_parameters(action, manual_parameters)
 ~~~
 
-For a link model, the analogous schema is
-`(layers=(...), lexp=(weight=(Dim, final_channels),))`. Array leaves can also
+For a link model the schema is
+`(layers=(...), lexp=(weight=(dimension, final_channels),))`. Array leaves can
 be edited directly, for example
 `parameters.layers[2].weight .= new_weight` or
 `link_parameters.lexp.weight .= beta`.
 
-### Use the same model through LuxCore
+## Use the same model through LuxCore
 
-The architecture is defined before it is wrapped, so the LuxCore adapter does
-not restrict the selected layer tuple:
+Gaugefields depends on the lightweight `LuxCore` interface. The architecture
+and parameter tree above can be wrapped as a Lux layer without changing their
+meaning:
 
 ~~~julia
 using LuxCore
@@ -270,9 +560,9 @@ workspace = LCNN.ModelWorkspace(action, U)
 value, state = lux_model((U, workspace), lux_parameters, state)
 ~~~
 
-`ModelWorkspace(model, U)` preallocates every lattice-sized intermediate.
-Use `forward_features!`, `forward_links!`, or pass the workspace to the model
-when repeatedly evaluating the same architecture.
+`ModelWorkspace(model, U)` preallocates the lattice-sized intermediates for
+repeated evaluation and differentiation. The direct API also accepts this
+workspace through `forward_features!`, `forward_links!`, and model calls.
 
 ## Features and link smearing are different outputs
 
@@ -398,15 +688,9 @@ The LExp exponential Fréchet pullback is a custom Enzyme boundary backed by
 the LatticeMatrices JACC kernel. The public VJP walks the user-selected LCB
 tuple in reverse and therefore does not fix the model depth.
 
-## Reproduce the Favoni et al. model
+## Reference model from Favoni et al.
 
-The L-CNN construction implemented here is based on M. Favoni, A. Ipp,
-D. I. Müller, and D. Schuh, “Lattice Gauge Equivariant Convolutional Neural
-Networks,” *Physical Review Letters* **128**, 032003 (2022),
-[doi:10.1103/PhysRevLett.128.032003](https://doi.org/10.1103/PhysRevLett.128.032003),
-[arXiv:2012.12901](https://arxiv.org/abs/2012.12901).
-
-The paper studies supervised regression of local gauge-invariant observables
+The cited paper studies supervised regression of local gauge-invariant observables
 in pure SU(2) Yang--Mills configurations. Its Wilson-loop datasets contain
 plaquettes as input features and site-local real traces of 1 by 1, 1 by 2,
 2 by 2, and 4 by 4 Wilson loops as targets. The experiments cover 1+1D and
@@ -462,8 +746,15 @@ prl_model = LCNN.favoni2022_wilson_1x2_small(
 
 | convention | upstream source | transported terms | parameters |
 |---|---|---:|---:|
-| `favoni_arxiv` | tag `arxiv_v1`, supplemental Table V counting | positive nonzero shifts, no centered term | 35 |
+| `favoni_arxiv` | tag `arxiv_v1`, Supplementary Table V counting | positive nonzero shifts, no centered term | 35 |
 | `favoni_prl` | tag `prl_2022`, released result pickle | centered term plus positive shifts | 47 |
+
+These counts follow directly from the LCB shape above. In two dimensions,
+`N_in=1`, `N_out=2`, `kernel_size=2`, `identity=true`, and `adjoints=true`, so
+`N_local=3`. The arXiv basis has two path descriptors and
+`N_transport=2*1*2+1=5`, giving `2*3*5=30` LCB weights. The four trace weights
+and one bias bring the total to 35. The released-PRL basis adds the centered
+descriptor, so `N_transport=2*1*3+1=7`: its total is `2*3*7+4+1=47`.
 
 The convention also fixes dilation semantics and basis order; it is not merely
 a parameter-count switch. New code should use these explicit names. Older NPZ
