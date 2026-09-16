@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>L-CNN · Gaugefields.jl</title><meta name="title" content="L-CNN · Gaugefields.jl"/><meta property="og:title" content="L-CNN · Gaugefields.jl"/><meta property="twitter:title" content="L-CNN · Gaugefields.jl"/><meta name="description" content="Documentation for Gaugefields.jl."/><meta property="og:description" content="Documentation for Gaugefields.jl."/><meta property="twitter:description" content="Documentation for Gaugefields.jl."/><meta property="og:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/lcnn/"/><meta property="twitter:url" content="https://akio-tomiya.github.io/Gaugefields.jl/v1/lcnn/"/><link rel="canonical" href="https://akio-tomiya.github.io/Gaugefields.jl/v1/lcnn/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Gaugefields.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Getting started</span><ul><li><a class="tocitem" href="../tutorial4d/">Four-dimensional quick start</a></li><li><a class="tocitem" href="../dimensions/">Two and three dimensions</a></li><li><a class="tocitem" href="../randomness/">Randomness and reproducibility</a></li></ul></li><li><span class="tocitem">Guides</span><ul><li><a class="tocitem" href="../applications/">Applications</a></li><li><a class="tocitem" href="../wilsonloops_actions/">Wilson loops and gauge actions</a></li><li><a class="tocitem" href="../gaugefixing/">Gauge fixing</a></li><li><a class="tocitem" href="../measurements/">Measurements</a></li><li><a class="tocitem" href="../utilities/">Utilities and I/O</a></li><li><a class="tocitem" href="../smearing/">Link smearing</a></li><li><a class="tocitem" href="../mpi/">MPI, GPU, and multi-GPU</a></li><li><a class="tocitem" href="../hmc/">HMC and custom integrators</a></li><li><a class="tocitem" href="../autodiff/">Automatic differentiation</a></li><li class="is-active"><a class="tocitem" href>L-CNN</a><ul class="internal"><li><a class="tocitem" href="#What-an-LCNN-computes"><span>What an LCNN computes</span></a></li><li><a class="tocitem" href="#Build-and-run-a-first-model"><span>Build and run a first model</span></a></li><li><a class="tocitem" href="#Define-your-own-network"><span>Define your own network</span></a></li><li><a class="tocitem" href="#Features-and-link-smearing-are-different-outputs"><span>Features and link smearing are different outputs</span></a></li><li><a class="tocitem" href="#Differentiation-with-Enzyme"><span>Differentiation with Enzyme</span></a></li><li><a class="tocitem" href="#Reproduce-the-Favoni-et-al.-model"><span>Reproduce the Favoni et al. model</span></a></li><li><a class="tocitem" href="#Training-on-the-paper-HDF5-layout"><span>Training on the paper HDF5 layout</span></a></li><li><a class="tocitem" href="#GPU-and-MPI-smoke-tests"><span>GPU and MPI smoke tests</span></a></li><li><a class="tocitem" href="#Remaining-layer-work"><span>Remaining layer work</span></a></li><li><a class="tocitem" href="#Optional:-PyTorch-checkpoint-interoperability"><span>Optional: PyTorch checkpoint interoperability</span></a></li></ul></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../highlevelapi/">High-level API parameters</a></li><li><a class="tocitem" href="../usefulfunctions/">Public v1 API index</a></li><li><a class="tocitem" href="../howtoimplement/">Extending the v1 API</a></li></ul></li><li><span class="tocitem">Compatibility</span><ul><li><a class="tocitem" href="../legacyapi/">Legacy API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Guides</a></li><li class="is-active"><a href>L-CNN</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>L-CNN</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/akio-tomiya/Gaugefields.jl/blob/master/docs/src/lcnn.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="L-CNN"><a class="docs-heading-anchor" href="#L-CNN">L-CNN</a><a id="L-CNN-1"></a><a class="docs-heading-anchor-permalink" href="#L-CNN" title="Permalink"></a></h1><p><code>Gaugefields.LCNN</code> provides lattice-gauge-equivariant feature maps, scalar models, and learned link smearings for 2D, 3D, and 4D <code>LatticeMatrices</code>-backed gauge fields. The ordinary Julia API does not require Python or PyTorch. <code>LuxCore</code> is a lightweight direct dependency; full Lux is not required to construct or evaluate a model.</p><h2 id="What-an-LCNN-computes"><a class="docs-heading-anchor" href="#What-an-LCNN-computes">What an LCNN computes</a><a id="What-an-LCNN-computes-1"></a><a class="docs-heading-anchor-permalink" href="#What-an-LCNN-computes" title="Permalink"></a></h2><p>Gauge links and site features transform differently:</p><p class="math-container">\[U_{x,\mu}\longmapsto
+\Omega_xU_{x,\mu}\Omega^\dagger_{x+\hat\mu},\qquad
+W_{x,i}\longmapsto\Omega_xW_{x,i}\Omega_x^\dagger.\]</p><p>An LCNN transports neighboring features to a common site before combining them. In this package a model is assembled as</p><pre><code class="language-text hljs">U -&gt; Plaq -&gt; LCB -&gt; ... -&gt; LCB -&gt; site-covariant features
+                                      |-&gt; Trace -&gt; real scalar
+                                      `-&gt; LExp  -&gt; updated gauge links</code></pre><p><code>Plaq</code> creates the initial matrix-valued site features. Each <code>LCB</code> performs a gauge-equivariant convolution and bilinear channel mixing. The final head determines whether the network is a gauge-invariant scalar model or a genuine link smearing.</p><h2 id="Build-and-run-a-first-model"><a class="docs-heading-anchor" href="#Build-and-run-a-first-model">Build and run a first model</a><a id="Build-and-run-a-first-model-1"></a><a class="docs-heading-anchor-permalink" href="#Build-and-run-a-first-model" title="Permalink"></a></h2><p>The following example constructs a small network directly from its layer widths. It does not use a paper-specific preset:</p><pre><code class="language-julia hljs">import JACC
+JACC.@init_backend
+
+using Gaugefields, Random
+const LCNN = Gaugefields.LCNN
+
+U = gauge_configuration(
+    (8, 8);
+    colors=2,
+    start=:hot,
+    seed=0x1234,
+)
+
+# Plaq -&gt; LCB(1 =&gt; 4) -&gt; LCB(4 =&gt; 2) in two dimensions.
+feature_model = LCNN.LCNNFeatureModel(
+    U, 4, 2;
+    kernel_size=2,
+    shifts=:both,
+    identity=true,
+    adjoints=true,
+)
+
+# Trace the two final channels and learn a real linear readout.
+model = LCNN.LCNNAction(
+    feature_model; component=:both, reduction=:mean,
+)
+parameters = LCNN.initial_parameters(
+    MersenneTwister(1234), model, Float32,
+)
+
+# One real prediction at every lattice site.
+local_prediction = LCNN.site_predictions(model, U, parameters)
+
+# The same predictions reduced to one scalar by the selected mean reduction.
+scalar_prediction = model(U, parameters)</code></pre><p><code>U</code> determines the dimension, color count, lattice shape, and backend, so users do not pass <code>Val(2)</code> or <code>Val(4)</code>. The same construction works for SU(N). For example, a 4D field automatically gives the first <code>LCB</code> six plaquette input channels instead of one.</p><p>Parameters are ordinary nested <code>NamedTuple</code>s containing real arrays:</p><pre><code class="language-julia hljs">LCNN.parameter_shapes(model)
+LCNN.parameter_count(model)
+LCNN.validate_parameters(model, parameters)
+
+parameters.layers[1].weight
+parameters.layers[2].weight
+parameters.readout.weight
+parameters.readout.bias</code></pre><p>Every trainable scalar is visible and may be initialized, loaded, or replaced without an ML framework.</p><h2 id="Define-your-own-network"><a class="docs-heading-anchor" href="#Define-your-own-network">Define your own network</a><a id="Define-your-own-network-1"></a><a class="docs-heading-anchor-permalink" href="#Define-your-own-network" title="Permalink"></a></h2><p>An LCNN is specified in three independent parts:</p><ol><li>a plaquette input and a sequential tuple of <code>LCB</code> feature layers;</li><li>either a scalar <code>Trace</code> readout or an <code>LExp</code> link-update head;</li><li>an ordinary nested <code>NamedTuple</code> containing every trainable parameter.</li></ol><h3 id="Choose-the-depth-and-the-settings-of-every-layer"><a class="docs-heading-anchor" href="#Choose-the-depth-and-the-settings-of-every-layer">Choose the depth and the settings of every layer</a><a id="Choose-the-depth-and-the-settings-of-every-layer-1"></a><a class="docs-heading-anchor-permalink" href="#Choose-the-depth-and-the-settings-of-every-layer" title="Permalink"></a></h3><p>The short constructor accepts any number of channel widths. The same keyword settings are then used by every <code>LCB</code>:</p><pre><code class="language-julia hljs">feature_model = LCNN.LCNNFeatureModel(
+    U,
+    8, 8, 4;                 # three LCBs with these output widths
+    kernel_size=2,
+    dilation=1,
+    shifts=:both,
+    identity=true,
+    adjoints=true,
+    init_weight_factor=1.0,
+)</code></pre><p>To configure the layers independently, construct the tuple explicitly. The number of plaquette input channels is <code>binomial(length(U), 2)</code>: one in 2D and six in 4D. Thus this same code works for both dimensions and for any SU(N):</p><pre><code class="language-julia hljs">nplaq = binomial(length(U), 2)
+layers = (
+    LCNN.LCB(
+        nplaq =&gt; 8;
+        kernel_size=2,
+        dilation=1,
+        shifts=:both,
+        identity=true,
+        adjoints=true,
+    ),
+    LCNN.LCB(
+        8 =&gt; 4;
+        kernel_size=3,
+        dilation=2,
+        shifts=:positive,
+        identity=true,
+        adjoints=false,
+    ),
+    LCNN.LCB(
+        4 =&gt; 2;
+        kernel_size=2,
+        dilation=1,
+        shifts=:both,
+        identity=false,
+        adjoints=true,
+    ),
+)
+feature_model = LCNN.LCNNFeatureModel(U, layers)</code></pre><p>The constructor checks every channel boundary immediately. For example, the second layer above must accept the eight channels produced by the first.</p><p>The <code>LCB</code> keywords have the following meanings. <code>convention</code> exists primarily for exact upstream compatibility; most new models can leave its default unchanged and consult <a href="#two-released-layer-conventions">Two released layer conventions</a> only when reproducing those results.</p><table><tr><th style="text-align: right">keyword</th><th style="text-align: right">choices</th><th style="text-align: right">effect</th></tr><tr><td style="text-align: right"><code>convention</code></td><td style="text-align: right"><code>:favoni_prl</code>, <code>:favoni_arxiv</code></td><td style="text-align: right">Selects the released centered-term/dilation convention or the arXiv-table convention.</td></tr><tr><td style="text-align: right"><code>kernel_size</code></td><td style="text-align: right">integer at least 2</td><td style="text-align: right">Uses nonzero path distances <code>1:(kernel_size - 1)</code>.</td></tr><tr><td style="text-align: right"><code>dilation</code></td><td style="text-align: right">positive integer for <code>:favoni_prl</code></td><td style="text-align: right">Sets the spacing between path distances. The arXiv convention uses its original zero-based dilation.</td></tr><tr><td style="text-align: right"><code>shifts</code></td><td style="text-align: right"><code>:positive</code>, <code>:both</code></td><td style="text-align: right">Uses positive axes only or positive and negative axes. <code>:favoni_arxiv</code> requires <code>:positive</code>.</td></tr><tr><td style="text-align: right"><code>identity</code></td><td style="text-align: right"><code>true</code>, <code>false</code></td><td style="text-align: right">Includes or removes the identity from the bilinear basis.</td></tr><tr><td style="text-align: right"><code>adjoints</code></td><td style="text-align: right"><code>true</code>, <code>false</code></td><td style="text-align: right">Includes or removes Hermitian-conjugate feature channels.</td></tr><tr><td style="text-align: right"><code>init_weight_factor</code></td><td style="text-align: right">finite real</td><td style="text-align: right">Scales only the random initializer; it does not alter evaluation.</td></tr></table><p>This API currently describes a sequential <code>Plaq -&gt; LCB -&gt; ...</code> backbone. Arbitrary depth, widths, and per-layer options are supported, but arbitrary Lux layers, skip connections, and branching DAGs are not silently accepted as LCNN layers. Standalone <code>LConv</code>, <code>LBilin</code>, <code>LAct</code>, and <code>Poly</code> composition is listed under <a href="#remaining-layer-work">Remaining layer work</a>.</p><h3 id="Choose-the-output-head"><a class="docs-heading-anchor" href="#Choose-the-output-head">Choose the output head</a><a id="Choose-the-output-head-1"></a><a class="docs-heading-anchor-permalink" href="#Choose-the-output-head" title="Permalink"></a></h3><p>For a gauge-invariant scalar or site-local regression model, attach <code>LCNNAction</code>. <code>component</code> chooses the real and/or imaginary trace components; <code>reduction</code> controls the scalar call. <code>site_predictions</code> always retains the site axis for a site-local loss:</p><pre><code class="language-julia hljs">action = LCNN.LCNNAction(
+    feature_model;
+    component=:both,         # :real, :imag, or :both
+    reduction=:mean,         # :sum or :mean
+)
+parameters = LCNN.initial_parameters(
+    MersenneTwister(7), action, Float32,
+)
+
+local_values = LCNN.site_predictions(action, U, parameters)
+scalar_value = action(U, parameters)</code></pre><p>For a genuine learned smearing, attach <code>LExp</code> instead. This produces links, not a scalar:</p><pre><code class="language-julia hljs">link_model = LCNN.LCNNLinkModel(
+    feature_model,
+    LCNN.LExp(
+        LCNN.output_channels(feature_model);
+        init_weight_factor=0.01,
+    ),
+)
+link_parameters = LCNN.initial_parameters(
+    MersenneTwister(8), link_model, Float32,
+)
+
+Unew = LCNN.forward_links(link_model, U, link_parameters)
+Unew_via_smearing = smear(U, lcnn_smearing(link_model, link_parameters))</code></pre><p>The backbone may be shared conceptually, but the two complete parameter trees have different heads: <code>readout</code> for <code>LCNNAction</code> and <code>lexp</code> for <code>LCNNLinkModel</code>.</p><h3 id="Inspect,-replace,-or-specify-every-parameter"><a class="docs-heading-anchor" href="#Inspect,-replace,-or-specify-every-parameter">Inspect, replace, or specify every parameter</a><a id="Inspect,-replace,-or-specify-every-parameter-1"></a><a class="docs-heading-anchor-permalink" href="#Inspect,-replace,-or-specify-every-parameter" title="Permalink"></a></h3><p>No parameter is hidden in the model object. <code>parameter_shapes</code> is the schema for the complete parameter tree, and <code>validate_parameters</code> checks names, shapes, and real element types:</p><pre><code class="language-julia hljs">shapes = LCNN.parameter_shapes(action)
+# (layers=((weight=...), ...), readout=(weight=..., bias=(1,)))
+
+rng = MersenneTwister(19)
+manual_parameters = (
+    layers=map(shapes.layers) do layer_shape
+        (
+            weight=0.01f0 .* randn(
+                rng, Float32, layer_shape.weight...,
+            ),
+        )
+    end,
+    readout=(
+        weight=randn(rng, Float32, shapes.readout.weight...),
+        bias=zeros(Float32, shapes.readout.bias...),
+    ),
+)
+LCNN.validate_parameters(action, manual_parameters)</code></pre><p>For a link model, the analogous schema is <code>(layers=(...), lexp=(weight=(Dim, final_channels),))</code>. Array leaves can also be edited directly, for example <code>parameters.layers[2].weight .= new_weight</code> or <code>link_parameters.lexp.weight .= beta</code>.</p><h3 id="Use-the-same-model-through-LuxCore"><a class="docs-heading-anchor" href="#Use-the-same-model-through-LuxCore">Use the same model through LuxCore</a><a id="Use-the-same-model-through-LuxCore-1"></a><a class="docs-heading-anchor-permalink" href="#Use-the-same-model-through-LuxCore" title="Permalink"></a></h3><p>The architecture is defined before it is wrapped, so the LuxCore adapter does not restrict the selected layer tuple:</p><pre><code class="language-julia hljs">using LuxCore
+
+lux_model = LCNN.lux_layer(action; parameter_type=Float32)
+lux_parameters, state = LuxCore.setup(MersenneTwister(20), lux_model)
+workspace = LCNN.ModelWorkspace(action, U)
+value, state = lux_model((U, workspace), lux_parameters, state)</code></pre><p><code>ModelWorkspace(model, U)</code> preallocates every lattice-sized intermediate. Use <code>forward_features!</code>, <code>forward_links!</code>, or pass the workspace to the model when repeatedly evaluating the same architecture.</p><h2 id="Features-and-link-smearing-are-different-outputs"><a class="docs-heading-anchor" href="#Features-and-link-smearing-are-different-outputs">Features and link smearing are different outputs</a><a id="Features-and-link-smearing-are-different-outputs-1"></a><a class="docs-heading-anchor-permalink" href="#Features-and-link-smearing-are-different-outputs" title="Permalink"></a></h2><h3 id="Inspect-site-covariant-features"><a class="docs-heading-anchor" href="#Inspect-site-covariant-features">Inspect site-covariant features</a><a id="Inspect-site-covariant-features-1"></a><a class="docs-heading-anchor-permalink" href="#Inspect-site-covariant-features" title="Permalink"></a></h3><p>The <code>Plaq -&gt; LCB -&gt; ...</code> backbone produces site fields transforming as</p><p class="math-container">\[W_{x,i} \longmapsto \Omega_x W_{x,i}\Omega_x^\dagger.\]</p><p>Evaluate this intermediate representation with <code>forward_features</code>:</p><pre><code class="language-julia hljs">feature_parameters = (layers=parameters.layers,)
+features = LCNN.forward_features(
+    feature_model, U, feature_parameters,
+)</code></pre><p>This feature map has not changed the gauge links and is therefore not a smearing. It is intentionally rejected by the Gaugefields <code>smear</code> API, whose result must always be another gauge-link configuration.</p><h3 id="Update-gauge-links-with-LExp"><a class="docs-heading-anchor" href="#Update-gauge-links-with-LExp">Update gauge links with LExp</a><a id="Update-gauge-links-with-LExp-1"></a><a class="docs-heading-anchor-permalink" href="#Update-gauge-links-with-LExp" title="Permalink"></a></h3><p><code>LExp</code> converts the feature channels into one traceless anti-Hermitian generator per link direction and performs</p><p class="math-container">\[A_{x,\mu}=\sum_i\beta_{\mu i}W_{x,i},\qquad
+U&#39;_{x,\mu}=\exp([A_{x,\mu}]_{\mathrm{TA}})U_{x,\mu}.\]</p><p>Because the exponential transforms at site <code>x</code>, <code>Unew</code> has the ordinary link transformation law. <code>LCNNLinkModel(feature_model)</code> adds an <code>LExp</code> head with the correct number of channels automatically:</p><pre><code class="language-julia hljs">link_model = LCNN.LCNNLinkModel(feature_model)
+link_parameters = LCNN.initial_parameters(
+    MersenneTwister(9), link_model, Float32,
+)
+
+lcnn = lcnn_smearing(link_model, link_parameters)
+Unew = smear(U, lcnn)
+
+# A conventional smearing has the same link-to-link call shape.
+stout = stout_link_smearing(U; rho=0.1)
+Ustout = smear(U, stout)</code></pre><p>Both results are vectors of SU(N) gauge links. A feature model or scalar <code>LCNNAction</code> cannot be passed to <code>lcnn_smearing</code>; an explicit <code>LCNNLinkModel</code> ending in <code>LExp</code> is required.</p><p>The recording form provides reusable storage just like other smearings:</p><pre><code class="language-julia hljs">recorded = smear(U, lcnn; record=true)
+
+Unew = recorded.configuration
+cache = recorded.history
+@assert recorded.derivative === nothing
+
+# Reuse feature, Lie-algebra, exponential, and output link fields.
+Unew = smear(U, lcnn; temps=cache)</code></pre><p>Reusing a cache overwrites its previously returned output configuration.</p><h2 id="Differentiation-with-Enzyme"><a class="docs-heading-anchor" href="#Differentiation-with-Enzyme">Differentiation with Enzyme</a><a id="Differentiation-with-Enzyme-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiation-with-Enzyme" title="Permalink"></a></h2><p>Loading Enzyme activates parameter and link differentiation.</p><h3 id="Differentiate-a-scalar-model"><a class="docs-heading-anchor" href="#Differentiate-a-scalar-model">Differentiate a scalar model</a><a id="Differentiate-a-scalar-model-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiate-a-scalar-model" title="Permalink"></a></h3><p>A scalar model can be differentiated with respect to both its gauge links and all trainable parameters:</p><pre><code class="language-julia hljs">using Enzyme
+
+workspace = LCNN.ModelWorkspace(model, U)
+dS_dU = LCNN.dSdu(model, U, parameters; workspace)
+dS_dparameters = LCNN.parameter_gradient(
+    model, U, parameters; workspace,
+)
+
+# Allocation-reusing form
+dworkspace = Enzyme.make_zero(workspace)
+LCNN.dSdu!(dS_dU, model, U, parameters, workspace, dworkspace)</code></pre><p>The result is the ambient complex-matrix derivative satisfying <code>delta S = real(dot(dS_dU, delta U))</code>. HMC-specific traceless anti-Hermitian projection remains a separate adapter step.</p><p><code>parameter_gradient</code> returns the same nested <code>NamedTuple</code> shape as <code>parameters</code>. Custom Enzyme rules stop at the JACC/LatticeMatrices plaquette, parallel-transport, bilinear, and trace kernels. The user-selected tuple of LCB layers remains normal differentiable Julia composition, so changing layer count does not require a new adjoint.</p><h3 id="Differentiate-a-link-model"><a class="docs-heading-anchor" href="#Differentiate-a-link-model">Differentiate a link model</a><a id="Differentiate-a-link-model-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiate-a-link-model" title="Permalink"></a></h3><p>The derivative of a link-valued output is represented as a vector–Jacobian product rather than a materialized Jacobian:</p><pre><code class="language-julia hljs">recorded = smear(U, lcnn; record=true, calcdSdU=true)
+
+# dUnew has the same link-field layout as recorded.configuration.
+dU = recorded.derivative(dUnew)
+
+# Request both the input-link and every parameter cotangent.
+pullback = LCNN.link_model_pullback(dUnew, U, recorded.history)
+dU = pullback.links
+dparameters = pullback.parameters</code></pre><p>The LExp exponential Fréchet pullback is a custom Enzyme boundary backed by the LatticeMatrices JACC kernel. The public VJP walks the user-selected LCB tuple in reverse and therefore does not fix the model depth.</p><h2 id="Reproduce-the-Favoni-et-al.-model"><a class="docs-heading-anchor" href="#Reproduce-the-Favoni-et-al.-model">Reproduce the Favoni et al. model</a><a id="Reproduce-the-Favoni-et-al.-model-1"></a><a class="docs-heading-anchor-permalink" href="#Reproduce-the-Favoni-et-al.-model" title="Permalink"></a></h2><p>The L-CNN construction implemented here is based on M. Favoni, A. Ipp, D. I. Müller, and D. Schuh, “Lattice Gauge Equivariant Convolutional Neural Networks,” <em>Physical Review Letters</em> <strong>128</strong>, 032003 (2022), <a href="https://doi.org/10.1103/PhysRevLett.128.032003">doi:10.1103/PhysRevLett.128.032003</a>, <a href="https://arxiv.org/abs/2012.12901">arXiv:2012.12901</a>.</p><p>The paper studies supervised regression of local gauge-invariant observables in pure SU(2) Yang–Mills configurations. Its Wilson-loop datasets contain plaquettes as input features and site-local real traces of 1 by 1, 1 by 2, 2 by 2, and 4 by 4 Wilson loops as targets. The experiments cover 1+1D and 3+1D lattices.</p><h3 id="The-small-1-by-2-Wilson-loop-experiment"><a class="docs-heading-anchor" href="#The-small-1-by-2-Wilson-loop-experiment">The small 1 by 2 Wilson-loop experiment</a><a id="The-small-1-by-2-Wilson-loop-experiment-1"></a><a class="docs-heading-anchor-permalink" href="#The-small-1-by-2-Wilson-loop-experiment" title="Permalink"></a></h3><p>The released <code>D2_W1x2_lcnn_s</code> experiment has the following architecture:</p><ul><li>1+1D SU(2) data on the training lattice <code>8 x 8</code>;</li><li>target <code>trW_1x2</code>, evaluated separately at every site;</li><li>positive-orientation 1 by 1 plaquette input, one channel in 2D;</li><li>one <code>LCB</code> with kernel size 2 and channel width <code>1 =&gt; 2</code>;</li><li>complex trace split as <code>re(W1), im(W1), re(W2), im(W2)</code>;</li><li>one real <code>Linear(4 =&gt; 1)</code> site-local readout;</li><li>no global average in the training loss.</li></ul><p>For exactly this specification, the whole architecture can be constructed with the reproduction convenience function:</p><pre><code class="language-julia hljs">model = LCNN.favoni2022_wilson_1x2_small(
+    U; convention=:favoni_prl,
+)
+parameters = LCNN.initial_parameters(
+    MersenneTwister(1234), model, Float32,
+)
+
+local_prediction = LCNN.site_predictions(model, U, parameters)
+scalar_prediction = model(U, parameters)</code></pre><p>This is only a paper-reproduction preset; ordinary LCNNs should be assembled with <code>LCNNFeatureModel</code> and the desired output head as shown above. The preset uses <code>reduction=:mean</code> for its scalar call. That final mean is not inserted into the site-local training path: <code>site_predictions</code> and <code>site_mse_loss</code> retain one prediction per site, matching the reference model.</p><h3 id="Two-released-layer-conventions"><a class="docs-heading-anchor" href="#Two-released-layer-conventions">Two released layer conventions</a><a id="Two-released-layer-conventions-1"></a><a class="docs-heading-anchor-permalink" href="#Two-released-layer-conventions" title="Permalink"></a></h3><p>The arXiv table and the later released result files use different transported bases:</p><pre><code class="language-julia hljs">arxiv_model = LCNN.favoni2022_wilson_1x2_small(
+    U; convention=:favoni_arxiv,
+) # 35 parameters
+
+prl_model = LCNN.favoni2022_wilson_1x2_small(
+    U; convention=:favoni_prl,
+) # 47 parameters; the default</code></pre><table><tr><th style="text-align: right">convention</th><th style="text-align: right">upstream source</th><th style="text-align: right">transported terms</th><th style="text-align: right">parameters</th></tr><tr><td style="text-align: right"><code>favoni_arxiv</code></td><td style="text-align: right">tag <code>arxiv_v1</code>, supplemental Table V counting</td><td style="text-align: right">positive nonzero shifts, no centered term</td><td style="text-align: right">35</td></tr><tr><td style="text-align: right"><code>favoni_prl</code></td><td style="text-align: right">tag <code>prl_2022</code>, released result pickle</td><td style="text-align: right">centered term plus positive shifts</td><td style="text-align: right">47</td></tr></table><p>The convention also fixes dilation semantics and basis order; it is not merely a parameter-count switch. New code should use these explicit names. Older NPZ metadata names remain accepted only when reading existing files.</p><h2 id="Training-on-the-paper-HDF5-layout"><a class="docs-heading-anchor" href="#Training-on-the-paper-HDF5-layout">Training on the paper HDF5 layout</a><a id="Training-on-the-paper-HDF5-layout-1"></a><a class="docs-heading-anchor-permalink" href="#Training-on-the-paper-HDF5-layout" title="Permalink"></a></h2><p>Training uses the optional <code>HDF5</code>, <code>Enzyme</code>, and <code>Optimisers</code> dependencies; no separate LCNN training package is involved.</p><pre><code class="language-julia hljs">pkg&gt; add Enzyme HDF5 Optimisers</code></pre><pre><code class="language-julia hljs">using Enzyme, Gaugefields, HDF5, Optimisers, Random
+const LCNN = Gaugefields.LCNN
+
+train = LCNN.read_favoni2022_dataset(
+    &quot;datasets/D2_8/train.hdf5&quot;; target=&quot;trW_1x2&quot;,
+)
+validation = LCNN.read_favoni2022_dataset(
+    &quot;datasets/D2_8/val.hdf5&quot;; target=&quot;trW_1x2&quot;,
+)
+test = LCNN.read_favoni2022_dataset(
+    &quot;datasets/D2_8/test.hdf5&quot;; target=&quot;trW_1x2&quot;,
+)
+
+model = LCNN.favoni2022_wilson_1x2_small(
+    ; convention=:favoni_prl,
+)
+parameters = LCNN.initial_parameters(
+    MersenneTwister(1234), model, Float32,
+)
+config = LCNN.TrainingConfig(
+    max_epochs=20,
+    batch_size=50,
+    learning_rate=3f-3,
+    weight_decay=0f0,
+    amsgrad=true,
+    patience=5,
+    min_delta=0f0,
+    seed=1234,
+)
+result = LCNN.fit!(model, parameters, train, validation; config)
+
+site_test_mse = LCNN.evaluate_dataset(model, result.parameters, test)
+reported_test_mse = LCNN.evaluate_dataset(
+    model, result.parameters, test; global_average=true,
+)</code></pre><p>The loader understands the released Python layout <code>u[sample, flattened_site, direction, row, column]</code>. It expands the C-order site index using <code>dims</code>, keeps the real component of the requested target, and ignores the stored <code>w</code>: plaquettes are recomputed from <code>u</code> by <code>Plaq</code>. A subset such as <code>samples=1:100</code> is useful for a short smoke run.</p><p>The released 2D datasets use ten beta values from 0.1 through 6.0, with 1000 training and 100 validation/test configurations per beta on an 8 by 8 lattice. Their observable-generation step adds <code>trW_1x2</code> to the HDF5 files.</p><p>Training minimizes MSE over all sites. Since <code>LatticeMatrix</code> currently has no batch axis, gradients are accumulated per configuration and averaged before one <code>Optimisers.update!</code>. Validation uses <code>min_delta</code>, stops after <code>patience</code> non-improving epochs, and restores the best parameter copy.</p><p><code>Optimisers.AdamW</code> is used when <code>amsgrad=false</code>. For <code>amsgrad=true</code>, <code>LCNN.adamw_amsgrad</code> implements the PyTorch update including bias correction, the maximum second moment, and decoupled weight decay.</p><p>The complete runnable entry point is <code>examples/lcnn/favoni2022_hdf5_training.jl</code>; set <code>LCNN_MAX_SAMPLES=100</code> for a short run.</p><h2 id="GPU-and-MPI-smoke-tests"><a class="docs-heading-anchor" href="#GPU-and-MPI-smoke-tests">GPU and MPI smoke tests</a><a id="GPU-and-MPI-smoke-tests-1"></a><a class="docs-heading-anchor-permalink" href="#GPU-and-MPI-smoke-tests" title="Permalink"></a></h2><p><code>test/lcnn_backend_smoke.jl</code> is an opt-in backend test covering the released 2D SU(2) model and a compact 4D SU(3) model. It checks forward evaluation, scalar parameter gradients, scalar <code>dS/dU</code>, and LExp link/parameter VJPs. An MPI run additionally requires all ranks to agree. A CUDA run verifies that lattice storage is a <code>CuArray</code> while scalar parameters remain ordinary Julia arrays.</p><p>After selecting the JACC backend in a test environment, a single-GPU run is:</p><pre><code class="language-sh hljs">CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0 \
+  julia --project=/path/to/cuda-test-env test/lcnn_backend_smoke.jl</code></pre><p>Two CPU MPI ranks use:</p><pre><code class="language-sh hljs">LCNN_USE_MPI=true LCNN_TEST_CASES=2d \
+  mpiexec -n 2 julia --project=/path/to/mpi-test-env \
+  test/lcnn_backend_smoke.jl</code></pre><p>For two NVIDIA GPUs, the MPI library selected by MPI.jl must match the launcher and support CUDA buffers:</p><pre><code class="language-sh hljs">CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0,1 \
+LCNN_USE_MPI=true LCNN_TEST_CASES=2d \
+  mpiexec -n 2 julia --project=/path/to/cuda-mpi-test-env \
+  test/lcnn_backend_smoke.jl</code></pre><p>Set <code>LCNN_TEST_PARAMETER_GRADIENT=false</code> and <code>LCNN_TEST_LINK_GRADIENT=false</code> and <code>LCNN_TEST_LINK_MODEL_PULLBACK=false</code> for a forward-only communication check. Set <code>LCNN_TEST_LINK_MODEL_PARAMETERS=false</code> to isolate the link-only LExp VJP. <code>LCNN_TEST_CASES=2d</code>, <code>4d</code>, or <code>2d,4d</code> controls the dimensional cases. These tests are not part of ordinary CI because accelerator availability, MPI launchers, and first Enzyme compilation are environment-dependent.</p><h2 id="Remaining-layer-work"><a class="docs-heading-anchor" href="#Remaining-layer-work">Remaining layer work</a><a id="Remaining-layer-work-1"></a><a class="docs-heading-anchor-permalink" href="#Remaining-layer-work" title="Permalink"></a></h2><p>The current implementation includes <code>Plaq</code>, configurable <code>LCB</code> stacks, <code>TraceReadout</code>, and an <code>LExp</code> link-update head with reusable storage. The complete layer family still requires:</p><ul><li><code>Poly</code> for non-contractible Polyakov-loop input channels;</li><li>standalone <code>LConv</code> and <code>LBilin</code>;</li><li><code>LAct</code> for gauge-invariant scalar activation.</li></ul><p>The current <code>LExp</code> path supplies true learned link smearing and a custom Enzyme/JACC pullback for links and parameters. Remaining composition work is automatic <code>Plaq</code>/<code>Poly</code> refresh when several learned link updates are chained.</p><h2 id="Optional:-PyTorch-checkpoint-interoperability"><a class="docs-heading-anchor" href="#Optional:-PyTorch-checkpoint-interoperability">Optional: PyTorch checkpoint interoperability</a><a id="Optional:-PyTorch-checkpoint-interoperability-1"></a><a class="docs-heading-anchor-permalink" href="#Optional:-PyTorch-checkpoint-interoperability" title="Permalink"></a></h2><p>Everything below is optional. Normal model construction, evaluation, smearing, differentiation, and Julia training do not require Python.</p><h3 id="Load-a-portable-checkpoint-in-Julia"><a class="docs-heading-anchor" href="#Load-a-portable-checkpoint-in-Julia">Load a portable checkpoint in Julia</a><a id="Load-a-portable-checkpoint-in-Julia-1"></a><a class="docs-heading-anchor-permalink" href="#Load-a-portable-checkpoint-in-Julia" title="Permalink"></a></h3><p>The convenience loader constructs the architecture recorded in an NPZ file and returns framework-independent parameters:</p><pre><code class="language-julia hljs">model, parameters, metadata = LCNN.load_pytorch_model(
+    U,
+    &quot;D2_W1x2_lcnn_s_model1.npz&quot;;
+    parameter_type=Float32,
+    strict=true,
+)
+
+prediction = model(U, parameters)</code></pre><p>For an already constructed model, load only its parameters:</p><pre><code class="language-julia hljs">checkpoint = LCNN.read_pytorch_checkpoint(&quot;model.npz&quot;)
+parameters = LCNN.load_pytorch_parameters(
+    model, checkpoint; parameter_type=Float32, strict=true,
+)</code></pre><p>Strict loading checks the format version, dimension, color count, convention, layer count, widths, kernel sizes, dilations, shifts, unit/adjoint channels, complex-component order, parameter shapes, and finite values. Gaugefields does not guess a convention or pad a 35-parameter model to 47 parameters.</p><h3 id="Export-from-an-existing-PyTorch-model"><a class="docs-heading-anchor" href="#Export-from-an-existing-PyTorch-model">Export from an existing PyTorch model</a><a id="Export-from-an-existing-PyTorch-model-1"></a><a class="docs-heading-anchor-permalink" href="#Export-from-an-existing-PyTorch-model" title="Permalink"></a></h3><p>Run the exporter in the Python environment that owns the trusted model:</p><pre><code class="language-python hljs">import sys
+sys.path.insert(0, &quot;examples/lcnn&quot;)
+
+from export_lge_checkpoint import export_lge_checkpoint
+
+export_lge_checkpoint(
+    model.state_dict(),
+    &quot;D2_W1x2_small.npz&quot;,
+    convention=&quot;favoni_prl&quot;,
+    dimension=2,
+    colors=2,
+    conv_channels=[2],
+    kernel_size=[2],
+    dilation=[1],
+    symmetric=False,
+    use_unit_elements=True,
+    global_average=False,
+    linear_sizes=[],
+    source_commit=&quot;prl_2022&quot;,
+)</code></pre><p>The command-line form is:</p><pre><code class="language-sh hljs">python examples/lcnn/export_lge_checkpoint.py model.ckpt model.npz \
+    --convention favoni_prl \
+    --dimension 2 \
+    --colors 2 \
+    --conv-channels 2 \
+    --kernel-size 2 \
+    --dilation 1 \
+    --source-commit prl_2022</code></pre><p><code>torch.load</code> and Python pickle can execute code. Only load a checkpoint from a trusted source. Gaugefields consumes the resulting numeric NPZ without Python.</p><p>The published <code>D2_W1x2_lcnn_s_results.pickle</code> uses legacy CUDA storage. Convert one stored ensemble member with:</p><pre><code class="language-sh hljs">python examples/lcnn/extract_favoni_checkpoint.py \
+    D2_W1x2_lcnn_s_results.pickle \
+    D2_W1x2_lcnn_s_model1.npz \
+    --model 0</code></pre><p>The converter reconstructs numeric tensors without requiring PyTorch or CUDA, but its pickle input must still be trusted.</p><h3 id="Optional-live-comparison-with-the-official-implementation"><a class="docs-heading-anchor" href="#Optional-live-comparison-with-the-official-implementation">Optional live comparison with the official implementation</a><a id="Optional-live-comparison-with-the-official-implementation-1"></a><a class="docs-heading-anchor-permalink" href="#Optional-live-comparison-with-the-official-implementation" title="Permalink"></a></h3><p>Set the Python executable and <code>layers.py</code> from the matching upstream tag:</p><pre><code class="language-sh hljs">export LCNN_TORCH_PYTHON=/path/to/python
+export LCNN_UPSTREAM_LAYERS=/path/to/lge-cnn/lge_cnn/nn/layers.py
+
+julia --project examples/lcnn/favoni2022_checkpoint_parity.jl \
+    favoni_prl D2_W1x2_lcnn_s_results.pickle</code></pre><p>The script evaluates two independent SU(2) configurations and compares every complex matrix at every site before tracing, followed by the final scalar. Set <code>LCNN_TORCH_DTYPE=float32</code> for publication precision; Float64 is the default stringent formula check.</p><p>The short training comparison starts PyTorch and Julia from identical weights and performs three full-batch SGD steps on one 4 by 4 configuration:</p><pre><code class="language-sh hljs">julia --project examples/lcnn/favoni2022_training_parity.jl favoni_prl</code></pre><p>An optional step count and learning rate may follow, for example <code>favoni_prl 2 1e-3</code>.</p><p>Live PyTorch is never run in Gaugefields CI. The ordinary test suite instead compares Julia with frozen official-PyTorch outputs in <code>test/data/lcnn/favoni2022_pytorch_outputs.npz</code>. The fixture contains the full complex pre-trace field and final scalar for both conventions on two independent gauge configurations. Provenance and a manual regeneration command are recorded in <code>test/data/lcnn/README.md</code>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../autodiff/">« Automatic differentiation</a><a class="docs-footer-nextpage" href="../highlevelapi/">High-level API parameters »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 16 September 2026 16:05">Wednesday 16 September 2026</span>. Using Julia version 1.11.9.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
