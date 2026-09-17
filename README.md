@@ -486,18 +486,49 @@ Sexton--Weingarten time-scale separation.
 
 ### L-CNN: gauge-equivariant models and learned link smearing
 
-`Gaugefields.LCNN` implements configurable lattice gauge-equivariant neural
-networks for 2D, 3D, and 4D SU(N) gauge fields. A model has a common
-gauge-covariant feature backbone and one of two output heads:
+`Gaugefields.LCNN` implements the Lattice Gauge Equivariant CNN introduced by
+Favoni, Ipp, Müller, and Schuh,
+[*Phys. Rev. Lett.* **128**, 032003 (2022)](https://doi.org/10.1103/PhysRevLett.128.032003)
+([arXiv:2012.12901](https://arxiv.org/abs/2012.12901),
+[reference implementation](https://gitlab.com/openpixi/lge-cnn)). It supports
+2D, 3D, and 4D SU(N) gauge fields.
 
 ```text
 U -> Plaq -> LCB -> ... -> LCB -> Trace -> gauge-invariant scalar
                                  `-> LExp  -> updated gauge links
 ```
 
-Here is a complete small scalar example. The dimension, number of colors,
-lattice shape, backend, and number of plaquette input channels are inferred
-from `U`; users do not need to pass `Val(2)` or `Val(4)`.
+`Plaq` supplies `N_0 = d(d-1)/2` untraced plaquette channels. For one LCB
+layer, let `B_A(x)` be the local basis made from `W`, `W†`, and optionally the
+identity, and let `B̃_B(x)` be the corresponding basis after transport along
+the paths selected by `kernel_size`, `dilation`, and `shifts`. The layer is
+
+```math
+W^{(l)}_i(x)=\sum_{A,B}\theta^{(l)}_{iAB}B_A(x)\widetilde B_B(x).
+```
+
+The constructor and trainable tensor correspond as follows:
+
+```julia
+layer = LCNN.LCB(
+    N_in => N_out;
+    kernel_size=K,
+    dilation=delta,
+    shifts=:both,
+    identity=true,
+    adjoints=true,
+)
+
+parameters.layers[l].weight[i, A, B] == theta[l][i, A, B]
+```
+
+Thus `N_in`, `N_out`, and the keywords define the architecture; the real
+`weight` array contains the trainable parameters. Its shape is
+`(N_out, N_local, N_transport)`. The exact path sets, basis ordering, defaults,
+and parameter-count formula are given in the
+[L-CNN manual](docs/src/lcnn.md#one-lcb-layer).
+
+The following is a complete scalar model:
 
 ```julia
 import JACC
@@ -513,7 +544,7 @@ U = gauge_configuration(
     seed=0x1234,
 )
 
-# Plaq -> LCB(1 => 4) -> LCB(4 => 2) for this two-dimensional U.
+# Plaq(1 channel) -> LCB(1 => 4) -> LCB(4 => 2)
 features = LCNN.LCNNFeatureModel(
     U, 4, 2;
     kernel_size=2,
@@ -522,7 +553,6 @@ features = LCNN.LCNNFeatureModel(
     adjoints=true,
 )
 
-# Trace the two output channels and reduce the site-local values by their mean.
 action = LCNN.LCNNAction(
     features;
     component=:both,
@@ -539,15 +569,32 @@ println("trainable parameters = ", LCNN.parameter_count(action))
 println(LCNN.parameter_shapes(action))
 ```
 
-The channel-width arguments (`4, 2` above) determine the number and widths of
-the LCB layers. Kernel size, dilation, positive/bidirectional shifts, identity
-channels, and adjoint channels are configurable. Every trainable value is an
-explicit real array in the returned nested `NamedTuple`; no parameter is
-hidden in the model object. Individual layers can also be constructed with
-`LCNN.LCB` when they need different settings.
+Here `4, 2` are the output widths of the two LCB layers. For these settings,
+the two LCB weight shapes are `(4, 3, 11)` and `(2, 9, 41)`. With the final
+readout the model has 875 trainable real parameters.
 
-To use the same kind of feature backbone as an actual Gaugefields smearing,
-attach an `LExp` link-update head through `LCNNLinkModel`:
+`LCNNAction` takes the trace of the final channels and evaluates
+
+```math
+\widehat y_x=b+\sum_c q_c z_c(x),
+```
+
+where `z` contains the real and/or imaginary trace components selected by
+`component`. The exact correspondence is
+`parameters.readout.weight[c] = q_c` and
+`parameters.readout.bias[1] = b`. `reduction=:sum` or `:mean` controls the
+scalar call but is not trainable.
+
+To produce updated links, attach the LExp head
+
+```math
+U'_{x,\mu}=\exp\!\left(
+\left[\sum_i\beta_{\mu i}W_i(x)\right]_{\mathrm{TA}}
+\right)U_{x,\mu}.
+```
+
+Its trainable coefficients are
+`link_parameters.lexp.weight[mu, i] = beta[mu, i]`:
 
 ```julia
 link_model = LCNN.LCNNLinkModel(features)
@@ -558,36 +605,24 @@ learned_smearing = lcnn_smearing(link_model, link_parameters)
 Unew = smear(U, learned_smearing)
 ```
 
-Only a link model ending in `LExp` is a smearing. A feature-only model returns
-site-covariant matrices, while `LCNNAction` returns gauge-invariant site values
-or a scalar; neither is presented through the smearing API.
+Only this link-valued model is exposed as Gaugefields smearing. A
+`LCNNFeatureModel` returns site-covariant matrices, while `LCNNAction` returns
+gauge-invariant site values or a scalar.
 
-Enzyme supplies derivatives with respect to both links and all parameters:
+Loading Enzyme provides link and parameter derivatives for scalar models:
 
 ```julia
 using Enzyme
 
 dS_dU = LCNN.dSdu(action, U, parameters)
 dS_dparameters = LCNN.parameter_gradient(action, U, parameters)
-
-recorded = smear(U, learned_smearing; record=true, calcdSdU=true)
-# For an output-link cotangent dUnew:
-dU = recorded.derivative(dUnew)
-full_pullback = LCNN.link_model_pullback(dUnew, U, recorded.history)
 ```
 
-The user-selected sequence of LCB layers remains ordinary differentiable
-Julia composition; custom Enzyme rules are used only at the lower-level
-JACC/LatticeMatrices operation boundaries. Thus changing the layer count or
-channel widths does not require writing a new adjoint.
-
-The [L-CNN manual](docs/src/lcnn.md) covers per-layer model construction,
-LuxCore integration, optional HDF5 + Enzyme + Optimisers training, site-local
-MSE, AdamW/AMSGrad, early stopping, GPU/MPI execution, and checkpointing. It
-also reproduces the Favoni--Ipp--Müller--Schuh 1 by 2 Wilson-loop model, keeps
-the arXiv-table and released-PRL conventions distinct, and documents portable
-PyTorch checkpoint interchange. Julia tests use frozen PyTorch outputs under
-[`test/data/lcnn`](test/data/lcnn/README.md); Python is not run by CI.
+The manual also covers LExp vector--Jacobian products, LuxCore integration,
+HDF5 + Optimisers training, GPU/MPI execution, the Favoni et al. 1 by 2
+Wilson-loop model, and PyTorch checkpoint interchange. Julia CI compares with
+frozen PyTorch outputs under [`test/data/lcnn`](test/data/lcnn/README.md)
+without executing Python.
 
 ## Documentation
 

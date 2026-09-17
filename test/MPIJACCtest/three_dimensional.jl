@@ -2,7 +2,7 @@ import JACC
 JACC.@init_backend
 
 using Gaugefields
-using LatticeMatrices
+import LatticeMatrices
 using LinearAlgebra
 using Test
 
