@@ -250,4 +250,66 @@ end
             (varied_action(epsilon) - varied_action(-epsilon)) / (2epsilon)
         @test finite_difference ≈ analytic_derivative atol=2e-8 rtol=2e-7
     end
+
+    @testset "B-path plans are cached and agree at U = 1" begin
+        lattice_size = (3, 3, 3, 3)
+        cold_U = Initialize_Gaugefields(
+            2,
+            0,
+            lattice_size...;
+            condition="cold",
+            verbose_level=0,
+        )
+        B = Initialize_Bfields(
+            2,
+            [1, 0, 0, 0, 0, 1],
+            0,
+            lattice_size...;
+            condition="tflux",
+            verbose_level=0,
+        )
+        temps = [similar(cold_U[1]) for _ = 1:4]
+        B_only = similar(cold_U[1])
+        dressed = similar(cold_U[1])
+        paths = (
+            make_loops_fromname("plaquette"; Dim=4)[1],
+            make_loops_fromname("rectangular"; Dim=4)[1],
+        )
+
+        for (number_of_cached_paths, path) in enumerate(paths)
+            evaluate_Bplaquettes!(B_only, path, B, temps)
+            @test length(B.pathplans) == number_of_cached_paths
+
+            evaluate_gaugelinks!(dressed, path, cold_U, B, temps)
+            @test dressed.U == B_only.U
+            @test length(B.pathplans) == number_of_cached_paths
+        end
+
+        expected_rectangle = copy(B_only.U)
+        @test clear_Bpath_cache!(B) === B
+        @test isempty(B.pathplans)
+        evaluate_Bplaquettes!(B_only, paths[2], B, temps)
+        @test B_only.U == expected_rectangle
+        @test length(B.pathplans) == 1
+
+        clear_Bpath_cache!(B)
+        evaluate_Bplaquettes!(B_only, paths[1], B, temps)
+        initial_flux_result = copy(B_only.U)
+        @test length(B.pathplans) == 1
+
+        zero_B = Initialize_Bfields(
+            2,
+            zeros(Int, 6),
+            0,
+            lattice_size...;
+            condition="tflux",
+            verbose_level=0,
+        )
+        substitute_U!(B, zero_B)
+        evaluate_Bplaquettes!(B_only, paths[1], B, temps)
+        evaluate_Bplaquettes!(dressed, paths[1], zero_B, temps)
+        @test B_only.U == dressed.U
+        @test B_only.U != initial_flux_result
+        @test length(B.pathplans) == 1
+    end
 end

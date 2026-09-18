@@ -7,6 +7,7 @@ import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evalua
     shift_U,
     substitute_U!,
     clear_U!,
+    unit_U!,
     multiply_12!,
     add_U!, thooftFlux_4D_B_at_bndry_nowing_mpi,
     thooftLoop_4D_B_temporal
@@ -18,18 +19,48 @@ using LinearAlgebra
 
 
 
-export Bfield
+export Bfield, clear_Bpath_cache!
+
+struct BPathStep{Dim}
+    direction::Int8
+    isdag::Bool
+    coordinate::NTuple{Dim,Int64}
+end
+
+struct BPathPlan{Dim}
+    origin::NTuple{Dim,Int64}
+    steps::Vector{BPathStep{Dim}}
+    active::Bool
+end
 
 struct Bfield{T,Dim}
     u::Matrix{T}
+    pathplans::IdDict{Wilsonline{Dim},BPathPlan{Dim}}
+    pathplans_lock::ReentrantLock
 
     function Bfield(u::Matrix{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
-        return new{eltype(u),Dim}(u)
+        plans = IdDict{Wilsonline{Dim},BPathPlan{Dim}}()
+        return new{eltype(u),Dim}(u, plans, ReentrantLock())
     end
 end
 
 @inline function Base.getindex(B::Bfield, μ, ν)
     @inbounds return B.u[μ, ν]
+end
+
+"""
+    clear_Bpath_cache!(B)
+
+Discard the cached geometric plans used to insert `B` along Wilson lines.
+The plans contain no B-field values, so changing `B` does not require
+invalidation. Call this function only after mutating a previously evaluated
+`Wilsonline` object itself.
+"""
+function clear_Bpath_cache!(B::Bfield)
+    lock(B.pathplans_lock) do
+        empty!(B.pathplans)
+    end
+    return B
 end
 
 function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
@@ -735,9 +766,75 @@ function evaluate_Bplaquettes!(
 ) where {T<:AbstractGaugefields,Dim}
     multiply_Bplaquettes!(uout, w, B, temps, true)
 end
+
+function _build_Bpath_plan(
+    w::Wilsonline{Dim};
+    validate_path=true,
+) where {Dim}
+    numlinks = length(w)
+    inactive_plan() = BPathPlan{Dim}(
+        ntuple(_ -> Int64(0), Dim), BPathStep{Dim}[], false)
+    numlinks == 0 && return inactive_plan()
+
+    if validate_path
+        numlinks < 3 && return inactive_plan()
+        displacement = zeros(Int64, Dim)
+        for index = 1:numlinks
+            link = w[index]
+            direction = get_direction(link)
+            displacement[direction] += isdag(link) ? -1 : 1
+        end
+        isloop = numlinks >= 4 && all(iszero, displacement)
+        isstaple = sum(abs, displacement) == 1
+        (isloop || isstaple) || return inactive_plan()
+    end
+
+    firstlink = w[1]
+    origin = collect(get_position(firstlink))
+    if isdag(firstlink)
+        origin[get_direction(firstlink)] += 1
+    end
+
+    coordinate = copy(origin)
+    steps = Vector{BPathStep{Dim}}(undef, numlinks)
+    for index = 1:numlinks
+        link = w[index]
+        direction = get_direction(link)
+        link_isdag = isdag(link)
+        if link_isdag
+            coordinate[direction] -= 1
+        end
+        steps[index] = BPathStep{Dim}(
+            Int8(direction), link_isdag, Tuple(coordinate))
+        if !link_isdag
+            coordinate[direction] += 1
+        end
+    end
+    return BPathPlan{Dim}(Tuple(origin), steps, true)
+end
+
+function _get_Bpath_plan!(B::Bfield{T,Dim}, w::Wilsonline{Dim}) where {T,Dim}
+    lock(B.pathplans_lock) do
+        return get!(B.pathplans, w) do
+            _build_Bpath_plan(w)
+        end
+    end
+end
+
 function multiply_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
+    B::Bfield{T,Dim},
+    temps::Array{T,1},
+    unity=false,
+) where {T<:AbstractGaugefields,Dim}
+    plan = _get_Bpath_plan!(B, w)
+    return multiply_Bplaquettes!(uout, plan, B, temps, unity)
+end
+
+function multiply_Bplaquettes!(
+    uout::T,
+    plan::BPathPlan{Dim},
     B::Bfield{T,Dim},
     temps::Array{T,1},
     unity=false,
@@ -746,18 +843,10 @@ function multiply_Bplaquettes!(
         unit_U!(uout)
     end
 
-    glinks = w
-    numlinks = length(glinks)
-    if numlinks < 3
-        return
-    end
+    plan.active || return
 
-    if !(isLoopwithB(glinks) || isStaplewithB(glinks))
-        return
-    end
-
-    for j = 1:numlinks
-        sweepaway_4D_Bplaquettes!(uout, glinks, B, temps, j)
+    for step in plan.steps
+        _sweepaway_4D_Bplaquettes!(uout, plan.origin, step, B, temps)
     end
 
 end
@@ -769,39 +858,24 @@ function sweepaway_4D_Bplaquettes!(
     temps::Array{T,1}, # length(temps) >= 4
     linknum,
 ) where {T<:AbstractGaugefields,Dim}
+    plan = _build_Bpath_plan(w; validate_path=false)
+    plan.active || return
+    1 <= linknum <= length(plan.steps) || return
+    return _sweepaway_4D_Bplaquettes!(
+        uout, plan.origin, plan.steps[linknum], B, temps)
+end
+
+function _sweepaway_4D_Bplaquettes!(
+    uout::T,
+    origin::NTuple{Dim,Int64},
+    step::BPathStep{Dim},
+    B::Bfield{T,Dim},
+    temps::Array{T,1}, # length(temps) >= 4
+) where {T<:AbstractGaugefields,Dim}
     Unew = temps[1]
-    glinks = w
-    origin = get_position(glinks[1])  #Tuple(zeros(Int64, Dim))
-    if isdag(glinks[1])
-        origin_shift = [0, 0, 0, 0]
-        origin_shift[get_direction(glinks[1])] += 1
-        origin = Tuple(origin_shift .+ collect(origin))
-    end
-
-    numlinks = length(glinks)
-    if numlinks < linknum
-        return
-    end
-
-    U1link = glinks[linknum]
-    direction = get_direction(U1link)
-    isU1dag = isdag(U1link)
-
-    coordinate = [0, 0, 0, 0] .+ collect(origin)
-    for j = 1:(linknum-1)
-        Ujlink = glinks[j]
-        j_direction = get_direction(Ujlink)
-        isUjdag = isdag(Ujlink)
-
-        if isUjdag
-            coordinate[j_direction] += -1
-        else
-            coordinate[j_direction] += +1
-        end
-    end
-    if isU1dag
-        coordinate[direction] += -1
-    end
+    direction = Int(step.direction)
+    isU1dag = step.isdag
+    coordinate = step.coordinate
 
     substitute_U!(Unew, uout)
     Ushift = shift_U(Unew, (0, 0, 0, 0))
