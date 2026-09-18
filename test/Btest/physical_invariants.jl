@@ -270,7 +270,9 @@ end
         )
         temps = [similar(cold_U[1]) for _ = 1:4]
         B_only = similar(cold_U[1])
+        B_fullmatrix_only = similar(cold_U[1])
         dressed = similar(cold_U[1])
+        B_fullmatrix = Gaugefields.Bfield_module.Bfield(B.u)
         paths = (
             make_loops_fromname("plaquette"; Dim=4)[1],
             make_loops_fromname("rectangular"; Dim=4)[1],
@@ -279,6 +281,9 @@ end
         for (number_of_cached_paths, path) in enumerate(paths)
             evaluate_Bplaquettes!(B_only, path, B, temps)
             @test length(B.pathplans) == number_of_cached_paths
+
+            evaluate_Bplaquettes!(B_fullmatrix_only, path, B_fullmatrix, temps)
+            @test B_fullmatrix_only.U == B_only.U
 
             evaluate_gaugelinks!(dressed, path, cold_U, B, temps)
             @test dressed.U == B_only.U

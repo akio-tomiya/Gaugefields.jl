@@ -1,5 +1,6 @@
 module Bfield_module
 import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
+    Gaugefields_4D_nowing,
     thooftFlux_4D_B_at_bndry,
     Initialize_Gaugefields,
     set_wing_U!,
@@ -33,14 +34,28 @@ struct BPathPlan{Dim}
     active::Bool
 end
 
+"""
+    Bfield(u; center_valued=false)
+
+Wrap the antisymmetric matrix of two-form fields in `u`. Set
+`center_valued=true` only when every field has the form `z(x) I`; this enables
+the scalar-phase fast path on supported backends. `Initialize_Bfields` sets
+this automatically. The default preserves full-matrix semantics for fields
+constructed directly by users.
+"""
 struct Bfield{T,Dim}
     u::Matrix{T}
+    center_valued::Bool
     pathplans::IdDict{Wilsonline{Dim},BPathPlan{Dim}}
     pathplans_lock::ReentrantLock
 
-    function Bfield(u::Matrix{<:AbstractGaugefields{NC,Dim}}) where {NC,Dim}
+    function Bfield(
+        u::Matrix{<:AbstractGaugefields{NC,Dim}};
+        center_valued=false,
+    ) where {NC,Dim}
         plans = IdDict{Wilsonline{Dim},BPathPlan{Dim}}()
-        return new{eltype(u),Dim}(u, plans, ReentrantLock())
+        return new{eltype(u),Dim}(
+            u, center_valued, plans, ReentrantLock())
     end
 end
 
@@ -71,7 +86,7 @@ function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
             output[μ, ν] = similar(B[μ, ν])
         end
     end
-    return Bfield(output)
+    return Bfield(output; center_valued=B.center_valued)
 end
 
 function substitute_U!(a::Bfield, b::Bfield)
@@ -384,7 +399,7 @@ function Initialize_Bfields(
             end
         end
     end
-    return Bfield(U)
+    return Bfield(U; center_valued=true)
     #return U
 end
 
@@ -865,7 +880,106 @@ function sweepaway_4D_Bplaquettes!(
         uout, plan.origin, plan.steps[linknum], B, temps)
 end
 
+@inline function _multiply_center_phase!(
+    uout::Gaugefields_4D_nowing{NC},
+    Uin,
+    Bplane::Gaugefields_4D_nowing{NC},
+    shift::NTuple{4,Int64},
+    isdag::Bool,
+) where {NC}
+    NX, NY, NZ, NT = Bplane.NX, Bplane.NY, Bplane.NZ, Bplane.NT
+    sx, sy, sz, st = shift
+
+    @inbounds for it in 1:NT
+        bt = mod1(it + st, NT)
+        for iz in 1:NZ
+            bz = mod1(iz + sz, NZ)
+            for iy in 1:NY
+                by = mod1(iy + sy, NY)
+                for ix in 1:NX
+                    bx = mod1(ix + sx, NX)
+                    phase = Bplane[1, 1, bx, by, bz, bt]
+                    isdag && (phase = conj(phase))
+                    for j in 1:NC
+                        @simd for i in 1:NC
+                            uout[i, j, ix, iy, iz, it] =
+                                Uin[i, j, ix, iy, iz, it] * phase
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+"""
+Fast path for the non-MPI, no-wing CPU field. A lattice two-form B field is
+center valued, `B_{μν}(x) = z_{μν}(x) I`, so multiplying by a shifted B
+matrix is exactly scalar multiplication by its `(1, 1)` element. The B value
+is read at every call; only the path geometry is cached, so dynamical B fields
+remain valid.
+
+Other gauge-field backends continue to use the generic full-matrix fallback
+below.
+"""
 function _sweepaway_4D_Bplaquettes!(
+    uout::Gaugefields_4D_nowing{NC},
+    origin::NTuple{4,Int64},
+    step::BPathStep{4},
+    B::Bfield{Gaugefields_4D_nowing{NC},4},
+    temps::Array{Gaugefields_4D_nowing{NC},1},
+) where {NC}
+    B.center_valued || return _sweepaway_4D_Bplaquettes_fullmatrix!(
+        uout, origin, step, B, temps)
+
+    direction = Int(step.direction)
+    direction == 4 && return nothing
+
+    coordinate = step.coordinate
+    origin_iszero = all(iszero, origin)
+    Uin = uout
+    Unew = temps[1]
+
+    for transverse in (direction + 1):4
+        displacement = coordinate[transverse]
+        displacement == 0 && continue
+
+        offsets = displacement > 0 ?
+                  (0:(displacement - 1)) : (-1:-1:displacement)
+        Bdag = displacement > 0 ? !step.isdag : step.isdag
+        Bplane = B[direction, transverse]
+
+        for offset in offsets
+            Bshift = ntuple(4) do axis
+                axis < transverse ? coordinate[axis] :
+                axis == transverse ? offset : 0
+            end
+            _multiply_center_phase!(uout, Uin, Bplane, Bshift, Bdag)
+
+            if origin_iszero
+                Uin = uout
+            else
+                substitute_U!(Unew, uout)
+                Uin = shift_U(Unew, origin)
+            end
+        end
+    end
+    return nothing
+end
+
+function _sweepaway_4D_Bplaquettes!(
+    uout::T,
+    origin::NTuple{Dim,Int64},
+    step::BPathStep{Dim},
+    B::Bfield{T,Dim},
+    temps::Array{T,1},
+) where {T<:AbstractGaugefields,Dim}
+    return _sweepaway_4D_Bplaquettes_fullmatrix!(
+        uout, origin, step, B, temps)
+end
+
+function _sweepaway_4D_Bplaquettes_fullmatrix!(
     uout::T,
     origin::NTuple{Dim,Int64},
     step::BPathStep{Dim},
