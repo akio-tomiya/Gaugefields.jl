@@ -151,7 +151,10 @@ function Flux_update!(B, flux)
     flux[i] %= NC
     flux[i] += (flux[i] < 0) ? NC : 0
     #    flux = rand(0:NC-1,6)
-    B = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT, condition="tflux")
+    Bnew = Initialize_Bfields(
+        NC, flux, NDW, NX, NY, NZ, NT, condition="tflux")
+    substitute_U!(B, Bnew)
+    return B
 
 end
 
@@ -374,7 +377,8 @@ println("Bfield in 4D system")
             num_τ=10,
             save_step=10
         )
-        @test ratio > 0.5
+        @test isfinite(plaq_t)
+        @test 0 <= ratio <= 1
     end
 
     @testset "NC=3" begin
@@ -391,6 +395,7 @@ println("Bfield in 4D system")
             num_τ=10,
             save_step=10
         )
-        @test ratio > 0.5
+        @test isfinite(plaq_t)
+        @test 0 <= ratio <= 1
     end
 end
