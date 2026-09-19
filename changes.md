@@ -1,5 +1,51 @@
 # Changes
 
+## v1.1.8
+
+### Higher-form B-field evaluation
+
+- Cache the B-field geometry of each `Wilsonline`: its origin, link
+  directions, adjoint flags, and coordinates. Repeated action and force
+  evaluations no longer reconstruct the same path after every U update. The
+  cache contains no U or B values, so dynamical changes to either field do not
+  require invalidation.
+- For center-valued fields `B_{μν}(x) = z_{μν}(x) I` on the serial
+  no-wing CPU backend, read the current center phase directly and multiply
+  every U component by that scalar. This avoids shifted full B matrices and
+  color-matrix multiplication. MPI/JACC and other field types retain the
+  generic full-matrix implementation.
+- Keep all evaluation methods selectable through `Initialize_Bfields`.
+  The default uses cached geometry and the center-phase fast path;
+  `use_center_fastpath=false` retains cached geometry but uses full matrices;
+  `bfield_evaluation=:legacy` reproduces the pre-v1.1.8 calculation by
+  recomputing the path for every link and using full-matrix multiplication.
+- Preserve the selected mode through `similar(B)` and B-value replacement.
+  Fix the dynamical-B sample so that a proposed flux is copied into the
+  existing B object rather than assigned only to a local variable.
+
+### Validation and performance
+
+- Compare v1.1.8 with the v1.1.7 implementation for SU(2), SU(3), and SU(4).
+  All 36 plaquette/rectangle paths, plaquette and mixed actions, all four force
+  directions, and the same calculations after changing B agree bit for bit;
+  every observed maximum absolute difference is `0.0`. The explicit
+  `:legacy` mode is also bitwise identical to v1.1.7 and keeps its path cache
+  empty.
+- On a representative single-thread Julia 1.11.8 benchmark with a `4^4`
+  SU(2) lattice, the median times changed as follows. These are local
+  measurements and absolute timings are machine-dependent.
+
+  | Calculation | v1.1.7 | v1.1.8 default | Speedup |
+  |---|---:|---:|---:|
+  | B plaquette path | 284.097 μs | 13.860 μs | 20.50x |
+  | B rectangle path | 398.969 μs | 22.130 μs | 18.03x |
+  | Plaquette action | 2607.857 μs | 1130.663 μs | 2.31x |
+  | Plaquette + rectangle action | 12121.430 μs | 4667.867 μs | 2.60x |
+  | Mixed-action force, direction 1 | 9009.696 μs | 3086.546 μs | 2.92x |
+
+  Allocated bytes decreased by 86--87% for isolated B paths and by 56--61%
+  for the measured complete action and force calls.
+
 ## v1.1.7
 
 ### Lattice gauge-equivariant neural networks

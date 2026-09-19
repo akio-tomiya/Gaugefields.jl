@@ -7,6 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+Gaugefields.jl v1.1.8 accelerates center-valued B-field evaluation while preserving bitwise-equivalent cached full-matrix and pre-v1.1.8 legacy modes; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.7 adds configurable lattice gauge-equivariant neural
 networks, learned `LExp` link smearing, Enzyme link/parameter differentiation,
 and optional HDF5 + Optimisers training; see [changes.md](changes.md).
@@ -624,12 +626,53 @@ Wilson-loop model, and PyTorch checkpoint interchange. Julia CI compares with
 frozen PyTorch outputs under [`test/data/lcnn`](test/data/lcnn/README.md)
 without executing Python.
 
+## B-field evaluation modes
+
+`Initialize_Bfields` uses cached Wilson-path geometry and center-phase
+multiplication by default. The same B values can instead be evaluated with
+the cached full-matrix method or with the complete pre-v1.1.8 method:
+
+```julia
+using Gaugefields
+
+NC = 2
+NDW = 0
+NX, NY, NZ, NT = 4, 4, 4, 4
+flux = [1, 0, 1, 1, 0, 1]
+
+# Current default: cached paths and center-phase multiplication.
+B = Initialize_Bfields(
+    NC, flux, NDW, NX, NY, NZ, NT;
+    condition="tflux",
+)
+
+# Cached paths, but the previous full-matrix B multiplication.
+B_cached_fullmatrix = Initialize_Bfields(
+    NC, flux, NDW, NX, NY, NZ, NT;
+    condition="tflux",
+    use_center_fastpath=false,
+)
+
+# Complete pre-v1.1.8 evaluation: recompute paths and use full matrices.
+B_legacy = Initialize_Bfields(
+    NC, flux, NDW, NX, NY, NZ, NT;
+    condition="tflux",
+    bfield_evaluation=:legacy,
+)
+```
+
+All three modes initialize the same B field and give identical results. B
+values may be updated with `substitute_U!(B, Bnew)` without invalidating the
+cached path geometry. See the [higher-form B-field manual](docs/src/bfields.md)
+for actions, dynamical updates, validation, and performance measurements.
+
 ## Documentation
 
 The manual contains the complete v1 API description and task-oriented examples:
 
 - [Four-dimensional quick start](docs/src/tutorial4d.md)
 - [Wilson loops and gauge actions](docs/src/wilsonloops_actions.md)
+- [Higher-form B fields and evaluation modes](docs/src/bfields.md)
 - [Measurements and QCDMeasurements.jl](docs/src/measurements.md)
 - [HMC assembled from traditional operations and with the MD driver](docs/src/hmc.md)
 - [Automatic differentiation with Enzyme](docs/src/autodiff.md)

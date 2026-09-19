@@ -328,7 +328,8 @@ export shift_U,
     evaluate_gaugelinks_eachsite!,
     Gradientflow,
     flow!
-export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!, isLoopwithB, isStaplewithB
+export evaluate_Bplaquettes!, multiply_Bplaquettes!, sweepaway_4D_Bplaquettes!,
+    isLoopwithB, isStaplewithB, clear_Bpath_cache!
 export heatbath!, Heatbath
 export HeatbathColoring, heatbath_colorings, heatbath_site_color
 export STOUT_Layer, CovNeuralnet, calc_smearedU, make_loops_fromname, STOUT_Layer_fast
@@ -367,6 +368,7 @@ import .Bfield_module: Initialize_Bfields,
     evaluate_Bplaquettes!,
     multiply_Bplaquettes!,
     sweepaway_4D_Bplaquettes!,
+    clear_Bpath_cache!,
     isLoopwithB,
     isStaplewithB
 
