@@ -35,7 +35,7 @@ struct BPathPlan{Dim}
 end
 
 """
-    Bfield(u; center_valued=false)
+    Bfield(u; center_valued=false, use_path_cache=true)
 
 Wrap the antisymmetric matrix of two-form fields in `u`. Set
 `center_valued=true` only when every field has the form `z(x) I`; this enables
@@ -46,16 +46,18 @@ constructed directly by users.
 struct Bfield{T,Dim}
     u::Matrix{T}
     center_valued::Bool
+    use_path_cache::Bool
     pathplans::IdDict{Wilsonline{Dim},BPathPlan{Dim}}
     pathplans_lock::ReentrantLock
 
     function Bfield(
         u::Matrix{<:AbstractGaugefields{NC,Dim}};
         center_valued=false,
+        use_path_cache=true,
     ) where {NC,Dim}
         plans = IdDict{Wilsonline{Dim},BPathPlan{Dim}}()
         return new{eltype(u),Dim}(
-            u, center_valued, plans, ReentrantLock())
+            u, center_valued, use_path_cache, plans, ReentrantLock())
     end
 end
 
@@ -86,7 +88,11 @@ function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
             output[μ, ν] = similar(B[μ, ν])
         end
     end
-    return Bfield(output; center_valued=B.center_valued)
+    return Bfield(
+        output;
+        center_valued=B.center_valued,
+        use_path_cache=B.use_path_cache,
+    )
 end
 
 function substitute_U!(a::Bfield, b::Bfield)
@@ -135,12 +141,16 @@ function substitute_U!(
 end
 
 """
-    Initialize_Bfields(NC, Flux, NDW, NN...; use_center_fastpath=true, ...)
+    Initialize_Bfields(NC, Flux, NDW, NN...;
+        bfield_evaluation=:optimized, use_center_fastpath=true, ...)
 
 Initialize the lattice two-form B field. The default uses scalar-phase
 multiplication for center-valued B fields on supported backends. Set
 `use_center_fastpath=false` to force the original full-matrix implementation;
-this changes only the evaluation algorithm, not the initialized B values.
+this retains path caching. Set `bfield_evaluation=:legacy` to reproduce the
+pre-optimization evaluation: no path cache and full-matrix B multiplication.
+These options change only the evaluation algorithm, not the initialized B
+values.
 """
 function Initialize_Bfields(
     NC,
@@ -160,8 +170,14 @@ function Initialize_Bfields(
     isMPILattice=false,
     boundarycondition=ones(length(NN)),
     elementtype=nothing,
+    bfield_evaluation::Symbol=:optimized,
     use_center_fastpath::Bool=true,
 )
+
+    bfield_evaluation in (:optimized, :legacy) || throw(ArgumentError(
+        "bfield_evaluation must be :optimized or :legacy; " *
+        "got $bfield_evaluation"))
+    legacy_evaluation = bfield_evaluation === :legacy
 
     Dim = length(NN)
     fluxnum = 1
@@ -406,7 +422,11 @@ function Initialize_Bfields(
             end
         end
     end
-    return Bfield(U; center_valued=use_center_fastpath)
+    return Bfield(
+        U;
+        center_valued=use_center_fastpath && !legacy_evaluation,
+        use_path_cache=!legacy_evaluation,
+    )
     #return U
 end
 
@@ -843,6 +863,55 @@ function _get_Bpath_plan!(B::Bfield{T,Dim}, w::Wilsonline{Dim}) where {T,Dim}
     end
 end
 
+function _build_legacy_Bpath_step(
+    w::Wilsonline{Dim},
+    linknum,
+) where {Dim}
+    1 <= linknum <= length(w) || return nothing
+
+    firstlink = w[1]
+    origin = get_position(firstlink)
+    if isdag(firstlink)
+        origin_shift = [0, 0, 0, 0]
+        origin_shift[get_direction(firstlink)] += 1
+        origin = Tuple(origin_shift .+ collect(origin))
+    end
+
+    coordinate = [0, 0, 0, 0] .+ collect(origin)
+    for index in 1:(linknum - 1)
+        link = w[index]
+        direction = get_direction(link)
+        coordinate[direction] += isdag(link) ? -1 : 1
+    end
+
+    link = w[linknum]
+    direction = get_direction(link)
+    link_isdag = isdag(link)
+    link_isdag && (coordinate[direction] -= 1)
+    step = BPathStep{Dim}(Int8(direction), link_isdag, Tuple(coordinate))
+    return Tuple(origin), step
+end
+
+function _multiply_Bplaquettes_legacy!(
+    uout::T,
+    w::Wilsonline{Dim},
+    B::Bfield{T,Dim},
+    temps::Array{T,1},
+    unity,
+) where {T<:AbstractGaugefields,Dim}
+    unity && unit_U!(uout)
+
+    numlinks = length(w)
+    numlinks < 3 && return
+    (isLoopwithB(w) || isStaplewithB(w)) || return
+
+    for linknum in 1:numlinks
+        origin, step = _build_legacy_Bpath_step(w, linknum)
+        _sweepaway_4D_Bplaquettes!(uout, origin, step, B, temps)
+    end
+    return nothing
+end
+
 function multiply_Bplaquettes!(
     uout::T,
     w::Wilsonline{Dim},
@@ -850,6 +919,9 @@ function multiply_Bplaquettes!(
     temps::Array{T,1},
     unity=false,
 ) where {T<:AbstractGaugefields,Dim}
+    B.use_path_cache || return _multiply_Bplaquettes_legacy!(
+        uout, w, B, temps, unity)
+
     plan = _get_Bpath_plan!(B, w)
     return multiply_Bplaquettes!(uout, plan, B, temps, unity)
 end
@@ -880,6 +952,13 @@ function sweepaway_4D_Bplaquettes!(
     temps::Array{T,1}, # length(temps) >= 4
     linknum,
 ) where {T<:AbstractGaugefields,Dim}
+    if !B.use_path_cache
+        path_step = _build_legacy_Bpath_step(w, linknum)
+        isnothing(path_step) && return
+        origin, step = path_step
+        return _sweepaway_4D_Bplaquettes!(uout, origin, step, B, temps)
+    end
+
     plan = _build_Bpath_plan(w; validate_path=false)
     plan.active || return
     1 <= linknum <= length(plan.steps) || return

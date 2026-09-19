@@ -277,9 +277,19 @@ end
             verbose_level=0,
             use_center_fastpath=false,
         )
+        B_legacy = Initialize_Bfields(
+            2,
+            [1, 0, 0, 0, 0, 1],
+            0,
+            lattice_size...;
+            condition="tflux",
+            verbose_level=0,
+            bfield_evaluation=:legacy,
+        )
         temps = [similar(cold_U[1]) for _ = 1:4]
         B_only = similar(cold_U[1])
         B_fullmatrix_only = similar(cold_U[1])
+        B_legacy_only = similar(cold_U[1])
         dressed = similar(cold_U[1])
         paths = (
             make_loops_fromname("plaquette"; Dim=4)[1],
@@ -292,6 +302,10 @@ end
 
             evaluate_Bplaquettes!(B_fullmatrix_only, path, B_fullmatrix, temps)
             @test B_fullmatrix_only.U == B_only.U
+
+            evaluate_Bplaquettes!(B_legacy_only, path, B_legacy, temps)
+            @test B_legacy_only.U == B_only.U
+            @test isempty(B_legacy.pathplans)
 
             evaluate_gaugelinks!(dressed, path, cold_U, B, temps)
             @test dressed.U == B_only.U
