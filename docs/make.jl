@@ -27,6 +27,7 @@ makedocs(;
         "Guides" => [
             "Applications" => "applications.md",
             "Wilson loops and gauge actions" => "wilsonloops_actions.md",
+            "Higher-form B fields" => "bfields.md",
             "Gauge fixing" => "gaugefixing.md",
             "Measurements" => "measurements.md",
             "Utilities and I/O" => "utilities.md",

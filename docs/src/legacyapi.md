@@ -1321,6 +1321,10 @@ main()
 ```
 
 ## Non-dynamical higher-form gauge fields
+The B-field evaluator, its optimized and pre-v1.1.8 modes, dynamical-update
+rules, and performance validation are documented in the dedicated
+[higher-form B-field guide](bfields.md).
+
 We can do the HMC simulations with B fields. The example code is as follows.
 ```julia
 
