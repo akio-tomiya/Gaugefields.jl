@@ -134,8 +134,14 @@ function substitute_U!(
     return nothing
 end
 
+"""
+    Initialize_Bfields(NC, Flux, NDW, NN...; use_center_fastpath=true, ...)
 
-
+Initialize the lattice two-form B field. The default uses scalar-phase
+multiplication for center-valued B fields on supported backends. Set
+`use_center_fastpath=false` to force the original full-matrix implementation;
+this changes only the evaluation algorithm, not the initialized B values.
+"""
 function Initialize_Bfields(
     NC,
     Flux,
@@ -154,6 +160,7 @@ function Initialize_Bfields(
     isMPILattice=false,
     boundarycondition=ones(length(NN)),
     elementtype=nothing,
+    use_center_fastpath::Bool=true,
 )
 
     Dim = length(NN)
@@ -399,7 +406,7 @@ function Initialize_Bfields(
             end
         end
     end
-    return Bfield(U; center_valued=true)
+    return Bfield(U; center_valued=use_center_fastpath)
     #return U
 end
 

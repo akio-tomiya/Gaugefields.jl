@@ -268,11 +268,19 @@ end
             condition="tflux",
             verbose_level=0,
         )
+        B_fullmatrix = Initialize_Bfields(
+            2,
+            [1, 0, 0, 0, 0, 1],
+            0,
+            lattice_size...;
+            condition="tflux",
+            verbose_level=0,
+            use_center_fastpath=false,
+        )
         temps = [similar(cold_U[1]) for _ = 1:4]
         B_only = similar(cold_U[1])
         B_fullmatrix_only = similar(cold_U[1])
         dressed = similar(cold_U[1])
-        B_fullmatrix = Gaugefields.Bfield_module.Bfield(B.u)
         paths = (
             make_loops_fromname("plaquette"; Dim=4)[1],
             make_loops_fromname("rectangular"; Dim=4)[1],
