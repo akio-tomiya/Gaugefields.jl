@@ -1,6 +1,6 @@
 # Changes
 
-## v1.1.8
+## v1.1.9
 
 ### B-field correctness fixes
 
@@ -36,6 +36,8 @@
   speed comparisons below concern the Wilson-path/action/force evaluator;
   they do not promise reproduction of the old erroneous measurement or
   trajectories perturbed by that measurement.
+
+## v1.1.8
 
 ### Higher-form B-field evaluation
 

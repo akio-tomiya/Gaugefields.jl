@@ -7,7 +7,7 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
-Gaugefields.jl v1.1.8 accelerates center-valued B-field evaluation while preserving bitwise-equivalent cached full-matrix and pre-v1.1.8 legacy modes; see [changes.md](changes.md).
+Gaugefields.jl v1.1.9 fixes B-field measurements, wing initialization, and gradient flow, and adds B-aware molecular dynamics while retaining the v1.1.8 evaluation optimizations and legacy mode; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.7 adds configurable lattice gauge-equivariant neural
 networks, learned `LExp` link smearing, Enzyme link/parameter differentiation,

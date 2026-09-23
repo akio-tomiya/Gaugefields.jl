@@ -52,6 +52,9 @@ dSdU1 = calc_dSdUμ(action, 1, U, B)
 
 ## Plaquette measurement and molecular dynamics
 
+The measurement and flow fixes and the B-aware MD interfaces below were
+introduced in v1.1.9. The three evaluation modes were introduced in v1.1.8.
+
 Measure the unnormalized real plaquette sum without changing U or B:
 
 ~~~julia
