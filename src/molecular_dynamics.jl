@@ -248,13 +248,41 @@ function md_potential(action::GaugeAction, U, workspace)
     return -real(evaluate_GaugeAction(action, U)) / U[1].NC
 end
 
-function md_force!(force, action::GaugeAction, U, workspace)
+"""
+    BfieldGaugeAction(action::GaugeAction, B)
+
+Bind a B field to an MD action provider for [`md_driver`](@ref). Both the
+potential and the U force use the current values of B. The B object is held
+by reference: `substitute_U!(B, Bnew)` is visible to an existing driver.
+This provider evolves U only; it does not propose or integrate B updates.
+
+`GaugeAction(U, B)` alone does not retain B. Pass this wrapper, or use
+`md_driver(U, action, B; ...)`, for B-dependent molecular dynamics.
+"""
+struct BfieldGaugeAction{A<:GaugeAction,B<:Bfield_module.Bfield}
+    action::A
+    B::B
+end
+
+md_action_workspace(action::BfieldGaugeAction, U) =
+    md_action_workspace(action.action, U)
+
+md_potential(action::BfieldGaugeAction, U, workspace) =
+    -real(evaluate_GaugeAction(action.action, U, action.B)) / U[1].NC
+
+_md_gauge_derivative!(derivative, action::GaugeAction, direction, U) =
+    calc_dSdUμ!(derivative, action, direction, U)
+
+_md_gauge_derivative!(derivative, action::BfieldGaugeAction, direction, U) =
+    calc_dSdUμ!(derivative, action.action, direction, U, action.B)
+
+function md_force!(force, action::Union{GaugeAction,BfieldGaugeAction}, U, workspace)
     length(force) == length(U) || throw(ArgumentError(
         "force and U must have the same number of directions",
     ))
     factor = -one(_md_real_scalar_type(U)) / U[1].NC
     for direction in eachindex(U)
-        calc_dSdUμ!(workspace.derivative, action, direction, U)
+        _md_gauge_derivative!(workspace.derivative, action, direction, U)
         clear_U!(force[direction])
         Traceless_antihermitian_product_add!(
             force[direction],
@@ -719,6 +747,15 @@ function md_driver(
     )
 end
 
+"""
+    md_driver(U, action::GaugeAction, B::Bfield; kwargs...)
+
+Construct an MD driver using B in both the potential and the U force.
+Equivalent to `md_driver(U, BfieldGaugeAction(action, B); kwargs...)`.
+"""
+md_driver(U, action::GaugeAction, B::Bfield_module.Bfield; kwargs...) =
+    md_driver(U, BfieldGaugeAction(action, B); kwargs...)
+
 """Return the MD step size, `trajectory_length / steps`."""
 md_step_size(driver::MDDriver) = driver.trajectory_length / driver.steps
 
@@ -1019,6 +1056,7 @@ export AbstractMDIntegrator,
     md_action_workspace,
     md_potential,
     md_force!,
+    BfieldGaugeAction,
     NHYPSmearedGaugeAction,
     SmearedGaugeAction,
     MDActionSet,

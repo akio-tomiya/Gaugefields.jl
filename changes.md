@@ -2,6 +2,41 @@
 
 ## v1.1.8
 
+### B-field correctness fixes
+
+- Fix `calculate_Plaquette(U, B, ...)` overwriting physical U links while
+  constructing a staple. Use a separate scratch field, reused for all four
+  directions. Also correct the reverse-orientation factor: the stored lower
+  triangle is `-B[ν, μ]`, not the group-valued reversed plaquette factor.
+  Measurements now agree with an independent site-by-site definition and
+  half the real unit-coefficient action containing both loop orientations.
+- Import the existing serial wing `tflux` and `tloop` constructors so B
+  initialization with `NDW > 0` no longer raises an undefined-name error.
+- Connect `flow!(U, B, Gradientflow(...))` to a working B-dependent
+  plaquette force. Both work-pool and work-array entry points now include B
+  and use sufficient scratch fields; unsupported non-plaquette requests
+  raise an explanatory error instead of accessing undefined variables.
+  Regression tests compare the flow with `Gradientflow_general_Bfields`
+  and verify the zero-flux limit against ordinary flow.
+- Add `BfieldGaugeAction(action, B)` and `md_driver(U, action, B; ...)` to
+  include B in both the MD potential and U force. The provider retains a
+  reference to B and observes in-place B updates. It does not integrate B
+  or implement a B proposal/acceptance algorithm. A plain `GaugeAction`
+  still requires explicit B arguments; its constructor does not retain B.
+- Add regression tests for SU(2)/SU(3), serial no-wing/wing fields, tflux/
+  tloop initialization, non-mutating repeated measurements, identity links,
+  zero flux, MD potential and force, B replacement, and PQP/QPQ reversibility.
+  All 200 new checks pass, as do 613 existing B-field physical-invariant
+  checks, 104 MD checks, and four dynamical-B sample checks. The manual builds
+  successfully. These new B-field fixes were tested on serial CPU fields;
+  MPI and GPU execution were not validated in this run.
+- Recheck saved SU(2)/SU(3)/SU(4) Wilson-path, action, and force results,
+  including B replacement: they remain bitwise unchanged by these fixes.
+- These fixes apply to all evaluation modes. The bitwise-equivalence and
+  speed comparisons below concern the Wilson-path/action/force evaluator;
+  they do not promise reproduction of the old erroneous measurement or
+  trajectories perturbed by that measurement.
+
 ### Higher-form B-field evaluation
 
 - Cache the B-field geometry of each `Wilsonline`: its origin, link

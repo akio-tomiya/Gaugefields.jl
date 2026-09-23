@@ -666,6 +666,12 @@ values may be updated with `substitute_U!(B, Bnew)` without invalidating the
 cached path geometry. See the [higher-form B-field manual](docs/src/bfields.md)
 for actions, dynamical updates, validation, and performance measurements.
 
+For B-dependent molecular dynamics, use `md_driver(U, action, B; steps=10)`
+or wrap the action with `BfieldGaugeAction(action, B)`. A plain
+`GaugeAction(U, B)` does not retain B. B-dependent plaquette measurement now
+preserves U and uses the corrected orientation sign in all evaluation modes;
+the legacy mode does not reintroduce these measurement bugs.
+
 ## Documentation
 
 The manual contains the complete v1 API description and task-oriented examples:

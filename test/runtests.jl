@@ -83,6 +83,7 @@ end
 
 @testset "Bfield physical invariants" begin
     include("Btest/physical_invariants.jl")
+    include("Btest/regressions.jl")
 end
 
 @testset "Initialization" begin
