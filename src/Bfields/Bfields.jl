@@ -2,12 +2,16 @@ module Bfield_module
 import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
     Gaugefields_4D_nowing,
     thooftFlux_4D_B_at_bndry,
+    thooftFlux_4D_B_at_bndry_wing,
+    thooftLoop_4D_B_temporal_wing,
     Initialize_Gaugefields,
     set_wing_U!,
     calculate_Plaquette,
     shift_U,
     substitute_U!,
     clear_U!,
+    add_force!,
+    Traceless_antihermitian_product_add!,
     unit_U!,
     multiply_12!,
     add_U!, thooftFlux_4D_B_at_bndry_nowing_mpi,
@@ -1484,8 +1488,9 @@ function calculate_Plaquette(
 ) where {NC,Dim,T<:AbstractGaugefields}
     plaq = 0
     V = staple
+    b_link = similar(temp)
     for μ = 1:Dim
-        construct_staple!(V, U, B, μ, temp)
+        construct_staple!(V, U, B, μ, temp, b_link)
         mul!(temp, U[μ], V')
         plaq += tr(temp)
 
@@ -1506,8 +1511,17 @@ function add_force!(
     plaqonly=false,
     staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
     factor=1,
-) where {NC,Dim,T1<:AbstractGaugefields,T2<:AbstractGaugefields}
-    error("add_force! is not implemented in type $(typeof(F)) ")
+) where {NC,Dim,T1<:TA_Gaugefields,T2<:AbstractGaugefields}
+    plaqonly || throw(ArgumentError(
+        "B-field add_force! supports plaqonly=true; use Gradientflow_general_Bfields for other actions",
+    ))
+    work, indices = get_temp(temps, 7)
+    try
+        add_force!(F, U, B, work; plaqonly, staplefactors, factor)
+    finally
+        unused!(temps, indices)
+    end
+    return nothing
 end
 function add_force!(
     F::Array{T1,1},
@@ -1518,28 +1532,17 @@ function add_force!(
     staplefactors::Union{Array{<:Number,1},Nothing}=nothing,
     factor=1,
 ) where {NC,Dim,T1<:TA_Gaugefields,T2<:AbstractGaugefields}
-    @assert length(temps) >= 3 "length(temps) should be >= 3. But $(length(temps))"
-
-    V = temps[3]
-    temp1 = temps[1]
-    temp2 = temps[2]
-
+    plaqonly || throw(ArgumentError(
+        "B-field add_force! supports plaqonly=true; use Gradientflow_general_Bfields for other actions",
+    ))
+    length(temps) >= 7 || throw(ArgumentError("B-field add_force! needs seven work fields"))
+    V, product = temps[1], temps[2]
+    path_temps = temps[3:7]
     for μ = 1:Dim
-        if plaqonly
-            construct_double_staple!(V, U, μ, temps[1:2])
-            mul!(temp1, U[μ], V') #U U*V
-        else
-            clear_U!(V)
-            for i = 1:gparam.numactions
-                loops = gparam.staples[i][μ]
-                evaluate_wilson_loops!(temp3, loops, U, B, [temp1, temp2])
-                add_U!(V, staplefactors[i], temp3)
-            end
-            mul!(temp1, U[μ], V) #U U*V
-        end
-
-        Traceless_antihermitian_add!(F[μ], factor, temp1)
+        construct_double_staple!(V, U, B, μ, path_temps)
+        Traceless_antihermitian_product_add!(F[μ], factor, U[μ], V', product)
     end
+    return nothing
 end
 
 function construct_double_staple!(
@@ -1559,8 +1562,11 @@ function construct_staple!(
     B::Bfield{T,Dim},
     μ,
     temp::AbstractGaugefields{NC,Dim},
+    b_link::AbstractGaugefields{NC,Dim}=similar(temp),
 ) where {NC,Dim,T<:AbstractGaugefields}
     U1U2 = temp
+    # Never use a physical link as scratch: measurement must preserve U.
+    U1 = b_link
     firstterm = true
 
     for ν = 1:Dim
@@ -1568,12 +1574,12 @@ function construct_staple!(
             continue
         end
 
-        U1 = U[ν]
-        # mul!(U1, U[ν], B[μ,ν]')
         if μ < ν
             mul!(U1, U[ν], B[μ, ν]')
         else
-            mul!(U1, U[ν], B[μ, ν])
+            # The lower triangle stores -B[ν, μ], not the reversed
+            # group-valued plaquette factor. Use the upper triangle.
+            mul!(U1, U[ν], B[ν, μ])
         end
         U2 = shift_U(U[μ], ν)
         mul!(U1U2, U1, U2)
