@@ -79,3 +79,7 @@ MPI.Initialized() || MPI.Init()
     @test isfinite(real(plaquette))
     @test isfinite(imag(plaquette))
 end
+
+# LatticeMatrices >= 1.2.8 is required; never silently skip compact-storage tests.
+include("bfields_center.jl")
+include("bfields_storage.jl")

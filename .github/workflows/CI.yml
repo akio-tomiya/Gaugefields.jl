@@ -171,6 +171,7 @@ jobs:
           mpi-test/bin/mpiexecjl --project=mpi-test -n 1 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_legacy_backends.jl
       - name: Run two-rank API tests
         run: |
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/bfields.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/high_level_api.jl
           GAUGEFIELDS_TEST_MPI=true mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/three_dimensional.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/heatbath_full_sweep.jl

@@ -1,5 +1,94 @@
 # Changes
 
+## v1.1.10
+
+### Compact LatticeMatrices B fields
+
+- Require the registered LatticeMatrices v1.2.8 or a later compatible 1.x
+  release (`[compat] LatticeMatrices = "1.2.8"`). No local LM development
+  checkout is required. [Official main](https://github.com/cometscome/LatticeMatrices.jl/blob/main/Project.toml)
+  and [General registration](https://github.com/JuliaRegistries/General/blob/master/L/LatticeMatrices/Versions.toml) were verified
+  on 2026-09-26; v1.2.8 has registry tree hash
+  `45a315c22ce4f5a4aecbc8c831f21f1fdf50cf1a`.
+- Use six independent `ScaledIdentityLattice` planes when initializing
+  LatticeMatrices-backed tflux/tloop fields. Each plane stores one complex
+  coefficient per site, not an NC×NC diagonal matrix. Scalar shifts and halo
+  exchanges therefore move only the coefficient field. Serial legacy
+  gauge-field backends are unchanged.
+- Preserve `Initialize_Bfields`, B-dependent action/force/flow/MD APIs,
+  `similar(B)`, and full/parity `substitute_U!` updates. Add
+  `bfield_storage=:matrix` to retain matrix storage explicitly; `:legacy`
+  and `use_center_fastpath=false` also select matrix storage automatically.
+  Explicit `:scalar` checks backend/API/evaluation compatibility.
+- Keep `B[mu,nu]` as an authoritative mutable matrix compatibility access:
+  requested planes expand lazily and subsequent evaluation uses matrices.
+  `get_Bplane` instead exposes the compact identity field; `get_Bphase`
+  exposes its 1×1 scalar backing. Mixing live native references with mutable
+  matrix access raises an error instead of allowing stale representations.
+- Scalar plaquette measurement does not materialize B planes. Cache only
+  geometry, never B values, so in-place coefficient updates remain visible.
+- Use the released LM scalar multiplication that reuses each site's
+  linear array indices across its color components. This removes the initial
+  standalone CPU slowdown without changing B storage, cached geometry, or
+  the supported matrix/legacy choices. Multiplication executes through JACC;
+  LM selects its component-wise kernel for JACC's CUDA backend and its
+  site-wise kernel for Threads and other backends.
+- LatticeMatrices v1.2.8 fixes aliasing in halo-backed shifted
+  copies. This corrects previously erroneous wing-backed rectangle forces;
+  matrix and compact evaluations are compared after that correction, not
+  against the erroneous old wing results. Legacy mode retains bug fixes.
+
+### Validation
+
+- Validate GF v1.1.10 with registry-installed LM v1.2.8 and JACC v1.4.0
+  on Julia 1.11.8. The test environment has no LM path/repository override;
+  its installed tree hash matches the registered release.
+- MPI two-rank execution passes 879 checks per rank: four workflow checks
+  plus 875 focused B-field checks:
+  529 path/action/force comparisons, 42 wing-versus-halo-free comparisons,
+  and 304 storage/compatibility checks. These cover SU(2)/SU(3)/SU(4),
+  scalar updates without rebuilding geometry, and Float32/Float64 storage.
+  Comparisons use precision-appropriate tolerances; this is not a promise
+  of bitwise equality for every backend or operation.
+- Compact-storage tests are now unconditional: the required released LM API
+  must be present instead of silently skipping tests on older LM versions.
+  Include the B-field workflow and compact-storage regressions in two-rank CI.
+  Serial execution passes 1,213 checks: 304 compact-storage, 613 physical
+  invariants, 200 B regressions, and 96 LM-compatibility checks.
+  The manual builds successfully. GPU hardware execution
+  has not been validated for the new storage in this run.
+- For SU(3), a compact plane uses 1/9 as many component elements. Six
+  independent scalar planes instead of twelve oriented matrix planes give
+  1/18 for the whole B field, excluding metadata, evaluation workspaces, and
+  any compatibility matrices explicitly materialized by the caller.
+
+### Performance
+
+On an Intel Xeon Gold 6526Y, Julia 1.11.8, registered LM v1.2.8,
+JACC v1.4.0 with one CPU thread, SU(3),
+ComplexF64, 4^4 sites and `NDW=1`, the following are median microseconds
+over 31 warmed-up calls, interleaved in randomized order. Both modes cache
+path geometry. The baseline is
+matrix storage with the shifted-copy bug fixed, not the erroneous old wing
+implementation. The mixed action uses plaquette/rectangle coefficients
+0.7/-0.13; the force is one direction.
+
+| Operation | Matrix storage | Scalar storage | Speedup | Maximum difference |
+| --- | ---: | ---: | ---: | ---: |
+| B plaquette | 909.584 | 127.965 | 7.11x | 0.0 |
+| B rectangle | 2218.083 | 136.670 | 16.23x | 0.0 |
+| Mixed action | 57526.756 | 18899.946 | 3.04x | 0.0 |
+| Mixed force, mu=1 | 44318.728 | 14214.097 | 3.12x | 0.0 |
+
+Reproduce with `test/MPIJACCtest/benchmark_bfields_storage.jl` in an
+environment using this Gaugefields checkout and registered LatticeMatrices
+v1.2.8. These are end-to-end CPU measurements, not GPU/MPI timing claims.
+LM v1.2.8 separately documents the fix for the initial standalone scalar
+slowdown, its CPU/GPU multiplication benchmarks, and bitwise comparisons
+against the initial scalar kernel in its
+[release notes](https://github.com/cometscome/LatticeMatrices.jl/blob/main/CHANGES.md).
+Those LM primitive measurements are not end-to-end GF GPU validation.
+
 ## v1.1.9
 
 ### B-field correctness fixes

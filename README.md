@@ -7,6 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+Gaugefields.jl v1.1.10 requires the registered LatticeMatrices v1.2.8 or later compatible 1.x release and adds compact B-field storage with optimized JACC multiplication while retaining matrix/legacy modes; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.9 fixes B-field measurements, wing initialization, and gradient flow, and adds B-aware molecular dynamics while retaining the v1.1.8 evaluation optimizations and legacy mode; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.7 adds configurable lattice gauge-equivariant neural
@@ -671,6 +673,29 @@ or wrap the action with `BfieldGaugeAction(action, B)`. A plain
 `GaugeAction(U, B)` does not retain B. B-dependent plaquette measurement now
 preserves U and uses the corrected orientation sign in all evaluation modes;
 the legacy mode does not reintroduce these measurement bugs.
+
+With the released LatticeMatrices API (v1.2.8 or later), choose compact scalar
+storage or the previous matrix representation explicitly:
+
+```julia
+B_compact = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_storage=:scalar)
+B_matrix = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_storage=:matrix)
+B_old = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_evaluation=:legacy)
+
+phase = get_Bphase(B_compact, 1, 2) # live 1×1 LatticeMatrix coefficient
+# Update phase with LatticeMatrices mutating operations.
+substitute_U!(B_matrix, B_compact) # independent full-matrix copy
+```
+
+The default `bfield_storage=:auto` selects compact storage for supported
+LatticeMatrices-backed tflux/tloop configurations. `B[mu,nu]` still provides mutable matrix access,
+but do not mix it with live `get_Bphase`/`get_Bplane` references on the same
+B object. See the manual for conversion and halo-update rules. The new
+wing-backed implementation includes the shifted-copy correctness fix;
+`:legacy` does not restore the previously erroneous wing force.
 
 ## Documentation
 
