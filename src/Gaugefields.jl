@@ -363,6 +363,8 @@ export loadU, saveU
 
 
 import .Bfield_module: Initialize_Bfields,
+    get_Bphase,
+    get_Bplane,
     B_RandomGauges,
     B_TfluxGauges,
     evaluate_Bplaquettes!,
@@ -374,6 +376,7 @@ import .Bfield_module: Initialize_Bfields,
 
 
 export Initialize_Bfields
+export get_Bphase, get_Bplane
 
 
 export CASK_layer, zero_grad!

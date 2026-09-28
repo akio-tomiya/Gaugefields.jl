@@ -48,6 +48,7 @@ function thooftFlux_4D_B_at_bndry(
     NN...;
     overallminus=false,
     verbose_level=2,
+    phase_NC=NC,
 )
     dim = length(NN)
     if dim == 4
@@ -71,7 +72,7 @@ function thooftFlux_4D_B_at_bndry(
             )
         end
 
-        v = exp(-im * (2pi / NC) * FLUX)
+        v = exp(-im * (2pi / phase_NC) * FLUX)
         if FLUXNUM == 1
             for it = 1:NN[4]
                 for iz = 1:NN[3]
@@ -162,6 +163,7 @@ function thooftLoop_4D_B_temporal(
     tloop_pos=[1, 1, 1, 1],
     tloop_dir=[1, 4],
     tloop_dis=1,
+    phase_NC=NC,
 )
     dim = length(NN)
     if dim == 4
@@ -192,12 +194,12 @@ function thooftLoop_4D_B_temporal(
             spatial_strpos = tloop_pos[spatial_dir]
             spatial_endpos = spatial_strpos + tloop_dis
 
-            v = exp(-im * (2pi / NC) * FLUX)
+            v = exp(-im * (2pi / phase_NC) * FLUX)
         else
             spatial_endpos = tloop_pos[spatial_dir]
             spatial_strpos = spatial_endpos + tloop_dis
 
-            v = exp(im * (2pi / NC) * FLUX)
+            v = exp(im * (2pi / phase_NC) * FLUX)
         end
 
         if FLUXNUM == 1 && (tloop_dir == [3, 4] || tloop_dir == [4, 3])
@@ -363,4 +365,3 @@ function thooftLoop_4D_B_temporal(
     set_wing_U!(U)
     return U
 end
-

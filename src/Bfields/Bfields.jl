@@ -1,6 +1,8 @@
 module Bfield_module
 import ..AbstractGaugefields_module: AbstractGaugefields, TA_Gaugefields, evaluate_gaugelinks!,
     Gaugefields_4D_nowing,
+    Gaugefields_4D_MPILattice,
+    Shifted_Gaugefields_4D_MPILattice,
     thooftFlux_4D_B_at_bndry,
     thooftFlux_4D_B_at_bndry_wing,
     thooftLoop_4D_B_temporal_wing,
@@ -20,6 +22,7 @@ import Wilsonloop: loops_staple_prime, Wilsonline, get_position, get_direction, 
 import ..Wilsonloops_module: Wilson_loop_set
 import ..Temporalfields_module: Temporalfields, get_temp, unused!
 using LinearAlgebra
+import LatticeMatrices
 
 
 
@@ -47,23 +50,25 @@ the scalar-phase fast path on supported backends. `Initialize_Bfields` sets
 this automatically. The default preserves full-matrix semantics for fields
 constructed directly by users.
 """
-struct Bfield{T,Dim}
-    u::Matrix{T}
+struct Bfield{T,Dim,S<:AbstractMatrix{T}}
+    u::S
     center_valued::Bool
     use_path_cache::Bool
     pathplans::IdDict{Wilsonline{Dim},BPathPlan{Dim}}
     pathplans_lock::ReentrantLock
 
     function Bfield(
-        u::Matrix{<:AbstractGaugefields{NC,Dim}};
+        u::AbstractMatrix{T};
         center_valued=false,
         use_path_cache=true,
-    ) where {NC,Dim}
+    ) where {NC,Dim,T<:AbstractGaugefields{NC,Dim}}
         plans = IdDict{Wilsonline{Dim},BPathPlan{Dim}}()
-        return new{eltype(u),Dim}(
+        return new{eltype(u),Dim,typeof(u)}(
             u, center_valued, use_path_cache, plans, ReentrantLock())
     end
 end
+
+include("ScalarBfields.jl")
 
 @inline function Base.getindex(B::Bfield, μ, ν)
     @inbounds return B.u[μ, ν]
@@ -100,11 +105,11 @@ function Base.similar(B::Bfield{T,Dim}) where {T,Dim}
 end
 
 function substitute_U!(a::Bfield, b::Bfield)
-    substitute_U!(a.u, b.u)
+    _substitute_Bstorage!(a.u, b.u)
 end
 
 function substitute_U!(a::Bfield, b::Bfield, iseven::Bool)
-    substitute_U!(a.u, b.u, iseven)
+    _substitute_Bstorage!(a.u, b.u, iseven)
 end
 
 include("GaugeActions_Bfields.jl")
@@ -146,15 +151,20 @@ end
 
 """
     Initialize_Bfields(NC, Flux, NDW, NN...;
-        bfield_evaluation=:optimized, use_center_fastpath=true, ...)
+        bfield_evaluation=:optimized, use_center_fastpath=true,
+        bfield_storage=:auto, ...)
 
 Initialize the lattice two-form B field. The default uses scalar-phase
 multiplication for center-valued B fields on supported backends. Set
 `use_center_fastpath=false` to force the original full-matrix implementation;
 this retains path caching. Set `bfield_evaluation=:legacy` to reproduce the
 pre-optimization evaluation: no path cache and full-matrix B multiplication.
-These options change only the evaluation algorithm, not the initialized B
-values.
+These options do not change the initialized B values. On a supporting
+LatticeMatrices backend, `bfield_storage=:auto` uses six scalar-backed
+identity planes. Use `:matrix` for the old representation or `:scalar` to
+require compact storage. Legacy/full-matrix evaluation selects matrix
+storage automatically. Matrix access through `B[mu,nu]` materializes a
+mutable compatibility plane; `get_Bplane` accesses compact storage instead.
 """
 function Initialize_Bfields(
     NC,
@@ -176,12 +186,28 @@ function Initialize_Bfields(
     elementtype=nothing,
     bfield_evaluation::Symbol=:optimized,
     use_center_fastpath::Bool=true,
+    bfield_storage::Symbol=:auto,
 )
 
     bfield_evaluation in (:optimized, :legacy) || throw(ArgumentError(
         "bfield_evaluation must be :optimized or :legacy; " *
         "got $bfield_evaluation"))
     legacy_evaluation = bfield_evaluation === :legacy
+    bfield_storage in (:auto, :matrix, :scalar) || throw(ArgumentError(
+        "bfield_storage must be :auto, :matrix, or :scalar"))
+    scalar_supported = isMPILattice
+    want_scalar = bfield_storage === :scalar ||
+        (bfield_storage === :auto && scalar_supported && use_center_fastpath && !legacy_evaluation &&
+         condition in ("tflux", "tloop"))
+    if want_scalar
+        scalar_supported || throw(ArgumentError(
+            "scalar B storage requires the LatticeMatrices backend and ScaledIdentityLattice"))
+        (use_center_fastpath && !legacy_evaluation) || throw(ArgumentError(
+            "scalar B storage requires optimized center-phase evaluation; choose bfield_storage=:matrix for legacy evaluation"))
+        return _initialize_scalar_Bfields(NC, Flux, NDW, NN...;
+            condition, PEs, verbose_level, tloop_pos, tloop_dir, tloop_dis,
+            singleprecision, boundarycondition, elementtype)
+    end
 
     Dim = length(NN)
     fluxnum = 1
@@ -1003,8 +1029,26 @@ end
     return nothing
 end
 
+@inline _supports_center_phase(::AbstractGaugefields) = false
+@inline _supports_center_phase(::Gaugefields_4D_nowing) = true
+@inline _supports_center_phase(::Gaugefields_4D_MPILattice) = true
+
+@inline _release_center_input!(input) = nothing
+@inline _release_center_input!(input::Shifted_Gaugefields_4D_MPILattice) =
+    LatticeMatrices.release!(input.U)
+
+function _multiply_center_phase!(
+    uout::Gaugefields_4D_MPILattice, Uin,
+    Bplane, shift::NTuple{4,Int64}, isdag::Bool,
+)
+    LatticeMatrices.with_shifted_lattice(Bplane, shift) do shifted_B
+        mul!(uout.U, Uin.U, isdag ? shifted_B' : shifted_B)
+    end
+    return nothing
+end
+
 """
-Fast path for the non-MPI, no-wing CPU field. A lattice two-form B field is
+Fast path for supported center-valued fields. A lattice two-form B field is
 center valued, `B_{μν}(x) = z_{μν}(x) I`, so multiplying by a shifted B
 matrix is exactly scalar multiplication by its `(1, 1)` element. The B value
 is read at every call; only the path geometry is cached, so dynamical B fields
@@ -1013,16 +1057,13 @@ remain valid.
 Other gauge-field backends continue to use the generic full-matrix fallback
 below.
 """
-function _sweepaway_4D_Bplaquettes!(
-    uout::Gaugefields_4D_nowing{NC},
+function _sweepaway_4D_Bplaquettes_center!(
+    uout::T,
     origin::NTuple{4,Int64},
     step::BPathStep{4},
-    B::Bfield{Gaugefields_4D_nowing{NC},4},
-    temps::Array{Gaugefields_4D_nowing{NC},1},
-) where {NC}
-    B.center_valued || return _sweepaway_4D_Bplaquettes_fullmatrix!(
-        uout, origin, step, B, temps)
-
+    B::Bfield{T,4},
+    temps::Array{T,1},
+) where {T<:AbstractGaugefields}
     direction = Int(step.direction)
     direction == 4 && return nothing
 
@@ -1031,29 +1072,32 @@ function _sweepaway_4D_Bplaquettes!(
     Uin = uout
     Unew = temps[1]
 
-    for transverse in (direction + 1):4
-        displacement = coordinate[transverse]
-        displacement == 0 && continue
+    try
+        for transverse in (direction + 1):4
+            displacement = coordinate[transverse]
+            displacement == 0 && continue
 
-        offsets = displacement > 0 ?
-                  (0:(displacement - 1)) : (-1:-1:displacement)
-        Bdag = displacement > 0 ? !step.isdag : step.isdag
-        Bplane = B[direction, transverse]
+            offsets = displacement > 0 ?
+                      (0:(displacement - 1)) : (-1:-1:displacement)
+            Bdag = displacement > 0 ? !step.isdag : step.isdag
+            Bplane = _center_Bplane(B, direction, transverse)
 
-        for offset in offsets
-            Bshift = ntuple(4) do axis
-                axis < transverse ? coordinate[axis] :
-                axis == transverse ? offset : 0
-            end
-            _multiply_center_phase!(uout, Uin, Bplane, Bshift, Bdag)
-
-            if origin_iszero
+            for offset in offsets
+                Bshift = ntuple(4) do axis
+                    axis < transverse ? coordinate[axis] :
+                    axis == transverse ? offset : 0
+                end
+                _multiply_center_phase!(uout, Uin, Bplane, Bshift, Bdag)
+                _release_center_input!(Uin)
                 Uin = uout
-            else
-                substitute_U!(Unew, uout)
-                Uin = shift_U(Unew, origin)
+                if !origin_iszero
+                    substitute_U!(Unew, uout)
+                    Uin = shift_U(Unew, origin)
+                end
             end
         end
+    finally
+        _release_center_input!(Uin)
     end
     return nothing
 end
@@ -1065,6 +1109,10 @@ function _sweepaway_4D_Bplaquettes!(
     B::Bfield{T,Dim},
     temps::Array{T,1},
 ) where {T<:AbstractGaugefields,Dim}
+    if B.center_valued && _supports_center_phase(uout) &&
+       (uout isa Gaugefields_4D_nowing || _uses_scalar_storage(B.u))
+        return _sweepaway_4D_Bplaquettes_center!(uout, origin, step, B, temps)
+    end
     return _sweepaway_4D_Bplaquettes_fullmatrix!(
         uout, origin, step, B, temps)
 end
@@ -1486,6 +1534,27 @@ function calculate_Plaquette(
     temp::AbstractGaugefields{NC,Dim},
     staple::AbstractGaugefields{NC,Dim},
 ) where {NC,Dim,T<:AbstractGaugefields}
+    if _uses_scalar_storage(B.u)
+        plaq = zero(real(zero(eltype(U[1]))))
+        for mu in 1:(Dim-1), nu in (mu+1):Dim
+            shifted_nu = shift_U(U[nu], mu)
+            try
+                mul!(temp, U[mu], shifted_nu)
+            finally
+                _release_center_input!(shifted_nu)
+            end
+            shifted_mu = shift_U(U[mu], nu)
+            try
+                mul!(staple, temp, shifted_mu')
+            finally
+                _release_center_input!(shifted_mu)
+            end
+            mul!(temp, staple, U[nu]')
+            mul!(staple.U, temp.U, B.u.phases[mu, nu])
+            plaq += real(tr(staple))
+        end
+        return plaq
+    end
     plaq = 0
     V = staple
     b_link = similar(temp)

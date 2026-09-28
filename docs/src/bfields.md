@@ -152,10 +152,85 @@ The legacy mode retains correctness fixes made around the evaluator; it
 selects the old numerical calculation and performance behavior rather than
 reintroducing earlier runtime errors.
 
-The center-phase specialization currently applies to serial
-`Gaugefields_4D_nowing` fields. Other backends automatically use full-matrix
-multiplication. They still benefit from path caching unless `:legacy` is
-selected.
+The center-phase specialization applies to serial `Gaugefields_4D_nowing`
+fields and to compact LatticeMatrices-backed B fields using the released
+`ScaledIdentityLattice` API. Other backends use full matrices.
+They still benefit from path caching unless `:legacy` is selected.
+
+## Compact storage on LatticeMatrices (v1.1.10)
+
+Gaugefields v1.1.10 requires LatticeMatrices v1.2.8 or a later compatible 1.x
+release, available through the Julia General registry. No local development
+checkout of LatticeMatrices is needed. The existing initializer uses
+six independent scalar-backed identity planes for `isMPILattice=true`:
+
+~~~julia
+B = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_storage=:auto)
+
+# Explicitly select either representation:
+B_compact = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_storage=:scalar)
+B_matrix = Initialize_Bfields(NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true, PEs=(1,1,1,1), bfield_storage=:matrix)
+~~~
+
+`:auto` uses compact storage only for supported tflux/tloop configurations
+with center-phase evaluation enabled. LatticeMatrices versions older than
+1.2.8 are excluded by package compatibility. `:legacy` and `use_center_fastpath=false` imply
+matrix storage in auto mode; combining them with explicit `:scalar` errors.
+
+Each compact plane is `ScaledIdentityLattice(NC, scalar)`, storing only a
+1×1 coefficient field. No full B matrices are retained during normal
+action/force/flow/MD evaluation. Relative to the old twelve oriented matrix
+fields, six scalar fields need `1/(2NC^2)` as many component elements
+(metadata and workspaces excluded). On SU(3), this is 1/18.
+
+Existing `B[mu,nu]` access still returns a mutable gauge matrix field. It
+materializes the requested plane and switches evaluation to the compatible
+matrix path, so later writes through a retained reference are not lost.
+Lower-plane expansion preserves the historical minus-sign convention.
+For compact access, use the new API instead:
+
+~~~julia
+plane = get_Bplane(B_compact, 1, 2)  # ScaledIdentityLattice
+phase = get_Bphase(B_compact, 1, 2)  # the live 1×1 coefficient lattice
+# LinearAlgebra.mul!(output.U, U[1].U, plane) uses scalar multiplication.
+~~~
+
+Use LatticeMatrices mutating operations to change `phase`; direct writes to
+`phase.A` require `LatticeMatrices.mark_halo_dirty!(phase)`. Native mutable
+references and matrix mutable references cannot be mixed: attempting the
+other access after exposing one representation raises an explanatory error.
+To explicitly convert a native B into an independent matrix B, initialize
+`B_matrix` as above and call `substitute_U!(B_matrix, B_compact)`.
+
+LatticeMatrices v1.2.8 also fixes aliased shifted copies.
+Previously incorrect wing-backed rectangle forces consequently change;
+compact and matrix modes agree after the fix. GPU hardware validation is
+not implied by the portable JACC implementation.
+
+The focused CPU benchmark (SU(3), ComplexF64, 4^4, `NDW=1`, Julia 1.11.8,
+registered LM v1.2.8, JACC v1.4.0 with one thread on a Xeon Gold 6526Y;
+medians of 31 warmed-up calls,
+interleaved in randomized order) compares
+compact storage with the corrected matrix-storage path, both caching geometry:
+
+| Operation | Matrix (microseconds) | Compact (microseconds) | Speedup |
+| --- | ---: | ---: | ---: |
+| B plaquette | 909.584 | 127.965 | 7.11x |
+| B rectangle | 2218.083 | 136.670 | 16.23x |
+| Mixed plaquette/rectangle action | 57526.756 | 18899.946 | 3.04x |
+| Mixed force, one direction | 44318.728 | 14214.097 | 3.12x |
+
+All four measured maximum differences were 0.0. Broader CPU/MPI comparisons
+use precision-appropriate tolerances; bitwise equality is not guaranteed
+universally. LM v1.2.8 also resolves the initial standalone scalar slowdown.
+Its multiplication executes through JACC: the Threads backend reuses each
+site's linear indices, while the CUDA backend selects a component-wise
+kernel. Separate LM primitive timings and validation are recorded in the
+[LM release notes](https://github.com/cometscome/LatticeMatrices.jl/blob/main/CHANGES.md).
+They do not constitute end-to-end GF GPU validation.
 
 ## Dynamical B fields
 
