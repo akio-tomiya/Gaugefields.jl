@@ -83,3 +83,4 @@ end
 # LatticeMatrices >= 1.2.8 is required; never silently skip compact-storage tests.
 include("bfields_center.jl")
 include("bfields_storage.jl")
+include("../Btest/gradientflow_regressions.jl")

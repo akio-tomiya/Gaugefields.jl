@@ -7,6 +7,8 @@
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
+Gaugefields.jl v1.1.11 fixes B-field rectangle forces/gradient flow and shifted-buffer lifetime across serial and LatticeMatrices backends, including legacy evaluation; see [changes.md](changes.md).
+
 Gaugefields.jl v1.1.10 requires the registered LatticeMatrices v1.2.8 or later compatible 1.x release and adds compact B-field storage with optimized JACC multiplication while retaining matrix/legacy modes; see [changes.md](changes.md).
 
 Gaugefields.jl v1.1.9 fixes B-field measurements, wing initialization, and gradient flow, and adds B-aware molecular dynamics while retaining the v1.1.8 evaluation optimizations and legacy mode; see [changes.md](changes.md).

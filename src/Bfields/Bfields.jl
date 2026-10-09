@@ -777,57 +777,13 @@ function evaluate_gaugelinks!(
     w::Wilsonline{Dim},
     U::Array{T,1},
     B::Bfield{T,Dim},
-    temps::Array{T,1}, # length >= 3
+    temps::Array{T,1}, # length >= 4 for the matrix B fallback
 ) where {T<:AbstractGaugefields,Dim}
-    Unew = temps[1]
-    origin = Tuple(zeros(Int64, Dim))
-
-    Ushift1 = temps[2]
-    Ushift2 = temps[3]
-
-    glinks = w
-    numlinks = length(glinks)
-    if numlinks == 0
-        unit_U!(uout)
-        return
-    end
-
-    j = 1
-    U1link = glinks[1]
-    direction = get_direction(U1link)
-    position = get_position(U1link)
-    isU1dag = isdag(U1link)
-
-    if numlinks == 1
-        substitute_U!(Unew, U[direction])
-        Ushift1 = shift_U(Unew, position)
-        if isU1dag
-            substitute_U!(uout, Ushift1')
-        else
-            substitute_U!(uout, Ushift1)
-        end
-
-        return
-    end
-
-    substitute_U!(Unew, U[direction])
-    Ushift1 = shift_U(Unew, position)
-
-    for j = 2:numlinks
-        Ujlink = glinks[j]
-        isUkdag = isdag(Ujlink)
-        position = get_position(Ujlink)
-        direction = get_direction(Ujlink)
-        Ushift2 = shift_U(U[direction], position)
-
-        multiply_12!(uout, Ushift1, Ushift2, j, isUkdag, isU1dag)
-
-        substitute_U!(Unew, uout)
-        Ushift1 = shift_U(Unew, origin)
-    end
-
+    # Reuse the B-free evaluator, including its shifted-buffer lifecycle.
+    # The B surface only multiplies this product; it must not translate it.
+    evaluate_gaugelinks!(uout, w, U, temps)
     multiply_Bplaquettes!(uout, w, B, temps)
-
+    return nothing
 end
 
 function evaluate_Bplaquettes!(
@@ -1067,37 +1023,23 @@ function _sweepaway_4D_Bplaquettes_center!(
     direction = Int(step.direction)
     direction == 4 && return nothing
 
+    # step.coordinate already includes the path origin. Shift only B,
+    # never the accumulated Wilson product, even for a displaced staple.
     coordinate = step.coordinate
-    origin_iszero = all(iszero, origin)
-    Uin = uout
-    Unew = temps[1]
-
-    try
-        for transverse in (direction + 1):4
-            displacement = coordinate[transverse]
-            displacement == 0 && continue
-
-            offsets = displacement > 0 ?
-                      (0:(displacement - 1)) : (-1:-1:displacement)
-            Bdag = displacement > 0 ? !step.isdag : step.isdag
-            Bplane = _center_Bplane(B, direction, transverse)
-
-            for offset in offsets
-                Bshift = ntuple(4) do axis
-                    axis < transverse ? coordinate[axis] :
-                    axis == transverse ? offset : 0
-                end
-                _multiply_center_phase!(uout, Uin, Bplane, Bshift, Bdag)
-                _release_center_input!(Uin)
-                Uin = uout
-                if !origin_iszero
-                    substitute_U!(Unew, uout)
-                    Uin = shift_U(Unew, origin)
-                end
+    for transverse in (direction + 1):4
+        displacement = coordinate[transverse]
+        displacement == 0 && continue
+        offsets = displacement > 0 ?
+                  (0:(displacement - 1)) : (-1:-1:displacement)
+        Bdag = displacement > 0 ? !step.isdag : step.isdag
+        Bplane = _center_Bplane(B, direction, transverse)
+        for offset in offsets
+            Bshift = ntuple(4) do axis
+                axis < transverse ? coordinate[axis] :
+                axis == transverse ? offset : 0
             end
+            _multiply_center_phase!(uout, uout, Bplane, Bshift, Bdag)
         end
-    finally
-        _release_center_input!(Uin)
     end
     return nothing
 end
@@ -1122,251 +1064,35 @@ function _sweepaway_4D_Bplaquettes_fullmatrix!(
     origin::NTuple{Dim,Int64},
     step::BPathStep{Dim},
     B::Bfield{T,Dim},
-    temps::Array{T,1}, # length(temps) >= 4
+    temps::Array{T,1},
 ) where {T<:AbstractGaugefields,Dim}
-    Unew = temps[1]
     direction = Int(step.direction)
-    isU1dag = step.isdag
     coordinate = step.coordinate
+    Unew = temps[1]
 
-    substitute_U!(Unew, uout)
-    Ushift = shift_U(Unew, (0, 0, 0, 0))
-
-    if direction == 1
-        if isU1dag
-            Bshift12 = shift_U(B[1, 2], (0, 0, 0, 0))
-            Bshift13 = shift_U(B[1, 3], (0, 0, 0, 0))
-            Bshift14 = shift_U(B[1, 4], (0, 0, 0, 0))
-        else
-            Bshift12 = shift_U(B[1, 2], (0, 0, 0, 0))'
-            Bshift13 = shift_U(B[1, 3], (0, 0, 0, 0))'
-            Bshift14 = shift_U(B[1, 4], (0, 0, 0, 0))'
-        end
-
-        Bshift12new = temps[2]
-        Bshift13new = temps[3]
-        Bshift14new = temps[4]
-
-        for ix = 1:abs(coordinate[1])
-            if coordinate[1] > 0
-                substitute_U!(Bshift12new, Bshift12)
-                Bshift12 = shift_U(Bshift12new, (1, 0, 0, 0))
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (1, 0, 0, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (1, 0, 0, 0))
-            else # coordinate[1] < 0
-                substitute_U!(Bshift12new, Bshift12)
-                Bshift12 = shift_U(Bshift12new, (-1, 0, 0, 0))
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (-1, 0, 0, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (-1, 0, 0, 0))
+    for transverse in (direction + 1):Dim
+        displacement = coordinate[transverse]
+        displacement == 0 && continue
+        offsets = displacement > 0 ?
+                  (0:(displacement - 1)) : (-1:-1:displacement)
+        Bdag = displacement > 0 ? !step.isdag : step.isdag
+        for offset in offsets
+            Bshift = ntuple(Dim) do axis
+                axis < transverse ? coordinate[axis] :
+                axis == transverse ? offset : 0
+            end
+            # Shift the original plane directly. Repeatedly copying a
+            # shifted view back onto its parent aliases on wing backends.
+            shifted_B = shift_U(B[direction, transverse], Bshift)
+            try
+                substitute_U!(Unew, uout)
+                multiply_12!(uout, Unew, shifted_B, 0, Bdag, false)
+            finally
+                _release_center_input!(shifted_B)
             end
         end
-
-        for iy = 1:abs(coordinate[2])
-            if coordinate[2] > 0
-                multiply_12!(uout, Ushift, Bshift12, 0, false, false)
-
-                substitute_U!(Bshift12new, Bshift12)
-                Bshift12 = shift_U(Bshift12new, (0, 1, 0, 0))
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0, 1, 0, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, 1, 0, 0))
-            else # coordinate[2] < 0
-                substitute_U!(Bshift12new, Bshift12)
-                Bshift12 = shift_U(Bshift12new, (0, -1, 0, 0))
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0, -1, 0, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, -1, 0, 0))
-
-                multiply_12!(uout, Ushift, Bshift12, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-
-        end
-
-        for iz = 1:abs(coordinate[3])
-            if coordinate[3] > 0
-                multiply_12!(uout, Ushift, Bshift13, 0, false, false)
-
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0, 0, 1, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, 0, 1, 0))
-            else # coordinate[3] < 0
-                substitute_U!(Bshift13new, Bshift13)
-                Bshift13 = shift_U(Bshift13new, (0, 0, -1, 0))
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, 0, -1, 0))
-
-                multiply_12!(uout, Ushift, Bshift13, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-
-        end
-
-        for it = 1:abs(coordinate[4])
-            if coordinate[4] > 0
-                multiply_12!(uout, Ushift, Bshift14, 0, false, false)
-
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, 0, 0, 1))
-            else # coordinate[4] < 0
-                substitute_U!(Bshift14new, Bshift14)
-                Bshift14 = shift_U(Bshift14new, (0, 0, 0, -1))
-
-                multiply_12!(uout, Ushift, Bshift14, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-
-        end
-    elseif direction == 2
-        if isU1dag
-            Bshift23 = shift_U(B[2, 3], (0, 0, 0, 0))
-            Bshift24 = shift_U(B[2, 4], (0, 0, 0, 0))
-        else
-            Bshift23 = shift_U(B[2, 3], (0, 0, 0, 0))'
-            Bshift24 = shift_U(B[2, 4], (0, 0, 0, 0))'
-        end
-
-        Bshift23new = temps[2]
-        Bshift24new = temps[3]
-
-        for ix = 1:abs(coordinate[1])
-            if coordinate[1] > 0
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (1, 0, 0, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (1, 0, 0, 0))
-            else # coordinate[1] < 0
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (-1, 0, 0, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (-1, 0, 0, 0))
-            end
-        end
-
-        for iy = 1:abs(coordinate[2])
-            if coordinate[2] > 0
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0, 1, 0, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, 1, 0, 0))
-            else # coordinate[2] < 0
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0, -1, 0, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, -1, 0, 0))
-            end
-        end
-
-        for iz = 1:abs(coordinate[3])
-            if coordinate[3] > 0
-                multiply_12!(uout, Ushift, Bshift23, 0, false, false)
-
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0, 0, 1, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, 0, 1, 0))
-            else # coordinate[3] < 0
-                substitute_U!(Bshift23new, Bshift23)
-                Bshift23 = shift_U(Bshift23new, (0, 0, -1, 0))
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, 0, -1, 0))
-
-                multiply_12!(uout, Ushift, Bshift23, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-
-        end
-
-        for it = 1:abs(coordinate[4])
-            if coordinate[4] > 0
-                multiply_12!(uout, Ushift, Bshift24, 0, false, false)
-
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, 0, 0, 1))
-            else # coordinate[4] < 0
-                substitute_U!(Bshift24new, Bshift24)
-                Bshift24 = shift_U(Bshift24new, (0, 0, 0, -1))
-
-                multiply_12!(uout, Ushift, Bshift24, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-        end
-    elseif direction == 3
-        if isU1dag
-            Bshift34 = shift_U(B[3, 4], (0, 0, 0, 0))
-        else
-            Bshift34 = shift_U(B[3, 4], (0, 0, 0, 0))'
-        end
-
-        Bshift34new = temps[2]
-
-        for ix = 1:abs(coordinate[1])
-            if coordinate[1] > 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (1, 0, 0, 0))
-            else # coordinate[1] < 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (-1, 0, 0, 0))
-            end
-        end
-
-        for iy = 1:abs(coordinate[2])
-            if coordinate[2] > 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, 1, 0, 0))
-            else # coordinate[2] < 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, -1, 0, 0))
-            end
-        end
-
-        for iz = 1:abs(coordinate[3])
-            if coordinate[3] > 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, 0, 1, 0))
-            else # coordinate[3] < 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, 0, -1, 0))
-            end
-        end
-
-        for it = 1:abs(coordinate[4])
-            if coordinate[4] > 0
-                multiply_12!(uout, Ushift, Bshift34, 0, false, false)
-
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, 0, 0, 1))
-            else # coordinate[4] < 0
-                substitute_U!(Bshift34new, Bshift34)
-                Bshift34 = shift_U(Bshift34new, (0, 0, 0, -1))
-
-                multiply_12!(uout, Ushift, Bshift34, 0, true, false)
-            end
-
-            substitute_U!(Unew, uout)
-            Ushift = shift_U(Unew, origin)
-
-        end
-    else
-        # direction==4: no multiplications
     end
+    return nothing
 end
 
 
@@ -1651,7 +1377,11 @@ function construct_staple!(
             mul!(U1, U[ν], B[ν, μ])
         end
         U2 = shift_U(U[μ], ν)
-        mul!(U1U2, U1, U2)
+        try
+            mul!(U1U2, U1, U2)
+        finally
+            _release_center_input!(U2)
+        end
 
         U3 = shift_U(U[ν], μ)
         if firstterm
@@ -1660,7 +1390,11 @@ function construct_staple!(
         else
             β = 1
         end
-        mul!(staple, U1U2, U3', 1, β)
+        try
+            mul!(staple, U1U2, U3', 1, β)
+        finally
+            _release_center_input!(U3)
+        end
     end
     set_wing_U!(staple)
 end

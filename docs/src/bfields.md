@@ -106,6 +106,25 @@ This now uses B in its force and agrees with
 For other loop actions, use `Gradientflow_general_Bfields`. Flow updates U
 but leaves B unchanged.
 
+Rectangle actions can be used in the same way:
+
+~~~julia
+g = Gradientflow_general_Bfields(
+    U, B, ["plaquette", "rectangular"], [1.0, 0.1]; eps=0.005, Nflow=1)
+flow!(U, B, g)
+~~~
+
+With identity B planes, this must agree with `Gradientflow_general` for
+the same links, loop coefficients, and flow parameters. The v1.1.11
+rectangle fix restores this property on both serial and LatticeMatrices
+backends. It also fixes shifted-plane aliasing on serial wing storage and
+returns LatticeMatrices shift buffers without waiting for garbage
+collection. These correctness fixes also apply to `:legacy`; affected
+rectangle results from v1.1.10 and earlier are intentionally not preserved.
+After `substitute_U!(B, Bnew)`, an existing flow object reads the new B
+values without rebuilding its geometric path cache. Flow itself still
+evolves only U, not B.
+
 ## Select the evaluation method
 
 Gaugefields v1.1.8 provides three evaluation choices. They initialize the

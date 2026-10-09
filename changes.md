@@ -1,5 +1,48 @@
 # Changes
 
+## v1.1.11
+
+### B-field rectangle flow and temporary storage
+
+- Keep the Wilson-link product at its original site while multiplying B
+  factors. The path coordinates already include the origin; translating
+  the accumulated product after each factor incorrectly changed displaced
+  rectangle staples, even when every B plane was the identity.
+- Evaluate full-matrix B factors by shifting the original plane directly.
+  Avoid copying a shifted view back into its own parent, which corrupted
+  nontrivial B factors on the serial wing backend.
+- Reuse the B-free Wilson-link evaluator's shifted-buffer lifecycle and
+  release each full-matrix B shift in a `finally` block. This prevents
+  no-wing LatticeMatrices calculations from exhausting the scratch pool
+  before garbage collection returns abandoned shifted buffers.
+  Also release shifts used by full-matrix B plaquette measurements.
+- Apply the fixes to optimized scalar, cached matrix, and `:legacy` modes.
+  The legacy option still recomputes geometry and uses full matrices; it
+  does not preserve the erroneous rectangle results. No LM changes or
+  new dependency version are required.
+- Add SU(2)/SU(3) rectangle gradient-flow regressions for serial and
+  LatticeMatrices backends, wing/no-wing storage, and all evaluation
+  modes. Check identity-B versus B-free flow, action finite differences,
+  cross-backend derivatives/flow, unchanged B during flow, in-place B
+  updates with reused flow objects, and deterministic scratch release.
+  The same tests are included in the two-rank MPI B-field entry point.
+- In the matched 4^4, one-step (`eps=0.005`) plaquette + 0.1 rectangle
+  comparison, the serial identity-B versus B-free link discrepancy drops
+  from `3.4869013748546063e-3` to zero for SU(2), and from approximately
+  `2.115994938519e-3` to zero for SU(3). For the same inputs, corrected
+  LM and serial derivatives agree exactly; rectangle-flow link differences
+  are zero for SU(2) and below `7.4e-14` for SU(3), including nontrivial B
+  and serial wing/no-wing modes. These are correctness checks, not timing
+  benchmarks or a claim of bitwise agreement across all backends.
+- Validation with Julia 1.11.8, registered LM 1.2.8, and JACC 1.4.0:
+  the existing serial B suite passes 817 checks; an additional tflux/tloop,
+  real/complex-coefficient repeated-flow probe passes 512 checks. The new
+  regression suite `test/Btest/gradientflow_regressions.jl`
+  passes 722 checks in serial and 722 on each of two MPI ranks, including
+  360 identity-factor/scratch/measurement checks with scratch capacity
+  capped at 8. The existing MPI B suite also passes 879 checks per rank.
+  GPU hardware validation has not been rerun for this GF correction.
+
 ## v1.1.10
 
 ### Compact LatticeMatrices B fields
