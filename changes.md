@@ -80,6 +80,8 @@ Enzyme users must add `Enzyme` as a direct dependency. See the
 
 ## v1.1.12
 
+- Require LatticeMatrices 1.2.11 or a later compatible 1.x release for the
+  Float32 matrix-exponential and kernel-precision fixes used by gauge smearing.
 - Preserve Float32 arithmetic in general SU(N) Lie-algebra kernels and convert
   portable JLD2 arrays to the destination precision before device transfer.
 - Add checked NERSC SU(3) input and output through `format=:nersc`, including
