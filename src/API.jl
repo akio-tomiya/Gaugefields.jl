@@ -695,9 +695,12 @@ function _load_portable_jld2_lm!(U, links, metadata, communicator)
         metadata.lattice...,
     )
     first_link = first(U)
+    # Convert on the host: a device without Float64 (Metal) cannot hold the
+    # file's element type even temporarily.
+    target_type = eltype(first_link.U.A)
     for direction in eachindex(U)
-        global_link = rank == 0 ? links[direction] :
-            Array{metadata.element_type}(undef, expected_size)
+        global_link = rank == 0 ? Array{target_type}(links[direction]) :
+            Array{target_type}(undef, expected_size)
         temporary = LatticeMatrix(
             global_link,
             metadata.dimension,
@@ -731,7 +734,7 @@ function _load_portable_jld2_legacy!(U, links, metadata)
 end
 
 """
-Save a gauge configuration in JLD2, Bridge, or ILDG format. Portable JLD2
+Save a gauge configuration in JLD2, Bridge, ILDG, or NERSC format. Portable JLD2
 output gathers physical links to rank 0 and stores backend-independent host
 arrays; all ranks owning a distributed configuration must participate.
 """
@@ -744,17 +747,19 @@ function save_configuration(filename, U; format::Symbol=:jld2, kwargs...)
             _write_portable_jld2(filename, U, links)
         end
         return nothing
+    elseif format === :nersc
+        return _save_nersc(filename, U; kwargs...)
     elseif format === :bridge
         isempty(kwargs) || throw(ArgumentError("Bridge output does not accept format keywords"))
         return save_textdata(U, filename)
     elseif format === :ildg
         return save_binarydata(U, filename; kwargs...)
     end
-    throw(ArgumentError("format must be :jld2, :bridge, or :ildg; got $format"))
+    throw(ArgumentError("format must be :jld2, :bridge, :ildg, or :nersc; got $format"))
 end
 
 """
-Load a portable JLD2 gauge configuration. The destination is allocated on the
+Load a portable JLD2 or NERSC gauge configuration. The destination is allocated on the
 current JACC backend and communicator; `process_grid` and `comm` may differ
 from those used when the file was written.
 """
@@ -769,13 +774,22 @@ function load_configuration(
     eltype=nothing,
     verbose::Integer=0,
 )
-    format === :jld2 || throw(ArgumentError(
-        "allocating load currently supports only format=:jld2; " *
+    format in (:jld2, :nersc) || throw(ArgumentError(
+        "allocating load supports format=:jld2 or :nersc; " *
         "use load_configuration! for Bridge or ILDG",
     ))
     communicator = backend isa LatticeMatricesBackend ?
         _initialize_gauge_communicator(comm) : nothing
-    metadata = _collective_portable_jld2_metadata(filename, communicator)
+    metadata = if format === :nersc
+        value = _portable_jld2_root_operation(communicator) do
+            open(filename, "r") do io
+                _nersc_checked_metadata(io, filename)
+            end
+        end
+        isnothing(communicator) ? value : broadcast(value, 0, communicator)
+    else
+        _collective_portable_jld2_metadata(filename, communicator)
+    end
     if metadata === nothing
         isnothing(communicator) || comm_size(communicator) == 1 || throw(
             ArgumentError(
@@ -800,13 +814,15 @@ function load_configuration(
         eltype=target_element_type,
         verbose,
     )
-    load_configuration!(U, filename; format=:jld2)
+    load_configuration!(U, filename; format)
     return U
 end
 
 """Load a gauge configuration into an existing target."""
 function load_configuration!(U, filename; format::Symbol=:jld2)
-    if format === :jld2
+    if format === :nersc
+        return _load_nersc!(U, filename)
+    elseif format === :jld2
         communicator = gauge_communicator(U)
         metadata = _collective_portable_jld2_metadata(filename, communicator)
         if metadata === nothing
@@ -847,7 +863,7 @@ function load_configuration!(U, filename; format::Symbol=:jld2)
     elseif format === :ildg
         load_binarydata!(U, filename)
     else
-        throw(ArgumentError("format must be :jld2, :bridge, or :ildg; got $format"))
+        throw(ArgumentError("format must be :jld2, :bridge, :ildg, or :nersc; got $format"))
     end
     return U
 end

@@ -4,6 +4,10 @@ JACC.@init_backend
 using Gaugefields
 using Test
 using Random
+
+include("float32_precision.jl")
+include("float32_dynamics.jl")
+include("nersc_io.jl")
 import Wilsonloop: loops_staple
 
 @testset "High-level API" begin

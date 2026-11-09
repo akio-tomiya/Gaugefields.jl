@@ -1,5 +1,18 @@
 # Changes
 
+## Unreleased
+
+- Preserve Float32 arithmetic in general SU(N) Lie-algebra kernels and convert
+  portable JLD2 arrays to the destination precision before device transfer.
+- Add checked NERSC SU(3) input and output through `format=:nersc`, including
+  two-row and full-matrix payloads, IEEE32/IEEE64, and both byte orders.
+  Validate the checksum, plaquette, and link trace before modifying a target.
+- Support allocating and in-place NERSC loading on the current JACC backend
+  and MPI decomposition using collective host staging. Output accepts
+  `precision=32|64`, `endian=:big|:little`, and `compressed=true|false`.
+- Add precision, smearing, force, MD reversibility, format round-trip,
+  cross-format, and malformed-file regressions.
+
 ## v1.1.11
 
 ### B-field rectangle flow and temporary storage

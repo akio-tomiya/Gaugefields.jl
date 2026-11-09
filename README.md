@@ -1,5 +1,7 @@
 # Gaugefields
 
+Unreleased changes preserve Float32 precision and add checked NERSC configuration I/O for JACC and MPI fields; see [changes.md](changes.md).
+
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
 
