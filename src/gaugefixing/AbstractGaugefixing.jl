@@ -34,7 +34,9 @@ import ..AbstractGaugefields_module: unit_U!
 import LatticeMatrices:
     LatticeMatrix,
     delinearize,
-    normalize_matrix!
+    ensure_halo!,
+    normalize_matrix!,
+    parallel_for_mutating!
 
 # The common layer contains only control flow and operations expressed through
 # the AbstractGaugefields interface.  Concrete kernels are supplied below by
