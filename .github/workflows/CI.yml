@@ -178,3 +178,4 @@ jobs:
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/heatbath_full_sweep_su3.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --startup-file=no --project=mpi-test test/MPIJACCtest/ildg_io.jl
           mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_legacy_backends.jl
+          mpi-test/bin/mpiexecjl --project=mpi-test -n 2 julia --threads=1 --startup-file=no --project=mpi-test test/MPIJACCtest/gaugefixing_fused.jl

@@ -2,6 +2,8 @@
 
 ## Previous release highlights
 
+Gaugefields.jl v1.1.12 preserves Float32 precision and adds checked NERSC configuration I/O for CPU, GPU, MPI, and MPI+GPU fields through JACC.
+
 Gaugefields.jl reached its first stable major release with v1.0.0.
 
 Gaugefields.jl v1.1.11 fixes B-field rectangle forces/gradient flow and shifted-buffer lifetime across serial and LatticeMatrices backends, including legacy evaluation.
@@ -78,10 +80,30 @@ Enzyme users must add `Enzyme` as a direct dependency. See the
 [high-level API](docs/src/highlevelapi.md) and
 [Legacy API migration map](docs/src/legacyapi.md#migration-map).
 
-## v1.1.12
+## v1.1.13
 
 - Require LatticeMatrices 1.2.11 or a later compatible 1.x release for the
   Float32 matrix-exponential and kernel-precision fixes used by gauge smearing.
+  The registered v1.1.12 package still allowed LatticeMatrices 1.2.8 through
+  1.2.10, which can produce NaNs in Float32 SU(3) stout smearing.
+- Include the dependency correction merged in PR #193 in a new patch release,
+  so package resolution excludes affected LatticeMatrices versions without
+  requiring an application-level compatibility override.
+- Incorporate PR #189: fuse MPILattice gauge-fixing sums, transformations,
+  and convergence residuals into JACC site kernels. Exchange link halos before
+  neighbour reads and refresh all link halos before returning, including after
+  convergence exits.
+- Keep the fused SU(2), SU(3), and general-color projections in the field's
+  real precision, avoiding Float64 intermediates for ComplexF32 fields.
+- Preserve halo-free gauge fixing through the existing field shifts and MPI
+  communication instead of reading beyond the stored core.
+- Add common CPU/GPU/MPI regressions for Coulomb and Landau gauge, Float32 and
+  Float64, odd local checkerboard extents, spatial/temporal decompositions,
+  halo widths zero through two, and gauge-invariant plaquettes. Run the
+  distributed regression in the two-rank MPI CI job.
+
+## v1.1.12
+
 - Preserve Float32 arithmetic in general SU(N) Lie-algebra kernels and convert
   portable JLD2 arrays to the destination precision before device transfer.
 - Add checked NERSC SU(3) input and output through `format=:nersc`, including

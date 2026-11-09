@@ -49,6 +49,8 @@ end
     include("gaugefixing_lm.jl")
 end
 
+include("gaugefixing_fused.jl")
+
 @testset "Gauge-fixing backend agreement" begin
     include("gaugefixing_backends.jl")
 end

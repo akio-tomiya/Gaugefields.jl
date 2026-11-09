@@ -1,6 +1,6 @@
 # Gaugefields
 
-Version 1.1.12 preserves Float32 precision and adds checked NERSC configuration I/O for CPU, GPU, MPI, and MPI+GPU fields through JACC; see [changes.md](changes.md).
+Version 1.1.13 adds fused JACC gauge fixing from PR #189 for CPU, GPU, MPI, and MPI+GPU and requires LatticeMatrices 1.2.11 to prevent Float32 stout-smearing NaNs; see [changes.md](changes.md).
 
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
