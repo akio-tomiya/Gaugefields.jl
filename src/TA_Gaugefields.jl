@@ -35,7 +35,8 @@ end
     end
 
     for diagonal = 1:(NC-1)
-        normalization = sqrt(diagonal * (diagonal + 1) / 2)
+        # Keep the arithmetic in the coefficients' precision (Metal has no Float64).
+        normalization = sqrt(eltype(coefficients)(diagonal * (diagonal + 1)) / 2)
         value = im * coefficients[basis, 1, coefficient_indices...] /
                 (2 * normalization)
         for ic = 1:diagonal
@@ -96,7 +97,7 @@ end
         diagonal_sum -= diagonal * imag(
             input[diagonal+1, diagonal+1, input_indices...],
         )
-        normalization = sqrt(diagonal * (diagonal + 1) / 2)
+        normalization = sqrt(eltype(output)(diagonal * (diagonal + 1)) / 2)
         output[basis, 1, output_indices...] +=
             factor * diagonal_sum / normalization
         basis += 1
@@ -111,7 +112,7 @@ function _sun_traceless_antihermitian_add!(output, factor, input, NC)
         _kernel_sun_traceless_antihermitian_add!,
         output.a.A,
         input.U.A,
-        factor,
+        eltype(output.a.A)(factor),  # a Float64 factor cannot enter a Metal kernel
         NC,
         input.U.indexer,
         output.a.nw,

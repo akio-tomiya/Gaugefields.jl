@@ -385,6 +385,7 @@ export Traceless_AntiHermitian
 
 include("./molecular_dynamics.jl")
 include("./API.jl")
+include("./output/nersc.jl")
 include("./lcnn/LCNN.jl")
 
 const LCNNLinkSmearing = LCNN.LCNNLinkSmearing

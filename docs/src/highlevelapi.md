@@ -198,8 +198,8 @@ load_configuration(filename; format=:jld2, process_grid=nothing, comm=nothing,
 load_configuration!(U, filename; format=:jld2)
 ```
 
-`save_configuration` and `load_configuration!` accept `:jld2`, `:bridge`, and
-`:ildg`. Allocating `load_configuration` currently accepts only `:jld2`;
+`save_configuration` and `load_configuration!` accept `:jld2`, `:bridge`,
+`:ildg`, and `:nersc`. Allocating `load_configuration` accepts `:jld2` and `:nersc`;
 Bridge and ILDG input require a preallocated destination.
 
 JLD2 is the portable Gaugefields checkpoint format. During output, all ranks
@@ -215,6 +215,34 @@ layout. Legacy object-serialized JLD2 files remain readable on one rank.
 
 ILDG output creates unique temporary paths in the output directory and removes
 them after packing; all ranks in `gauge_communicator(U)` must participate.
+
+### NERSC configurations
+
+```julia
+U = load_configuration("ensemble.nersc"; format=:nersc, eltype=ComplexF32)
+load_configuration!(U, "ensemble.nersc"; format=:nersc)
+save_configuration("copy.nersc", U; format=:nersc,
+                   precision=32, endian=:big, compressed=true)
+```
+
+NERSC I/O supports four-dimensional SU(3): `4D_SU3_GAUGE` stores two rows
+and reconstructs the third, while `4D_SU3_GAUGE_3x3` stores all entries.
+IEEE32/IEEE64 payloads support explicit `BIG` and `LITTLE` suffixes.
+For unsuffixed labels, the reader accepts the byte order that passes all
+validation checks. Output always uses an explicit byte-order suffix.
+
+The reader checks the payload size, unsigned 32-bit checksum, plaquette,
+and average real link trace before changing the destination. Observable
+checks use absolute and relative tolerances of `5e-6` for IEEE32 and
+`5e-8` for IEEE64, allowing rounded header values. Missing required fields,
+nonfinite values, truncated payloads, and mismatches raise an error.
+
+All ranks in the configuration communicator must participate in I/O.
+Rank zero stages the global configuration and validates file data on the
+host; existing LatticeMatrices communication distributes links to the
+requested MPI layout and JACC device. File values are converted to the
+requested precision before device transfer. Root memory therefore scales
+with the global configuration size. No device-specific I/O dependency is needed.
 
 ## Molecular dynamics
 

@@ -1,86 +1,9 @@
 # Gaugefields
 
+Version 1.1.12 preserves Float32 precision and adds checked NERSC configuration I/O for CPU, GPU, MPI, and MPI+GPU fields through JACC; see [changes.md](changes.md).
+
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)
 [![v1 documentation](https://img.shields.io/badge/docs-v1-blue.svg)](https://akio-tomiya.github.io/Gaugefields.jl/v1/)
-
-🎉 **Gaugefields.jl v1 is available!**
-
-Gaugefields.jl reached its first stable major release with v1.0.0.
-
-Gaugefields.jl v1.1.11 fixes B-field rectangle forces/gradient flow and shifted-buffer lifetime across serial and LatticeMatrices backends, including legacy evaluation; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.10 requires the registered LatticeMatrices v1.2.8 or later compatible 1.x release and adds compact B-field storage with optimized JACC multiplication while retaining matrix/legacy modes; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.9 fixes B-field measurements, wing initialization, and gradient flow, and adds B-aware molecular dynamics while retaining the v1.1.8 evaluation optimizations and legacy mode; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.7 adds configurable lattice gauge-equivariant neural
-networks, learned `LExp` link smearing, Enzyme link/parameter differentiation,
-and optional HDF5 + Optimisers training; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.6 adds fused force projection, link-only stout pullback, and trajectory-level PQP kick fusion; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.5 adds native APE, stout/EXP, HYP, HEX, and QEX-compatible nHYP smearing, analytic pullbacks, and smeared GaugeAction providers for HMC on LatticeMatrices-backed 4D fields; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.4 adds an opt-in Grid/Bridge++ momentum normalization to
-the MD driver while preserving the historical default; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.3 adds shared STOUT pullbacks for legacy CUDA and MPI fields, faster serial ILDG loading, and public MPI-safe `normalize_U!`; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.2 fixes rectangle-stout temporary storage; see [changes.md](changes.md).
-
-Gaugefields.jl v1.1.1 adds Landau and Coulomb gauge fixing, improves
-LatticeMatrices updates, and restores fast local-volume ILDG loading; see
-[changes.md](changes.md).
-
-Gaugefields.jl v1.1.0 made MPI.jl optional while preserving serial, GPU, MPI,
-and multi-GPU execution.
-
-## What's fixed in v1.0.3
-
-- Empty `Vector{Union{}}` values now retain Base's normal `similar` behavior
-  instead of ambiguously matching every gauge-field-vector specialization.
-  This keeps Pkg/TOML operations usable after Gaugefields has been loaded.
-
-## What's fixed in v1.0.1
-
-- Enzyme MD differentiates the underlying LatticeMatrices links directly,
-  avoiding Julia 1.12 failures involving composite gauge-field and lazy
-  shifted/adjoint wrappers.
-- `mul_shifted!`, `mul_shifted_adjoint!`, and `mul_adjoint!` provide clear,
-  Enzyme-safe lattice-product operations for custom potentials.
-- The Enzyme guide now includes the Julia 1.12-compatible potential contract
-  and complete plaquette/HMC examples.
-
-## What's new in v1.0.0
-
-Compared with the previous release, v0.7.3, v1.0.0 adds and stabilizes:
-
-- **A new high-level API** centered on `gauge_configuration`. It returns a
-  vector of `Dim` gauge-link fields, uses the LatticeMatrices backend by
-  default, and has a default halo width of one.
-- **Portable 2D, 3D, and 4D execution** with
-  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.1
-  and [JACC.jl](https://github.com/JuliaORNL/JACC.jl), covering threaded CPUs,
-  NVIDIA, AMD, and Intel GPUs, MPI domain decomposition, and multi-GPU jobs.
-- **Portable update and analysis workflows**, including plaquette and general
-  Wilson-loop actions, heatbath and overrelaxation, gradient flow, 4D stout
-  smearing, special initial configurations, and configuration I/O.
-- **Decomposition-independent random-number streams** for seeded LM hot
-  starts, Gaussian momenta, and heatbath updates, with explicit seeds and
-  sweep counters for reproducible simulations.
-- **A deterministic molecular-dynamics driver** with `QPQ()`, `PQP()`, and
-  user-defined integrators, plus optional Enzyme-based action derivatives.
-- **A reorganized v1 manual** with four-dimensional examples first, dedicated
-  MPI/GPU, randomness, HMC, Enzyme, and Wilson-action guides, and the complete
-  historical interface collected on one Legacy API page.
-
-**Upgrading from v0.7:** Existing programs using `Initialize_Gaugefields` and
-the historical API remain supported and retain their legacy backend and
-defaults. New programs should use `gauge_configuration`, whose default backend
-is LatticeMatrices. Gaugefields v1.1 requires LatticeMatrices v1.2 or later;
-Enzyme users must add `Enzyme` as a direct dependency. See the
-[high-level API](docs/src/highlevelapi.md) and
-[Legacy API migration map](docs/src/legacyapi.md#migration-map).
 
 # Abstract
 
