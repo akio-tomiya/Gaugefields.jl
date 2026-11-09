@@ -50,7 +50,7 @@ This package has following functionarities
     - quenched HMC with MPI being subject to 't Hooft twisted b.c.
 
 - Portable GPU and multi-GPU computation through
-  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.2.0
+  [LatticeMatrices.jl](https://github.com/cometscome/LatticeMatrices.jl) v1.2.11
   and [JACC.jl](https://github.com/JuliaORNL/JACC.jl). See the
   [GPU and multi-GPU tutorial](docs/src/tutorial4d.md#multiple-gpus-with-mpi).
     - NVIDIA GPUs through CUDA.jl
