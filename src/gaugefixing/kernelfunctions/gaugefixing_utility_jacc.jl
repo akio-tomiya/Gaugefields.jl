@@ -154,7 +154,9 @@ end
 
 # Traceless antihermitian part, as LatticeMatrices.kernel_traceless_antihermitian!.
 @inline function _traceless_antihermitian_local!(out, v, ::Val{3})
-    fac13 = 1 / 3
+    RT = typeof(real(zero(eltype(out))))
+    fac13 = RT(1 / 3)
+    half = RT(0.5)
     @inbounds begin
         v11 = v[1, 1]; v21 = v[2, 1]; v31 = v[3, 1]
         v12 = v[1, 2]; v22 = v[2, 2]; v32 = v[3, 2]
@@ -169,30 +171,34 @@ end
         x21 = -conj(x12)
         x31 = -conj(x13)
         x32 = -conj(x23)
-        out[1, 1] = y11; out[2, 1] = 0.5 * x21; out[3, 1] = 0.5 * x31
-        out[1, 2] = 0.5 * x12; out[2, 2] = y22; out[3, 2] = 0.5 * x32
-        out[1, 3] = 0.5 * x13; out[2, 3] = 0.5 * x23; out[3, 3] = y33
+        out[1, 1] = y11; out[2, 1] = half * x21; out[3, 1] = half * x31
+        out[1, 2] = half * x12; out[2, 2] = y22; out[3, 2] = half * x32
+        out[1, 3] = half * x13; out[2, 3] = half * x23; out[3, 3] = y33
     end
     return nothing
 end
 
 @inline function _traceless_antihermitian_local!(out, v, ::Val{2})
+    RT = typeof(real(zero(eltype(out))))
+    half = RT(0.5)
     @inbounds begin
         v11 = v[1, 1]; v22 = v[2, 2]
-        tri = (imag(v11) + imag(v22)) * 0.5
+        tri = (imag(v11) + imag(v22)) * half
         x12 = v[1, 2] - conj(v[2, 1])
         x21 = -conj(x12)
         out[1, 1] = (imag(v11) - tri) * im
-        out[1, 2] = 0.5 * x12
-        out[2, 1] = 0.5 * x21
+        out[1, 2] = half * x12
+        out[2, 1] = half * x21
         out[2, 2] = (imag(v22) - tri) * im
     end
     return nothing
 end
 
 @inline function _traceless_antihermitian_local!(out, v, ::Val{N}) where {N}
-    fac1N = 1 / N
-    tri = 0.0
+    RT = typeof(real(zero(eltype(out))))
+    half = RT(0.5)
+    fac1N = one(RT) / N
+    tri = zero(RT)
     @inbounds for k in 1:N
         tri += imag(v[k, k])
     end
@@ -201,7 +207,7 @@ end
         out[k, k] = (imag(v[k, k]) - tri) * im
     end
     @inbounds for k1 in 1:N, k2 in (k1 + 1):N
-        vv = 0.5 * (v[k1, k2] - conj(v[k2, k1]))
+        vv = half * (v[k1, k2] - conj(v[k2, k1]))
         out[k1, k2] = vv
         out[k2, k1] = -conj(vv)
     end

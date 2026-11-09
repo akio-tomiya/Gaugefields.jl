@@ -160,6 +160,15 @@ function gaugefixing_step_sd!(
     D_fix=4,
 ) where {NC,T<:Gaugefields_4D_MPILattice}
     G = g_transform.U
+    # The fused kernels address the neighbouring halo directly. Halo-free
+    # storage instead uses the existing materialized shifts, including MPI.
+    if G.nw == 0
+        for parity in (0, 1)
+            make_g_steepest_descent!(U, g_transform, Δ, parity, overrelax, temps, D_fix)
+            gUgshift!(U, g_transform, temps[1])
+        end
+        return nothing
+    end
     RT = typeof(real(zero(eltype(G.A))))
     for parity in (0, 1)
         _ensure_link_halos!(U, D_fix)
@@ -186,6 +195,14 @@ function gaugefixing_step_la!(
     # they multiply StaticArrays matrices, whose fused multiply-adds depend on the
     # surrounding code, and the result would otherwise differ in the last bit.
     W = temp.U
+    if W.nw == 0
+        for parity in (0, 1)
+            make_g_los_alamos!(U, g_transform, temp, parity,
+                overrelax, ovr_coeff2, ovr_coeff3, D_fix)
+            gUgshift!(U, g_transform, temp)
+        end
+        return nothing
+    end
     for parity in (0, 1)
         _ensure_link_halos!(U, D_fix)
         parallel_for_mutating!(W, prod(W.PN), jacckernel_los_alamos_sum!,
@@ -204,6 +221,7 @@ function _gaugefixing_delta!(
     temps,
     D_fix,
 ) where {NC,T<:Gaugefields_4D_MPILattice}
+    Δ.U.nw == 0 && return get_Δ!(Δ, U, temps, D_fix)
     _ensure_link_halos!(U, D_fix)
     D = Δ.U
     parallel_for_mutating!(D, prod(D.PN), jacckernel_delta_fused!,

@@ -1,5 +1,19 @@
 # Changes
 
+## Unreleased
+
+- Fuse MPILattice gauge-fixing sums, transformations, and convergence residuals
+  into JACC site kernels. Exchange link halos before neighbour reads and refresh
+  all link halos before returning, including after convergence exits.
+- Keep the fused SU(2), SU(3), and general-color projections in the field's
+  real precision, avoiding Float64 intermediates for ComplexF32 fields.
+- Preserve halo-free gauge fixing through the existing field shifts and MPI
+  communication instead of reading beyond the stored core.
+- Add common CPU/GPU/MPI regressions for Coulomb and Landau gauge, Float32 and
+  Float64, odd local checkerboard extents, spatial/temporal decompositions,
+  halo widths zero through two, and gauge-invariant plaquettes. Run the
+  distributed regression in the two-rank MPI CI job.
+
 ## Previous release highlights
 
 Gaugefields.jl reached its first stable major release with v1.0.0.
