@@ -4,6 +4,14 @@ function make_g_los_alamos! end
 """Backend hook for one steepest-descent checkerboard update."""
 function make_g_steepest_descent! end
 
+# Δ for the convergence test of gaugefixing!; a backend may compute it in fewer
+# passes. Called with the links after a full checkerboard sweep.
+_gaugefixing_delta!(Δ, U, temps, D_fix) = get_Δ!(Δ, U, temps, D_fix)
+
+# Called once before gaugefixing! returns; a backend that defers halo exchanges
+# during the iterations refreshes them here.
+_gaugefixing_finish!(U) = nothing
+
 """Return whether a concrete field has supplied the gauge-fixing hooks."""
 gaugefixing_backend_supported(::AbstractGaugefields) = false
 
@@ -143,7 +151,7 @@ function gaugefixing!(
     norm_g = NC * g_transform.NV
     trace_g = real(tr(g_transform) / norm_g)
 
-    get_Δ!(Δ, U, temps, D_fix)
+    _gaugefixing_delta!(Δ, U, temps, D_fix)
     trace_dAmu_sqr = real(trace_AAdagger(Δ, temps[1]))
 
     println_verbose_level1(
@@ -174,7 +182,7 @@ function gaugefixing!(
 
         trace = real(trace_U(U; D_fix))
         trace_g = real(tr(g_transform) / norm_g)
-        get_Δ!(Δ, U, temps, D_fix)
+        _gaugefixing_delta!(Δ, U, temps, D_fix)
         trace_dAmu_sqr = real(trace_AAdagger(Δ, temps[1]))
 
         if iter >= min(min_iterations, LA_iteration) && trace_dAmu_sqr < tol
@@ -213,7 +221,7 @@ function gaugefixing!(
 
         trace = real(trace_U(U; D_fix))
         trace_g = real(tr(g_transform) / norm_g)
-        get_Δ!(Δ, U, temps, D_fix)
+        _gaugefixing_delta!(Δ, U, temps, D_fix)
         trace_dAmu_sqr = real(trace_AAdagger(Δ, temps[1]))
         diff = abs(trace_prev - trace)
 
@@ -244,6 +252,7 @@ function gaugefixing!(
         end
         flush(stdout)
     end
+    _gaugefixing_finish!(U)
     return U
 end
 

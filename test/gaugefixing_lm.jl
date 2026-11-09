@@ -264,3 +264,67 @@ end
         @test det(matrix) ≈ 1 rtol=3e-5 atol=3e-5
     end
 end
+
+@testset "Fused MPILattice gauge-fixing steps equal the field-level operations" begin
+    # gaugefixing! builds g and transforms the links in fused kernels on
+    # MPILattice fields; each site repeats the arithmetic of the field-level
+    # functions, so the links must agree bit for bit with those functions.
+    M = Gaugefields.AbstractGaugefixing_module
+    start = gauge_configuration(
+        (4, 4, 4, 8);
+        colors=3,
+        start=:hot,
+        seed=UInt64(0x2026),
+        process_grid=(1, 1, 1, 1),
+        verbose=0,
+    )
+    function copy_links(V)
+        W = [similar(v) for v in V]
+        for μ in eachindex(V)
+            Gaugefields.substitute_U!(W[μ], V[μ])
+            Gaugefields.set_wing_U!(W[μ])
+        end
+        return W
+    end
+    core(x) = x.U.A[:, :, 2:(end - 1), 2:(end - 1), 2:(end - 1), 2:(end - 1)]
+    temps = [similar(start[1]) for _ in 1:6]
+    D_fix = 3
+
+    reference = copy_links(start)
+    fused = copy_links(start)
+    Δ_reference = similar(start[1])
+    Δ_fused = similar(start[1])
+    M.get_Δ!(Δ_reference, reference, temps[2:6], D_fix)
+    M._gaugefixing_delta!(Δ_fused, fused, temps[2:6], D_fix)
+    @test core(Δ_fused) == core(Δ_reference)
+
+    # Los Alamos and steepest-descent sweeps over both checkerboards
+    g_reference = similar(start[1])
+    g_fused = similar(start[1])
+    for parity in (0, 1)
+        M.make_g_los_alamos!(reference, g_reference, temps[2], parity,
+            1.7, 0.595, -0.0595, D_fix)
+        M.gUgshift!(reference, g_reference, temps[2])
+    end
+    M.gaugefixing_step_la!(fused, g_fused, 1.7, 0.595, -0.0595, temps[2]; D_fix)
+    @test core(g_fused) == core(g_reference)
+    @test all(core(fused[μ]) == core(reference[μ]) for μ in 1:4)
+
+    for parity in (0, 1)
+        M.make_g_steepest_descent!(reference, g_reference, Δ_reference,
+            parity, 1.99, temps[2:6], D_fix)
+        M.gUgshift!(reference, g_reference, temps[2])
+    end
+    M.gaugefixing_step_sd!(fused, g_fused, Δ_fused, 1.99, temps[2:6]; D_fix)
+    @test core(g_fused) == core(g_reference)
+    @test all(core(fused[μ]) == core(reference[μ]) for μ in 1:4)
+
+    # gaugefixing! defers the link halos during the iterations and sets them
+    # before it returns.
+    gaugefixing!(fused, g_fused, 1.0, 3, 1.99, 3, 0.0, 0, temps; D_fix)
+    for μ in 1:4
+        with_halo = copy(fused[μ].U.A)
+        Gaugefields.set_wing_U!(fused[μ])
+        @test fused[μ].U.A == with_halo
+    end
+end
