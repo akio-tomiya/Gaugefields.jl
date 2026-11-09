@@ -218,12 +218,19 @@ them after packing; all ranks in `gauge_communicator(U)` must participate.
 
 ### NERSC configurations
 
+See [NERSC format](utilities.md#NERSC-format) for the I/O guide, output options,
+and a collective MPI example. `format=:nersc` must be specified explicitly.
+
 ```julia
 U = load_configuration("ensemble.nersc"; format=:nersc, eltype=ComplexF32)
 load_configuration!(U, "ensemble.nersc"; format=:nersc)
 save_configuration("copy.nersc", U; format=:nersc,
                    precision=32, endian=:big, compressed=true)
 ```
+
+Output defaults to `precision=64`, `endian=:big`, and `compressed=false`.
+The allocating loader uses the file precision unless `eltype` is supplied;
+the in-place loader retains the target's precision and execution layout.
 
 NERSC I/O supports four-dimensional SU(3): `4D_SU3_GAUGE` stores two rows
 and reconstructs the third, while `4D_SU3_GAUGE_3x3` stores all entries.

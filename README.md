@@ -42,7 +42,8 @@ This package has following functionarities
     - Gradient flow for SU(Nc)/Z(Nc) gauge theory
 - Landau and Coulomb gauge fixing with Los Alamos and steepest-descent updates
 - I/O: portable JLD2 checkpoints are supported across CPU, GPU, MPI, and
-  multi-GPU execution. ILDG and Bridge++ interoperability is also supported
+  multi-GPU execution, as is checked [NERSC SU(3) I/O](docs/src/utilities.md#NERSC-format).
+  ILDG and Bridge++ interoperability is also supported
   ([c-lime](https://usqcd-software.github.io/c-lime/) is installed implicitly
   with [CLIME_jll](https://github.com/JuliaBinaryWrappers/CLIME_jll.jl)).
 - MPI parallel computation (experimental. See documents.)

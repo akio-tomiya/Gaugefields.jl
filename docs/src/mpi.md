@@ -145,6 +145,12 @@ on host memory and writes one file. Loading reconstructs the destination on
 its current devices and process grid. All ranks must call save and load in the
 same order.
 
+NERSC SU(3) I/O also supports CPU, GPU, MPI, and multi-GPU fields through
+`format=:nersc`, including allocating `load_configuration`. It uses collective
+host staging on rank zero and converts file data to the destination precision
+before device transfer. All ranks participate; see the
+[NERSC I/O guide](utilities.md#NERSC-format) for examples and format options.
+
 ## Reproducibility across decompositions
 
 An explicit `seed` uses global-site streams for LM hot starts, Gaussian

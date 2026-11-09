@@ -104,8 +104,8 @@ heatbath streams. See [Randomness and reproducibility](randomness.md).
 
 ## JLD2
 
-JLD2 is the only format that currently supports allocating the destination
-from the file:
+JLD2 is the default checkpoint format. Both JLD2 and NERSC support allocating
+the destination from the file:
 
 ~~~julia
 save_configuration("configuration.jld2", U)
@@ -138,6 +138,88 @@ Uloaded = load_configuration(
 An in-place load uses the backend, device placement, communicator, and process
 grid already owned by `U`. Thus a file written on multiple GPUs can be read on
 one CPU core, and the reverse direction uses the same file.
+
+## NERSC format
+
+Use `format=:nersc` for four-dimensional SU(3) gauge configurations. Specify
+the format explicitly; the filename extension does not select the reader.
+The allocating loader reads the lattice dimensions from the header:
+
+~~~julia
+using Gaugefields
+
+U = load_configuration("ensemble.nersc"; format=:nersc, eltype=ComplexF32)
+save_configuration("copy.nersc", U; format=:nersc)
+~~~
+
+Omit `eltype` to use the file precision. To reuse a configuration with matching
+lattice dimensions and three colors, load in place:
+
+~~~julia
+load_configuration!(U, "ensemble.nersc"; format=:nersc)
+~~~
+
+An in-place load preserves the destination precision, JACC backend, and MPI
+layout, and refreshes its halos. File values are converted to the destination
+precision on the host before transfer to the device.
+
+### Output precision and compression
+
+~~~julia
+save_configuration("compact.nersc", U; format=:nersc,
+                   precision=32, endian=:little, compressed=true)
+~~~
+
+| Output keyword | Default | Meaning |
+| --- | --- | --- |
+| `precision` | `64` | Store IEEE 32-bit or 64-bit real and imaginary components; choose `32` or `64`. |
+| `endian` | `:big` | Byte order: `:big` or `:little`. |
+| `compressed` | `false` | Store the full matrix, or store two rows and reconstruct the third using the SU(3) relation. |
+
+Output precision is independent of the field precision: saving a ComplexF32
+field with default options writes IEEE64 data without recovering precision
+already lost in the field. Two-row output checks that reconstruction agrees
+with the input within the source/output precision tolerance.
+
+The reader accepts `4D_SU3_GAUGE` (two rows) and `4D_SU3_GAUGE_3x3`
+(full matrix), with IEEE32/IEEE64 and either byte order. Output labels the byte
+order explicitly with `BIG` or `LITTLE`. For unsuffixed `IEEE32` or `IEEE64`,
+the reader selects a byte order only if all validation checks pass.
+
+### MPI and JACC devices
+
+After selecting the application's JACC backend as described in
+[MPI, GPU, and multi-GPU execution](mpi.md), use the same I/O calls on CPU,
+GPU, MPI, or MPI+GPU. For a distributed load, every rank executes:
+
+~~~julia
+using MPI, Gaugefields
+MPI.Initialized() || MPI.Init()
+
+U = load_configuration("ensemble.nersc"; format=:nersc,
+                       comm=MPI.COMM_WORLD, process_grid=:auto,
+                       eltype=ComplexF32)
+save_configuration("distributed-copy.nersc", U; format=:nersc,
+                   precision=32, compressed=true)
+~~~
+
+All ranks in the configuration communicator must call load/save in the same
+order; do not restrict these calls to rank zero. The selected process grid
+must divide the file's lattice dimensions. Rank zero reads or writes one
+global host configuration, and existing LatticeMatrices communication
+distributes or gathers the links. This is collective host-staged I/O, not
+parallel-file I/O; rank-zero memory usage scales with the global volume.
+The file stores physical links, not the process grid, device, or halo buffers.
+
+### Input validation
+
+Before replacing an existing configuration, the loader checks the payload
+size, unsigned 32-bit checksum, plaquette, and average real link trace.
+Observable checks use absolute and relative tolerances of `5e-6` for IEEE32
+and `5e-8` for IEEE64, allowing rounded header values. Invalid headers,
+truncated data, nonfinite values, or mismatches raise an error; a failed file
+validation leaves the existing target unchanged. Under MPI, file-validation
+errors are propagated to all participating ranks.
 
 ## Bridge text format
 

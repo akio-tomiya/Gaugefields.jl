@@ -275,6 +275,19 @@ current JACC backend, while `load_configuration!` redistributes into an
 existing destination. The file does not contain a communicator, process grid,
 device array, or halo storage.
 
+For four-dimensional SU(3), NERSC also supports allocating and in-place loads:
+
+```julia
+save_configuration("configuration.nersc", U; format=:nersc,
+                   precision=32, compressed=true)
+Uloaded = load_configuration("configuration.nersc"; format=:nersc,
+                            eltype=ComplexF32)
+```
+
+These calls use the same collective participation rules on MPI and JACC
+devices. See [NERSC format](utilities.md#NERSC-format) for byte order,
+precision, validation, and distributed-loading examples.
+
 Bridge and ILDG data can be loaded into a configuration whose lattice and
 color sizes have already been specified; see the I/O API for those formats.
 

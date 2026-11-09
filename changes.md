@@ -90,6 +90,8 @@ Enzyme users must add `Enzyme` as a direct dependency. See the
   `precision=32|64`, `endian=:big|:little`, and `compressed=true|false`.
 - Add precision, smearing, force, MD reversibility, format round-trip,
   cross-format, and malformed-file regressions.
+- Document NERSC loading, output options, input validation, and collective
+  MPI/JACC usage in the I/O guide, API reference, and four-dimensional tutorial.
 
 ## v1.1.11
 
