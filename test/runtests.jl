@@ -35,6 +35,8 @@ end
 end
 
 include("performance_feedback.jl")
+include("smearing_output_lifetime.jl")
+test_smearing_output_lifetime()
 
 @testset "Enzyme molecular dynamics" begin
     include("enzyme_md.jl")

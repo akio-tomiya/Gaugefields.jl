@@ -1,5 +1,7 @@
 # Gaugefields
 
+Version 1.1.14 fixes legacy smearing output ownership so that backpropagation and subsequent smearing calls preserve previously returned configurations; see [changes.md](changes.md).
+
 Version 1.1.13 adds fused JACC gauge fixing from PR #189 for CPU, GPU, MPI, and MPI+GPU and requires LatticeMatrices 1.2.11 to prevent Float32 stout-smearing NaNs; see [changes.md](changes.md).
 
 [![CI](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/akio-tomiya/Gaugefields.jl/actions/workflows/CI.yml)

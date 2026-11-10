@@ -1,5 +1,12 @@
 # Changes
 
+## v1.1.14
+
+- Keep legacy `calc_smearedU` / `apply_smearing_U` results independent of the
+  temporary pool, so `back_prop!` and subsequent forward calls preserve every
+  returned layer, including one-layer stout configurations.
+- Add output-lifetime and pullback regressions against the v1 stout API.
+
 ## Previous release highlights
 
 Gaugefields.jl v1.1.12 preserves Float32 precision and adds checked NERSC configuration I/O for CPU, GPU, MPI, and MPI+GPU fields through JACC.

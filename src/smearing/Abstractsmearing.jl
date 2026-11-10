@@ -295,9 +295,10 @@ function apply_smearing_U(
     #F0 = initialize_TA_Gaugefields(Uin[1])
     numlayers = get_numlayers(smearing)
     Uout_multi = Array{typeof(Uin),1}(undef, numlayers)
-    temps_multi, its_temp_multi = get_temp(smearing._temp_U, numlayers * Dim)
+    # Returned configurations must own their storage: back_prop! and later
+    # forward calls reuse the temporary pool after this function returns.
     for i = 1:numlayers
-        Uout_multi[i] = temps_multi[(i-1)*Dim+1:(i-1)*Dim+Dim]#similar(Uin)
+        Uout_multi[i] = map(similar, Uin)
     end
     #apply_neuralnet!(Uout_multi, smearing, Uin, [temp1, temp2, temp3, temp4], [F0])
     #apply_neuralnet!(Uout_multi, smearing, Uin, temps, [F0])
@@ -305,8 +306,6 @@ function apply_smearing_U(
 
     unused!(smearing._temp_U, its_temp1)
     unused!(smearing._temp_UA, its_F0)
-
-    unused!(smearing._temp_U, its_temp_multi)
 
     return Uout_multi
 
