@@ -13,27 +13,36 @@ geometry of a fixed `Wilsonline` remains unchanged.
 
 ## Initialize a B field and action
 
-The compatibility constructor creates a four-dimensional gauge field and a B
-field carrying the requested 't Hooft flux:
+`gauge_configuration` creates a four-dimensional gauge field, and
+`Initialize_Bfields` creates a B field carrying the requested 't Hooft flux.
+With `isMPILattice=true` the B field uses the same LatticeMatrices backend as
+U. Its halo width `NDW` must equal that of U and `PEs` its process grid;
+otherwise `GaugeAction(U, B)` has no matching method:
 
 ~~~julia
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 
 NC = 2
-NDW = 0
+NDW = 1 # the halo width of U
 NX, NY, NZ, NT = 4, 4, 4, 4
 flux = [1, 0, 1, 1, 0, 1]
 
-U = Initialize_Gaugefields(
-    NC, NDW, NX, NY, NZ, NT;
-    condition="hot",
-    randomnumber="Reproducible",
-    verbose_level=0,
+U = gauge_configuration(
+    (NX, NY, NZ, NT);
+    colors=NC,
+    halo=NDW,
+    start=:hot,
+    seed=1234,
 )
 
 B = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
     condition="tflux",
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     verbose_level=0,
 )
 
@@ -141,6 +150,8 @@ The current default is:
 ~~~julia
 B = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
 )
 ~~~
@@ -151,6 +162,8 @@ multiplication, use:
 ~~~julia
 B_cached_fullmatrix = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
     use_center_fastpath=false,
 )
@@ -162,6 +175,8 @@ construction, use:
 ~~~julia
 B_legacy = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
     bfield_evaluation=:legacy,
 )
@@ -261,6 +276,8 @@ cache:
 new_flux = [0, 1, 0, 1, 0, 1]
 Bnew = Initialize_Bfields(
     NC, new_flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
 )
 

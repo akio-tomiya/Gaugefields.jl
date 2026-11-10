@@ -1,168 +1,54 @@
+# Quenched HMC for SU(3) with the Wilson plaquette action at beta = 6.0,
+# written with the Gaugefields v1 MD driver (cold start, 20 QPQ steps of
+# length 1/20 per trajectory, 100 trajectories).
+# Run: julia -t 4 --project=. samplehmc.jl
+# The lattice is 8^4 so that a laptop finishes in a few minutes; the former
+# version of this sample used 16^4.
+import JACC
+JACC.@init_backend
+
 using Gaugefields
-using LinearAlgebra
 using Random
 
-function MDtest!(gauge_action,U,Dim)
-    p = initialize_TA_Gaugefields(U) #This is a traceless-antihermitian gauge fields. This has NC^2-1 real coefficients. 
-    Uold = similar(U)
-    substitute_U!(Uold,U)
-    MDsteps = 20
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    numaccepted = 0
+function main()
+    lattice = (8, 8, 8, 8)
+    U = gauge_configuration(lattice; colors=3, start=:cold)
 
-    Random.seed!(123)
+    beta = 6.0
+    action = GaugeAction(U)
+    plaquettes = make_loops_fromname("plaquette", Dim=4)
+    append!(plaquettes, plaquettes')
+    push!(action, beta / 2, plaquettes)
+    show(action)
 
-    plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println("initial plaq: $plaq_t")
+    md = md_driver(U, action; steps=20, trajectory_length=1.0, integrator=QPQ())
 
+    old_U = copy_configuration(U)
+    p = gauge_momenta(U)
+    metropolis_rng = Xoshiro(123)
+    momentum_seed = 0x5678
+
+    println("initial plaquette = ", measure_plaquette(U))
     numtrj = 100
-    for itrj = 1:numtrj
-        accepted = MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
-        numaccepted += ifelse(accepted,1,0)
+    numaccepted = 0
+    for trajectory in 1:numtrj
+        # A new momentum stream for every trajectory.
+        gaussian_momenta!(p; seed=momentum_seed, sweep=trajectory - 1)
+        copy_configuration!(old_U, U)
 
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        println("$itrj plaq_t = $plaq_t")
-        println("acceptance ratio ",numaccepted/itrj)
+        result = md_trajectory!(U, p, md)
+        dH = result.delta_hamiltonian
+        accepted = log(rand(metropolis_rng)) < min(0, -dH)
+        if accepted
+            numaccepted += 1
+        else
+            copy_configuration!(U, old_U)
+        end
+
+        println("$trajectory plaquette = $(measure_plaquette(U)) ",
+                "deltaH = $dH accepted = $accepted")
     end
+    println("acceptance ratio = ", numaccepted / numtrj)
 end
 
-function calc_action(gauge_action,U,p)
-    NC = U[1].NC
-    Sg = -evaluate_GaugeAction(gauge_action,U)/NC #evaluate_GaugeAction(gauge_action,U) = tr(evaluate_GaugeAction_untraced(gauge_action,U))
-    Sp = p*p/2
-    S = Sp + Sg
-    return real(S)
-end
-
-
-function MDstep!(gauge_action,U,p,MDsteps,Dim,Uold)
-    Δτ = 1/MDsteps
-    NC,_,NN... = size(U[1])
-    for μ=1:Dim
-        pwork = gauss_distribution(prod(NN)*(NC^2-1))
-        substitute_U!(p[μ],pwork)
-    end
-    println(p[1][1,1,1,1,1,1])
-
-    #gauss_distribution!(p)
-    Sold = calc_action(gauge_action,U,p)
-    substitute_U!(Uold,U)
-    println(" Sold $Sold")
-
-    for itrj=1:MDsteps
-        println(itrj,"/$MDsteps")
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-
-        #Si = calc_action(gauge_action,U,p)
-        #println("$itrj Si $Si")
-
-        P_update!(U,p,1.0,Δτ,Dim,gauge_action)
-
-        U_update!(U,p,0.5,Δτ,Dim,gauge_action)
-    end
-    Snew = calc_action(gauge_action,U,p)
-    println("Sold = $Sold, Snew = $Snew")
-    println("Snew - Sold = $(Snew-Sold)")
-    ratio = min(1,exp(-Snew+Sold))
-    if rand() > ratio
-        substitute_U!(U,Uold)
-        return false
-    else
-        return true
-    end
-end
-
-function U_update!(U,p,ϵ,Δτ,Dim,gauge_action)
-    temps = get_temporary_gaugefields(gauge_action)
-    temp1 = temps[1]
-    temp2 = temps[2]
-    expU = temps[3]
-    W = temps[4]
-
-    for μ=1:Dim
-        #exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-
-        #display(expU.U[:,:,1,1,1,1])
-
-        #mul!(W,expU,U[μ])
-        #substitute_U!(U[μ],W)
-
-        exptU!(expU,ϵ*Δτ,p[μ],[temp1,temp2])
-        println("expU")
-        display(expU.U[:,:,1,1,1,1])
-        println("U[μ]")
-        display(U[μ].U[:,:,1,1,1,1])
-        mul!(W,expU,U[μ])
-        println("W")
-        display(W.U[:,:,1,1,1,1])
-        println("U")
-        substitute_U!(U[μ],W)
-        display(U[μ].U[:,:,1,1,1,1])
-        
-
-        
-    end
-    error("up")
-end
-
-function P_update!(U,p,ϵ,Δτ,Dim,gauge_action) # p -> p +factor*U*dSdUμ
-    NC = U[1].NC
-    temps = get_temporary_gaugefields(gauge_action)
-    dSdUμ = temps[end]
-    factor =  -ϵ*Δτ/(NC)
-
-    for μ=1:Dim
-        calc_dSdUμ!(dSdUμ,gauge_action,μ,U)
-        mul!(temps[1],U[μ],dSdUμ) # U*dSdUμ
-        Traceless_antihermitian_add!(p[μ],factor,temps[1])
-    end
-end
-
-function test1()
-    NX = 16
-    NY = 16
-    NZ = 16
-    NT = 16
-    Nwing = 0
-    Dim = 4
-    NC = 3
-
-    U  =Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
-
-
-    gauge_action = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette")
-    append!(plaqloop,plaqloop')
-    β = 6.0/2
-    push!(gauge_action,β,plaqloop)
-    
-    show(gauge_action)
-
-    MDtest!(gauge_action,U,Dim)
-
-end
-
-function gauss_distribution(nv) 
-    variance = 1
-    nvh = div(nv,2)
-    granf = zeros(Float64,nv)
-    for i=1:nvh
-        rho = sqrt(-2*log(rand())*variance)
-        theta = 2pi*rand()
-        granf[i] = rho*cos(theta)
-        granf[i+nvh] = rho*sin(theta)
-    end
-    if 2*nvh == nv
-        return granf
-    end
-
-    granf[nv] = sqrt(-2*log(rand())*variance) * cos(2pi*rand())
-    return granf
-end
-
-
-test1()
-
+main()

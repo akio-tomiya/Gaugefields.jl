@@ -1,128 +1,105 @@
+# Clover energy density along the Wilson gradient flow of the stored 8^4 SU(3)
+# configuration conf_08080808.ildg, built from Wilson loops (Gaugefields v1).
+# Run from any directory: julia -t 4 --project=. energydensity.jl
+# For production measurements, QCDMeasurements.jl provides these observables;
+# see docs/src/measurements.md.
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 using Wilsonloop
 using LinearAlgebra
 
-function make_cloverloops(μ,ν;Dim=4)
+function make_cloverloops(μ, ν; Dim=4)
     loops = Wilsonline{Dim}[]
-    loop_righttop = Wilsonline([(μ,1),(ν,1),(μ,-1),(ν,-1)])
-    loop_lefttop = Wilsonline([(ν,1),(μ,-1),(ν,-1),(μ,1)])
-    loop_rightbottom = Wilsonline([(ν,-1),(μ,1),(ν,1),(μ,-1)])
-    loop_leftbottom= Wilsonline([(μ,-1),(ν,-1),(μ,1),(ν,1)])
-    push!(loops,loop_righttop)
-    push!(loops,loop_lefttop)
-    push!(loops,loop_rightbottom)
-    push!(loops,loop_leftbottom)
+    loop_righttop = Wilsonline([(μ, 1), (ν, 1), (μ, -1), (ν, -1)])
+    loop_lefttop = Wilsonline([(ν, 1), (μ, -1), (ν, -1), (μ, 1)])
+    loop_rightbottom = Wilsonline([(ν, -1), (μ, 1), (ν, 1), (μ, -1)])
+    loop_leftbottom = Wilsonline([(μ, -1), (ν, -1), (μ, 1), (ν, 1)])
+    push!(loops, loop_righttop)
+    push!(loops, loop_lefttop)
+    push!(loops, loop_rightbottom)
+    push!(loops, loop_leftbottom)
     return loops
 end
 
 function cloverloops(Dim)
-    loops_μν= Matrix{Vector{Wilsonline{Dim}}}(undef,Dim,Dim)
-    for μ=1:Dim
-        for ν=1:Dim
-            loops_μν[μ,ν] = Wilsonline{Dim}[]
+    loops_μν = Matrix{Vector{Wilsonline{Dim}}}(undef, Dim, Dim)
+    for μ in 1:Dim
+        for ν in 1:Dim
+            loops_μν[μ, ν] = Wilsonline{Dim}[]
             if ν == μ
                 continue
             end
-            loops_μν[μ,ν] = make_cloverloops(μ,ν,Dim=Dim)
+            loops_μν[μ, ν] = make_cloverloops(μ, ν, Dim=Dim)
         end
     end
-    return  loops_μν
+    return loops_μν
 end
 
-function make_energy_density!(Wmat,U::Vector{<: AbstractGaugefields{NC,Dim}},temps) where {NC,Dim}
-    W_operator = cloverloops(Dim)
-    calc_wilson_loop!(Wmat,W_operator,U,temps)
-    return 
-end
-
-
-function calc_wilson_loop!(W,W_operator,U::Vector{<: AbstractGaugefields{NC,Dim}},temps) where {NC,Dim}
-    for μ=1:Dim
-        for ν=1:Dim
+# Wmat[μ,ν] = traceless anti-Hermitian part of the clover sum, an untraced field.
+function make_energy_density!(Wmat, loops_μν, U, temps)
+    Dim = length(U)
+    for μ in 1:Dim
+        for ν in 1:Dim
             if μ == ν
                 continue
             end
-            evaluate_gaugelinks!(W[μ,ν],W_operator[μ,ν],U,temps)
-            W[μ,ν] = Traceless_antihermitian(W[μ,ν])
+            evaluate_gaugelinks!(temps[1], loops_μν[μ, ν], U, temps[2:5])
+            Traceless_antihermitian!(Wmat[μ, ν], temps[1])
         end
     end
-    return 
+    return
 end
 
-function  make_energy_density_core(Wmat::Matrix{<: AbstractGaugefields{NC,Dim}}) where {NC,Dim}
-    @assert Dim == 4
+function make_energy_density_core(Wmat, Dim)
     W = 0.0 + 0.0im
-    for μ=1:Dim # all directions
-        for ν=1:Dim
+    for μ in 1:Dim
+        for ν in 1:Dim
             if μ == ν
                 continue
             end
-            W += -tr(Wmat[μ,ν],Wmat[μ,ν])/2
+            W += -tr(Wmat[μ, ν], Wmat[μ, ν]) / 2
         end
     end
     return W
 end
 
-
-function calculate_energy_density(U::Array{T,1}, Wmat,temps) where T <: AbstractGaugefields
-    # Making a ( Ls × Lt) Wilson loop operator for potential calculations
-    WL = 0.0+0.0im
-    NV = U[1].NV
-    NC = U[1].NC
-    make_energy_density!(Wmat,U,temps) # make wilon loop operator and evaluate as a field, not traced.
-    WL =  make_energy_density_core(Wmat) # tracing over color and average over spacetime and x,y,z.
-    NDir = 4.0*3.0/2 # choice of 2 axis from 4.
-    return real(WL)/(NV*4^2)
+# E = (1/V) sum_x (1/2) sum_{μν} tr(F_μν F_μν), with F_μν from the clover
+# (the factor 4^2 is the square of the number of leaves).
+function calculate_energy_density(U, Wmat, loops_μν, temps)
+    volume = prod(gauge_lattice_size(U))
+    make_energy_density!(Wmat, loops_μν, U, temps)
+    WL = make_energy_density_core(Wmat, length(U))
+    return real(WL) / (volume * 4^2)
 end
 
-function test()
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
-    Nwing = 0
-    NC = 3
-    
+function main()
     Dim = 4
-    
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
-    filename="./conf_08080808.ildg"
-    
-    ildg = ILDG(filename)
-    i = 1
-    L = [NX,NY,NZ,NT]
-    load_gaugefield!(U,i,ildg,L,NC)
+    U = gauge_configuration((8, 8, 8, 8); colors=3)
+    filename = joinpath(@__DIR__, "conf_08080808.ildg")
+    load_configuration!(U, filename; format=:ildg)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    β = 5.7
-    W_temp = Matrix{typeof(U[1])}(undef,Dim,Dim)
-    for μ=1:Dim
-        for ν=1:Dim
-            W_temp[μ,ν] = similar(U[1])
+    # evaluate_gaugelinks! with a vector of loops needs four work fields.
+    temps = [similar(U[1]) for _ in 1:5]
+    Wmat = Matrix{typeof(U[1])}(undef, Dim, Dim)
+    for μ in 1:Dim
+        for ν in 1:Dim
+            Wmat[μ, ν] = similar(U[1])
         end
     end
+    loops_μν = cloverloops(Dim)
 
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println(" plaq_t = $plaq_t")
+    println("plaquette = ", measure_plaquette(U))
 
     dt = 0.01
-
-    g = Gradientflow(U,eps = dt)
-
-    for itrj=1:10
-        flow!(U,g)
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        e = calculate_energy_density(U, W_temp,[temp1,temp2])
-        println("$itrj $dt $plaq_t $e # itrj dt plaq energy")
+    flow = gradient_flow(U; steps=1, step_size=dt)
+    for itrj in 1:10
+        flow!(U, flow)
+        plaq = measure_plaquette(U)
+        e = calculate_energy_density(U, Wmat, loops_μν, temps)
+        println("$itrj $dt $plaq $e # itrj dt plaq energy")
     end
-
-
-
-
 end
-test()
+
+main()

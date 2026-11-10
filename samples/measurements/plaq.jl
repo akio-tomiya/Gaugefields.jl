@@ -1,60 +1,26 @@
+# Measure the plaquette and the Polyakov loop of the stored 8^4 SU(3)
+# configuration conf_08080808.ildg (Gaugefields v1 API).
+# Run from any directory: julia -t 4 --project=. plaq.jl
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 
-function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-    Dim = 4
-    Nwing = 1
+function main()
+    U = gauge_configuration((8, 8, 8, 8); colors=3)
+    filename = joinpath(@__DIR__, "conf_08080808.ildg")
+    load_configuration!(U, filename; format=:ildg)
 
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
-    println(typeof(U))
+    # Normalized observables: a cold configuration gives one for both.
+    plaq = measure_plaquette(U)
+    poly = measure_polyakov_loop(U)
+    println("plaquette = $plaq")
+    println("Polyakov loop = $(real(poly)) $(imag(poly))")
 
-    gauge_action = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette",Dim=Dim)
-    append!(plaqloop,plaqloop')
-    βinp = β/2
-    push!(gauge_action,βinp,plaqloop)
-
-    rectloop = make_loops_fromname("rectangular",Dim=Dim)
-    append!(rectloop,rectloop')
-    βinp = β/2
-    push!(gauge_action,βinp,rectloop)
-    hnew = Heatbath_update(U,gauge_action)
-
-    show(gauge_action)
-
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2) 
-    println("polyakov loop = $(real(poly)) $(imag(poly))")
-
-    numhb = 1000
-    for itrj = 1:numhb
-
-        heatbath!(U,hnew)
-
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2) 
-
-        if itrj % 40 == 0
-            println("$itrj plaq_t = $plaq_t")
-            println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
-        end
-    end
-    
-    close(fp)
-    return plaq_t
-
+    # The historical unnormalized conventions of calculate_Plaquette and
+    # calculate_Polyakov_loop.
+    println("plaquette (normalize=false) = ", measure_plaquette(U; normalize=false))
+    println("Polyakov loop (normalize=false) = ", measure_polyakov_loop(U; normalize=false))
 end
 
-NX = 4
-NY = 4
-NZ = 4
-NT = 4
-NC = 3
-β = 5.7
-heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+main()

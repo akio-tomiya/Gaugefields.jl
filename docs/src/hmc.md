@@ -12,6 +12,9 @@ shown explicitly because it remains useful when an application needs complete
 control over every update stage.
 
 ```julia
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 using LinearAlgebra
 using Random
@@ -80,11 +83,13 @@ function traditional_hmc_trajectory!(U, P, old_U, action, temps, steps)
     return (; accepted, delta_hamiltonian)
 end
 
-Random.seed!(0x1234)
-U = Initialize_Gaugefields(
-    3, 0, 8, 8, 8, 8;
-    condition="hot",
-    randomnumber="Reproducible",
+Random.seed!(0x1234) # seeds gauss_distribution! and the Metropolis test
+U = gauge_configuration(
+    (8, 8, 8, 8);
+    colors=3,
+    halo=1,
+    start=:cold,
+    seed=0x1234,
 )
 action = GaugeAction(U)
 plaquettes = make_loops_fromname("plaquette", Dim=4)
@@ -138,7 +143,7 @@ U = gauge_configuration(
     lattice;
     colors=3,
     halo=1,
-    start=:hot,
+    start=:cold,
     seed=0x1234,
     process_grid=(1, 1, 1, 1),
 )
@@ -173,7 +178,7 @@ for trajectory in 1:100
     result = md_trajectory!(U, p, md)
     accept = log(rand(metropolis_rng)) < min(0, -result.delta_hamiltonian)
     if accept
-        accepted += 1
+        global accepted += 1
     else
         copy_configuration!(U, old_U)
     end
@@ -200,8 +205,8 @@ not need to be restored after rejection when the next trajectory refreshes
 them.
 
 For an exactly restartable chain, save the configuration, the next trajectory
-number (used as `sweep` above), and the state of `metropolis_rng`. A hot-start
-seed does not seed either of the later streams. Under MPI, initialize the same
+number (used as `sweep` above), and the state of `metropolis_rng`. The `seed`
+passed to `gauge_configuration` does not seed either of the later streams. Under MPI, initialize the same
 Metropolis RNG on every rank and consume it identically, or draw on rank zero
 and broadcast the decision.
 
