@@ -130,10 +130,16 @@ unchanged.
 
 Gaugefields supports both the traditional construction from elementary
 operations and a deterministic, preallocated MD driver. The examples below
-use the same Wilson gauge action and QPQ integrator. First define the shared
-system:
+use the same Wilson gauge action and QPQ integrator. The examples from here
+to the end of the L-CNN section run in order in one Julia session. First
+define the shared system:
 
 ```julia
+import JACC
+JACC.@init_backend
+
+using Gaugefields
+
 function wilson_hmc_system()
     U = gauge_configuration(
         (4, 4, 4, 4);
@@ -345,7 +351,9 @@ polar_hyp = HYPSmearing(
     projection=:polar)
 V, cache = link_smear(U, polar_hyp)
 
-# Fill dV with the cotangent with respect to V.
+# dV is the cotangent with respect to V. A copy of V is a placeholder here;
+# in an application, fill dV with the derivative of the loss with respect to V.
+dV = copy_configuration(V)
 dU = link_smear_pullback(dV, U, cache)
 ```
 
@@ -362,6 +370,7 @@ For HMC, wrap a thin-link action with `SmearedGaugeAction`; APE and HYP must
 use the polar choice:
 
 ```julia
+U, thin_link_action = wilson_hmc_system()  # from the example above
 action = SmearedGaugeAction(
     thin_link_action,
     APESmearing(alpha=0.6, projection=:polar),
@@ -440,6 +449,10 @@ W^{(l)}_i(x)=\sum_{A,B}\theta^{(l)}_{iAB}B_A(x)\widetilde B_B(x).
 The constructor and trainable tensor correspond as follows:
 
 ```julia
+const LCNN = Gaugefields.LCNN
+N_in, N_out = 1, 4  # input and output channels
+K, delta = 2, 1     # kernel size and dilation
+
 layer = LCNN.LCB(
     N_in => N_out;
     kernel_size=K,
@@ -449,7 +462,8 @@ layer = LCNN.LCB(
     adjoints=true,
 )
 
-parameters.layers[l].weight[i, A, B] == theta[l][i, A, B]
+# For the l-th layer of a model:
+# parameters.layers[l].weight[i, A, B] == theta[l][i, A, B]
 ```
 
 Thus `N_in`, `N_out`, and the keywords define the architecture; the real
@@ -539,7 +553,10 @@ Only this link-valued model is exposed as Gaugefields smearing. A
 `LCNNFeatureModel` returns site-covariant matrices, while `LCNNAction` returns
 gauge-invariant site values or a scalar.
 
-Loading Enzyme provides link and parameter derivatives for scalar models:
+Loading Enzyme provides link and parameter derivatives for scalar models.
+Enzyme is not installed with Gaugefields; add it first with `add Enzyme` in
+the package mode. The following uses `action`, `U`, and `parameters` from the
+complete scalar model above:
 
 ```julia
 using Enzyme
