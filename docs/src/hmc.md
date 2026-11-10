@@ -12,6 +12,9 @@ shown explicitly because it remains useful when an application needs complete
 control over every update stage.
 
 ```julia
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 using LinearAlgebra
 using Random
@@ -80,11 +83,13 @@ function traditional_hmc_trajectory!(U, P, old_U, action, temps, steps)
     return (; accepted, delta_hamiltonian)
 end
 
-Random.seed!(0x1234)
-U = Initialize_Gaugefields(
-    3, 0, 8, 8, 8, 8;
-    condition="hot",
-    randomnumber="Reproducible",
+Random.seed!(0x1234) # seeds gauss_distribution! and the Metropolis test
+U = gauge_configuration(
+    (8, 8, 8, 8);
+    colors=3,
+    halo=1,
+    start=:hot,
+    seed=0x1234,
 )
 action = GaugeAction(U)
 plaquettes = make_loops_fromname("plaquette", Dim=4)
