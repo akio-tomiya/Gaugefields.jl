@@ -150,6 +150,8 @@ The current default is:
 ~~~julia
 B = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
 )
 ~~~
@@ -160,6 +162,8 @@ multiplication, use:
 ~~~julia
 B_cached_fullmatrix = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
     use_center_fastpath=false,
 )
@@ -171,6 +175,8 @@ construction, use:
 ~~~julia
 B_legacy = Initialize_Bfields(
     NC, flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
     bfield_evaluation=:legacy,
 )
@@ -270,6 +276,8 @@ cache:
 new_flux = [0, 1, 0, 1, 0, 1]
 Bnew = Initialize_Bfields(
     NC, new_flux, NDW, NX, NY, NZ, NT;
+    isMPILattice=true,
+    PEs=(1, 1, 1, 1),
     condition="tflux",
 )
 
