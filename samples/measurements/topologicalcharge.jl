@@ -1,3 +1,12 @@
+# Topological charge (plaquette, clover, and improved definitions) along the
+# Wilson gradient flow of the stored 8^4 SU(3) configuration conf_08080808.ildg,
+# built from Wilson loops (Gaugefields v1).
+# Run from any directory: julia -t 4 --project=. topologicalcharge.jl
+# For production measurements, QCDMeasurements.jl provides these observables;
+# see docs/src/measurements.md.
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 using Wilsonloop
 using LinearAlgebra
@@ -69,7 +78,7 @@ function calc_UμνTA!(UμνTA,loops_μν,U::Array{<: AbstractGaugefields{NC,Dim
             if ν == μ
                 continue
             end
-            evaluate_gaugelinks!(temps[1],loops_μν[μ,ν],U,temps[2:3])
+            evaluate_gaugelinks!(temps[1],loops_μν[μ,ν],U,temps[2:5]) # needs four work fields
             Traceless_antihermitian!(UμνTA[μ,ν],temps[1])
         end
     end
@@ -163,7 +172,7 @@ function epsilon_tensor(mu::Int,nu::Int,rho::Int,sigma::Int)
     end
     if rho < 0
         sign*=-1
-        rh=-rho
+        rho=-rho
     end
     if sigma < 0
         sign*=-1
@@ -197,56 +206,32 @@ function epsilon_tensor(mu::Int,nu::Int,rho::Int,sigma::Int)
     return epsilon[mu,nu,rho,sigma]*sign
 end
 
-function test()
-    NX = 8
-    NY = 8
-    NZ = 8
-    NT = 8
-    Nwing = 0
-    NC = 3
-    
+function main()
     Dim = 4
-    
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "hot")
-    filename="./conf_08080808.ildg"
-    
-    ildg = ILDG(filename)
-    i = 1
-    L = [NX,NY,NZ,NT]
-    load_gaugefield!(U,i,ildg,L,NC)
+    U = gauge_configuration((8, 8, 8, 8); colors=3)
+    filename = joinpath(@__DIR__, "conf_08080808.ildg")
+    load_configuration!(U, filename; format=:ildg)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    β = 5.7
-    temp_UμνTA= Matrix{typeof(U[1])}(undef,Dim,Dim)
-    for μ=1:Dim
-        for ν=1:Dim
-            temp_UμνTA[μ,ν] = similar(U[1])
+    temps = [similar(U[1]) for _ in 1:5]
+    temp_UμνTA = Matrix{typeof(U[1])}(undef, Dim, Dim)
+    for μ in 1:Dim
+        for ν in 1:Dim
+            temp_UμνTA[μ, ν] = similar(U[1])
         end
     end
 
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println(" plaq_t = $plaq_t")
+    println("plaquette = ", measure_plaquette(U))
 
     dt = 0.01
-
-    g = Gradientflow(U,eps = dt)
-
-    for itrj=1:10
-        flow!(U,g)
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        Qplaq = calculate_topological_charge_plaq(U,temp_UμνTA,[temp1,temp2,temp3])
-        Qclover = calculate_topological_charge_clover(U,temp_UμνTA,[temp1,temp2,temp3])
-        Qimproved= calculate_topological_charge_improved(U,temp_UμνTA,Qclover,[temp1,temp2,temp3])
-        println("$itrj $dt $plaq_t $Qplaq $Qclover $Qimproved # itrj dt plaq Qplaq Qclover Qimproved ")
+    flow = gradient_flow(U; steps=1, step_size=dt)
+    for itrj in 1:10
+        flow!(U, flow)
+        plaq = measure_plaquette(U)
+        Qplaq = calculate_topological_charge_plaq(U, temp_UμνTA, temps)
+        Qclover = calculate_topological_charge_clover(U, temp_UμνTA, temps)
+        Qimproved = calculate_topological_charge_improved(U, temp_UμνTA, Qclover, temps)
+        println("$itrj $dt $plaq $Qplaq $Qclover $Qimproved # itrj dt plaq Qplaq Qclover Qimproved")
     end
-
-
-
-
 end
-test()
+
+main()

@@ -1,33 +1,35 @@
+# Save an SU(3) configuration in the ILDG format, load it back, and check
+# that the plaquette and Polyakov loop are unchanged (Gaugefields v1 API).
+# Run: julia -t 4 --project=. ildgtest.jl
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 
 function main()
-    NX = 4
-    NY = 4
-    NZ = 4
-    NT = 4
-    NC = 3
-    Nwing = 1
-    Dim = 4
+    lattice = (4, 4, 4, 4)
+    colors = 3
 
-    U = Initialize_Gaugefields(NC, Nwing, NX, NY, NZ, NT, condition="cold")
-    filename = "hoge.ildg"
-    save_binarydata(U, filename; tempfile1="temp1.dat", tempfile2="temp2.dat")
+    # A hot start makes the round trip a nontrivial check.
+    U = gauge_configuration(lattice; colors, start=:hot, seed=1234)
+    plaq = measure_plaquette(U)
+    poly = measure_polyakov_loop(U)
+    println("before save: plaquette = $plaq")
+    println("before save: Polyakov loop = $(real(poly)) $(imag(poly))")
 
+    # Write into a temporary directory so that no file is left behind.
+    filename = joinpath(mktempdir(), "configuration.ildg")
+    save_configuration(filename, U; format=:ildg)
 
-    filename = "hoge.ildg"
-    ildg = ILDG(filename)
-    i = 1
-    L = [NX, NY, NZ, NT]
-    load_gaugefield!(U, i, ildg, L, NC)
+    # ILDG input needs a preallocated configuration of the same size.
+    Uloaded = gauge_configuration(lattice; colors)
+    load_configuration!(Uloaded, filename; format=:ildg)
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-
-    comb = 6
-    factor = 1 / (comb * U[1].NV * U[1].NC)
-    @time plaq_t = calculate_Plaquette(U, temp1, temp2) * factor
-    println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U, temp1, temp2)
-    println("polyakov loop = $(real(poly)) $(imag(poly))")
+    plaq_loaded = measure_plaquette(Uloaded)
+    poly_loaded = measure_polyakov_loop(Uloaded)
+    println("after load: plaquette = $plaq_loaded")
+    println("after load: Polyakov loop = $(real(poly_loaded)) $(imag(poly_loaded))")
+    println("difference of plaquettes = $(plaq_loaded - plaq)")
 end
+
 main()

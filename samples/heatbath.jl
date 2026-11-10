@@ -1,59 +1,47 @@
+# Heatbath updates of SU(3) gauge fields on a 4^4 lattice with a plaquette
+# plus rectangle action, written with the Gaugefields v1 API.
+# Run: julia -t 4 --project=. heatbath.jl
+import JACC
+JACC.@init_backend
+
 using Gaugefields
 
-function heatbathtest_4D(NX,NY,NZ,NT,β,NC)
-    Dim = 4
-    Nwing = 1
+function heatbath_4d(lattice, beta, colors; sweeps=1000, seed=5678)
+    U = gauge_configuration(lattice; colors, start=:cold)
 
-    U = Initialize_Gaugefields(NC,Nwing,NX,NY,NZ,NT,condition = "cold")
-    println(typeof(U))
+    # Action: (beta/2) * (plaquettes + h.c.) + (beta/2) * (rectangles + h.c.)
+    action = GaugeAction(U)
+    plaquettes = make_loops_fromname("plaquette", Dim=4)
+    append!(plaquettes, plaquettes')
+    push!(action, beta / 2, plaquettes)
 
-    gauge_action = GaugeAction(U)
-    plaqloop = make_loops_fromname("plaquette",Dim=Dim)
-    append!(plaqloop,plaqloop')
-    βinp = β/2
-    push!(gauge_action,βinp,plaqloop)
+    rectangles = make_loops_fromname("rectangular", Dim=4)
+    append!(rectangles, rectangles')
+    push!(action, beta / 2, rectangles)
+    show(action)
 
-    rectloop = make_loops_fromname("rectangular",Dim=Dim)
-    append!(rectloop,rectloop')
-    βinp = β/2
-    push!(gauge_action,βinp,rectloop)
-    hnew = Heatbath_update(U,gauge_action)
+    # A general-action heatbath updater; construct it once and reuse it.
+    updater = heatbath_updater(U, action; seed)
 
-    show(gauge_action)
+    # measure_polyakov_loop is normalized by NC (a cold start gives 1).
+    plaq = measure_plaquette(U)
+    poly = measure_polyakov_loop(U)
+    println("initial plaquette = $plaq")
+    println("initial Polyakov loop = $(real(poly)) $(imag(poly))")
 
-    temp1 = similar(U[1])
-    temp2 = similar(U[1])
-    temp3 = similar(U[1])
-
-    comb = 6
-    factor = 1/(comb*U[1].NV*U[1].NC)
-    @time plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-    println("plaq_t = $plaq_t")
-    poly = calculate_Polyakov_loop(U,temp1,temp2)
-    println("polyakov loop = $(real(poly)) $(imag(poly))")
-
-    numhb = 1000
-    for itrj = 1:numhb
-
-        heatbath!(U,hnew)
-
-        plaq_t = calculate_Plaquette(U,temp1,temp2)*factor
-        poly = calculate_Polyakov_loop(U,temp1,temp2)
-
-        if itrj % 40 == 0
-            println("$itrj plaq_t = $plaq_t")
-            println("$itrj polyakov loop = $(real(poly)) $(imag(poly))")
+    for sweep in 1:sweeps
+        heatbath!(U, updater)
+        if sweep % 40 == 0
+            plaq = measure_plaquette(U)
+            poly = measure_polyakov_loop(U)
+            println("$sweep plaquette = $plaq")
+            println("$sweep Polyakov loop = $(real(poly)) $(imag(poly))")
         end
     end
-
-    return plaq_t
-
+    return measure_plaquette(U)
 end
 
-NX = 4
-NY = 4
-NZ = 4
-NT = 4
-NC = 3
-β = 5.7
-heatbathtest_4D(NX,NY,NZ,NT,β,NC)
+lattice = (4, 4, 4, 4)
+colors = 3
+beta = 5.7
+heatbath_4d(lattice, beta, colors)
