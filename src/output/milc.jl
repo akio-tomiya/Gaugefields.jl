@@ -136,44 +136,31 @@ function _milc_unitarity_deviation(links)
     return deviation
 end
 
-# Projection onto SU(3) as in MILC generic/reunitarize2.c (reunit_su3):
-# normalize row 1, orthogonalize row 2 against it and normalize, and set
-# row 3 to the complex conjugate of the cross product of rows 1 and 2.
-# MILC reports an error when a row norm deviates from 1 by more than 1e-4.
-function _milc_reunitarize(links)
+# MILC generic/reunitarize2.c (reunit_su3) refuses links whose first two rows
+# deviate from orthonormality by more than 1e-4. Apply the same test before
+# projecting with normalize_U!, which uses the same row-wise Gram-Schmidt
+# procedure and sets row 3 to the conjugate cross product of rows 1 and 2.
+function _milc_check_reunitarizable(links)
     tolerance = 1e-4
-    result = [ComplexF64.(a) for a in links]
-    for a in result, site in CartesianIndices(size(a)[3:end])
+    for a in links, site in CartesianIndices(size(a)[3:end])
         p = Tuple(site)
-        n1 = sum(abs2, view(a, 1, :, p...))
-        abs(n1 - 1) <= tolerance || throw(ArgumentError(
-            "MILC link at site $p deviates from unitarity by $(abs(n1 - 1)); " *
+        u = ComplexF64.(view(a, :, :, p...))
+        r1 = sum(abs2, view(u, 1, :))
+        r2 = sum(abs2, view(u, 2, :))
+        overlap = abs(sum(conj(u[1, j]) * u[2, j] for j in 1:3))
+        deviation = max(abs(r1 - 1), abs(r2 - 1), overlap)
+        deviation <= tolerance || throw(ArgumentError(
+            "MILC link at site $p deviates from unitarity by $deviation; " *
             "refusing to reunitarize (MILC tolerance 1e-4)"))
-        a[1, :, p...] ./= sqrt(n1)
-        overlap = sum(conj(a[1, j, p...]) * a[2, j, p...] for j in 1:3)
-        abs(overlap) <= tolerance || throw(ArgumentError(
-            "MILC link at site $p has row overlap $(abs(overlap)); " *
-            "refusing to reunitarize (MILC tolerance 1e-4)"))
-        for j in 1:3
-            a[2, j, p...] -= overlap * a[1, j, p...]
-        end
-        n2 = sum(abs2, view(a, 2, :, p...))
-        abs(n2 - 1) <= tolerance || throw(ArgumentError(
-            "MILC link at site $p deviates from unitarity by $(abs(n2 - 1)); " *
-            "refusing to reunitarize (MILC tolerance 1e-4)"))
-        a[2, :, p...] ./= sqrt(n2)
-        a[3, 1, p...] = conj(a[1, 2, p...] * a[2, 3, p...] - a[1, 3, p...] * a[2, 2, p...])
-        a[3, 2, p...] = conj(a[1, 3, p...] * a[2, 1, p...] - a[1, 1, p...] * a[2, 3, p...])
-        a[3, 3, p...] = conj(a[1, 1, p...] * a[2, 2, p...] - a[1, 2, p...] * a[2, 1, p...])
     end
-    return result
+    return nothing
 end
 
 function _milc_experimental_warning(filename, target_type, reunitarize, before, after)
     state = if reunitarize
-        "reunitarize=true: links were projected onto SU(3) as MILC does after " *
-        "reading in double precision; max|U'U - 1| was $(before) in the file " *
-        "and is $(after) after projection"
+        "reunitarize=true: links were projected onto SU(3) with normalize_U!, " *
+        "as MILC does after reading in double precision; max|U'U - 1| was " *
+        "$(before) in the file and is $(after) after projection"
     else
         "reunitarize=false: links are used as stored in single precision; " *
         "max|U'U - 1| = $(before). Pass reunitarize=true to project them onto " *
@@ -187,18 +174,10 @@ function _load_milc!(U, filename; reunitarize::Bool=false)
     communicator = gauge_communicator(U)
     result = _portable_jld2_root_operation(communicator) do
         links, metadata = _read_milc(filename)
-        before = _milc_unitarity_deviation(links)
-        if reunitarize
-            links = _milc_reunitarize(links)
-            after = _milc_unitarity_deviation(links)
-        else
-            after = before
-        end
-        (links, metadata, before, after)
+        reunitarize && _milc_check_reunitarizable(links)
+        (links, metadata, _milc_unitarity_deviation(links))
     end
     rank = isnothing(communicator) ? 0 : comm_rank(communicator)
-    rank == 0 && _milc_experimental_warning(filename,
-        _portable_configuration_element_type(_first_gauge_link(U)), reunitarize, result[3], result[4])
     metadata = rank == 0 ? result[2] : nothing
     isnothing(communicator) || (metadata = broadcast(metadata, 0, communicator))
     _validate_portable_jld2_target(U, metadata)
@@ -208,6 +187,17 @@ function _load_milc!(U, filename; reunitarize::Bool=false)
     else
         _load_portable_jld2_legacy!(U, links, metadata)
     end
+    after = nothing
+    if reunitarize
+        for link in U
+            normalize_U!(link)
+        end
+        projected = _portable_jld2_links(U)
+        rank == 0 && (after = _milc_unitarity_deviation(projected))
+    end
+    rank == 0 && _milc_experimental_warning(filename,
+        _portable_configuration_element_type(_first_gauge_link(U)), reunitarize,
+        result[3], after)
     return U
 end
 

@@ -9,8 +9,9 @@
 - MILC I/O is experimental: each load and save prints a warning, and the load
   warning reports the `reunitarize` setting and the largest deviation from
   unitarity. The allocating loader defaults to `ComplexF64`. The new
-  `reunitarize` keyword (default `false`) projects the single-precision links
-  onto SU(3) as MILC `reunit_su3` does after reading in double precision.
+  `reunitarize` keyword (default `false`) applies `normalize_U!`, whose SU(3)
+  projection is that of MILC `reunit_su3`, after reading, as MILC does in
+  double precision; links beyond MILC's 1e-4 tolerance are refused.
 - The reader accepts both byte orders and site-list (node-dump) files and
   verifies the MILC sum29/sum31 checksums before replacing the target. The
   writer produces files that MILC `reload_serial` accepts, plus the `.info`

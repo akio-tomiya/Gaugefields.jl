@@ -156,6 +156,20 @@ end
             end
             rank == 0 && @test any(m -> occursin("experimental", m) && occursin("reunitarize=true", m), shown)
             projected = gather_and_bcast_matrix.(getproperty.(R, :U))
+            # normalize_U! agrees with MILC reunit_su3 (rows 1 and 2 by
+            # Gram-Schmidt, row 3 as the conjugate cross product).
+            reference_difference = 0.0
+            for mu in 1:4, s in CartesianIndices(fixture_dims)
+                u = links[mu][:, :, Tuple(s)...]
+                r1 = u[1, :] / norm(u[1, :])
+                r2 = u[2, :] - dot(r1, u[2, :]) * r1
+                r2 /= norm(r2)
+                r3 = conj(cross(r1, r2))
+                reference = permutedims(hcat(r1, r2, r3))
+                reference_difference = max(reference_difference,
+                    maximum(abs, projected[mu][:, :, Tuple(s)...] - reference))
+            end
+            @test reference_difference < 1e-14
             @test Gaugefields._milc_unitarity_deviation(links) > 1e-8
             @test Gaugefields._milc_unitarity_deviation(projected) < 1e-14
             @test all(abs(det(projected[mu][:, :, Tuple(s)...]) - 1) < 1e-14
