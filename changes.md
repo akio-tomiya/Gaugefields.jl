@@ -4,8 +4,9 @@
 
 - Add MILC version 5 SU(3) configuration I/O (`format=:milc`) for
   `load_configuration`, `load_configuration!`, and `save_configuration`. It uses
-  the same host-staged path as NERSC I/O; tested on CPU (LatticeMatrices and
-  legacy backends) and on two MPI ranks, not yet on GPUs.
+  the same host-staged path as NERSC I/O. `test/milc_io.jl` runs on CPU with
+  the LatticeMatrices and legacy backends and, through
+  `test/MPIJACCtest/milc_io.jl`, on two MPI ranks in CI; not yet tested on GPUs.
 - MILC I/O is experimental: each load and save prints a warning, and the load
   warning reports the `reunitarize` setting and the largest deviation from
   unitarity. The allocating loader defaults to `ComplexF64`. The new

@@ -14,8 +14,6 @@
 # list, whose entries encode x + nx*(y + ny*(z + nz*t)).
 # The links carry no staggered phases or boundary signs.
 
-import LinearAlgebra: I
-
 const _MILC_MAGIC = UInt32(20103)
 const _MILC_HEADER_BYTES = 4 + 16 + 64 + 4
 const _MILC_WORDS_PER_SITE = 4 * 3 * 3 * 2
@@ -45,7 +43,7 @@ _milc_from_file(x, endian) = endian === :big ? ntoh(x) : ltoh(x)
 _milc_to_file(x, endian) = endian === :big ? hton(x) : htol(x)
 
 function _milc_metadata(io, filename)
-    filesize(filename) >= _MILC_HEADER_BYTES + 8 ||
+    filesize(filename) >= 4 ||
         throw(ArgumentError("file is too short for a MILC gauge configuration"))
     raw = read(io, UInt32)
     endian = if ltoh(raw) == _MILC_MAGIC
@@ -62,6 +60,8 @@ function _milc_metadata(io, filename)
             "files (magic number 20103) are supported",
         ))
     end
+    filesize(filename) >= _MILC_HEADER_BYTES + 8 ||
+        throw(ArgumentError("file is too short for a MILC gauge configuration"))
     dims = ntuple(_ -> Int(reinterpret(Int32, _milc_from_file(read(io, UInt32), endian))), 4)
     all(>(0), dims) || throw(ArgumentError("MILC lattice dimensions must be positive: $dims"))
     stamp = read(io, 64)
@@ -130,8 +130,14 @@ end
 function _milc_unitarity_deviation(links)
     deviation = 0.0
     for a in links, site in CartesianIndices(size(a)[3:end])
-        u = ComplexF64.(view(a, :, :, Tuple(site)...))
-        deviation = max(deviation, maximum(abs, u' * u - I))
+        p = Tuple(site)
+        @inbounds for j in 1:3, k in 1:3
+            z = zero(ComplexF64)
+            for i in 1:3
+                z += conj(ComplexF64(a[i, j, p...])) * ComplexF64(a[i, k, p...])
+            end
+            deviation = max(deviation, abs(z - (j == k)))
+        end
     end
     return deviation
 end
@@ -192,6 +198,9 @@ function _load_milc!(U, filename; reunitarize::Bool=false)
         for link in U
             normalize_U!(link)
         end
+        # normalize_U! refreshes the halo of LatticeMatrices fields but not the
+        # wings of legacy fields.
+        gauge_backend(U) isa LatticeMatricesBackend || set_wing_U!(U)
         projected = _portable_jld2_links(U)
         rank == 0 && (after = _milc_unitarity_deviation(projected))
     end

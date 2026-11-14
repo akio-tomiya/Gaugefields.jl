@@ -154,7 +154,8 @@ end
             shown = warnings() do
                 R = load_configuration(fixture; format=:milc, reunitarize=true, process_grid=grid, comm)
             end
-            rank == 0 && @test any(m -> occursin("experimental", m) && occursin("reunitarize=true", m), shown)
+            rank == 0 && @test any(m -> occursin("experimental", m) && occursin("reunitarize=true", m) &&
+                                        occursin("ComplexF64", m) && occursin("after projection", m), shown)
             projected = gather_and_bcast_matrix.(getproperty.(R, :U))
             # normalize_U! agrees with MILC reunit_su3 (rows 1 and 2 by
             # Gram-Schmidt, row 3 as the conjugate cross product).
@@ -179,6 +180,12 @@ end
             @test obs.ssplaq ≈ milc_ssplaq atol = 1e-6
             @test obs.stplaq ≈ milc_stplaq atol = 1e-6
 
+            S = load_configuration(fixture; format=:milc, eltype=ComplexF32, reunitarize=true,
+                process_grid=grid, comm)
+            @test eltype(S[1].U.A) == ComplexF32
+            @test Gaugefields._milc_unitarity_deviation(
+                gather_and_bcast_matrix.(getproperty.(S, :U))) < 1e-6
+
             shown = warnings(() -> save_configuration(joinpath(directory, "w.lat"), V; format=:milc))
             rank == 0 && @test any(m -> occursin("experimental", m), shown)
             @test_throws ArgumentError load_configuration!(V, fixture; format=:jld2, reunitarize=true)
@@ -200,6 +207,13 @@ end
                     start=:cold, verbose=0)
                 load_configuration!(legacy, fixture; format=:milc)
                 @test measure_plaquette(legacy) ≈ measure_plaquette(V) atol = 1e-12
+                # Reunitarization must leave the legacy wings consistent.
+                load_configuration!(legacy, fixture; format=:milc, reunitarize=true)
+                stored = [copy(link.U) for link in legacy]
+                Gaugefields.set_wing_U!(legacy)
+                @test all(legacy[mu].U == stored[mu] for mu in 1:4)
+                @test Gaugefields._milc_unitarity_deviation(
+                    Gaugefields._portable_jld2_links(legacy)) < 1e-14
             end
         end
 
@@ -240,6 +254,20 @@ end
                 @test_throws ErrorException load_configuration!(V, bad; format=:milc)
                 @test all(gather_and_bcast_matrix(V[mu].U) == before[mu] for mu in 1:4)
             end
+            # Site lists must be permutations of the lattice sites.
+            listed = joinpath(directory, "badlist.lat")
+            root(() -> write_site_list_order(fixture, listed, [0; 0:prod(fixture_dims)-2]))
+            @test_throws ErrorException load_configuration!(V, listed; format=:milc)
+            @test all(gather_and_bcast_matrix(V[mu].U) == before[mu] for mu in 1:4)
+            tiny = joinpath(directory, "tiny.lime")
+            root(() -> write(tiny, hton(UInt32(0x456789ab))))
+            err = try
+                load_configuration!(V, tiny; format=:milc)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ErrorException && occursin("format=:ildg", err.msg)
             nersc = joinpath(directory, "same.nersc")
             err = try
                 load_configuration!(V, nersc; format=:milc)
