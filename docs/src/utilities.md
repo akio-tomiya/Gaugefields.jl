@@ -221,6 +221,42 @@ truncated data, nonfinite values, or mismatches raise an error; a failed file
 validation leaves the existing target unchanged. Under MPI, file-validation
 errors are propagated to all participating ranks.
 
+## MILC format
+
+Use `format=:milc` for MILC version 5 lattice files, which the MILC code
+writes with `save_serial` and reads with `reload_serial` (magic number 20103).
+As with NERSC, specify the format explicitly; the allocating loader reads the
+lattice dimensions from the header:
+
+~~~julia
+U = load_configuration("ensemble.lat"; format=:milc,
+                       eltype=ComplexF64)
+load_configuration!(U, "ensemble.lat"; format=:milc)
+save_configuration("copy.lat", U; format=:milc)
+~~~
+
+MILC stores links in single precision, so omitting `eltype` allocates a
+`ComplexF32` configuration. The file holds the 4D SU(3) links without
+staggered phases or boundary signs, ordered by site with x fastest, then by
+direction (x, y, z, t), then row-major 3x3 complex entries.
+
+| Output keyword | Default | Meaning |
+| --- | --- | --- |
+| `endian` | `:little` | Byte order: `:little` or `:big`. MILC detects either from the magic number. |
+| `info` | `true` | Also write the ASCII `filename.info` with checksums, plaquettes (`gauge.ssplaq`, `gauge.stplaq`), link trace, and NERSC checksum, as MILC does. |
+| `time_stamp` | current time | Time stamp stored in the header (fewer than 64 bytes). |
+
+Output rounds the links to Float32. With the same time stamp, rewriting a
+loaded MILC file reproduces it byte for byte.
+
+The reader accepts either byte order and files with a site list (node-dump
+order). Before replacing the target it checks the payload size and the
+sum29/sum31 checksums. NERSC archive and LIME (SciDAC/ILDG) files are rejected
+with a message that names the matching format. MPI and JACC devices are
+handled as for NERSC: all ranks call the same function, rank zero reads or
+writes one global host configuration, and a failed validation leaves the
+target unchanged on every rank.
+
 ## Bridge text format
 
 Bridge input requires a preallocated target:

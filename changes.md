@@ -1,5 +1,19 @@
 # Changes
 
+## Unreleased
+
+- Add MILC version 5 SU(3) configuration I/O (`format=:milc`) for
+  `load_configuration`, `load_configuration!`, and `save_configuration`. It uses
+  the same host-staged path as NERSC I/O; tested on CPU (LatticeMatrices and
+  legacy backends) and on two MPI ranks, not yet on GPUs.
+- The reader accepts both byte orders and site-list (node-dump) files and
+  verifies the MILC sum29/sum31 checksums before replacing the target. The
+  writer produces files that MILC `reload_serial` accepts, plus the `.info`
+  file.
+- Add a 2x4x6x8 reference configuration written by the MILC code, with tests
+  against MILC's own plaquette, link trace, NERSC checksum, and Polyakov loop,
+  a byte-identical rewrite, byte-order and site-list cases, and corrupted files.
+
 ## v1.1.15
 
 - Normalize SU(2) Kennedy-Pendleton updates by `sqrt(detU)`, where `detU`
