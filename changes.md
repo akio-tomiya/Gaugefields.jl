@@ -6,7 +6,8 @@
   `load_configuration`, `load_configuration!`, and `save_configuration`. It uses
   the same host-staged path as NERSC I/O. `test/milc_io.jl` runs on CPU with
   the LatticeMatrices and legacy backends and, through
-  `test/MPIJACCtest/milc_io.jl`, on two MPI ranks in CI; not yet tested on GPUs.
+  `test/MPIJACCtest/milc_io.jl`, on two MPI ranks in CI. It also passed with
+  the JACC CUDA backend (RTX 4000 Ada), run by hand; GPU CI does not run it.
 - MILC I/O is experimental: each load and save prints a warning, and the load
   warning reports the `reunitarize` setting and the largest deviation from
   unitarity. The allocating loader defaults to `ComplexF64`. The new
