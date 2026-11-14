@@ -2,6 +2,8 @@
 
 Version 1.1.15 fixes SU(2) Kennedy-Pendleton heatbath normalization, detects invalid staples before rejection sampling, and verifies SU(2)/SU(3) sweeps on CPU, GPU, MPI, and MPI+GPU; see [changes.md](changes.md).
 
+The normalization fix changes output matrix bits from earlier releases. The serial Julia-RNG adapter retains its historical prefix draws; fixed-seed tests check the corrected matrices and RNG continuation.
+
 Version 1.1.14 fixes legacy smearing output ownership so that backpropagation and subsequent smearing calls preserve previously returned configurations; see [changes.md](changes.md).
 
 Version 1.1.13 adds fused JACC gauge fixing from PR #189 for CPU, GPU, MPI, and MPI+GPU and requires LatticeMatrices 1.2.11 to prevent Float32 stout-smearing NaNs; see [changes.md](changes.md).

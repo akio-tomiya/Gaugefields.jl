@@ -83,14 +83,17 @@ After acceptance it consumes two more `heatbath_uniform` values for the
 orientation. Rejected proposals repeat only the four proposal draws.
 
 Gaugefields' serial Julia-RNG adapter consumes the four historical overwritten
-draws in `heatbath_prepare_su2`. This preserves the released serial stream and
-matrix bits without contaminating the portable kernel. LatticeMatrices site
-streams use the clean contract. Gaugefields v1 intentionally does not promise
-random-stream compatibility with older experimental LatticeMatrices heatbath
-implementations.
+draws in `heatbath_prepare_su2`. This retains the historical prefix in the
+serial stream without adding discarded draws to the portable kernel.
+The v1.1.15 correction from `detU` to `sqrt(detU)` changes output matrix bits,
+including roundoff changes in SU(3) subgroup updates. Bitwise agreement with
+earlier releases is therefore not promised. The fixed-seed regression cases
+check both the corrected matrices and the unchanged RNG continuation.
+LatticeMatrices site streams use the clean contract. Gaugefields v1
+intentionally does not promise random-stream compatibility with older
+experimental LatticeMatrices heatbath implementations.
 
 The fixed-draw and released-stream references are maintained in:
 
 - `test/su2update_allocationfree.jl`
 - `test/su3update_allocationfree.jl`
-

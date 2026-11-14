@@ -6,6 +6,9 @@
   is the squared norm of the projected quaternion. This restores unit
   determinant and unitarity; the difference for ordinary SU(2) staples is
   typically at floating-point roundoff level.
+- Update the fixed-seed SU(2)/SU(3) reference matrices for the corrected
+  normalization. Retain exact RNG-continuation checks and add unitarity and
+  determinant checks. Historical output matrix bits are not preserved.
 - Detect zero, nonfinite, or singular staples and nonpositive or nonfinite
   sampling strength before division and rejection sampling. Return failure
   without consuming the rejection budget or changing the output link. The

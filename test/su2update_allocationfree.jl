@@ -151,13 +151,24 @@ end
         @test matrix_bits(U) == expected
     end
 
-    @testset "released Julia-RNG reference" begin
-        # Gaugefields v0.7.3 reference on the supported Julia 1.11 series.
-        expected = UInt64[
+    @testset "normalized Julia-RNG reference" begin
+        # The v0.7.3 fixture used detU instead of sqrt(detU). Its staple is
+        # not a quaternion, so the old output is visibly nonunitary.
+        released_bits = UInt64[
             0xbfd576989dabe0f7, 0x3fe7257c0c05caa6,
             0xbfe0c1fd9b3fe149, 0xbfbf763656942642,
             0x3fe0c1fd9b3fe149, 0xbfbf763656942642,
             0xbfd576989dabe0f7, 0xbfe7257c0c05caa6,
+        ]
+        released_U = reshape(reinterpret(ComplexF64, released_bits), 2, 2)
+        normalized_reference = released_U / sqrt(real(det(released_U)))
+        # v1.1.15 output with corrected normalization. Keep the exact RNG
+        # continuation below to check the historical discarded draws.
+        expected = UInt64[
+            0xbfd650f75170a060, 0x3fe810faa943cf3f,
+            0xbfe16c7c80c25c1b, 0xbfc05b27722849f1,
+            0x3fe16c7c80c25c1b, 0xbfc05b27722849f1,
+            0xbfd650f75170a060, 0xbfe810faa943cf3f,
         ]
         U = fill(ComplexF64(NaN, NaN), 2, 2)
         temps = [similar(U), similar(U)]
@@ -166,6 +177,9 @@ end
         result = SU2update_KP!(U, staples[1], 0.1, 2, temps, iteration_max)
         @test result === nothing
         @test matrix_bits(U) == expected
+        @test U ≈ normalized_reference atol=2e-15 rtol=0
+        @test U' * U ≈ I atol=2e-15
+        @test det(U) ≈ 1 atol=2e-15
         @test rand(UInt64) == 0xfdb6d3cef1d2a283
 
         fill!(U, ComplexF64(NaN, NaN))
@@ -175,6 +189,9 @@ end
         )
         @test allocation_free_result === nothing
         @test matrix_bits(U) == expected
+        @test U ≈ normalized_reference atol=2e-15 rtol=0
+        @test U' * U ≈ I atol=2e-15
+        @test det(U) ≈ 1 atol=2e-15
         @test rand(UInt64) == 0xfdb6d3cef1d2a283
     end
 

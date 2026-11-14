@@ -221,18 +221,20 @@ end
         @test su3_matrix_bits(u) == expected
     end
 
-    @testset "released Julia-RNG reference" begin
-        # Gaugefields v0.7.3 reference on the supported Julia 1.11 series.
+    @testset "normalized Julia-RNG reference" begin
+        # v1.1.15 corrects each SU(2) subgroup's normalization. Final SU(3)
+        # reunitarization leaves only roundoff changes from the v0.7.3
+        # fixture; the historical RNG continuation remains unchanged.
         expected = UInt64[
-            0x3fec519c4522aeda, 0x3fbb7137b68004fc,
-            0x3fd0a4b62e07f8f8, 0xbfd346e0b61fa745,
-            0x3fb69483b9abdbd2, 0x3fc9597d204033ff,
-            0xbfcc0572b9821cdf, 0xbfd5f63ece535e15,
-            0x3fed18642c29d80d, 0xbf988d8ea5ab199f,
-            0xbfb3e5552817c7bb, 0xbfa047934b0f69a1,
-            0xbfbd5f2eb1a555ce, 0x3fc4d7026f0ad45e,
-            0x3fbd30614acd214d, 0x3fa305b82e312577,
-            0x3feef5aeee1ac65e, 0xbfb97beea0262afe,
+            0x3fec519c4522aedb, 0x3fbb7137b68004fb,
+            0x3fd0a4b62e07f8fb, 0xbfd346e0b61fa745,
+            0x3fb69483b9abdbda, 0x3fc9597d204033ff,
+            0xbfcc0572b9821ce5, 0xbfd5f63ece535e16,
+            0x3fed18642c29d80d, 0xbf988d8ea5ab1945,
+            0xbfb3e5552817c7a7, 0xbfa047934b0f69a2,
+            0xbfbd5f2eb1a555cc, 0x3fc4d7026f0ad462,
+            0x3fbd30614acd2137, 0x3fa305b82e312583,
+            0x3feef5aeee1ac660, 0xbfb97beea0262b12,
         ]
         u = Matrix{ComplexF64}(I, 3, 3)
         temps2 = ntuple(_ -> zeros(ComplexF64, 2, 2), 4)
@@ -250,6 +252,8 @@ end
         )
         @test result === nothing
         @test su3_matrix_bits(u) == expected
+        @test u' * u ≈ I atol=2e-15
+        @test det(u) ≈ 1 atol=2e-15
         @test rand(UInt64) == 0x6e1e10f05537e4ce
 
         u = Matrix{ComplexF64}(I, 3, 3)
@@ -259,6 +263,8 @@ end
         )
         @test allocation_free_result === nothing
         @test su3_matrix_bits(u) == expected
+        @test u' * u ≈ I atol=2e-15
+        @test det(u) ≈ 1 atol=2e-15
         @test rand(UInt64) == 0x6e1e10f05537e4ce
     end
 
