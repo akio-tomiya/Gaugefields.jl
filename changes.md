@@ -6,6 +6,11 @@
   `load_configuration`, `load_configuration!`, and `save_configuration`. It uses
   the same host-staged path as NERSC I/O; tested on CPU (LatticeMatrices and
   legacy backends) and on two MPI ranks, not yet on GPUs.
+- MILC I/O is experimental: each load and save prints a warning, and the load
+  warning reports the `reunitarize` setting and the largest deviation from
+  unitarity. The allocating loader defaults to `ComplexF64`. The new
+  `reunitarize` keyword (default `false`) projects the single-precision links
+  onto SU(3) as MILC `reunit_su3` does after reading in double precision.
 - The reader accepts both byte orders and site-list (node-dump) files and
   verifies the MILC sum29/sum31 checksums before replacing the target. The
   writer produces files that MILC `reload_serial` accepts, plus the `.info`

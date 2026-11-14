@@ -117,7 +117,9 @@ end
         end
 
         @testset "precision, byte order, and site order" begin
-            single = load_configuration(fixture; format=:milc, process_grid=grid, comm)
+            default = load_configuration(fixture; format=:milc, process_grid=grid, comm)
+            @test eltype(default[1].U.A) == ComplexF64
+            single = load_configuration(fixture; format=:milc, eltype=ComplexF32, process_grid=grid, comm)
             @test eltype(single[1].U.A) == ComplexF32
             for mu in 1:4
                 @test ComplexF64.(gather_and_bcast_matrix(single[mu].U)) == links[mu]
@@ -135,6 +137,47 @@ end
             root(() -> write_site_list_order(fixture, listed, reverse(0:prod(fixture_dims)-1)))
             L = load_configuration(listed; format=:milc, eltype=ComplexF64, process_grid=grid, comm)
             @test all(gather_and_bcast_matrix(L[mu].U) == links[mu] for mu in 1:4)
+        end
+
+        @testset "experimental warning and reunitarization" begin
+            warnings(f) = [string(l.message) for l in first(Test.collect_test_logs(f))
+                           if l.level == Base.CoreLogging.Warn]
+            shown = warnings(() -> load_configuration!(V, fixture; format=:milc))
+            if rank == 0
+                @test any(m -> occursin("experimental", m) && occursin("reunitarize=false", m), shown)
+            else
+                @test isempty(shown)
+            end
+            @test all(gather_and_bcast_matrix(V[mu].U) == links[mu] for mu in 1:4)
+
+            R = nothing
+            shown = warnings() do
+                R = load_configuration(fixture; format=:milc, reunitarize=true, process_grid=grid, comm)
+            end
+            rank == 0 && @test any(m -> occursin("experimental", m) && occursin("reunitarize=true", m), shown)
+            projected = gather_and_bcast_matrix.(getproperty.(R, :U))
+            @test Gaugefields._milc_unitarity_deviation(links) > 1e-8
+            @test Gaugefields._milc_unitarity_deviation(projected) < 1e-14
+            @test all(abs(det(projected[mu][:, :, Tuple(s)...]) - 1) < 1e-14
+                      for mu in 1:4 for s in CartesianIndices(fixture_dims))
+            @test all(maximum(abs, projected[mu] - links[mu]) < 1e-6 for mu in 1:4)
+            obs = Gaugefields._milc_observables(projected)
+            @test obs.ssplaq ≈ milc_ssplaq atol = 1e-6
+            @test obs.stplaq ≈ milc_stplaq atol = 1e-6
+
+            shown = warnings(() -> save_configuration(joinpath(directory, "w.lat"), V; format=:milc))
+            rank == 0 && @test any(m -> occursin("experimental", m), shown)
+            @test_throws ArgumentError load_configuration!(V, fixture; format=:jld2, reunitarize=true)
+            @test_throws ArgumentError load_configuration(fixture; format=:nersc, reunitarize=true)
+
+            # Links far from SU(3) are refused, as MILC does above 1e-4.
+            scaled = joinpath(directory, "scaled.lat")
+            root(() -> Gaugefields._write_milc(scaled, [1.01 .* a for a in links]; info=false))
+            @test_throws ErrorException load_configuration!(V, scaled; format=:milc, reunitarize=true)
+            @test all(gather_and_bcast_matrix(V[mu].U) == links[mu] for mu in 1:4)
+            shown = warnings(() -> load_configuration!(V, scaled; format=:milc))
+            rank == 0 && @test any(m -> occursin("reunitarize=false", m), shown)
+            load_configuration!(V, fixture; format=:milc)
         end
 
         @testset "legacy backend" begin

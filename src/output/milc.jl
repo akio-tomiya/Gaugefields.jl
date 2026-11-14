@@ -14,6 +14,8 @@
 # list, whose entries encode x + nx*(y + ny*(z + nz*t)).
 # The links carry no staggered phases or boundary signs.
 
+import LinearAlgebra: I
+
 const _MILC_MAGIC = UInt32(20103)
 const _MILC_HEADER_BYTES = 4 + 16 + 64 + 4
 const _MILC_WORDS_PER_SITE = 4 * 3 * 3 * 2
@@ -72,8 +74,10 @@ function _milc_metadata(io, filename)
         "MILC payload size does not match the header: file has " *
         "$(filesize(filename)) bytes, header implies $expected",
     ))
+    # The file is always single precision; MILC compiled in double precision
+    # converts to double after reading, and so does the allocating loader.
     return (dimension=4, lattice=dims, colors=3, halo=1, boundary=ones(Int, 4),
-        element_type=ComplexF32, endian, order, time_stamp)
+        element_type=ComplexF64, endian, order, time_stamp)
 end
 
 function _read_milc(filename)
@@ -122,12 +126,79 @@ function _read_milc(filename)
     end
 end
 
-function _load_milc!(U, filename)
+# Largest |(U^dagger U - 1)_ij| over all links.
+function _milc_unitarity_deviation(links)
+    deviation = 0.0
+    for a in links, site in CartesianIndices(size(a)[3:end])
+        u = ComplexF64.(view(a, :, :, Tuple(site)...))
+        deviation = max(deviation, maximum(abs, u' * u - I))
+    end
+    return deviation
+end
+
+# Projection onto SU(3) as in MILC generic/reunitarize2.c (reunit_su3):
+# normalize row 1, orthogonalize row 2 against it and normalize, and set
+# row 3 to the complex conjugate of the cross product of rows 1 and 2.
+# MILC reports an error when a row norm deviates from 1 by more than 1e-4.
+function _milc_reunitarize(links)
+    tolerance = 1e-4
+    result = [ComplexF64.(a) for a in links]
+    for a in result, site in CartesianIndices(size(a)[3:end])
+        p = Tuple(site)
+        n1 = sum(abs2, view(a, 1, :, p...))
+        abs(n1 - 1) <= tolerance || throw(ArgumentError(
+            "MILC link at site $p deviates from unitarity by $(abs(n1 - 1)); " *
+            "refusing to reunitarize (MILC tolerance 1e-4)"))
+        a[1, :, p...] ./= sqrt(n1)
+        overlap = sum(conj(a[1, j, p...]) * a[2, j, p...] for j in 1:3)
+        abs(overlap) <= tolerance || throw(ArgumentError(
+            "MILC link at site $p has row overlap $(abs(overlap)); " *
+            "refusing to reunitarize (MILC tolerance 1e-4)"))
+        for j in 1:3
+            a[2, j, p...] -= overlap * a[1, j, p...]
+        end
+        n2 = sum(abs2, view(a, 2, :, p...))
+        abs(n2 - 1) <= tolerance || throw(ArgumentError(
+            "MILC link at site $p deviates from unitarity by $(abs(n2 - 1)); " *
+            "refusing to reunitarize (MILC tolerance 1e-4)"))
+        a[2, :, p...] ./= sqrt(n2)
+        a[3, 1, p...] = conj(a[1, 2, p...] * a[2, 3, p...] - a[1, 3, p...] * a[2, 2, p...])
+        a[3, 2, p...] = conj(a[1, 3, p...] * a[2, 1, p...] - a[1, 1, p...] * a[2, 3, p...])
+        a[3, 3, p...] = conj(a[1, 1, p...] * a[2, 2, p...] - a[1, 2, p...] * a[2, 1, p...])
+    end
+    return result
+end
+
+function _milc_experimental_warning(filename, target_type, reunitarize, before, after)
+    state = if reunitarize
+        "reunitarize=true: links were projected onto SU(3) as MILC does after " *
+        "reading in double precision; max|U'U - 1| was $(before) in the file " *
+        "and is $(after) after projection"
+    else
+        "reunitarize=false: links are used as stored in single precision; " *
+        "max|U'U - 1| = $(before). Pass reunitarize=true to project them onto " *
+        "SU(3) as MILC does after reading in double precision"
+    end
+    @warn "MILC configuration I/O is experimental. Loaded $(filename) into " *
+          "$(target_type) links with $(state)."
+end
+
+function _load_milc!(U, filename; reunitarize::Bool=false)
     communicator = gauge_communicator(U)
     result = _portable_jld2_root_operation(communicator) do
-        _read_milc(filename)
+        links, metadata = _read_milc(filename)
+        before = _milc_unitarity_deviation(links)
+        if reunitarize
+            links = _milc_reunitarize(links)
+            after = _milc_unitarity_deviation(links)
+        else
+            after = before
+        end
+        (links, metadata, before, after)
     end
     rank = isnothing(communicator) ? 0 : comm_rank(communicator)
+    rank == 0 && _milc_experimental_warning(filename,
+        _portable_configuration_element_type(_first_gauge_link(U)), reunitarize, result[3], result[4])
     metadata = rank == 0 ? result[2] : nothing
     isnothing(communicator) || (metadata = broadcast(metadata, 0, communicator))
     _validate_portable_jld2_target(U, metadata)
@@ -232,6 +303,9 @@ end
 function _save_milc(filename, U; kwargs...)
     length(U) == 4 && gauge_num_colors(U) == 3 ||
         throw(ArgumentError("MILC output requires four-dimensional SU(3) fields"))
+    rank = isnothing(gauge_communicator(U)) ? 0 : comm_rank(gauge_communicator(U))
+    rank == 0 && @warn "MILC configuration I/O is experimental. Writing " *
+        "$(filename) rounds the links to single precision."
     links = _portable_jld2_links(U)
     _portable_jld2_root_operation(gauge_communicator(U)) do
         _write_milc(filename, links; kwargs...)

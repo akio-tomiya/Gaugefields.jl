@@ -221,10 +221,12 @@ them after packing; all ranks in `gauge_communicator(U)` must participate.
 
 See [MILC format](utilities.md#MILC-format). `format=:milc` reads and writes
 MILC version 5 files (`save_serial`/`reload_serial`) and checks their
-sum29/sum31 checksums.
+sum29/sum31 checksums. It is experimental and prints a warning. The allocating
+loader defaults to `ComplexF64`; `reunitarize=true` projects the
+single-precision links onto SU(3) as MILC does in double precision.
 
 ```julia
-U = load_configuration("ensemble.lat"; format=:milc, eltype=ComplexF64)
+U = load_configuration("ensemble.lat"; format=:milc, reunitarize=true)
 save_configuration("copy.lat", U; format=:milc, endian=:little)
 ```
 

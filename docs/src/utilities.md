@@ -223,6 +223,11 @@ errors are propagated to all participating ranks.
 
 ## MILC format
 
+!!! warning "Experimental"
+    MILC I/O is experimental. Every load and save prints a warning; the load
+    warning states whether the links were reunitarized and the largest
+    deviation from unitarity.
+
 Use `format=:milc` for MILC version 5 lattice files, which the MILC code
 writes with `save_serial` and reads with `reload_serial` (magic number 20103).
 As with NERSC, specify the format explicitly; the allocating loader reads the
@@ -235,8 +240,23 @@ load_configuration!(U, "ensemble.lat"; format=:milc)
 save_configuration("copy.lat", U; format=:milc)
 ~~~
 
-MILC stores links in single precision, so omitting `eltype` allocates a
-`ComplexF32` configuration. The file holds the 4D SU(3) links without
+MILC files always store links in single precision. Omitting `eltype` allocates
+a `ComplexF64` configuration, as MILC compiled in double precision converts the
+links after reading; pass `eltype=ComplexF32` to keep single precision.
+
+The stored links deviate from SU(3) by the single-precision rounding, about
+1e-7. MILC compiled in double precision reunitarizes them after reading.
+Select this with the `reunitarize` keyword of `load_configuration` and
+`load_configuration!` (default `false`, which keeps the links as stored):
+
+~~~julia
+U = load_configuration("ensemble.lat"; format=:milc, reunitarize=true)
+~~~
+
+Reunitarization follows MILC `reunit_su3`: normalize the first row,
+orthogonalize and normalize the second, and set the third to the complex
+conjugate of their cross product. As in MILC, a row whose norm or overlap
+deviates by more than 1e-4 is an error. The file holds the 4D SU(3) links without
 staggered phases or boundary signs, ordered by site with x fastest, then by
 direction (x, y, z, t), then row-major 3x3 complex entries.
 

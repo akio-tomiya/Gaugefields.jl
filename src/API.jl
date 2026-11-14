@@ -775,7 +775,11 @@ function load_configuration(
     boundary=nothing,
     eltype=nothing,
     verbose::Integer=0,
+    reunitarize::Bool=false,
 )
+    reunitarize && format !== :milc && throw(ArgumentError(
+        "reunitarize is supported only for format=:milc",
+    ))
     format in (:jld2, :nersc, :milc) || throw(ArgumentError(
         "allocating load supports format=:jld2, :nersc, or :milc; " *
         "use load_configuration! for Bridge or ILDG",
@@ -823,16 +827,24 @@ function load_configuration(
         eltype=target_element_type,
         verbose,
     )
-    load_configuration!(U, filename; format)
+    load_configuration!(U, filename; format, reunitarize)
     return U
 end
 
-"""Load a gauge configuration into an existing target."""
-function load_configuration!(U, filename; format::Symbol=:jld2)
+"""
+Load a gauge configuration into an existing target. For `format=:milc`,
+`reunitarize=true` projects the single-precision links onto SU(3) as MILC does
+after reading in double precision; MILC I/O is experimental and reports the
+setting in a warning.
+"""
+function load_configuration!(U, filename; format::Symbol=:jld2, reunitarize::Bool=false)
+    reunitarize && format !== :milc && throw(ArgumentError(
+        "reunitarize is supported only for format=:milc",
+    ))
     if format === :nersc
         return _load_nersc!(U, filename)
     elseif format === :milc
-        return _load_milc!(U, filename)
+        return _load_milc!(U, filename; reunitarize)
     elseif format === :jld2
         communicator = gauge_communicator(U)
         metadata = _collective_portable_jld2_metadata(filename, communicator)
