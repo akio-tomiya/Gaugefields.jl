@@ -1,5 +1,28 @@
 # Changes
 
+## v1.1.15
+
+- Normalize SU(2) Kennedy-Pendleton updates by `sqrt(detU)`, where `detU`
+  is the squared norm of the projected quaternion. This restores unit
+  determinant and unitarity; the difference for ordinary SU(2) staples is
+  typically at floating-point roundoff level.
+- Update the fixed-seed SU(2)/SU(3) reference matrices for the corrected
+  normalization. Retain exact RNG-continuation checks and add unitarity and
+  determinant checks. Historical output matrix bits are not preserved.
+- Detect zero, nonfinite, or singular staples and nonpositive or nonfinite
+  sampling strength before division and rejection sampling. Return failure
+  without consuming the rejection budget or changing the output link. The
+  public CPU wrapper reports an `ArgumentError` with the sampling strength
+  and staple norm. No fallback distribution is substituted for a zero staple.
+- Keep the shared device-safe failure protocol for CPU and GPU kernels and
+  preserve the output link if the final normalization is invalid.
+- Add normalization and invalid-input regressions, including NaN, Inf, zero,
+  and singular staples. Compare identical Philox site streams across CPU,
+  GPU, MPI, and MPI+GPU through JACC.
+- Verify complete SU(2)/SU(3) heatbath sweeps against the existing serial
+  reference, including Float32 SU(3) and sweep-counter preservation on failure,
+  on all four execution modes.
+
 ## v1.1.14
 
 - Keep legacy `calc_smearedU` / `apply_smearing_U` results independent of the

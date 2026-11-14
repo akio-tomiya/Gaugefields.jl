@@ -5,6 +5,8 @@ using Gaugefields
 using Test
 using Random
 
+include("heatbath_su2_regressions.jl")
+include("heatbath_su2_backends.jl")
 include("float32_precision.jl")
 include("float32_dynamics.jl")
 include("nersc_io.jl")

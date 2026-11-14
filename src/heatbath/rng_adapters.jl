@@ -101,9 +101,15 @@ end
 @inline heatbath_normalize3!(u) = normalize3_allocationfree!(u)
 
 @noinline function _throw_kp_heatbath_failure(result, ITERATION_MAX)
-    _, _, _, k, rho, delta, R, Rp, Rpp, Rppp = result
+    _, _, tries, k, rho, delta, R, Rp, Rpp, Rppp = result
+    if tries == 0 && ITERATION_MAX > 0
+        throw(ArgumentError(
+            "KP heatbath requires a finite, nonsingular staple and positive finite k; " *
+            "k=$k, ρ=$rho (no rejection trials performed)",
+        ))
+    end
     error(
-        "KP heatbath failed to accept after $ITERATION_MAX tries; " *
+        "KP heatbath failed to accept after $tries tries; " *
         "k=$k, ρ=$rho, delta=$delta R = $R Rp=$Rp Rpp=$Rpp Rppp=$Rppp",
     )
 end

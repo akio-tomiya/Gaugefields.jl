@@ -79,10 +79,6 @@ end
     rho = sqrt(rho0^2 + rho1^2 + rho2^2 + rho3^2)
 
     detV = V[1, 1] * V[2, 2] - V[1, 2] * V[2, 1]
-    V0[1, 1] = rho * V[2, 2] / detV
-    V0[1, 2] = -rho * V[1, 2] / detV
-    V0[2, 1] = -rho * V[2, 1] / detV
-    V0[2, 2] = rho * V[1, 1] / detV
 
     k = 2 * (beta / NC) * rho
     WT = typeof(k)
@@ -98,6 +94,22 @@ end
     delta = zero(WT)
     accepted = false
     tries_used = 0
+
+    # Report invalid staples through the same device-safe failure protocol as
+    # rejection exhaustion, before dividing or consuming the rejection budget.
+    if !(isfinite(rho) && rho > 0 && isfinite(detV) && !iszero(detV) &&
+         isfinite(k) && k > 0)
+        return rng, false, tries_used, k, rho, delta, R, Rp, Rpp, Rppp
+    end
+    V0[1, 1] = rho * V[2, 2] / detV
+    V0[1, 2] = -rho * V[1, 2] / detV
+    V0[2, 1] = -rho * V[2, 1] / detV
+    V0[2, 2] = rho * V[1, 1] / detV
+
+    if !(isfinite(V0[1, 1]) && isfinite(V0[1, 2]) &&
+         isfinite(V0[2, 1]) && isfinite(V0[2, 2]))
+        return rng, false, tries_used, k, rho, delta, R, Rp, Rpp, Rppp
+    end
 
     for tries in 1:ITERATION_MAX
         rng, R = heatbath_log_uniform(rng, WT)
@@ -136,15 +148,22 @@ end
     temp[1, 2] = a3 + im * a2
     temp[2, 1] = -a3 + im * a2
     temp[2, 2] = a1 - im * a4
-    mul!(Unew, temp, V0)
-
-    alpha = Unew[1, 1] * half + conj(Unew[2, 2]) * half
-    beta_su2 = Unew[2, 1] * half - conj(Unew[1, 2]) * half
+    # Keep the output link intact until a finite normalized update is ready.
+    u11 = temp[1, 1] * V0[1, 1] + temp[1, 2] * V0[2, 1]
+    u12 = temp[1, 1] * V0[1, 2] + temp[1, 2] * V0[2, 2]
+    u21 = temp[2, 1] * V0[1, 1] + temp[2, 2] * V0[2, 1]
+    u22 = temp[2, 1] * V0[1, 2] + temp[2, 2] * V0[2, 2]
+    alpha = u11 * half + conj(u22) * half
+    beta_su2 = u21 * half - conj(u12) * half
     detU = abs(alpha)^2 + abs(beta_su2)^2
-    Unew[1, 1] = alpha / detU
-    Unew[2, 1] = beta_su2 / detU
-    Unew[1, 2] = -conj(beta_su2) / detU
-    Unew[2, 2] = conj(alpha) / detU
+    if !(isfinite(detU) && detU > 0)
+        return rng, false, tries_used, k, rho, delta, R, Rp, Rpp, Rppp
+    end
+    normalization = sqrt(detU)
+    Unew[1, 1] = alpha / normalization
+    Unew[2, 1] = beta_su2 / normalization
+    Unew[1, 2] = -conj(beta_su2) / normalization
+    Unew[2, 2] = conj(alpha) / normalization
 
     return rng, true, tries_used, k, rho, delta, R, Rp, Rpp, Rppp
 end
