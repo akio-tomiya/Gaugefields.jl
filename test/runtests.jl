@@ -10,6 +10,7 @@ include("heatbath_su2_backends.jl")
 include("float32_precision.jl")
 include("float32_dynamics.jl")
 include("nersc_io.jl")
+include("milc_io.jl")
 import Wilsonloop: loops_staple
 
 @testset "High-level API" begin

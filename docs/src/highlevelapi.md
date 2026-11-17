@@ -199,7 +199,8 @@ load_configuration!(U, filename; format=:jld2)
 ```
 
 `save_configuration` and `load_configuration!` accept `:jld2`, `:bridge`,
-`:ildg`, and `:nersc`. Allocating `load_configuration` accepts `:jld2` and `:nersc`;
+`:ildg`, `:nersc`, and `:milc`. Allocating `load_configuration` accepts `:jld2`,
+`:nersc`, and `:milc`;
 Bridge and ILDG input require a preallocated destination.
 
 JLD2 is the portable Gaugefields checkpoint format. During output, all ranks
@@ -215,6 +216,23 @@ layout. Legacy object-serialized JLD2 files remain readable on one rank.
 
 ILDG output creates unique temporary paths in the output directory and removes
 them after packing; all ranks in `gauge_communicator(U)` must participate.
+
+### MILC configurations
+
+See [MILC format](utilities.md#MILC-format). `format=:milc` reads and writes
+MILC version 5 files (`save_serial`/`reload_serial`) and checks their
+sum29/sum31 checksums. It is experimental and prints a warning. The allocating
+loader defaults to `ComplexF64`; `reunitarize=true` projects the
+single-precision links onto SU(3) as MILC does in double precision. Before
+modifying the target, it applies MILC's four sequential deviation checks,
+including squared row overlap and third-row reconstruction error. A failed
+check leaves the target unchanged. CPU, GPU, MPI, and MPI+GPU fields use the
+same collective I/O path; all ranks owning a distributed field must participate.
+
+```julia
+U = load_configuration("ensemble.lat"; format=:milc, reunitarize=true)
+save_configuration("copy.lat", U; format=:milc, endian=:little)
+```
 
 ### NERSC configurations
 
