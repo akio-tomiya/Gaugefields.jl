@@ -142,22 +142,41 @@ function _milc_unitarity_deviation(links)
     return deviation
 end
 
-# MILC generic/reunitarize2.c (reunit_su3) refuses links whose first two rows
-# deviate from orthonormality by more than 1e-4. Apply the same test before
-# projecting with normalize_U!, which uses the same row-wise Gram-Schmidt
-# procedure and sets row 3 to the conjugate cross product of rows 1 and 2.
+# Follow the four deviation checks in MILC generic/reunitarize2.c
+# (reunit_su3), in double precision on host copies. Reject any failed check
+# before changing the target; the subsequent projection uses normalize_U!
+# on the target backend and in its precision.
+function _milc_check_deviation(deviation, site, direction, check)
+    deviation < 1e-4 || throw(ArgumentError(
+        "MILC link at site $site, direction $direction fails $check " *
+        "with deviation $deviation; refusing to reunitarize " *
+        "(MILC requires deviation < 1e-4)"))
+    return nothing
+end
+
 function _milc_check_reunitarizable(links)
-    tolerance = 1e-4
-    for a in links, site in CartesianIndices(size(a)[3:end])
+    for (direction, a) in pairs(links), site in CartesianIndices(size(a)[3:end])
         p = Tuple(site)
         u = ComplexF64.(view(a, :, :, p...))
-        r1 = sum(abs2, view(u, 1, :))
-        r2 = sum(abs2, view(u, 2, :))
-        overlap = abs(sum(conj(u[1, j]) * u[2, j] for j in 1:3))
-        deviation = max(abs(r1 - 1), abs(r2 - 1), overlap)
-        deviation <= tolerance || throw(ArgumentError(
-            "MILC link at site $p deviates from unitarity by $deviation; " *
-            "refusing to reunitarize (MILC tolerance 1e-4)"))
+        r1, r2, r3 = eachrow(u)
+        norm1 = sum(abs2, r1)
+        _milc_check_deviation(abs(norm1 - 1), p, direction, "first-row norm")
+        r1 .*= inv(sqrt(norm1))
+
+        overlap = sum(conj(r1[j]) * r2[j] for j in 1:3)
+        _milc_check_deviation(abs2(overlap), p, direction, "squared row overlap")
+        r2 .-= overlap .* r1
+        norm2 = sum(abs2, r2)
+        _milc_check_deviation(abs(norm2 - 1), p, direction, "orthogonalized second-row norm")
+        r2 .*= inv(sqrt(norm2))
+
+        reconstructed = conj.((
+            r1[2] * r2[3] - r1[3] * r2[2],
+            r1[3] * r2[1] - r1[1] * r2[3],
+            r1[1] * r2[2] - r1[2] * r2[1],
+        ))
+        _milc_check_deviation(sum(abs2, r3 .- reconstructed), p, direction,
+            "squared third-row reconstruction error")
     end
     return nothing
 end

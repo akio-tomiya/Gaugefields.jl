@@ -223,7 +223,11 @@ See [MILC format](utilities.md#MILC-format). `format=:milc` reads and writes
 MILC version 5 files (`save_serial`/`reload_serial`) and checks their
 sum29/sum31 checksums. It is experimental and prints a warning. The allocating
 loader defaults to `ComplexF64`; `reunitarize=true` projects the
-single-precision links onto SU(3) as MILC does in double precision.
+single-precision links onto SU(3) as MILC does in double precision. Before
+modifying the target, it applies MILC's four sequential deviation checks,
+including squared row overlap and third-row reconstruction error. A failed
+check leaves the target unchanged. CPU, GPU, MPI, and MPI+GPU fields use the
+same collective I/O path; all ranks owning a distributed field must participate.
 
 ```julia
 U = load_configuration("ensemble.lat"; format=:milc, reunitarize=true)

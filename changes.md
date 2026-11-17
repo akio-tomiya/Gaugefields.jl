@@ -1,19 +1,22 @@
 # Changes
 
-## Unreleased
+## v1.1.16
 
 - Add MILC version 5 SU(3) configuration I/O (`format=:milc`) for
   `load_configuration`, `load_configuration!`, and `save_configuration`. It uses
   the same host-staged path as NERSC I/O. `test/milc_io.jl` runs on CPU with
   the LatticeMatrices and legacy backends and, through
-  `test/MPIJACCtest/milc_io.jl`, on two MPI ranks in CI. It also passed with
-  the JACC CUDA backend (RTX 4000 Ada), run by hand; GPU CI does not run it.
+  `test/MPIJACCtest/milc_io.jl`, on two MPI ranks in CI. Local validation also
+  covers the JACC CUDA backend and CUDA with two MPI ranks; GPU CI does not
+  run these tests.
 - MILC I/O is experimental: each load and save prints a warning, and the load
   warning reports the `reunitarize` setting and the largest deviation from
   unitarity. The allocating loader defaults to `ComplexF64`. The new
   `reunitarize` keyword (default `false`) applies `normalize_U!`, whose SU(3)
   projection is that of MILC `reunit_su3`, after reading, as MILC does in
-  double precision; links beyond MILC's 1e-4 tolerance are refused.
+  double precision. Before modifying the target, apply MILC's four sequential
+  deviation checks, including squared row overlap and third-row reconstruction
+  error, with its strict 1e-4 threshold.
 - The reader accepts both byte orders and site-list (node-dump) files and
   verifies the MILC sum29/sum31 checksums before replacing the target. The
   writer produces files that MILC `reload_serial` accepts, plus the `.info`
@@ -21,6 +24,9 @@
 - Add a 2x4x6x8 reference configuration written by the MILC code, with tests
   against MILC's own plaquette, link trace, NERSC checksum, and Polyakov loop,
   a byte-identical rewrite, byte-order and site-list cases, and corrupted files.
+- Add regressions for accepted row overlaps, the second-row norm after
+  orthogonalization, invalid third rows, strict tolerance boundaries, and
+  unchanged targets on failed loads in both Float32 and Float64.
 
 ## v1.1.15
 
@@ -53,6 +59,8 @@
 - Add output-lifetime and pullback regressions against the v1 stout API.
 
 ## Previous release highlights
+
+Gaugefields.jl v1.1.13 adds fused JACC gauge fixing from PR #189 for CPU, GPU, MPI, and MPI+GPU and requires LatticeMatrices 1.2.11 to prevent Float32 stout-smearing NaNs.
 
 Gaugefields.jl v1.1.12 preserves Float32 precision and adds checked NERSC configuration I/O for CPU, GPU, MPI, and MPI+GPU fields through JACC.
 

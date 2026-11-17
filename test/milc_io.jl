@@ -191,7 +191,7 @@ end
             @test_throws ArgumentError load_configuration!(V, fixture; format=:jld2, reunitarize=true)
             @test_throws ArgumentError load_configuration(fixture; format=:nersc, reunitarize=true)
 
-            # Links far from SU(3) are refused, as MILC does above 1e-4.
+            # Reject links that fail MILC's deviation checks.
             scaled = joinpath(directory, "scaled.lat")
             root(() -> Gaugefields._write_milc(scaled, [1.01 .* a for a in links]; info=false))
             @test_throws ErrorException load_configuration!(V, scaled; format=:milc, reunitarize=true)
@@ -199,6 +199,67 @@ end
             shown = warnings(() -> load_configuration!(V, scaled; format=:milc))
             rank == 0 && @test any(m -> occursin("reunitarize=false", m), shown)
             load_configuration!(V, fixture; format=:milc)
+        end
+
+        @testset "MILC sequential deviation checks" begin
+            # These matrices distinguish MILC's checks from a raw overlap
+            # magnitude or a second-row norm measured before orthogonalization.
+            accepted = (
+                ComplexF64[1 0 0; 0.001 1 0; 0 0 1],
+                ComplexF64[1 0 0; 0.003+0.004im 1 0; 0 0 1],
+                ComplexF64[1 0 0; 0.009 sqrt(1.00005) 0; 0 0 1],
+            )
+            rejected = (
+                ComplexF64[1 0 0; 0 1 0; 0 0 0],
+                ComplexF64[1 0 0; 0 1 0; 0 0 -1],
+                ComplexF64[1.01 0 0; 0 1 0; 0 0 1],
+                ComplexF64[1 0 0; 0 1.01 0; 0 0 1],
+                ComplexF64[1 0 0; 0.02 1 0; 0 0 1],
+                ComplexF64[1 0 0; 1 0 0; 0 0 1],
+            )
+            file = joinpath(directory, "deviation-checks.lat")
+            for (should_accept, cases) in ((true, accepted), (false, rejected))
+                for matrix in cases
+                    root() do
+                        altered = deepcopy(links)
+                        # Put the problematic link last, to catch partial loads.
+                        altered[4][:, :, fixture_dims...] = matrix
+                        Gaugefields._write_milc(file, altered; info=false)
+                    end
+                    for T in (ComplexF32, ComplexF64)
+                        target = load_configuration(fixture; format=:milc,
+                            eltype=T, process_grid=grid, comm)
+                        before = gather_and_bcast_matrix.(getproperty.(target, :U))
+                        if should_accept
+                            load_configuration!(target, file; format=:milc, reunitarize=true)
+                            actual = gather_and_bcast_matrix(target[4].U)
+                            @test actual[:, :, fixture_dims...] ≈ Matrix{T}(I, 3, 3) atol=1e-6
+                            @test all(!LatticeMatrices.halo_is_dirty(link.U) for link in target)
+                        else
+                            @test_throws ErrorException load_configuration!(target, file;
+                                format=:milc, reunitarize=true)
+                            @test all(gather_and_bcast_matrix(target[mu].U) == before[mu] for mu in 1:4)
+                        end
+                    end
+                end
+            end
+            # MILC checks deviation < tolerance, not <=. Exercise host-side
+            # Float64 boundaries directly, without Float32 file rounding.
+            for delta in (prevfloat(0.01), 0.01, nextfloat(0.01))
+                for matrix in (
+                    ComplexF64[1 0 0; delta 1 0; 0 0 1],
+                    ComplexF64[1 0 0; 0 1 0; delta 0 1],
+                )
+                    input = [reshape(copy(matrix), 3, 3, 1, 1, 1, 1)]
+                    original = deepcopy(input)
+                    if delta < 0.01
+                        @test isnothing(Gaugefields._milc_check_reunitarizable(input))
+                    else
+                        @test_throws ArgumentError Gaugefields._milc_check_reunitarizable(input)
+                    end
+                    @test input == original
+                end
+            end
         end
 
         @testset "legacy backend" begin

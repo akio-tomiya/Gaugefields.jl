@@ -256,9 +256,14 @@ U = load_configuration("ensemble.lat"; format=:milc, reunitarize=true)
 Reunitarization applies `normalize_U!` to the loaded field, on its backend and
 in its precision. Its SU(3) projection is the one in MILC `reunit_su3`:
 normalize the first row, orthogonalize and normalize the second, and set the
-third to the complex conjugate of their cross product. As in MILC, the loader
-first refuses links whose first two rows deviate from orthonormality by more
-than 1e-4. The file holds the 4D SU(3) links without
+third to the complex conjugate of their cross product. Before changing the
+target, the loader runs MILC's four deviation checks on double-precision host
+copies: the first-row squared norm minus one (absolute value), the squared
+overlap with the normalized first row, the orthogonalized second-row squared
+norm minus one (absolute value), and the squared distance between the original
+third row and its reconstruction. Every deviation must be strictly below
+1e-4. Any failed check rejects the load and leaves the target unchanged.
+The file holds the 4D SU(3) links without
 staggered phases or boundary signs, ordered by site with x fastest, then by
 direction (x, y, z, t), then row-major 3x3 complex entries.
 
